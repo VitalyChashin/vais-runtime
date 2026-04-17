@@ -37,6 +37,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IUsageSink _usageSink;
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ResiliencePipeline _pipeline;
+    private readonly IToolRegistry? _toolRegistry;
     private readonly string? _agentName;
 
     /// <summary>
@@ -61,6 +62,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _usageSink = options.UsageSink ?? NullUsageSink.Instance;
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
+        _toolRegistry = options.ToolRegistry;
         _agentName = options.AgentName;
 
         SystemPrompt = options.SystemPrompt;
@@ -87,7 +89,11 @@ public sealed class StatefulAiAgent : IAiAgent
         // reference would race with the next call or allow an adapter to mutate
         // our state.
         var snapshot = _history.ToArray();
-        var request = new CompletionRequest(snapshot, SystemPrompt);
+        var tools = _toolRegistry?.Tools;
+        var request = new CompletionRequest(
+            snapshot,
+            SystemPrompt,
+            Tools: tools is { Count: > 0 } ? tools : null);
 
         var context = _contextAccessor.Current;
         var startedAt = DateTimeOffset.UtcNow;

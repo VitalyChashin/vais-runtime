@@ -19,8 +19,15 @@ namespace Vais2.Agents;
 /// </param>
 /// <param name="Temperature">Sampling temperature hint; null means "use provider default".</param>
 /// <param name="MaxTokens">Maximum output tokens hint; null means "use provider default".</param>
+/// <param name="Tools">
+/// Optional tools available to the model for this turn. When non-empty the adapter
+/// is expected to advertise them to its underlying SDK with auto-invocation enabled,
+/// so any tool calls the model emits are executed and their results fed back before
+/// the final response is returned.
+/// </param>
 public sealed record CompletionRequest(
     IReadOnlyList<ChatTurn> History,
     string? SystemPrompt = null,
     float? Temperature = null,
-    int? MaxTokens = null);
+    int? MaxTokens = null,
+    IReadOnlyList<ITool>? Tools = null);

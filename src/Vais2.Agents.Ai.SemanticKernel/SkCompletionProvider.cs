@@ -19,6 +19,7 @@ namespace Vais2.Agents.Ai.SemanticKernel;
 /// </remarks>
 public sealed class SkCompletionProvider : ICompletionProvider
 {
+    private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
     private readonly string _modelId;
 
@@ -31,6 +32,7 @@ public sealed class SkCompletionProvider : ICompletionProvider
     public SkCompletionProvider(Kernel kernel)
     {
         ArgumentNullException.ThrowIfNull(kernel);
+        _kernel = kernel;
         _chatService = kernel.GetRequiredService<IChatCompletionService>();
         _modelId = _chatService.Attributes.TryGetValue("ModelId", out var m)
             ? m?.ToString() ?? "unknown"
@@ -54,8 +56,20 @@ public sealed class SkCompletionProvider : ICompletionProvider
             Temperature = request.Temperature ?? 0.2,
         };
 
+        // When the request carries tools, clone the kernel and attach them as a
+        // plugin. Cloning keeps the per-turn mutation local — multiple concurrent
+        // calls don't step on each other's plugin set. Auto-invocation is enabled
+        // so SK handles tool calls inline and returns the final assistant text.
+        var kernel = _kernel;
+        if (request.Tools is { Count: > 0 } tools)
+        {
+            kernel = _kernel.Clone();
+            kernel.Plugins.Add(SkToolBinder.BuildPlugin(tools));
+            settings.FunctionChoiceBehavior = FunctionChoiceBehavior.Auto();
+        }
+
         var result = await _chatService
-            .GetChatMessageContentAsync(history, settings, kernel: null, cancellationToken)
+            .GetChatMessageContentAsync(history, settings, kernel, cancellationToken)
             .ConfigureAwait(false);
 
         var text = result.Content ?? string.Empty;

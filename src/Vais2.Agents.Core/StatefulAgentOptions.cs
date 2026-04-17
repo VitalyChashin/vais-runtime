@@ -45,4 +45,12 @@ public sealed class StatefulAgentOptions
     /// behaviour of the previous <c>AiAgent&lt;T&gt;.CallFunction</c> in VAIS2.
     /// </summary>
     public ResiliencePipeline? ResiliencePipeline { get; init; }
+
+    /// <summary>
+    /// Tools made available to the model on every turn. When set, the registry's
+    /// <see cref="IToolRegistry.Tools"/> is attached to each <see cref="CompletionRequest"/>
+    /// and the adapter is expected to advertise them to its underlying SDK with
+    /// auto-invocation enabled. Null means the agent operates without tools.
+    /// </summary>
+    public IToolRegistry? ToolRegistry { get; init; }
 }

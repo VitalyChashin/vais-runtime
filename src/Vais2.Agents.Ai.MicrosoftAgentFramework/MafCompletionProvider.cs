@@ -52,7 +52,12 @@ public sealed class MafCompletionProvider : ICompletionProvider
         string? modelId = null)
     {
         ArgumentNullException.ThrowIfNull(chatClient);
-        _chatClient = chatClient;
+
+        // Wrap the chat client once with FunctionInvokingChatClient. MAF's
+        // ChatClientAgent requires it in the pipeline to auto-invoke tools;
+        // without tools in a given turn the wrapper passes through harmlessly,
+        // so we pay the wrapping cost once at construction and never again.
+        _chatClient = chatClient.AsBuilder().UseFunctionInvocation().Build();
         _agentName = agentName;
         _modelId = modelId ?? ResolveModelId(chatClient);
     }
@@ -77,14 +82,18 @@ public sealed class MafCompletionProvider : ICompletionProvider
 
         var messages = request.History.Select(ToMeai).ToList();
 
-        var options = new ChatClientAgentRunOptions
+        var chatOptions = new ChatOptions
         {
-            ChatOptions = new ChatOptions
-            {
-                MaxOutputTokens = request.MaxTokens ?? 1024,
-                Temperature = request.Temperature ?? 0.2f,
-            }
+            MaxOutputTokens = request.MaxTokens ?? 1024,
+            Temperature = request.Temperature ?? 0.2f,
         };
+
+        if (request.Tools is { Count: > 0 } tools)
+        {
+            chatOptions.Tools = MafToolBinder.BuildTools(tools);
+        }
+
+        var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
 
         var response = await agent
             .RunAsync(messages, thread: null, options: options, cancellationToken: cancellationToken)

@@ -20,6 +20,8 @@ Vais2.Agents.Core.StatefulAgentOptions.ResiliencePipeline.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.StatefulAgentOptions() -> void
 Vais2.Agents.Core.StatefulAgentOptions.SystemPrompt.get -> string?
 Vais2.Agents.Core.StatefulAgentOptions.SystemPrompt.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.ToolRegistry.get -> Vais2.Agents.IToolRegistry?
+Vais2.Agents.Core.StatefulAgentOptions.ToolRegistry.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.UsageSink.get -> Vais2.Agents.IUsageSink?
 Vais2.Agents.Core.StatefulAgentOptions.UsageSink.init -> void
 Vais2.Agents.Core.StatefulAiAgent

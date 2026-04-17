@@ -27,8 +27,8 @@ Vais2.Agents.ChatTurn.Text.get -> string!
 Vais2.Agents.ChatTurn.Text.init -> void
 Vais2.Agents.CompletionRequest
 Vais2.Agents.CompletionRequest.<Clone>$() -> Vais2.Agents.CompletionRequest!
-Vais2.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null) -> void
-Vais2.Agents.CompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! History, out string? SystemPrompt, out float? Temperature, out int? MaxTokens) -> void
+Vais2.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>? Tools = null) -> void
+Vais2.Agents.CompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! History, out string? SystemPrompt, out float? Temperature, out int? MaxTokens, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>? Tools) -> void
 Vais2.Agents.CompletionRequest.Equals(Vais2.Agents.CompletionRequest? other) -> bool
 Vais2.Agents.CompletionRequest.History.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!
 Vais2.Agents.CompletionRequest.History.init -> void
@@ -38,6 +38,8 @@ Vais2.Agents.CompletionRequest.SystemPrompt.get -> string?
 Vais2.Agents.CompletionRequest.SystemPrompt.init -> void
 Vais2.Agents.CompletionRequest.Temperature.get -> float?
 Vais2.Agents.CompletionRequest.Temperature.init -> void
+Vais2.Agents.CompletionRequest.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>?
+Vais2.Agents.CompletionRequest.Tools.init -> void
 Vais2.Agents.CompletionResponse
 Vais2.Agents.CompletionResponse.<Clone>$() -> Vais2.Agents.CompletionResponse!
 Vais2.Agents.CompletionResponse.CompletionResponse(string! Text, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null) -> void
@@ -69,6 +71,14 @@ Vais2.Agents.IAiAgent.SystemPrompt.set -> void
 Vais2.Agents.ICompletionProvider
 Vais2.Agents.ICompletionProvider.CompleteAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais2.Agents.CompletionResponse!>!
 Vais2.Agents.ICompletionProvider.ProviderName.get -> string!
+Vais2.Agents.ITool
+Vais2.Agents.ITool.Description.get -> string!
+Vais2.Agents.ITool.InvokeAsync(System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais2.Agents.ITool.Name.get -> string!
+Vais2.Agents.ITool.ParametersSchema.get -> System.Text.Json.JsonElement
+Vais2.Agents.IToolRegistry
+Vais2.Agents.IToolRegistry.GetByName(string! name) -> Vais2.Agents.ITool?
+Vais2.Agents.IToolRegistry.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>!
 Vais2.Agents.IUsageSink
 Vais2.Agents.IUsageSink.ReportAsync(Vais2.Agents.UsageRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais2.Agents.UsageRecord

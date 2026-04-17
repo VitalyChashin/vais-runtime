@@ -25,4 +25,8 @@
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais2.Agents.ParityTests" />
+  </ItemGroup>
+
 </Project>
