@@ -23,9 +23,11 @@
     <PackageVersion Include="OpenAI" Version="2.5.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Logging / DI used across adapters (bumped to match transitive requirements from MEAI / MAF).">
+  <ItemGroup Label="Logging / DI / resilience used across adapters (bumped to match transitive requirements from MEAI / MAF).">
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.10.0" />
   </ItemGroup>
 
   <ItemGroup Label="Public API surface guard">

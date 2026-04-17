@@ -19,16 +19,16 @@ csharp_prefer_braces = true:suggestion
 csharp_style_namespace_declarations = file_scoped:warning
 dotnet_diagnostic.IDE0005.severity = warning
 
-# Public API analyzer: wired up but not yet enforcing.
-# Milestone 2 will baseline PublicAPI.Shipped/Unshipped.txt and flip these to warning.
-dotnet_diagnostic.RS0016.severity = none
-dotnet_diagnostic.RS0017.severity = none
-dotnet_diagnostic.RS0024.severity = none
-dotnet_diagnostic.RS0025.severity = none
-dotnet_diagnostic.RS0026.severity = none
-dotnet_diagnostic.RS0027.severity = none
-dotnet_diagnostic.RS0037.severity = none
-dotnet_diagnostic.RS0041.severity = none
+# Public API analyzer (M2 baseline). Surface must be declared in PublicAPI.Unshipped.txt;
+# once a release is cut we move entries to PublicAPI.Shipped.txt and they become load-bearing.
+dotnet_diagnostic.RS0016.severity = warning  # Add public API to unshipped file
+dotnet_diagnostic.RS0017.severity = warning  # Remove deleted public API from shipped file
+dotnet_diagnostic.RS0024.severity = none     # (unused severity on our API shape)
+dotnet_diagnostic.RS0025.severity = warning  # Do not duplicate declarations across files
+dotnet_diagnostic.RS0026.severity = warning  # Do not add multiple overloads of default-param methods
+dotnet_diagnostic.RS0027.severity = none     # Oblivious reference on public API (we're fully #nullable enable)
+dotnet_diagnostic.RS0037.severity = warning  # Enable tracking of nullability on public API
+dotnet_diagnostic.RS0041.severity = none     # (unused — our API does not use oblivious ref types)
 
 # CA1014 (CLSCompliant) off — we ship a modern .NET-only library.
 dotnet_diagnostic.CA1014.severity = none

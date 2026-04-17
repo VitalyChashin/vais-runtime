@@ -1,0 +1,48 @@
+// Copyright (c) 2026 VAIS2 Platform contributors.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using Polly;
+
+namespace Vais2.Agents.Core;
+
+/// <summary>
+/// Construction-time options for <see cref="StatefulAiAgent"/>. Every field is
+/// optional and has a sensible default; consumers override what they care about.
+/// </summary>
+public sealed class StatefulAgentOptions
+{
+    /// <summary>
+    /// Optional stable name for this agent. Surfaces in telemetry via
+    /// <see cref="UsageRecord.AgentName"/>.
+    /// </summary>
+    public string? AgentName { get; init; }
+
+    /// <summary>
+    /// System instruction prepended to every turn. Mutable after construction via
+    /// <see cref="IAiAgent.SystemPrompt"/>.
+    /// </summary>
+    public string? SystemPrompt { get; init; }
+
+    /// <summary>
+    /// Ordered filter chain. Filters run in the order given, outermost first.
+    /// Default: empty (no filters).
+    /// </summary>
+    public IReadOnlyList<IAgentFilter> Filters { get; init; } = Array.Empty<IAgentFilter>();
+
+    /// <summary>
+    /// Usage telemetry sink. Default: <see cref="NullUsageSink.Instance"/>.
+    /// </summary>
+    public IUsageSink? UsageSink { get; init; }
+
+    /// <summary>
+    /// Ambient context accessor. Default: a private <see cref="AsyncLocalAgentContextAccessor"/>.
+    /// </summary>
+    public IAgentContextAccessor? ContextAccessor { get; init; }
+
+    /// <summary>
+    /// Resilience pipeline wrapping the provider call. When null, the core uses a
+    /// default pipeline with 3 retries and exponential back-off — matching the
+    /// behaviour of the previous <c>AiAgent&lt;T&gt;.CallFunction</c> in VAIS2.
+    /// </summary>
+    public ResiliencePipeline? ResiliencePipeline { get; init; }
+}

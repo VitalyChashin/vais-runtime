@@ -44,7 +44,7 @@ public sealed class StatefulAiAgentTests
     public async Task AskAsync_Forwards_SystemPrompt_To_Provider()
     {
         var provider = new FakeCompletionProvider();
-        var agent = new StatefulAiAgent(provider, systemPrompt: "Be terse.");
+        var agent = new StatefulAiAgent(provider, new StatefulAgentOptions { SystemPrompt = "Be terse." });
 
         await agent.AskAsync("Hi");
 
@@ -90,7 +90,7 @@ public sealed class StatefulAiAgentTests
     [Fact]
     public async Task Reset_Clears_History_But_Keeps_SystemPrompt()
     {
-        var agent = new StatefulAiAgent(new FakeCompletionProvider(), systemPrompt: "keep me");
+        var agent = new StatefulAiAgent(new FakeCompletionProvider(), new StatefulAgentOptions { SystemPrompt = "keep me" });
         await agent.AskAsync("hi");
         agent.History.Should().NotBeEmpty();
 

@@ -40,6 +40,12 @@ dotnet test
 OPENAI_API_KEY=... dotnet run --project samples/HelloAgent
 ```
 
+## Architecture decisions
+
+Short records of decisions that shape the public surface live in [`docs/adr/`](docs/adr/). The current set:
+
+- [ADR 0001 — Keyed `IChatClient` DI convention](docs/adr/0001-keyed-ichatclient-di-convention.md) — the colon-delimited string-key shape (`openai:gpt-4o:primary`) used when consumers register multiple providers side-by-side.
+
 ## Roadmap (high level)
 
 - **M1 (current):** Core contracts + SK and MAF adapters + minimal sample + Core unit tests.

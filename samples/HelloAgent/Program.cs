@@ -56,7 +56,7 @@ static ICompletionProvider BuildMafProvider(string apiKey, string model)
 static async Task RunConversationAsync(string label, ICompletionProvider provider, string systemPrompt)
 {
     Console.WriteLine($"========== {label} ({provider.ProviderName}) ==========");
-    var agent = new StatefulAiAgent(provider, systemPrompt);
+    var agent = new StatefulAiAgent(provider, new StatefulAgentOptions { SystemPrompt = systemPrompt });
 
     var turn1 = await agent.AskAsync("What is the capital of France?");
     Console.WriteLine("user:      What is the capital of France?");
