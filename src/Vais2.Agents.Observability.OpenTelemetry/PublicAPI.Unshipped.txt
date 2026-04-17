@@ -1,0 +1,9 @@
+#nullable enable
+Vais2.Agents.Observability.OpenTelemetry.AgenticOpenTelemetryExtensions
+Vais2.Agents.Observability.OpenTelemetry.OpenTelemetryUsageSink
+Vais2.Agents.Observability.OpenTelemetry.OpenTelemetryUsageSink.Dispose() -> void
+Vais2.Agents.Observability.OpenTelemetry.OpenTelemetryUsageSink.OpenTelemetryUsageSink() -> void
+Vais2.Agents.Observability.OpenTelemetry.OpenTelemetryUsageSink.ReportAsync(Vais2.Agents.UsageRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais2.Agents.Observability.OpenTelemetry.AgenticOpenTelemetryExtensions.AddAgenticInstrumentation(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
+static Vais2.Agents.Observability.OpenTelemetry.AgenticOpenTelemetryExtensions.AddAgenticInstrumentation(this OpenTelemetry.Trace.TracerProviderBuilder! builder) -> OpenTelemetry.Trace.TracerProviderBuilder!
+static Vais2.Agents.Observability.OpenTelemetry.AgenticOpenTelemetryExtensions.AddAgenticOpenTelemetrySink(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

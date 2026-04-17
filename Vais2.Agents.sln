@@ -23,6 +23,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloAgent", "samples\Hello
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Hosting.InMemory", "src\Vais2.Agents.Hosting.InMemory\Vais2.Agents.Hosting.InMemory.csproj", "{9757C758-7D64-4340-8FE6-91B5EABDB6CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Observability.OpenTelemetry", "src\Vais2.Agents.Observability.OpenTelemetry\Vais2.Agents.Observability.OpenTelemetry.csproj", "{736CB205-805B-4C3D-90EB-BEDE3F48F3FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Observability.Langfuse", "src\Vais2.Agents.Observability.Langfuse\Vais2.Agents.Observability.Langfuse.csproj", "{65D423DC-378B-40FF-9FD8-4822664E2625}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Observability.Tests", "tests\Vais2.Agents.Observability.Tests\Vais2.Agents.Observability.Tests.csproj", "{A60BF572-394F-4D4A-B639-74A405A8E702}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +66,18 @@ Global
 		{9757C758-7D64-4340-8FE6-91B5EABDB6CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9757C758-7D64-4340-8FE6-91B5EABDB6CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9757C758-7D64-4340-8FE6-91B5EABDB6CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{736CB205-805B-4C3D-90EB-BEDE3F48F3FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{736CB205-805B-4C3D-90EB-BEDE3F48F3FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{736CB205-805B-4C3D-90EB-BEDE3F48F3FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{736CB205-805B-4C3D-90EB-BEDE3F48F3FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65D423DC-378B-40FF-9FD8-4822664E2625}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65D423DC-378B-40FF-9FD8-4822664E2625}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65D423DC-378B-40FF-9FD8-4822664E2625}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65D423DC-378B-40FF-9FD8-4822664E2625}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A60BF572-394F-4D4A-B639-74A405A8E702}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A60BF572-394F-4D4A-B639-74A405A8E702}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A60BF572-394F-4D4A-B639-74A405A8E702}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A60BF572-394F-4D4A-B639-74A405A8E702}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -69,5 +87,8 @@ Global
 		{E8367FD4-1A7A-4960-A547-C0E7C4EC385F} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{D01C13A3-8FA9-446F-9A0D-442B5A62779A} = {54CDD7E5-7E4C-4FBF-9893-C21646330365}
 		{9757C758-7D64-4340-8FE6-91B5EABDB6CE} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{736CB205-805B-4C3D-90EB-BEDE3F48F3FA} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{65D423DC-378B-40FF-9FD8-4822664E2625} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{A60BF572-394F-4D4A-B639-74A405A8E702} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal

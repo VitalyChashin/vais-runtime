@@ -93,6 +93,8 @@ public sealed class StatefulAiAgent : IAiAgent
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
 
+        using var activity = StartTurnActivity(context);
+
         CompletionResponse? response = null;
         Exception? failure = null;
 
@@ -118,6 +120,8 @@ public sealed class StatefulAiAgent : IAiAgent
             sw.Stop();
         }
 
+        AnnotateTurnActivity(activity, response, failure);
+
         await ReportUsageAsync(response, failure, context, startedAt, sw.Elapsed, cancellationToken).ConfigureAwait(false);
 
         if (failure is not null)
@@ -132,6 +136,73 @@ public sealed class StatefulAiAgent : IAiAgent
 
     /// <inheritdoc />
     public void Reset() => _history.Clear();
+
+    private Activity? StartTurnActivity(AgentContext context)
+    {
+        // StartActivity returns null when no listener is registered — zero cost
+        // for consumers that haven't wired up OpenTelemetry.
+        var activity = AgenticDiagnostics.ActivitySource.StartActivity("chat", ActivityKind.Client);
+        if (activity is null)
+        {
+            return null;
+        }
+
+        activity.SetTag(AgenticTags.GenAiSystem, _provider.ProviderName);
+        activity.SetTag(AgenticTags.GenAiOperationName, "chat");
+
+        var agentName = _agentName ?? context.AgentName;
+        if (!string.IsNullOrEmpty(agentName))
+        {
+            activity.SetTag(AgenticTags.AgentName, agentName);
+        }
+        if (!string.IsNullOrEmpty(context.UserId))
+        {
+            activity.SetTag(AgenticTags.UserId, context.UserId);
+        }
+        if (!string.IsNullOrEmpty(context.TenantId))
+        {
+            activity.SetTag(AgenticTags.TenantId, context.TenantId);
+        }
+        if (!string.IsNullOrEmpty(context.CorrelationId))
+        {
+            activity.SetTag(AgenticTags.CorrelationId, context.CorrelationId);
+        }
+
+        return activity;
+    }
+
+    private static void AnnotateTurnActivity(Activity? activity, CompletionResponse? response, Exception? failure)
+    {
+        if (activity is null)
+        {
+            return;
+        }
+
+        if (response is not null)
+        {
+            activity.SetTag(AgenticTags.GenAiResponseModel, response.ModelId);
+            activity.DisplayName = $"chat {response.ModelId}";
+
+            if (response.PromptTokens is int prompt)
+            {
+                activity.SetTag(AgenticTags.GenAiUsageInputTokens, prompt);
+            }
+            if (response.CompletionTokens is int completion)
+            {
+                activity.SetTag(AgenticTags.GenAiUsageOutputTokens, completion);
+            }
+        }
+
+        if (failure is null)
+        {
+            activity.SetStatus(ActivityStatusCode.Ok);
+        }
+        else
+        {
+            activity.SetStatus(ActivityStatusCode.Error, failure.Message);
+            activity.SetTag(AgenticTags.ErrorType, failure.GetType().Name);
+        }
+    }
 
     private Task<CompletionResponse> InvokeThroughFiltersAsync(
         CompletionRequest request,
