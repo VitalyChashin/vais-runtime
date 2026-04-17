@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Vais2.Agents.Samples.HelloAgent</RootNamespace>
+    <AssemblyName>HelloAgent</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais2.Agents.Abstractions\Vais2.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Core\Vais2.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Ai.SemanticKernel\Vais2.Agents.Ai.SemanticKernel.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Ai.MicrosoftAgentFramework\Vais2.Agents.Ai.MicrosoftAgentFramework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="OpenAI" />
+  </ItemGroup>
+
+</Project>

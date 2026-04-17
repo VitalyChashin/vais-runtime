@@ -1,0 +1,34 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,csproj,sln,props,targets}]
+indent_size = 4
+
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_prefer_braces = true:suggestion
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Public API analyzer: wired up but not yet enforcing.
+# Milestone 2 will baseline PublicAPI.Shipped/Unshipped.txt and flip these to warning.
+dotnet_diagnostic.RS0016.severity = none
+dotnet_diagnostic.RS0017.severity = none
+dotnet_diagnostic.RS0024.severity = none
+dotnet_diagnostic.RS0025.severity = none
+dotnet_diagnostic.RS0026.severity = none
+dotnet_diagnostic.RS0027.severity = none
+dotnet_diagnostic.RS0037.severity = none
+dotnet_diagnostic.RS0041.severity = none
+
+# CA1014 (CLSCompliant) off — we ship a modern .NET-only library.
+dotnet_diagnostic.CA1014.severity = none

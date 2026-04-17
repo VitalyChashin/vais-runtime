@@ -1,0 +1,21 @@
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+artifacts/
+.nuget/
+project.lock.json
+packages/
+
+# OS
+Thumbs.db
+.DS_Store

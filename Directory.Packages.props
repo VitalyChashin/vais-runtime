@@ -1,0 +1,42 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup Label="Microsoft.Extensions.AI (MEAI) - unifying IChatClient abstraction">
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.10.0-preview.1.25513.3" />
+  </ItemGroup>
+
+  <ItemGroup Label="Semantic Kernel adapter">
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.62.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.62.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft Agent Framework (MAF) adapter">
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.0.0-preview.251009.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="OpenAI SDK - pinned to match MEAI.OpenAI preview; SK 1.62's exact-version requirement tolerated via NU1608 suppression (SK adapter doesn't reference MEAI.OpenAI, so its graph is unaffected).">
+    <PackageVersion Include="OpenAI" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Logging / DI used across adapters (bumped to match transitive requirements from MEAI / MAF).">
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup Label="Public API surface guard">
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.24629.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="Test dependencies">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.2" />
+  </ItemGroup>
+
+</Project>
