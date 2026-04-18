@@ -56,8 +56,15 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
   </ItemGroup>
 
+  <ItemGroup Label="Postgres persistence (Vais2.Agents.Persistence.Postgres). Orleans ADO.NET providers + Npgsql.">
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="9.2.1" />
+    <PackageVersion Include="Npgsql" Version="8.0.5" />
+  </ItemGroup>
+
   <ItemGroup Label="Testcontainers (integration tests that need real infrastructure).">
     <PackageVersion Include="Testcontainers.Redis" Version="4.0.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Test dependencies">

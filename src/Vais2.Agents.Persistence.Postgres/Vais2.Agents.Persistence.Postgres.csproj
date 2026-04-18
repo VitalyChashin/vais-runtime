@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais2.Agents.Persistence.Postgres</RootNamespace>
+    <AssemblyName>Vais2.Agents.Persistence.Postgres</AssemblyName>
+    <Description>Postgres-backed Orleans clustering and grain storage for Vais2.Agents. Thin DI wrappers over Microsoft.Orleans.Clustering.AdoNet + Microsoft.Orleans.Persistence.AdoNet with the Npgsql invariant wired in and the AiAgentGrain storage name convention baked in.</Description>
+    <PackageTags>agents;ai;llm;hosting;orleans;postgres;persistence</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais2.Agents.Hosting.Orleans\Vais2.Agents.Hosting.Orleans.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" />
+    <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>
