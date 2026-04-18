@@ -67,4 +67,34 @@ public sealed class OrleansAgentRuntime : IAgentRuntime
         _ = _grainFactory.GetGrain<IAiAgentGrain>(agentId).DeleteAsync();
         return removed;
     }
+
+    /// <summary>
+    /// Get an <see cref="IAgentSession"/> bound to a specific session of the given agent.
+    /// Multiple sessions of the same agent run in distinct grain instances and therefore
+    /// serialise only per-session, not per-agent. Compose with
+    /// <see cref="Core.StatefulAiAgent"/> via
+    /// <see cref="Core.StatefulAgentOptions.Session"/> to run the turn-loop locally while
+    /// history is durably owned by the silo.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Either id is null, empty, whitespace, or contains the reserved <c>/</c> separator.
+    /// </exception>
+    public IAgentSession GetSession(string agentId, string sessionId)
+    {
+        var key = OrleansSessionGrainKey.Build(agentId, sessionId);
+        var grain = _grainFactory.GetGrain<IAgentSessionGrain>(key);
+        return new OrleansAgentSession(grain, agentId, sessionId);
+    }
+
+    /// <summary>
+    /// Get the per-agent config grain (system prompt + shared config) for
+    /// <paramref name="agentId"/>. Typically consumed by host-side code that wires
+    /// session grains and wants to share config across them.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="agentId"/> is null, empty, or whitespace.</exception>
+    public IAgentConfigGrain GetAgentConfig(string agentId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        return _grainFactory.GetGrain<IAgentConfigGrain>(agentId);
+    }
 }
