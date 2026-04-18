@@ -22,6 +22,8 @@ public enum AgentEventKind
     ToolCallCompleted = 4,
     /// <summary><see cref="GuardrailTriggered"/>.</summary>
     GuardrailTriggered = 5,
+    /// <summary><see cref="InterruptRaised"/>.</summary>
+    InterruptRaised = 6,
 }
 
 /// <summary>
@@ -103,6 +105,14 @@ public struct AgentEventSurrogate
     /// <summary>Guardrail reason — populated for <see cref="AgentEventKind.GuardrailTriggered"/>.</summary>
     [Id(16)]
     public string? GuardrailReason;
+
+    /// <summary>Interrupt correlation id — populated for <see cref="AgentEventKind.InterruptRaised"/>.</summary>
+    [Id(17)]
+    public string? InterruptId;
+
+    /// <summary>Interrupt reason — populated for <see cref="AgentEventKind.InterruptRaised"/>.</summary>
+    [Id(18)]
+    public string? InterruptReason;
 }
 
 /// <summary>
@@ -157,6 +167,11 @@ internal static class AgentEventSurrogateHelpers
                 surrogate.GuardrailLayer ?? Vais2.Agents.GuardrailLayer.Input,
                 surrogate.GuardrailDecision ?? Vais2.Agents.GuardrailDecision.Deny,
                 surrogate.GuardrailReason),
+            AgentEventKind.InterruptRaised => new InterruptRaised(
+                surrogate.At,
+                context,
+                surrogate.InterruptId ?? string.Empty,
+                surrogate.InterruptReason ?? string.Empty),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -220,6 +235,14 @@ internal static class AgentEventSurrogateHelpers
                 GuardrailLayer = g.Layer,
                 GuardrailDecision = g.Decision,
                 GuardrailReason = g.Reason,
+            },
+            InterruptRaised i => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.InterruptRaised,
+                At = i.At,
+                Context = contextSurrogate,
+                InterruptId = i.InterruptId,
+                InterruptReason = i.Reason,
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -323,5 +346,18 @@ public sealed class GuardrailTriggeredSurrogateConverter : IConverter<GuardrailT
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in GuardrailTriggered value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="InterruptRaised"/>.</summary>
+[RegisterConverter]
+public sealed class InterruptRaisedSurrogateConverter : IConverter<InterruptRaised, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public InterruptRaised ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (InterruptRaised)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in InterruptRaised value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

@@ -13,6 +13,38 @@ Vais2.Agents.AgentGuardrailDeniedException
 Vais2.Agents.AgentGuardrailDeniedException.AgentGuardrailDeniedException(Vais2.Agents.GuardrailLayer layer, string? reason) -> void
 Vais2.Agents.AgentGuardrailDeniedException.Layer.get -> Vais2.Agents.GuardrailLayer
 Vais2.Agents.AgentGuardrailDeniedException.Reason.get -> string?
+Vais2.Agents.AgentInterrupt
+Vais2.Agents.AgentInterrupt.<Clone>$() -> Vais2.Agents.AgentInterrupt!
+Vais2.Agents.AgentInterrupt.AgentInterrupt(string! InterruptId, string! Reason, System.Text.Json.JsonElement Payload) -> void
+Vais2.Agents.AgentInterrupt.Deconstruct(out string! InterruptId, out string! Reason, out System.Text.Json.JsonElement Payload) -> void
+Vais2.Agents.AgentInterrupt.Equals(Vais2.Agents.AgentInterrupt? other) -> bool
+Vais2.Agents.AgentInterrupt.InterruptId.get -> string!
+Vais2.Agents.AgentInterrupt.InterruptId.init -> void
+Vais2.Agents.AgentInterrupt.Payload.get -> System.Text.Json.JsonElement
+Vais2.Agents.AgentInterrupt.Payload.init -> void
+Vais2.Agents.AgentInterrupt.Reason.get -> string!
+Vais2.Agents.AgentInterrupt.Reason.init -> void
+Vais2.Agents.AgentInterruptedException
+Vais2.Agents.AgentInterruptedException.AgentInterruptedException(Vais2.Agents.AgentInterrupt! interrupt) -> void
+Vais2.Agents.AgentInterruptedException.Interrupt.get -> Vais2.Agents.AgentInterrupt!
+Vais2.Agents.GuardrailDecision.Interrupt = 2 -> Vais2.Agents.GuardrailDecision
+Vais2.Agents.InterruptRaised
+Vais2.Agents.InterruptRaised.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out string! InterruptId, out string! Reason) -> void
+Vais2.Agents.InterruptRaised.Equals(Vais2.Agents.InterruptRaised? other) -> bool
+Vais2.Agents.InterruptRaised.InterruptId.get -> string!
+Vais2.Agents.InterruptRaised.InterruptId.init -> void
+Vais2.Agents.InterruptRaised.InterruptRaised(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context, string! InterruptId, string! Reason) -> void
+Vais2.Agents.InterruptRaised.Reason.get -> string!
+Vais2.Agents.InterruptRaised.Reason.init -> void
+Vais2.Agents.ResumeInput
+Vais2.Agents.ResumeInput.<Clone>$() -> Vais2.Agents.ResumeInput!
+Vais2.Agents.ResumeInput.Deconstruct(out string! InterruptId, out System.Text.Json.JsonElement Payload) -> void
+Vais2.Agents.ResumeInput.Equals(Vais2.Agents.ResumeInput? other) -> bool
+Vais2.Agents.ResumeInput.InterruptId.get -> string!
+Vais2.Agents.ResumeInput.InterruptId.init -> void
+Vais2.Agents.ResumeInput.Payload.get -> System.Text.Json.JsonElement
+Vais2.Agents.ResumeInput.Payload.init -> void
+Vais2.Agents.ResumeInput.ResumeInput(string! InterruptId, System.Text.Json.JsonElement Payload) -> void
 Vais2.Agents.ChatTurn.ChatTurn(Vais2.Agents.AgentChatRole Role, string! Text, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls = null, string? ToolCallId = null) -> void
 Vais2.Agents.ChatTurn.Deconstruct(out Vais2.Agents.AgentChatRole Role, out string! Text, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls, out string? ToolCallId) -> void
 Vais2.Agents.ChatTurn.ToolCallId.get -> string?
@@ -112,9 +144,11 @@ Vais2.Agents.GuardrailOutcome
 Vais2.Agents.GuardrailOutcome.<Clone>$() -> Vais2.Agents.GuardrailOutcome!
 Vais2.Agents.GuardrailOutcome.Decision.get -> Vais2.Agents.GuardrailDecision
 Vais2.Agents.GuardrailOutcome.Decision.init -> void
-Vais2.Agents.GuardrailOutcome.Deconstruct(out Vais2.Agents.GuardrailDecision Decision, out string? Reason) -> void
+Vais2.Agents.GuardrailOutcome.Deconstruct(out Vais2.Agents.GuardrailDecision Decision, out string? Reason, out Vais2.Agents.AgentInterrupt? InterruptPayload) -> void
 Vais2.Agents.GuardrailOutcome.Equals(Vais2.Agents.GuardrailOutcome? other) -> bool
-Vais2.Agents.GuardrailOutcome.GuardrailOutcome(Vais2.Agents.GuardrailDecision Decision, string? Reason = null) -> void
+Vais2.Agents.GuardrailOutcome.GuardrailOutcome(Vais2.Agents.GuardrailDecision Decision, string? Reason = null, Vais2.Agents.AgentInterrupt? InterruptPayload = null) -> void
+Vais2.Agents.GuardrailOutcome.InterruptPayload.get -> Vais2.Agents.AgentInterrupt?
+Vais2.Agents.GuardrailOutcome.InterruptPayload.init -> void
 Vais2.Agents.GuardrailOutcome.Reason.get -> string?
 Vais2.Agents.GuardrailOutcome.Reason.init -> void
 Vais2.Agents.IAgentSession
@@ -206,10 +240,21 @@ Vais2.Agents.MemorySearchResult.Key.init -> void
 Vais2.Agents.MemorySearchResult.MemorySearchResult(string! Key, Vais2.Agents.MemoryItem! Item, float? Score = null) -> void
 Vais2.Agents.MemorySearchResult.Score.get -> float?
 Vais2.Agents.MemorySearchResult.Score.init -> void
+override Vais2.Agents.AgentInterrupt.Equals(object? obj) -> bool
+override Vais2.Agents.AgentInterrupt.GetHashCode() -> int
+override Vais2.Agents.AgentInterrupt.ToString() -> string!
 override Vais2.Agents.GuardrailTriggered.<Clone>$() -> Vais2.Agents.GuardrailTriggered!
 override Vais2.Agents.GuardrailTriggered.Equals(object? obj) -> bool
 override Vais2.Agents.GuardrailTriggered.GetHashCode() -> int
 override Vais2.Agents.GuardrailTriggered.ToString() -> string!
+override Vais2.Agents.InterruptRaised.<Clone>$() -> Vais2.Agents.InterruptRaised!
+override Vais2.Agents.InterruptRaised.Equals(object? obj) -> bool
+override Vais2.Agents.InterruptRaised.GetHashCode() -> int
+override Vais2.Agents.InterruptRaised.ToString() -> string!
+override Vais2.Agents.ResumeInput.Equals(object? obj) -> bool
+override Vais2.Agents.ResumeInput.GetHashCode() -> int
+override Vais2.Agents.ResumeInput.ToString() -> string!
+override sealed Vais2.Agents.InterruptRaised.Equals(Vais2.Agents.AgentEvent? other) -> bool
 override Vais2.Agents.ToolCallCompleted.<Clone>$() -> Vais2.Agents.ToolCallCompleted!
 override Vais2.Agents.ToolCallCompleted.Equals(object? obj) -> bool
 override Vais2.Agents.ToolCallCompleted.GetHashCode() -> int
@@ -248,8 +293,14 @@ override Vais2.Agents.MemorySearchResult.ToString() -> string!
 override Vais2.Agents.RunBudget.Equals(object? obj) -> bool
 override Vais2.Agents.RunBudget.GetHashCode() -> int
 override Vais2.Agents.RunBudget.ToString() -> string!
+static Vais2.Agents.AgentInterrupt.operator !=(Vais2.Agents.AgentInterrupt? left, Vais2.Agents.AgentInterrupt? right) -> bool
+static Vais2.Agents.AgentInterrupt.operator ==(Vais2.Agents.AgentInterrupt? left, Vais2.Agents.AgentInterrupt? right) -> bool
 static Vais2.Agents.GuardrailTriggered.operator !=(Vais2.Agents.GuardrailTriggered? left, Vais2.Agents.GuardrailTriggered? right) -> bool
 static Vais2.Agents.GuardrailTriggered.operator ==(Vais2.Agents.GuardrailTriggered? left, Vais2.Agents.GuardrailTriggered? right) -> bool
+static Vais2.Agents.InterruptRaised.operator !=(Vais2.Agents.InterruptRaised? left, Vais2.Agents.InterruptRaised? right) -> bool
+static Vais2.Agents.InterruptRaised.operator ==(Vais2.Agents.InterruptRaised? left, Vais2.Agents.InterruptRaised? right) -> bool
+static Vais2.Agents.ResumeInput.operator !=(Vais2.Agents.ResumeInput? left, Vais2.Agents.ResumeInput? right) -> bool
+static Vais2.Agents.ResumeInput.operator ==(Vais2.Agents.ResumeInput? left, Vais2.Agents.ResumeInput? right) -> bool
 static Vais2.Agents.ToolCallCompleted.operator !=(Vais2.Agents.ToolCallCompleted? left, Vais2.Agents.ToolCallCompleted? right) -> bool
 static Vais2.Agents.ToolCallCompleted.operator ==(Vais2.Agents.ToolCallCompleted? left, Vais2.Agents.ToolCallCompleted? right) -> bool
 static Vais2.Agents.ToolCallOutcome.operator !=(Vais2.Agents.ToolCallOutcome? left, Vais2.Agents.ToolCallOutcome? right) -> bool
@@ -260,6 +311,7 @@ static Vais2.Agents.ToolCallStarted.operator !=(Vais2.Agents.ToolCallStarted? le
 static Vais2.Agents.ToolCallStarted.operator ==(Vais2.Agents.ToolCallStarted? left, Vais2.Agents.ToolCallStarted? right) -> bool
 static Vais2.Agents.ContextContribution.Empty.get -> Vais2.Agents.ContextContribution!
 static Vais2.Agents.GuardrailOutcome.Deny(string? reason = null) -> Vais2.Agents.GuardrailOutcome!
+static Vais2.Agents.GuardrailOutcome.Interrupt(Vais2.Agents.AgentInterrupt! interrupt, string? reason = null) -> Vais2.Agents.GuardrailOutcome!
 static Vais2.Agents.GuardrailOutcome.Pass.get -> Vais2.Agents.GuardrailOutcome!
 static Vais2.Agents.GuardrailOutcome.operator !=(Vais2.Agents.GuardrailOutcome? left, Vais2.Agents.GuardrailOutcome? right) -> bool
 static Vais2.Agents.GuardrailOutcome.operator ==(Vais2.Agents.GuardrailOutcome? left, Vais2.Agents.GuardrailOutcome? right) -> bool

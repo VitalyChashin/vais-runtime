@@ -1,17 +1,24 @@
 #nullable enable
 Vais2.Agents.Hosting.Orleans.AgentEventKind.GuardrailTriggered = 5 -> Vais2.Agents.Hosting.Orleans.AgentEventKind
+Vais2.Agents.Hosting.Orleans.AgentEventKind.InterruptRaised = 6 -> Vais2.Agents.Hosting.Orleans.AgentEventKind
 Vais2.Agents.Hosting.Orleans.AgentEventKind.ToolCallCompleted = 4 -> Vais2.Agents.Hosting.Orleans.AgentEventKind
 Vais2.Agents.Hosting.Orleans.AgentEventKind.ToolCallStarted = 3 -> Vais2.Agents.Hosting.Orleans.AgentEventKind
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.CallId -> string?
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailDecision -> Vais2.Agents.GuardrailDecision?
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailLayer -> Vais2.Agents.GuardrailLayer?
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailReason -> string?
+Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptId -> string?
+Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptReason -> string?
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.Succeeded -> bool?
 Vais2.Agents.Hosting.Orleans.AgentEventSurrogate.ToolName -> string?
 Vais2.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter
 Vais2.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertFromSurrogate(in Vais2.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais2.Agents.GuardrailTriggered!
 Vais2.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertToSurrogate(in Vais2.Agents.GuardrailTriggered! value) -> Vais2.Agents.Hosting.Orleans.AgentEventSurrogate
 Vais2.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.GuardrailTriggeredSurrogateConverter() -> void
+Vais2.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter
+Vais2.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertFromSurrogate(in Vais2.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais2.Agents.InterruptRaised!
+Vais2.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertToSurrogate(in Vais2.Agents.InterruptRaised! value) -> Vais2.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais2.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.InterruptRaisedSurrogateConverter() -> void
 Vais2.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter
 Vais2.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertFromSurrogate(in Vais2.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais2.Agents.ToolCallCompleted!
 Vais2.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertToSurrogate(in Vais2.Agents.ToolCallCompleted! value) -> Vais2.Agents.Hosting.Orleans.AgentEventSurrogate

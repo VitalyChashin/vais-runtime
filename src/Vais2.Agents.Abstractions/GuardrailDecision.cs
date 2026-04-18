@@ -19,4 +19,13 @@ public enum GuardrailDecision
     /// <see cref="TurnFailed"/>).
     /// </summary>
     Deny = 1,
+
+    /// <summary>
+    /// The turn is paused for human-in-the-loop review. The guardrail must supply a
+    /// non-null <see cref="GuardrailOutcome.Interrupt"/>. <c>StatefulAiAgent</c> raises
+    /// <see cref="AgentInterruptedException"/>, emits <see cref="InterruptRaised"/>
+    /// then <see cref="TurnFailed"/>, and the caller resumes later with a
+    /// <see cref="ResumeInput"/>.
+    /// </summary>
+    Interrupt = 2,
 }

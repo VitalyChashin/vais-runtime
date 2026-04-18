@@ -536,6 +536,43 @@ public sealed class StatefulAiAgent : IAiAgent
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// v0.4 shim for human-in-the-loop resume. Treats the supplied <see cref="ResumeInput"/>
+    /// as the caller's decision and continues the conversation by dispatching
+    /// <paramref name="input"/>'s JSON-payload string as the next user turn.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// True mid-loop resume (picking up where the interrupt paused, with working-history
+    /// replay) lands with the durable-execution pillar. In v0.4 the method is a typed
+    /// alias over <see cref="AskAsync"/> — consumers handle the
+    /// <see cref="AgentInterruptedException"/>, gather human input, build a
+    /// <see cref="ResumeInput"/>, and call this method. The interrupt's <c>InterruptId</c>
+    /// correlation still flows through for observability; the behaviour is a new turn,
+    /// not a continuation.
+    /// </para>
+    /// </remarks>
+    /// <param name="input">Caller's decision payload plus the originating interrupt id.</param>
+    /// <param name="cancellationToken">Cancels the resume turn.</param>
+    /// <returns>Assistant reply for the resume turn.</returns>
+    public Task<string> ResumeAsync(ResumeInput input, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var userMessage = input.Payload.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => input.Payload.GetString() ?? string.Empty,
+            System.Text.Json.JsonValueKind.Undefined or System.Text.Json.JsonValueKind.Null => string.Empty,
+            _ => input.Payload.ToString(),
+        };
+        if (string.IsNullOrWhiteSpace(userMessage))
+        {
+            throw new ArgumentException(
+                "ResumeInput.Payload must contain a non-empty string or object; v0.4 resume forwards the payload as the next user turn.",
+                nameof(input));
+        }
+        return AskAsync(userMessage, cancellationToken);
+    }
+
     /// <inheritdoc />
     public void Reset()
     {
@@ -707,13 +744,7 @@ public sealed class StatefulAiAgent : IAiAgent
         foreach (var guardrail in _inputGuardrails)
         {
             var outcome = await guardrail.EvaluateAsync(request, context, cancellationToken).ConfigureAwait(false);
-            if (outcome.Decision == GuardrailDecision.Deny)
-            {
-                await PublishEventAsync(
-                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, GuardrailLayer.Input, outcome.Decision, outcome.Reason),
-                    cancellationToken).ConfigureAwait(false);
-                throw new AgentGuardrailDeniedException(GuardrailLayer.Input, outcome.Reason);
-            }
+            await HandleGuardrailOutcomeAsync(outcome, GuardrailLayer.Input, context, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -730,13 +761,36 @@ public sealed class StatefulAiAgent : IAiAgent
         foreach (var guardrail in _outputGuardrails)
         {
             var outcome = await guardrail.EvaluateAsync(response, context, cancellationToken).ConfigureAwait(false);
-            if (outcome.Decision == GuardrailDecision.Deny)
-            {
+            await HandleGuardrailOutcomeAsync(outcome, GuardrailLayer.Output, context, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task HandleGuardrailOutcomeAsync(
+        GuardrailOutcome outcome,
+        GuardrailLayer layer,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        switch (outcome.Decision)
+        {
+            case GuardrailDecision.Pass:
+                return;
+            case GuardrailDecision.Deny:
                 await PublishEventAsync(
-                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, GuardrailLayer.Output, outcome.Decision, outcome.Reason),
+                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, layer, outcome.Decision, outcome.Reason),
                     cancellationToken).ConfigureAwait(false);
-                throw new AgentGuardrailDeniedException(GuardrailLayer.Output, outcome.Reason);
-            }
+                throw new AgentGuardrailDeniedException(layer, outcome.Reason);
+            case GuardrailDecision.Interrupt:
+                if (outcome.InterruptPayload is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Guardrail ({layer}) returned Interrupt without an AgentInterrupt payload. " +
+                        "Use GuardrailOutcome.Interrupt(AgentInterrupt, reason?) to construct this outcome.");
+                }
+                await PublishEventAsync(
+                    new InterruptRaised(DateTimeOffset.UtcNow, context, outcome.InterruptPayload.InterruptId, outcome.InterruptPayload.Reason),
+                    cancellationToken).ConfigureAwait(false);
+                throw new AgentInterruptedException(outcome.InterruptPayload);
         }
     }
 

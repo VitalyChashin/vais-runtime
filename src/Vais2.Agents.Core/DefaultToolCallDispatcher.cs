@@ -59,13 +59,7 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
         foreach (var guardrail in _toolGuardrails)
         {
             var outcome = await guardrail.BeforeInvokeAsync(tool, request.Arguments, context, cancellationToken).ConfigureAwait(false);
-            if (outcome.Decision == GuardrailDecision.Deny)
-            {
-                await _eventBus.PublishAsync(
-                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, GuardrailLayer.Tool, outcome.Decision, outcome.Reason),
-                    cancellationToken).ConfigureAwait(false);
-                throw new AgentGuardrailDeniedException(GuardrailLayer.Tool, outcome.Reason);
-            }
+            await HandleToolGuardrailOutcomeAsync(outcome, context, cancellationToken).ConfigureAwait(false);
         }
 
         await _eventBus.PublishAsync(
@@ -101,17 +95,14 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
         foreach (var guardrail in _toolGuardrails)
         {
             var outcome = await guardrail.AfterInvokeAsync(tool, request.Arguments, result, context, cancellationToken).ConfigureAwait(false);
-            if (outcome.Decision == GuardrailDecision.Deny)
+            if (outcome.Decision != GuardrailDecision.Pass)
             {
                 // Emit the completion event first so observers see a paired Started/Completed
-                // even when the outer exception aborts the turn, then the guardrail event.
+                // even when the outer exception aborts the turn, then the guardrail/interrupt event.
                 await _eventBus.PublishAsync(
                     new ToolCallCompleted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName, Succeeded: true, Error: null, sw.Elapsed),
                     cancellationToken).ConfigureAwait(false);
-                await _eventBus.PublishAsync(
-                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, GuardrailLayer.Tool, outcome.Decision, outcome.Reason),
-                    cancellationToken).ConfigureAwait(false);
-                throw new AgentGuardrailDeniedException(GuardrailLayer.Tool, outcome.Reason);
+                await HandleToolGuardrailOutcomeAsync(outcome, context, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -120,5 +111,33 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             cancellationToken).ConfigureAwait(false);
 
         return new ToolCallOutcome(request.CallId, result);
+    }
+
+    private async Task HandleToolGuardrailOutcomeAsync(
+        GuardrailOutcome outcome,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        switch (outcome.Decision)
+        {
+            case GuardrailDecision.Pass:
+                return;
+            case GuardrailDecision.Deny:
+                await _eventBus.PublishAsync(
+                    new GuardrailTriggered(DateTimeOffset.UtcNow, context, GuardrailLayer.Tool, outcome.Decision, outcome.Reason),
+                    cancellationToken).ConfigureAwait(false);
+                throw new AgentGuardrailDeniedException(GuardrailLayer.Tool, outcome.Reason);
+            case GuardrailDecision.Interrupt:
+                if (outcome.InterruptPayload is null)
+                {
+                    throw new InvalidOperationException(
+                        "Tool guardrail returned Interrupt without an AgentInterrupt payload. " +
+                        "Use GuardrailOutcome.Interrupt(AgentInterrupt, reason?) to construct this outcome.");
+                }
+                await _eventBus.PublishAsync(
+                    new InterruptRaised(DateTimeOffset.UtcNow, context, outcome.InterruptPayload.InterruptId, outcome.InterruptPayload.Reason),
+                    cancellationToken).ConfigureAwait(false);
+                throw new AgentInterruptedException(outcome.InterruptPayload);
+        }
     }
 }

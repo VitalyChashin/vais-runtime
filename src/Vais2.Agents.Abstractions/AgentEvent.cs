@@ -133,3 +133,20 @@ public sealed record GuardrailTriggered(
     GuardrailDecision Decision,
     string? Reason)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted when a guardrail or tool dispatcher raises an <see cref="AgentInterrupt"/>.
+/// Paired with a subsequent <see cref="TurnFailed"/>; callers typically react by
+/// gathering human input and invoking the agent's resume entry point with a
+/// <see cref="ResumeInput"/> carrying the same <see cref="InterruptId"/>.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient agent context at event-emission time.</param>
+/// <param name="InterruptId">Correlation id carried into the matching <see cref="ResumeInput.InterruptId"/>.</param>
+/// <param name="Reason">Operator-readable reason the guardrail/dispatcher supplied.</param>
+public sealed record InterruptRaised(
+    DateTimeOffset At,
+    AgentContext Context,
+    string InterruptId,
+    string Reason)
+    : AgentEvent(At, Context);

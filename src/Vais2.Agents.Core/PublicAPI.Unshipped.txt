@@ -53,6 +53,7 @@ Vais2.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.get -> Vais2.Agents.IT
 Vais2.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais2.Agents.ISystemPromptComposer?
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.init -> void
+Vais2.Agents.Core.StatefulAiAgent.ResumeAsync(Vais2.Agents.ResumeInput! input, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 Vais2.Agents.Core.StatefulAiAgent.Session.get -> Vais2.Agents.IAgentSession!
 static readonly Vais2.Agents.Core.FormatStringPromptTemplate.Instance -> Vais2.Agents.Core.FormatStringPromptTemplate!
 static readonly Vais2.Agents.Core.NoopContextWindowPacker.Instance -> Vais2.Agents.Core.NoopContextWindowPacker!

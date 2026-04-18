@@ -224,6 +224,36 @@ public sealed class OrleansAgentEventBusTests
     }
 
     [Fact]
+    public async Task Publishes_And_Subscribes_InterruptRaised_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        InterruptRaised? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is InterruptRaised raised)
+            {
+                observed = raised;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new InterruptRaised(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty,
+            InterruptId: "intr-42",
+            Reason: "approval required");
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.InterruptId.Should().Be("intr-42");
+        observed.Reason.Should().Be("approval required");
+    }
+
+    [Fact]
     public async Task Dispose_Unsubscribes_And_Later_Events_Are_Not_Received()
     {
         var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
