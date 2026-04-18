@@ -67,6 +67,8 @@ Vais2.Agents.GuardrailTriggered.Reason.get -> string?
 Vais2.Agents.GuardrailTriggered.Reason.init -> void
 Vais2.Agents.IToolCallDispatcher
 Vais2.Agents.IToolCallDispatcher.DispatchAsync(Vais2.Agents.ToolCallRequest! request, Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ToolCallOutcome!>
+Vais2.Agents.IToolSource
+Vais2.Agents.IToolSource.DiscoverAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.ITool!>!
 Vais2.Agents.ToolCallCompleted
 Vais2.Agents.ToolCallCompleted.CallId.get -> string!
 Vais2.Agents.ToolCallCompleted.CallId.init -> void

@@ -12,6 +12,10 @@ Vais2.Agents.Core.InMemoryMemoryStore.InMemoryMemoryStore() -> void
 Vais2.Agents.Core.InMemoryMemoryStore.ReadAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.MemoryItem?>
 Vais2.Agents.Core.InMemoryMemoryStore.SearchAsync(Vais2.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.MemorySearchResult!>!
 Vais2.Agents.Core.InMemoryMemoryStore.WriteAsync(Vais2.Agents.MemoryScope! scope, string! key, Vais2.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.AggregatingToolRegistry
+Vais2.Agents.Core.AggregatingToolRegistry.GetByName(string! name) -> Vais2.Agents.ITool?
+Vais2.Agents.Core.AggregatingToolRegistry.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>!
+Vais2.Agents.Core.Tool
 Vais2.Agents.Core.AggregatingSystemPromptComposer
 Vais2.Agents.Core.AggregatingSystemPromptComposer.AggregatingSystemPromptComposer(System.Collections.Generic.IEnumerable<Vais2.Agents.ISystemPromptContributor!>! contributors) -> void
 Vais2.Agents.Core.AggregatingSystemPromptComposer.ComposeAsync(Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
@@ -59,3 +63,6 @@ static readonly Vais2.Agents.Core.FormatStringPromptTemplate.Instance -> Vais2.A
 static readonly Vais2.Agents.Core.NoopContextWindowPacker.Instance -> Vais2.Agents.Core.NoopContextWindowPacker!
 static readonly Vais2.Agents.Core.NoopHistoryReducer.Instance -> Vais2.Agents.Core.NoopHistoryReducer!
 static readonly Vais2.Agents.Core.NullMemoryStore.Instance -> Vais2.Agents.Core.NullMemoryStore!
+static Vais2.Agents.Core.AggregatingToolRegistry.BuildAsync(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>? staticTools, System.Collections.Generic.IReadOnlyList<Vais2.Agents.IToolSource!>? sources, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais2.Agents.Core.AggregatingToolRegistry!>!
+static Vais2.Agents.Core.Tool.FromFunc<TInput, TOutput>(string! name, string! description, System.Func<TInput, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOutput>!>! handler) -> Vais2.Agents.ITool!
+static Vais2.Agents.Core.Tool.FromFunc<TOutput>(string! name, string! description, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TOutput>!>! handler) -> Vais2.Agents.ITool!
