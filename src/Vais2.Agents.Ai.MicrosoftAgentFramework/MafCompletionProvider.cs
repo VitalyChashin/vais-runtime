@@ -2,10 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
+using MeaiFunctionCallContent = Microsoft.Extensions.AI.FunctionCallContent;
+using MeaiFunctionResultContent = Microsoft.Extensions.AI.FunctionResultContent;
 using VaisChatRole = Vais2.Agents.AgentChatRole;
 
 namespace Vais2.Agents.Ai.MicrosoftAgentFramework;
@@ -25,6 +28,16 @@ namespace Vais2.Agents.Ai.MicrosoftAgentFramework;
 /// each call and intentionally supply no <see cref="AgentSession"/>. That keeps
 /// the neutral core as the single source of truth for conversation state —
 /// important for Orleans-backed grain persistence.
+/// </para>
+/// <para>
+/// <b>Tool-call behavior (v0.4+):</b> the agent is constructed with
+/// <c>UseProvidedChatClientAsIs = true</c> so MAF does NOT add its default
+/// <c>FunctionInvokingChatClient</c> wrapping. Tool calls surface as
+/// <see cref="MeaiFunctionCallContent"/> items on the response message and get
+/// mapped to <see cref="CompletionResponse.ToolCalls"/> for <c>StatefulAiAgent</c>'s
+/// loop to dispatch. Tool-using streaming is not supported through
+/// <c>StatefulAiAgent.StreamAsync</c> in v0.4 — if the model requests tools on a
+/// streaming call the deltas will be empty.
 /// </para>
 /// </remarks>
 public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompletionProvider
@@ -53,11 +66,12 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
     {
         ArgumentNullException.ThrowIfNull(chatClient);
 
-        // Wrap the chat client once with FunctionInvokingChatClient. MAF's
-        // ChatClientAgent requires it in the pipeline to auto-invoke tools;
-        // without tools in a given turn the wrapper passes through harmlessly,
-        // so we pay the wrapping cost once at construction and never again.
-        _chatClient = chatClient.AsBuilder().UseFunctionInvocation().Build();
+        // v0.4: we no longer wrap with UseFunctionInvocation(). Instead, we pass
+        // UseProvidedChatClientAsIs = true on the ChatClientAgentOptions so MAF
+        // does not inject its default FunctionInvokingChatClient middleware. Tool
+        // calls surface as MEAI FunctionCallContent items; StatefulAiAgent's
+        // outer loop dispatches them via IToolCallDispatcher.
+        _chatClient = chatClient;
         _agentName = agentName;
         _modelId = modelId ?? ResolveModelId(chatClient);
     }
@@ -75,9 +89,9 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         // Build a fresh MAF agent each call. Caching by (chatClient, instructions) is
         // a later optimisation — avoid it here to keep the adapter stateless and
         // obviously correct.
-        var agent = BuildAgent(request.SystemPrompt);
+        var agent = BuildAgent();
 
-        var messages = request.History.Select(ToMeai).ToList();
+        var messages = BuildMessages(request);
 
         var chatOptions = new ChatOptions
         {
@@ -106,7 +120,9 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
             completionTokens = (int?)usage.OutputTokenCount;
         }
 
-        return new CompletionResponse(text, _modelId, promptTokens, completionTokens);
+        var toolCalls = ExtractToolCalls(response.Messages);
+
+        return new CompletionResponse(text, _modelId, promptTokens, completionTokens, toolCalls);
     }
 
     /// <inheritdoc />
@@ -116,9 +132,9 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var agent = BuildAgent(request.SystemPrompt);
+        var agent = BuildAgent();
 
-        var messages = request.History.Select(ToMeai).ToList();
+        var messages = BuildMessages(request);
 
         var chatOptions = new ChatOptions
         {
@@ -134,9 +150,8 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
 
         // MAF's RunStreamingAsync emits AgentRunResponseUpdate items — each carries a Text fragment
-        // plus (typically only on the last item) the Usage block. The wrapping FunctionInvokingChatClient
-        // continues to auto-invoke tools on this path, so tool-calling streams work the same way
-        // tool-calling on the non-streaming path does.
+        // plus (typically only on the last item) the Usage block. With UseProvidedChatClientAsIs we
+        // don't auto-invoke tools here either; tool-using streaming is undefined in v0.4.
         await foreach (var update in agent
             .RunStreamingAsync(messages, session: null, options: options, cancellationToken: cancellationToken)
             .ConfigureAwait(false))
@@ -156,20 +171,123 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         }
     }
 
-    private ChatClientAgent BuildAgent(string? systemPrompt) =>
+    private ChatClientAgent BuildAgent() =>
         new(
             _chatClient,
-            name: _agentName,
-            instructions: systemPrompt,
-            description: "Vais2.Agents MAF-backed agent");
+            new ChatClientAgentOptions
+            {
+                Name = _agentName,
+                Description = "Vais2.Agents MAF-backed agent",
+                UseProvidedChatClientAsIs = true,
+            });
 
-    private static MeaiChatMessage ToMeai(ChatTurn turn) => turn.Role switch
+    // The options-shaped ChatClientAgent ctor doesn't carry `instructions`, so we
+    // front-load the system prompt as a System-role message. MAF will pass it along
+    // with the rest of the history to the underlying IChatClient on every call.
+    private static List<MeaiChatMessage> BuildMessages(CompletionRequest request)
     {
-        VaisChatRole.System => new MeaiChatMessage(MeaiChatRole.System, turn.Text),
-        VaisChatRole.User => new MeaiChatMessage(MeaiChatRole.User, turn.Text),
-        VaisChatRole.Assistant => new MeaiChatMessage(MeaiChatRole.Assistant, turn.Text),
-        _ => throw new ArgumentOutOfRangeException(nameof(turn), turn.Role, "Unsupported chat role."),
-    };
+        var messages = new List<MeaiChatMessage>();
+        if (!string.IsNullOrEmpty(request.SystemPrompt))
+        {
+            messages.Add(new MeaiChatMessage(MeaiChatRole.System, request.SystemPrompt));
+        }
+        foreach (var turn in request.History)
+        {
+            messages.Add(ToMeai(turn));
+        }
+        return messages;
+    }
+
+    private static MeaiChatMessage ToMeai(ChatTurn turn)
+    {
+        switch (turn.Role)
+        {
+            case VaisChatRole.System:
+                return new MeaiChatMessage(MeaiChatRole.System, turn.Text);
+            case VaisChatRole.User:
+                return new MeaiChatMessage(MeaiChatRole.User, turn.Text);
+            case VaisChatRole.Assistant:
+                if (turn.ToolCalls is { Count: > 0 } calls)
+                {
+                    var contents = new List<AIContent>();
+                    if (!string.IsNullOrEmpty(turn.Text))
+                    {
+                        contents.Add(new TextContent(turn.Text));
+                    }
+                    foreach (var call in calls)
+                    {
+                        contents.Add(new MeaiFunctionCallContent(
+                            callId: call.CallId,
+                            name: call.ToolName,
+                            arguments: JsonElementToDictionary(call.Arguments)));
+                    }
+                    return new MeaiChatMessage(MeaiChatRole.Assistant, contents);
+                }
+                return new MeaiChatMessage(MeaiChatRole.Assistant, turn.Text);
+            case VaisChatRole.Tool:
+                return new MeaiChatMessage(
+                    MeaiChatRole.Tool,
+                    new List<AIContent>
+                    {
+                        new MeaiFunctionResultContent(
+                            callId: turn.ToolCallId ?? string.Empty,
+                            result: turn.Text),
+                    });
+            default:
+                throw new ArgumentOutOfRangeException(nameof(turn), turn.Role, "Unsupported chat role.");
+        }
+    }
+
+    private static IReadOnlyList<ToolCallRequest>? ExtractToolCalls(IEnumerable<MeaiChatMessage> messages)
+    {
+        List<ToolCallRequest>? result = null;
+        foreach (var message in messages)
+        {
+            foreach (var content in message.Contents)
+            {
+                if (content is MeaiFunctionCallContent call)
+                {
+                    result ??= new List<ToolCallRequest>();
+                    result.Add(new ToolCallRequest(
+                        ToolName: call.Name,
+                        Arguments: SerializeArguments(call.Arguments),
+                        CallId: call.CallId));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static JsonElement SerializeArguments(IDictionary<string, object?>? arguments)
+    {
+        if (arguments is null || arguments.Count == 0)
+        {
+            return JsonDocument.Parse("{}").RootElement;
+        }
+        return JsonSerializer.SerializeToElement(arguments);
+    }
+
+    private static Dictionary<string, object?>? JsonElementToDictionary(JsonElement arguments)
+    {
+        if (arguments.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        var result = new Dictionary<string, object?>();
+        foreach (var prop in arguments.EnumerateObject())
+        {
+            result[prop.Name] = prop.Value.ValueKind switch
+            {
+                JsonValueKind.String => prop.Value.GetString(),
+                JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? (object?)l : prop.Value.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => prop.Value.ToString(),
+            };
+        }
+        return result;
+    }
 
     private static string ResolveModelId(IChatClient client)
     {
