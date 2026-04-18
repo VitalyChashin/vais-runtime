@@ -101,4 +101,23 @@ public sealed class StatefulAgentOptions
     /// unchanged, preserving pre-0.4 behaviour).
     /// </summary>
     public IHistoryReducer? HistoryReducer { get; init; }
+
+    /// <summary>
+    /// Ordered per-turn context contributors. Each runs once per turn; the host merges every
+    /// <see cref="ContextContribution"/> into the candidate <see cref="CompletionRequest"/>
+    /// before the filter chain and the provider call. Default: empty (no providers).
+    /// </summary>
+    /// <remarks>
+    /// Provider exceptions propagate and fail the turn; wrap providers yourself if swallow
+    /// semantics are wanted. Multiple providers' <see cref="ContextContribution.SystemPromptAddendum"/>
+    /// values are concatenated in provider order with <c>"\n\n"</c> separators.
+    /// </remarks>
+    public IReadOnlyList<IContextProvider> ContextProviders { get; init; } = Array.Empty<IContextProvider>();
+
+    /// <summary>
+    /// Runs after all <see cref="ContextProviders"/> have contributed, to fit the merged
+    /// candidate into whatever window the packer cares about. Default:
+    /// <see cref="NoopContextWindowPacker.Instance"/> (identity).
+    /// </summary>
+    public IContextWindowPacker? ContextWindowPacker { get; init; }
 }

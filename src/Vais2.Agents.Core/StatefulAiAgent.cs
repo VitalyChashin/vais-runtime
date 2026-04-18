@@ -42,6 +42,8 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly ResiliencePipeline _pipeline;
     private readonly IToolRegistry? _toolRegistry;
     private readonly IHistoryReducer _historyReducer;
+    private readonly IReadOnlyList<IContextProvider> _contextProviders;
+    private readonly IContextWindowPacker _contextWindowPacker;
     private readonly string? _agentName;
 
     /// <summary>
@@ -78,6 +80,8 @@ public sealed class StatefulAiAgent : IAiAgent
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
         _toolRegistry = options.ToolRegistry;
         _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
+        _contextProviders = options.ContextProviders;
+        _contextWindowPacker = options.ContextWindowPacker ?? NoopContextWindowPacker.Instance;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -112,12 +116,20 @@ public sealed class StatefulAiAgent : IAiAgent
         var snapshot = _session.History.ToArray();
         var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
-        var request = new CompletionRequest(
+        var candidate = new CompletionRequest(
             reduced,
             SystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
 
         var context = _contextAccessor.Current;
+
+        // Context-provider chain: each provider reads the candidate + returns
+        // a contribution the host merges into the request. Packer runs after
+        // all providers so it sees the final pre-filter shape.
+        candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
+        candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
+        var request = candidate;
+
         var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
@@ -224,12 +236,17 @@ public sealed class StatefulAiAgent : IAiAgent
         var snapshot = _session.History.ToArray();
         var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
-        var request = new CompletionRequest(
+        var candidate = new CompletionRequest(
             reduced,
             SystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
 
         var context = _contextAccessor.Current;
+
+        candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
+        candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
+        var request = candidate;
+
         var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
@@ -405,6 +422,86 @@ public sealed class StatefulAiAgent : IAiAgent
             activity.SetStatus(ActivityStatusCode.Error, failure.Message);
             activity.SetTag(AgenticTags.ErrorType, failure.GetType().Name);
         }
+    }
+
+    private async Task<CompletionRequest> ApplyContextProvidersAsync(
+        CompletionRequest candidate,
+        AgentContext ambient,
+        CancellationToken cancellationToken)
+    {
+        if (_contextProviders.Count == 0)
+        {
+            return candidate;
+        }
+
+        var invocation = new ContextInvocationContext(candidate, ambient, _session);
+        var systemPrompt = candidate.SystemPrompt;
+        List<ChatTurn>? historyAccum = null;
+        List<ITool>? toolsAccum = null;
+
+        foreach (var provider in _contextProviders)
+        {
+            // Exceptions propagate — providers are load-bearing; swallowing here
+            // would mask missing retrieval results. Consumers who want swallow
+            // semantics wrap with a resilience-handling provider.
+            var contribution = await provider.InvokeAsync(invocation, cancellationToken).ConfigureAwait(false);
+
+            if (!string.IsNullOrEmpty(contribution.SystemPromptAddendum))
+            {
+                systemPrompt = string.IsNullOrEmpty(systemPrompt)
+                    ? contribution.SystemPromptAddendum
+                    : systemPrompt + "\n\n" + contribution.SystemPromptAddendum;
+            }
+            if (contribution.InjectedHistory is { Count: > 0 } injected)
+            {
+                historyAccum ??= new List<ChatTurn>();
+                historyAccum.AddRange(injected);
+            }
+            if (contribution.AdditionalTools is { Count: > 0 } addTools)
+            {
+                toolsAccum ??= new List<ITool>();
+                toolsAccum.AddRange(addTools);
+            }
+        }
+
+        if (ReferenceEquals(systemPrompt, candidate.SystemPrompt) && historyAccum is null && toolsAccum is null)
+        {
+            return candidate;
+        }
+
+        IReadOnlyList<ChatTurn> finalHistory = candidate.History;
+        if (historyAccum is not null)
+        {
+            // Injected history appended AFTER session history — keeps the most
+            // recent user turn at the tail where models expect it. This is the
+            // canonical "here's some retrieved context, now here's the conversation"
+            // layering pattern.
+            var combined = new List<ChatTurn>(candidate.History.Count + historyAccum.Count);
+            combined.AddRange(candidate.History);
+            combined.AddRange(historyAccum);
+            finalHistory = combined;
+        }
+
+        IReadOnlyList<ITool>? finalTools = candidate.Tools;
+        if (toolsAccum is not null)
+        {
+            var combined = candidate.Tools is { Count: > 0 } existing
+                ? new List<ITool>(existing.Count + toolsAccum.Count)
+                : new List<ITool>(toolsAccum.Count);
+            if (candidate.Tools is { Count: > 0 } existingTools)
+            {
+                combined.AddRange(existingTools);
+            }
+            combined.AddRange(toolsAccum);
+            finalTools = combined;
+        }
+
+        return candidate with
+        {
+            History = finalHistory,
+            SystemPrompt = systemPrompt,
+            Tools = finalTools,
+        };
     }
 
     private Task<CompletionResponse> InvokeThroughFiltersAsync(

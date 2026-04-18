@@ -12,6 +12,8 @@ Vais2.Agents.Core.InMemoryMemoryStore.InMemoryMemoryStore() -> void
 Vais2.Agents.Core.InMemoryMemoryStore.ReadAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.MemoryItem?>
 Vais2.Agents.Core.InMemoryMemoryStore.SearchAsync(Vais2.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.MemorySearchResult!>!
 Vais2.Agents.Core.InMemoryMemoryStore.WriteAsync(Vais2.Agents.MemoryScope! scope, string! key, Vais2.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.NoopContextWindowPacker
+Vais2.Agents.Core.NoopContextWindowPacker.PackAsync(Vais2.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.CompletionRequest!>
 Vais2.Agents.Core.NoopHistoryReducer
 Vais2.Agents.Core.NoopHistoryReducer.ReduceAsync(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! history, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!>
 Vais2.Agents.Core.NullMemoryStore
@@ -19,6 +21,10 @@ Vais2.Agents.Core.NullMemoryStore.DeleteAsync(Vais2.Agents.MemoryScope! scope, s
 Vais2.Agents.Core.NullMemoryStore.ReadAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.MemoryItem?>
 Vais2.Agents.Core.NullMemoryStore.SearchAsync(Vais2.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.MemorySearchResult!>!
 Vais2.Agents.Core.NullMemoryStore.WriteAsync(Vais2.Agents.MemoryScope! scope, string! key, Vais2.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.StatefulAgentOptions.ContextProviders.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IContextProvider!>!
+Vais2.Agents.Core.StatefulAgentOptions.ContextProviders.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.ContextWindowPacker.get -> Vais2.Agents.IContextWindowPacker?
+Vais2.Agents.Core.StatefulAgentOptions.ContextWindowPacker.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.HistoryReducer.get -> Vais2.Agents.IHistoryReducer?
 Vais2.Agents.Core.StatefulAgentOptions.HistoryReducer.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.get -> Vais2.Agents.IMemoryStore?
@@ -26,5 +32,6 @@ Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.Session.get -> Vais2.Agents.IAgentSession?
 Vais2.Agents.Core.StatefulAgentOptions.Session.init -> void
 Vais2.Agents.Core.StatefulAiAgent.Session.get -> Vais2.Agents.IAgentSession!
+static readonly Vais2.Agents.Core.NoopContextWindowPacker.Instance -> Vais2.Agents.Core.NoopContextWindowPacker!
 static readonly Vais2.Agents.Core.NoopHistoryReducer.Instance -> Vais2.Agents.Core.NoopHistoryReducer!
 static readonly Vais2.Agents.Core.NullMemoryStore.Instance -> Vais2.Agents.Core.NullMemoryStore!

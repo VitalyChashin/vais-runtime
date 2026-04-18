@@ -1,4 +1,26 @@
 #nullable enable
+Vais2.Agents.ContextContribution
+Vais2.Agents.ContextContribution.<Clone>$() -> Vais2.Agents.ContextContribution!
+Vais2.Agents.ContextContribution.AdditionalTools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>?
+Vais2.Agents.ContextContribution.AdditionalTools.init -> void
+Vais2.Agents.ContextContribution.ContextContribution(string? SystemPromptAddendum = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? InjectedHistory = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>? AdditionalTools = null) -> void
+Vais2.Agents.ContextContribution.Deconstruct(out string? SystemPromptAddendum, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? InjectedHistory, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>? AdditionalTools) -> void
+Vais2.Agents.ContextContribution.Equals(Vais2.Agents.ContextContribution? other) -> bool
+Vais2.Agents.ContextContribution.InjectedHistory.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>?
+Vais2.Agents.ContextContribution.InjectedHistory.init -> void
+Vais2.Agents.ContextContribution.SystemPromptAddendum.get -> string?
+Vais2.Agents.ContextContribution.SystemPromptAddendum.init -> void
+Vais2.Agents.ContextInvocationContext
+Vais2.Agents.ContextInvocationContext.<Clone>$() -> Vais2.Agents.ContextInvocationContext!
+Vais2.Agents.ContextInvocationContext.AmbientContext.get -> Vais2.Agents.AgentContext!
+Vais2.Agents.ContextInvocationContext.AmbientContext.init -> void
+Vais2.Agents.ContextInvocationContext.Candidate.get -> Vais2.Agents.CompletionRequest!
+Vais2.Agents.ContextInvocationContext.Candidate.init -> void
+Vais2.Agents.ContextInvocationContext.ContextInvocationContext(Vais2.Agents.CompletionRequest! Candidate, Vais2.Agents.AgentContext! AmbientContext, Vais2.Agents.IAgentSession! Session) -> void
+Vais2.Agents.ContextInvocationContext.Deconstruct(out Vais2.Agents.CompletionRequest! Candidate, out Vais2.Agents.AgentContext! AmbientContext, out Vais2.Agents.IAgentSession! Session) -> void
+Vais2.Agents.ContextInvocationContext.Equals(Vais2.Agents.ContextInvocationContext? other) -> bool
+Vais2.Agents.ContextInvocationContext.Session.get -> Vais2.Agents.IAgentSession!
+Vais2.Agents.ContextInvocationContext.Session.init -> void
 Vais2.Agents.IAgentSession
 Vais2.Agents.IAgentSession.AgentId.get -> string!
 Vais2.Agents.IAgentSession.AppendAsync(Vais2.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
@@ -6,6 +28,10 @@ Vais2.Agents.IAgentSession.History.get -> System.Collections.Generic.IReadOnlyLi
 Vais2.Agents.IAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais2.Agents.IAgentSession.SessionId.get -> string!
 Vais2.Agents.IAiAgent.Session.get -> Vais2.Agents.IAgentSession!
+Vais2.Agents.IContextProvider
+Vais2.Agents.IContextProvider.InvokeAsync(Vais2.Agents.ContextInvocationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ContextContribution!>
+Vais2.Agents.IContextWindowPacker
+Vais2.Agents.IContextWindowPacker.PackAsync(Vais2.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.CompletionRequest!>
 Vais2.Agents.IHistoryReducer
 Vais2.Agents.IHistoryReducer.ReduceAsync(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! history, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!>
 Vais2.Agents.IMemoryStore
@@ -52,6 +78,12 @@ Vais2.Agents.MemorySearchResult.Key.init -> void
 Vais2.Agents.MemorySearchResult.MemorySearchResult(string! Key, Vais2.Agents.MemoryItem! Item, float? Score = null) -> void
 Vais2.Agents.MemorySearchResult.Score.get -> float?
 Vais2.Agents.MemorySearchResult.Score.init -> void
+override Vais2.Agents.ContextContribution.Equals(object? obj) -> bool
+override Vais2.Agents.ContextContribution.GetHashCode() -> int
+override Vais2.Agents.ContextContribution.ToString() -> string!
+override Vais2.Agents.ContextInvocationContext.Equals(object? obj) -> bool
+override Vais2.Agents.ContextInvocationContext.GetHashCode() -> int
+override Vais2.Agents.ContextInvocationContext.ToString() -> string!
 override Vais2.Agents.MemoryItem.Equals(object? obj) -> bool
 override Vais2.Agents.MemoryItem.GetHashCode() -> int
 override Vais2.Agents.MemoryItem.ToString() -> string!
@@ -61,6 +93,11 @@ override Vais2.Agents.MemoryScope.ToString() -> string!
 override Vais2.Agents.MemorySearchResult.Equals(object? obj) -> bool
 override Vais2.Agents.MemorySearchResult.GetHashCode() -> int
 override Vais2.Agents.MemorySearchResult.ToString() -> string!
+static Vais2.Agents.ContextContribution.Empty.get -> Vais2.Agents.ContextContribution!
+static Vais2.Agents.ContextContribution.operator !=(Vais2.Agents.ContextContribution? left, Vais2.Agents.ContextContribution? right) -> bool
+static Vais2.Agents.ContextContribution.operator ==(Vais2.Agents.ContextContribution? left, Vais2.Agents.ContextContribution? right) -> bool
+static Vais2.Agents.ContextInvocationContext.operator !=(Vais2.Agents.ContextInvocationContext? left, Vais2.Agents.ContextInvocationContext? right) -> bool
+static Vais2.Agents.ContextInvocationContext.operator ==(Vais2.Agents.ContextInvocationContext? left, Vais2.Agents.ContextInvocationContext? right) -> bool
 static Vais2.Agents.MemoryItem.operator !=(Vais2.Agents.MemoryItem? left, Vais2.Agents.MemoryItem? right) -> bool
 static Vais2.Agents.MemoryItem.operator ==(Vais2.Agents.MemoryItem? left, Vais2.Agents.MemoryItem? right) -> bool
 static Vais2.Agents.MemoryScope.operator !=(Vais2.Agents.MemoryScope? left, Vais2.Agents.MemoryScope? right) -> bool
