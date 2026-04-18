@@ -18,7 +18,7 @@ Vais2.Agents.Core.AggregatingSystemPromptComposer.ComposeAsync(Vais2.Agents.Agen
 Vais2.Agents.Core.FormatStringPromptTemplate
 Vais2.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
 Vais2.Agents.Core.DefaultToolCallDispatcher
-Vais2.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais2.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais2.Agents.IToolGuardrail!>? toolGuardrails = null) -> void
+Vais2.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais2.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais2.Agents.IToolGuardrail!>? toolGuardrails = null, Vais2.Agents.IAgentEventBus? eventBus = null) -> void
 Vais2.Agents.Core.DefaultToolCallDispatcher.DispatchAsync(Vais2.Agents.ToolCallRequest! request, Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ToolCallOutcome!>
 Vais2.Agents.Core.NoopContextWindowPacker
 Vais2.Agents.Core.NoopContextWindowPacker.PackAsync(Vais2.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.CompletionRequest!>

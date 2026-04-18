@@ -12,15 +12,15 @@ namespace Vais2.Agents;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Closed hierarchy: the Abstractions package defines exactly these three concrete
+/// Closed hierarchy: the Abstractions package defines exactly these six concrete
 /// shapes. Consumers pattern-match on subtype; adding a new subtype is an
 /// <em>unshipped</em> addition to Abstractions, not a subclass in downstream code.
 /// Keeps wire serialisation (Orleans, Redis streams) deterministic.
 /// </para>
 /// <para>
-/// Tool-invocation events are intentionally NOT yet represented — surfacing them
-/// requires adapter-side hooks inside SK's auto-invoke connector and MAF's
-/// <c>FunctionInvokingChatClient</c>. Deferred to a later milestone.
+/// Tool-invocation and guardrail events (<see cref="ToolCallStarted"/>,
+/// <see cref="ToolCallCompleted"/>, <see cref="GuardrailTriggered"/>) landed in
+/// v0.4 once <c>StatefulAiAgent</c> took over the outer tool-call loop.
 /// </para>
 /// </remarks>
 /// <param name="At">UTC timestamp when the event was emitted.</param>
@@ -74,4 +74,62 @@ public sealed record TurnFailed(
     string ErrorType,
     string ErrorMessage,
     TimeSpan Duration)
+    : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by <c>DefaultToolCallDispatcher</c> immediately before a tool's
+/// <see cref="ITool.InvokeAsync"/> is called. Paired 1:1 with a subsequent
+/// <see cref="ToolCallCompleted"/>.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient agent context at event-emission time.</param>
+/// <param name="CallId">Provider-assigned correlation id for this tool call.</param>
+/// <param name="ToolName">Name of the tool about to be invoked.</param>
+public sealed record ToolCallStarted(
+    DateTimeOffset At,
+    AgentContext Context,
+    string CallId,
+    string ToolName)
+    : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by <c>DefaultToolCallDispatcher</c> after a tool invocation resolves —
+/// either successfully, as a tool-exception-captured outcome (<see cref="Succeeded"/>
+/// false, <see cref="Error"/> set), or after an <c>AfterInvokeAsync</c> guardrail
+/// denial.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient agent context at event-emission time.</param>
+/// <param name="CallId">Correlation id matching <see cref="ToolCallStarted.CallId"/>.</param>
+/// <param name="ToolName">Name of the tool that was invoked.</param>
+/// <param name="Succeeded">True when the tool returned normally; false when it threw.</param>
+/// <param name="Error">Tool exception type name when <see cref="Succeeded"/> is false; null on success.</param>
+/// <param name="Duration">Wall-clock duration of the tool invocation.</param>
+public sealed record ToolCallCompleted(
+    DateTimeOffset At,
+    AgentContext Context,
+    string CallId,
+    string ToolName,
+    bool Succeeded,
+    string? Error,
+    TimeSpan Duration)
+    : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted when a guardrail returns <see cref="GuardrailDecision.Deny"/> at any
+/// of the three middleware layers. Fires once per denial, immediately before
+/// <see cref="AgentGuardrailDeniedException"/> propagates up and
+/// <see cref="TurnFailed"/> is emitted for the whole turn.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient agent context at event-emission time.</param>
+/// <param name="Layer">Which middleware layer raised the denial.</param>
+/// <param name="Decision">The decision the guardrail returned (currently always <see cref="GuardrailDecision.Deny"/>).</param>
+/// <param name="Reason">The operator-readable reason the guardrail supplied, if any.</param>
+public sealed record GuardrailTriggered(
+    DateTimeOffset At,
+    AgentContext Context,
+    GuardrailLayer Layer,
+    GuardrailDecision Decision,
+    string? Reason)
     : AgentEvent(At, Context);

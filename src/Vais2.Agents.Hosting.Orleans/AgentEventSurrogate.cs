@@ -16,6 +16,12 @@ public enum AgentEventKind
     Completed = 1,
     /// <summary><see cref="TurnFailed"/>.</summary>
     Failed = 2,
+    /// <summary><see cref="ToolCallStarted"/>.</summary>
+    ToolCallStarted = 3,
+    /// <summary><see cref="ToolCallCompleted"/>.</summary>
+    ToolCallCompleted = 4,
+    /// <summary><see cref="GuardrailTriggered"/>.</summary>
+    GuardrailTriggered = 5,
 }
 
 /// <summary>
@@ -60,19 +66,43 @@ public struct AgentEventSurrogate
     public int? CompletionTokens;
 
     /// <summary>
-    /// Wall-clock duration — populated for <see cref="AgentEventKind.Completed"/> and
-    /// <see cref="AgentEventKind.Failed"/>.
+    /// Wall-clock duration — populated for <see cref="AgentEventKind.Completed"/>,
+    /// <see cref="AgentEventKind.Failed"/>, and <see cref="AgentEventKind.ToolCallCompleted"/>.
     /// </summary>
     [Id(8)]
     public TimeSpan? Duration;
 
-    /// <summary>Error type — populated for <see cref="AgentEventKind.Failed"/>.</summary>
+    /// <summary>Error type — populated for <see cref="AgentEventKind.Failed"/> and failed <see cref="AgentEventKind.ToolCallCompleted"/>.</summary>
     [Id(9)]
     public string? ErrorType;
 
     /// <summary>Error message — populated for <see cref="AgentEventKind.Failed"/>.</summary>
     [Id(10)]
     public string? ErrorMessage;
+
+    /// <summary>Tool-call correlation id — populated for <see cref="AgentEventKind.ToolCallStarted"/> and <see cref="AgentEventKind.ToolCallCompleted"/>.</summary>
+    [Id(11)]
+    public string? CallId;
+
+    /// <summary>Tool name — populated for <see cref="AgentEventKind.ToolCallStarted"/> and <see cref="AgentEventKind.ToolCallCompleted"/>.</summary>
+    [Id(12)]
+    public string? ToolName;
+
+    /// <summary>Tool invocation success flag — populated for <see cref="AgentEventKind.ToolCallCompleted"/>.</summary>
+    [Id(13)]
+    public bool? Succeeded;
+
+    /// <summary>Guardrail layer — populated for <see cref="AgentEventKind.GuardrailTriggered"/>.</summary>
+    [Id(14)]
+    public GuardrailLayer? GuardrailLayer;
+
+    /// <summary>Guardrail decision — populated for <see cref="AgentEventKind.GuardrailTriggered"/>.</summary>
+    [Id(15)]
+    public GuardrailDecision? GuardrailDecision;
+
+    /// <summary>Guardrail reason — populated for <see cref="AgentEventKind.GuardrailTriggered"/>.</summary>
+    [Id(16)]
+    public string? GuardrailReason;
 }
 
 /// <summary>
@@ -108,6 +138,25 @@ internal static class AgentEventSurrogateHelpers
                 surrogate.ErrorType ?? string.Empty,
                 surrogate.ErrorMessage ?? string.Empty,
                 surrogate.Duration ?? TimeSpan.Zero),
+            AgentEventKind.ToolCallStarted => new ToolCallStarted(
+                surrogate.At,
+                context,
+                surrogate.CallId ?? string.Empty,
+                surrogate.ToolName ?? string.Empty),
+            AgentEventKind.ToolCallCompleted => new ToolCallCompleted(
+                surrogate.At,
+                context,
+                surrogate.CallId ?? string.Empty,
+                surrogate.ToolName ?? string.Empty,
+                surrogate.Succeeded ?? false,
+                surrogate.ErrorType,
+                surrogate.Duration ?? TimeSpan.Zero),
+            AgentEventKind.GuardrailTriggered => new GuardrailTriggered(
+                surrogate.At,
+                context,
+                surrogate.GuardrailLayer ?? Vais2.Agents.GuardrailLayer.Input,
+                surrogate.GuardrailDecision ?? Vais2.Agents.GuardrailDecision.Deny,
+                surrogate.GuardrailReason),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -143,6 +192,34 @@ internal static class AgentEventSurrogateHelpers
                 ErrorType = f.ErrorType,
                 ErrorMessage = f.ErrorMessage,
                 Duration = f.Duration,
+            },
+            ToolCallStarted s => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.ToolCallStarted,
+                At = s.At,
+                Context = contextSurrogate,
+                CallId = s.CallId,
+                ToolName = s.ToolName,
+            },
+            ToolCallCompleted c => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.ToolCallCompleted,
+                At = c.At,
+                Context = contextSurrogate,
+                CallId = c.CallId,
+                ToolName = c.ToolName,
+                Succeeded = c.Succeeded,
+                ErrorType = c.Error,
+                Duration = c.Duration,
+            },
+            GuardrailTriggered g => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.GuardrailTriggered,
+                At = g.At,
+                Context = contextSurrogate,
+                GuardrailLayer = g.Layer,
+                GuardrailDecision = g.Decision,
+                GuardrailReason = g.Reason,
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -207,5 +284,44 @@ public sealed class TurnFailedSurrogateConverter : IConverter<TurnFailed, AgentE
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in TurnFailed value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="ToolCallStarted"/>.</summary>
+[RegisterConverter]
+public sealed class ToolCallStartedSurrogateConverter : IConverter<ToolCallStarted, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public ToolCallStarted ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (ToolCallStarted)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in ToolCallStarted value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="ToolCallCompleted"/>.</summary>
+[RegisterConverter]
+public sealed class ToolCallCompletedSurrogateConverter : IConverter<ToolCallCompleted, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public ToolCallCompleted ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (ToolCallCompleted)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in ToolCallCompleted value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="GuardrailTriggered"/>.</summary>
+[RegisterConverter]
+public sealed class GuardrailTriggeredSurrogateConverter : IConverter<GuardrailTriggered, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public GuardrailTriggered ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (GuardrailTriggered)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in GuardrailTriggered value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

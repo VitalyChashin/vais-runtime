@@ -125,6 +125,105 @@ public sealed class OrleansAgentEventBusTests
     }
 
     [Fact]
+    public async Task Publishes_And_Subscribes_ToolCallStarted_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        ToolCallStarted? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is ToolCallStarted started)
+            {
+                observed = started;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new ToolCallStarted(
+            DateTimeOffset.UtcNow,
+            new AgentContext(UserId: "u"),
+            CallId: "call-42",
+            ToolName: "get_weather");
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.CallId.Should().Be("call-42");
+        observed.ToolName.Should().Be("get_weather");
+        observed.Context.UserId.Should().Be("u");
+    }
+
+    [Fact]
+    public async Task Publishes_And_Subscribes_ToolCallCompleted_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        ToolCallCompleted? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is ToolCallCompleted completed)
+            {
+                observed = completed;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new ToolCallCompleted(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty,
+            CallId: "call-7",
+            ToolName: "search",
+            Succeeded: false,
+            Error: "InvalidOperationException",
+            Duration: TimeSpan.FromMilliseconds(55));
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.CallId.Should().Be("call-7");
+        observed.ToolName.Should().Be("search");
+        observed.Succeeded.Should().BeFalse();
+        observed.Error.Should().Be("InvalidOperationException");
+        observed.Duration.Should().Be(TimeSpan.FromMilliseconds(55));
+    }
+
+    [Fact]
+    public async Task Publishes_And_Subscribes_GuardrailTriggered_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        GuardrailTriggered? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is GuardrailTriggered triggered)
+            {
+                observed = triggered;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new GuardrailTriggered(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty,
+            Layer: GuardrailLayer.Output,
+            Decision: GuardrailDecision.Deny,
+            Reason: "content-policy");
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.Layer.Should().Be(GuardrailLayer.Output);
+        observed.Decision.Should().Be(GuardrailDecision.Deny);
+        observed.Reason.Should().Be("content-policy");
+    }
+
+    [Fact]
     public async Task Dispose_Unsubscribes_And_Later_Events_Are_Not_Received()
     {
         var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);

@@ -150,9 +150,14 @@ public sealed class StatefulAiAgentGuardrailIntegrationTests
         Func<Task> act = async () => await agent.AskAsync("hi");
         await act.Should().ThrowAsync<AgentGuardrailDeniedException>();
 
-        events.Should().HaveCount(2);
+        events.Should().HaveCount(3);
         events[0].Should().BeOfType<TurnStarted>();
-        events[1].Should().BeOfType<TurnFailed>()
+        events[1].Should().BeOfType<GuardrailTriggered>()
+            .Which.Should().Match<GuardrailTriggered>(g =>
+                g.Layer == GuardrailLayer.Input &&
+                g.Decision == GuardrailDecision.Deny &&
+                g.Reason == "reason-text");
+        events[2].Should().BeOfType<TurnFailed>()
             .Which.ErrorType.Should().Be(nameof(AgentGuardrailDeniedException));
     }
 
