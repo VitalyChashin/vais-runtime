@@ -86,4 +86,19 @@ public sealed class StatefulAgentOptions
     /// (no-op). Bus failures are logged and swallowed; events never break the main flow.
     /// </summary>
     public IAgentEventBus? EventBus { get; init; }
+
+    /// <summary>
+    /// Optional long-term / working memory store. Exposed for consumers that wire memory-backed
+    /// context providers or custom filters; <see cref="StatefulAiAgent"/> does not consult this
+    /// field directly in v0.4 (it lands as a concern of the context-provider pillar). Default:
+    /// <see cref="NullMemoryStore.Instance"/> (no-op).
+    /// </summary>
+    public IMemoryStore? MemoryStore { get; init; }
+
+    /// <summary>
+    /// Optional reducer applied to the session's history before each turn's request is built.
+    /// Default: <see cref="NoopHistoryReducer.Instance"/> (identity — history passes through
+    /// unchanged, preserving pre-0.4 behaviour).
+    /// </summary>
+    public IHistoryReducer? HistoryReducer { get; init; }
 }

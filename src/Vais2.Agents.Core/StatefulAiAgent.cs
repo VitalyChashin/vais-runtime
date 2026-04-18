@@ -41,6 +41,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ResiliencePipeline _pipeline;
     private readonly IToolRegistry? _toolRegistry;
+    private readonly IHistoryReducer _historyReducer;
     private readonly string? _agentName;
 
     /// <summary>
@@ -76,6 +77,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
         _toolRegistry = options.ToolRegistry;
+        _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -108,9 +110,10 @@ public sealed class StatefulAiAgent : IAiAgent
         // session may keep mutating across turns; handing out the live reference
         // would race with the next call or allow an adapter to mutate our state.
         var snapshot = _session.History.ToArray();
+        var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
         var request = new CompletionRequest(
-            snapshot,
+            reduced,
             SystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
 
@@ -219,9 +222,10 @@ public sealed class StatefulAiAgent : IAiAgent
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
         var snapshot = _session.History.ToArray();
+        var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
         var request = new CompletionRequest(
-            snapshot,
+            reduced,
             SystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
 

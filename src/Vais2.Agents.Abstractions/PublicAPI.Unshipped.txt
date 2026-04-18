@@ -6,3 +6,64 @@ Vais2.Agents.IAgentSession.History.get -> System.Collections.Generic.IReadOnlyLi
 Vais2.Agents.IAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais2.Agents.IAgentSession.SessionId.get -> string!
 Vais2.Agents.IAiAgent.Session.get -> Vais2.Agents.IAgentSession!
+Vais2.Agents.IHistoryReducer
+Vais2.Agents.IHistoryReducer.ReduceAsync(System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>! history, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!>
+Vais2.Agents.IMemoryStore
+Vais2.Agents.IMemoryStore.DeleteAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais2.Agents.IMemoryStore.ReadAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.MemoryItem?>
+Vais2.Agents.IMemoryStore.SearchAsync(Vais2.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.MemorySearchResult!>!
+Vais2.Agents.IMemoryStore.WriteAsync(Vais2.Agents.MemoryScope! scope, string! key, Vais2.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.MemoryDurability
+Vais2.Agents.MemoryDurability.LongTerm = 1 -> Vais2.Agents.MemoryDurability
+Vais2.Agents.MemoryDurability.ShortTerm = 0 -> Vais2.Agents.MemoryDurability
+Vais2.Agents.MemoryDurability.Working = 2 -> Vais2.Agents.MemoryDurability
+Vais2.Agents.MemoryItem
+Vais2.Agents.MemoryItem.<Clone>$() -> Vais2.Agents.MemoryItem!
+Vais2.Agents.MemoryItem.Content.get -> string!
+Vais2.Agents.MemoryItem.Content.init -> void
+Vais2.Agents.MemoryItem.CreatedAt.get -> System.DateTimeOffset?
+Vais2.Agents.MemoryItem.CreatedAt.init -> void
+Vais2.Agents.MemoryItem.Deconstruct(out string! Content, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata, out System.DateTimeOffset? CreatedAt) -> void
+Vais2.Agents.MemoryItem.Equals(Vais2.Agents.MemoryItem? other) -> bool
+Vais2.Agents.MemoryItem.MemoryItem(string! Content, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null, System.DateTimeOffset? CreatedAt = null) -> void
+Vais2.Agents.MemoryItem.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais2.Agents.MemoryItem.Metadata.init -> void
+Vais2.Agents.MemoryScope
+Vais2.Agents.MemoryScope.<Clone>$() -> Vais2.Agents.MemoryScope!
+Vais2.Agents.MemoryScope.AgentId.get -> string?
+Vais2.Agents.MemoryScope.AgentId.init -> void
+Vais2.Agents.MemoryScope.Deconstruct(out string? SessionId, out string? AgentId, out string? TenantId, out Vais2.Agents.MemoryDurability Durability) -> void
+Vais2.Agents.MemoryScope.Durability.get -> Vais2.Agents.MemoryDurability
+Vais2.Agents.MemoryScope.Durability.init -> void
+Vais2.Agents.MemoryScope.Equals(Vais2.Agents.MemoryScope? other) -> bool
+Vais2.Agents.MemoryScope.MemoryScope(string? SessionId = null, string? AgentId = null, string? TenantId = null, Vais2.Agents.MemoryDurability Durability = Vais2.Agents.MemoryDurability.LongTerm) -> void
+Vais2.Agents.MemoryScope.SessionId.get -> string?
+Vais2.Agents.MemoryScope.SessionId.init -> void
+Vais2.Agents.MemoryScope.TenantId.get -> string?
+Vais2.Agents.MemoryScope.TenantId.init -> void
+Vais2.Agents.MemorySearchResult
+Vais2.Agents.MemorySearchResult.<Clone>$() -> Vais2.Agents.MemorySearchResult!
+Vais2.Agents.MemorySearchResult.Deconstruct(out string! Key, out Vais2.Agents.MemoryItem! Item, out float? Score) -> void
+Vais2.Agents.MemorySearchResult.Equals(Vais2.Agents.MemorySearchResult? other) -> bool
+Vais2.Agents.MemorySearchResult.Item.get -> Vais2.Agents.MemoryItem!
+Vais2.Agents.MemorySearchResult.Item.init -> void
+Vais2.Agents.MemorySearchResult.Key.get -> string!
+Vais2.Agents.MemorySearchResult.Key.init -> void
+Vais2.Agents.MemorySearchResult.MemorySearchResult(string! Key, Vais2.Agents.MemoryItem! Item, float? Score = null) -> void
+Vais2.Agents.MemorySearchResult.Score.get -> float?
+Vais2.Agents.MemorySearchResult.Score.init -> void
+override Vais2.Agents.MemoryItem.Equals(object? obj) -> bool
+override Vais2.Agents.MemoryItem.GetHashCode() -> int
+override Vais2.Agents.MemoryItem.ToString() -> string!
+override Vais2.Agents.MemoryScope.Equals(object? obj) -> bool
+override Vais2.Agents.MemoryScope.GetHashCode() -> int
+override Vais2.Agents.MemoryScope.ToString() -> string!
+override Vais2.Agents.MemorySearchResult.Equals(object? obj) -> bool
+override Vais2.Agents.MemorySearchResult.GetHashCode() -> int
+override Vais2.Agents.MemorySearchResult.ToString() -> string!
+static Vais2.Agents.MemoryItem.operator !=(Vais2.Agents.MemoryItem? left, Vais2.Agents.MemoryItem? right) -> bool
+static Vais2.Agents.MemoryItem.operator ==(Vais2.Agents.MemoryItem? left, Vais2.Agents.MemoryItem? right) -> bool
+static Vais2.Agents.MemoryScope.operator !=(Vais2.Agents.MemoryScope? left, Vais2.Agents.MemoryScope? right) -> bool
+static Vais2.Agents.MemoryScope.operator ==(Vais2.Agents.MemoryScope? left, Vais2.Agents.MemoryScope? right) -> bool
+static Vais2.Agents.MemorySearchResult.operator !=(Vais2.Agents.MemorySearchResult? left, Vais2.Agents.MemorySearchResult? right) -> bool
+static Vais2.Agents.MemorySearchResult.operator ==(Vais2.Agents.MemorySearchResult? left, Vais2.Agents.MemorySearchResult? right) -> bool
