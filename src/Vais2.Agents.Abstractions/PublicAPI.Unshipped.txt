@@ -363,3 +363,233 @@ static Vais2.Agents.MemorySearchResult.operator ==(Vais2.Agents.MemorySearchResu
 static Vais2.Agents.RunBudget.Unlimited.get -> Vais2.Agents.RunBudget!
 static Vais2.Agents.RunBudget.operator !=(Vais2.Agents.RunBudget? left, Vais2.Agents.RunBudget? right) -> bool
 static Vais2.Agents.RunBudget.operator ==(Vais2.Agents.RunBudget? left, Vais2.Agents.RunBudget? right) -> bool
+Vais2.Agents.AgentHandle
+Vais2.Agents.AgentHandle.<Clone>$() -> Vais2.Agents.AgentHandle!
+Vais2.Agents.AgentHandle.AgentHandle(string! AgentId, string! Version, string? InstanceId = null) -> void
+Vais2.Agents.AgentHandle.AgentId.get -> string!
+Vais2.Agents.AgentHandle.AgentId.init -> void
+Vais2.Agents.AgentHandle.Deconstruct(out string! AgentId, out string! Version, out string? InstanceId) -> void
+Vais2.Agents.AgentHandle.Equals(Vais2.Agents.AgentHandle? other) -> bool
+Vais2.Agents.AgentHandle.InstanceId.get -> string?
+Vais2.Agents.AgentHandle.InstanceId.init -> void
+Vais2.Agents.AgentHandle.Version.get -> string!
+Vais2.Agents.AgentHandle.Version.init -> void
+Vais2.Agents.AgentHandlerRef
+Vais2.Agents.AgentHandlerRef.<Clone>$() -> Vais2.Agents.AgentHandlerRef!
+Vais2.Agents.AgentHandlerRef.AgentHandlerRef(string! TypeName, string? AssemblyName = null) -> void
+Vais2.Agents.AgentHandlerRef.AssemblyName.get -> string?
+Vais2.Agents.AgentHandlerRef.AssemblyName.init -> void
+Vais2.Agents.AgentHandlerRef.Deconstruct(out string! TypeName, out string? AssemblyName) -> void
+Vais2.Agents.AgentHandlerRef.Equals(Vais2.Agents.AgentHandlerRef? other) -> bool
+Vais2.Agents.AgentHandlerRef.TypeName.get -> string!
+Vais2.Agents.AgentHandlerRef.TypeName.init -> void
+Vais2.Agents.AgentInvocationRequest
+Vais2.Agents.AgentInvocationRequest.<Clone>$() -> Vais2.Agents.AgentInvocationRequest!
+Vais2.Agents.AgentInvocationRequest.AgentInvocationRequest(string! Text, string? SessionId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Vais2.Agents.AgentInvocationRequest.Deconstruct(out string! Text, out string? SessionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Vais2.Agents.AgentInvocationRequest.Equals(Vais2.Agents.AgentInvocationRequest? other) -> bool
+Vais2.Agents.AgentInvocationRequest.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais2.Agents.AgentInvocationRequest.Metadata.init -> void
+Vais2.Agents.AgentInvocationRequest.SessionId.get -> string?
+Vais2.Agents.AgentInvocationRequest.SessionId.init -> void
+Vais2.Agents.AgentInvocationRequest.Text.get -> string!
+Vais2.Agents.AgentInvocationRequest.Text.init -> void
+Vais2.Agents.AgentInvocationResult
+Vais2.Agents.AgentInvocationResult.<Clone>$() -> Vais2.Agents.AgentInvocationResult!
+Vais2.Agents.AgentInvocationResult.AgentInvocationResult(string! Text, string? SessionId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Vais2.Agents.AgentInvocationResult.Deconstruct(out string! Text, out string? SessionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Vais2.Agents.AgentInvocationResult.Equals(Vais2.Agents.AgentInvocationResult? other) -> bool
+Vais2.Agents.AgentInvocationResult.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais2.Agents.AgentInvocationResult.Metadata.init -> void
+Vais2.Agents.AgentInvocationResult.SessionId.get -> string?
+Vais2.Agents.AgentInvocationResult.SessionId.init -> void
+Vais2.Agents.AgentInvocationResult.Text.get -> string!
+Vais2.Agents.AgentInvocationResult.Text.init -> void
+Vais2.Agents.AgentManifest
+Vais2.Agents.AgentManifest.<Clone>$() -> Vais2.Agents.AgentManifest!
+Vais2.Agents.AgentManifest.AgentManifest(string! Id, string! Version, Vais2.Agents.AgentHandlerRef! Handler, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ProtocolBinding!>! Protocols, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolRef!>! Tools, Vais2.Agents.MemoryRef? Memory = null, Vais2.Agents.IdentityRef? Identity = null, Vais2.Agents.AutoscalingSpec? Autoscaling = null, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais2.Agents.AgentManifest.Autoscaling.get -> Vais2.Agents.AutoscalingSpec?
+Vais2.Agents.AgentManifest.Autoscaling.init -> void
+Vais2.Agents.AgentManifest.Deconstruct(out string! Id, out string! Version, out Vais2.Agents.AgentHandlerRef! Handler, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ProtocolBinding!>! Protocols, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolRef!>! Tools, out Vais2.Agents.MemoryRef? Memory, out Vais2.Agents.IdentityRef? Identity, out Vais2.Agents.AutoscalingSpec? Autoscaling, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais2.Agents.AgentManifest.Description.get -> string?
+Vais2.Agents.AgentManifest.Description.init -> void
+Vais2.Agents.AgentManifest.Equals(Vais2.Agents.AgentManifest? other) -> bool
+Vais2.Agents.AgentManifest.Handler.get -> Vais2.Agents.AgentHandlerRef!
+Vais2.Agents.AgentManifest.Handler.init -> void
+Vais2.Agents.AgentManifest.Id.get -> string!
+Vais2.Agents.AgentManifest.Id.init -> void
+Vais2.Agents.AgentManifest.Identity.get -> Vais2.Agents.IdentityRef?
+Vais2.Agents.AgentManifest.Identity.init -> void
+Vais2.Agents.AgentManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais2.Agents.AgentManifest.Labels.init -> void
+Vais2.Agents.AgentManifest.Memory.get -> Vais2.Agents.MemoryRef?
+Vais2.Agents.AgentManifest.Memory.init -> void
+Vais2.Agents.AgentManifest.Protocols.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ProtocolBinding!>!
+Vais2.Agents.AgentManifest.Protocols.init -> void
+Vais2.Agents.AgentManifest.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolRef!>!
+Vais2.Agents.AgentManifest.Tools.init -> void
+Vais2.Agents.AgentManifest.Version.get -> string!
+Vais2.Agents.AgentManifest.Version.init -> void
+Vais2.Agents.AgentPrincipal
+Vais2.Agents.AgentPrincipal.<Clone>$() -> Vais2.Agents.AgentPrincipal!
+Vais2.Agents.AgentPrincipal.AgentPrincipal(string! Id, string? TenantId = null, System.Collections.Generic.IReadOnlyList<string!>? Scopes = null) -> void
+Vais2.Agents.AgentPrincipal.Deconstruct(out string! Id, out string? TenantId, out System.Collections.Generic.IReadOnlyList<string!>? Scopes) -> void
+Vais2.Agents.AgentPrincipal.Equals(Vais2.Agents.AgentPrincipal? other) -> bool
+Vais2.Agents.AgentPrincipal.Id.get -> string!
+Vais2.Agents.AgentPrincipal.Id.init -> void
+Vais2.Agents.AgentPrincipal.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais2.Agents.AgentPrincipal.Scopes.init -> void
+Vais2.Agents.AgentPrincipal.TenantId.get -> string?
+Vais2.Agents.AgentPrincipal.TenantId.init -> void
+Vais2.Agents.AgentSignal
+Vais2.Agents.AgentSignal.<Clone>$() -> Vais2.Agents.AgentSignal!
+Vais2.Agents.AgentSignal.AgentSignal(string! Kind, System.Text.Json.JsonElement Payload) -> void
+Vais2.Agents.AgentSignal.Deconstruct(out string! Kind, out System.Text.Json.JsonElement Payload) -> void
+Vais2.Agents.AgentSignal.Equals(Vais2.Agents.AgentSignal? other) -> bool
+Vais2.Agents.AgentSignal.Kind.get -> string!
+Vais2.Agents.AgentSignal.Kind.init -> void
+Vais2.Agents.AgentSignal.Payload.get -> System.Text.Json.JsonElement
+Vais2.Agents.AgentSignal.Payload.init -> void
+Vais2.Agents.AgentStatus
+Vais2.Agents.AgentStatus.Active = 1 -> Vais2.Agents.AgentStatus
+Vais2.Agents.AgentStatus.Idle = 2 -> Vais2.Agents.AgentStatus
+Vais2.Agents.AgentStatus.Paused = 3 -> Vais2.Agents.AgentStatus
+Vais2.Agents.AgentStatus.Terminated = 4 -> Vais2.Agents.AgentStatus
+Vais2.Agents.AgentStatus.Unknown = 0 -> Vais2.Agents.AgentStatus
+Vais2.Agents.AutoscalingSpec
+Vais2.Agents.AutoscalingSpec.<Clone>$() -> Vais2.Agents.AutoscalingSpec!
+Vais2.Agents.AutoscalingSpec.AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, string? Target = null) -> void
+Vais2.Agents.AutoscalingSpec.Deconstruct(out int MinReplicas, out int? MaxReplicas, out string? Target) -> void
+Vais2.Agents.AutoscalingSpec.Equals(Vais2.Agents.AutoscalingSpec? other) -> bool
+Vais2.Agents.AutoscalingSpec.MaxReplicas.get -> int?
+Vais2.Agents.AutoscalingSpec.MaxReplicas.init -> void
+Vais2.Agents.AutoscalingSpec.MinReplicas.get -> int
+Vais2.Agents.AutoscalingSpec.MinReplicas.init -> void
+Vais2.Agents.AutoscalingSpec.Target.get -> string?
+Vais2.Agents.AutoscalingSpec.Target.init -> void
+Vais2.Agents.IAgentIdentityProvider
+Vais2.Agents.IAgentIdentityProvider.AcquireOutboundAsync(string! agentId, string! credentialRef, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.OutboundCredential!>
+Vais2.Agents.IAgentIdentityProvider.AuthenticateInboundAsync(Vais2.Agents.AgentInvocationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentPrincipal!>
+Vais2.Agents.IAgentLifecycleManager
+Vais2.Agents.IAgentLifecycleManager.CancelAsync(Vais2.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.IAgentLifecycleManager.CreateAsync(Vais2.Agents.AgentManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentHandle!>
+Vais2.Agents.IAgentLifecycleManager.EvictAsync(Vais2.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.IAgentLifecycleManager.InvokeAsync(Vais2.Agents.AgentHandle! handle, Vais2.Agents.AgentInvocationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentInvocationResult!>
+Vais2.Agents.IAgentLifecycleManager.QueryAsync(Vais2.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentStatus>
+Vais2.Agents.IAgentLifecycleManager.SignalAsync(Vais2.Agents.AgentHandle! handle, Vais2.Agents.AgentSignal! signal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.IAgentLifecycleManager.UpdateAsync(Vais2.Agents.AgentHandle! handle, Vais2.Agents.AgentManifest! newManifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentHandle!>
+Vais2.Agents.IAgentRegistry
+Vais2.Agents.IAgentRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentManifest?>
+Vais2.Agents.IAgentRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.AgentManifest!>!
+Vais2.Agents.IdentityRef
+Vais2.Agents.IdentityRef.<Clone>$() -> Vais2.Agents.IdentityRef!
+Vais2.Agents.IdentityRef.Deconstruct(out string? InboundAuth, out string? OutboundCredentials) -> void
+Vais2.Agents.IdentityRef.Equals(Vais2.Agents.IdentityRef? other) -> bool
+Vais2.Agents.IdentityRef.IdentityRef(string? InboundAuth = null, string? OutboundCredentials = null) -> void
+Vais2.Agents.IdentityRef.InboundAuth.get -> string?
+Vais2.Agents.IdentityRef.InboundAuth.init -> void
+Vais2.Agents.IdentityRef.OutboundCredentials.get -> string?
+Vais2.Agents.IdentityRef.OutboundCredentials.init -> void
+Vais2.Agents.MemoryRef
+Vais2.Agents.MemoryRef.<Clone>$() -> Vais2.Agents.MemoryRef!
+Vais2.Agents.MemoryRef.ConnectionName.get -> string?
+Vais2.Agents.MemoryRef.ConnectionName.init -> void
+Vais2.Agents.MemoryRef.Deconstruct(out string! Provider, out string? ConnectionName) -> void
+Vais2.Agents.MemoryRef.Equals(Vais2.Agents.MemoryRef? other) -> bool
+Vais2.Agents.MemoryRef.MemoryRef(string! Provider, string? ConnectionName = null) -> void
+Vais2.Agents.MemoryRef.Provider.get -> string!
+Vais2.Agents.MemoryRef.Provider.init -> void
+Vais2.Agents.OutboundCredential
+Vais2.Agents.OutboundCredential.<Clone>$() -> Vais2.Agents.OutboundCredential!
+Vais2.Agents.OutboundCredential.Deconstruct(out string! Kind, out string! Value, out System.DateTimeOffset? ExpiresAt) -> void
+Vais2.Agents.OutboundCredential.Equals(Vais2.Agents.OutboundCredential? other) -> bool
+Vais2.Agents.OutboundCredential.ExpiresAt.get -> System.DateTimeOffset?
+Vais2.Agents.OutboundCredential.ExpiresAt.init -> void
+Vais2.Agents.OutboundCredential.Kind.get -> string!
+Vais2.Agents.OutboundCredential.Kind.init -> void
+Vais2.Agents.OutboundCredential.OutboundCredential(string! Kind, string! Value, System.DateTimeOffset? ExpiresAt = null) -> void
+Vais2.Agents.OutboundCredential.Value.get -> string!
+Vais2.Agents.OutboundCredential.Value.init -> void
+Vais2.Agents.ProtocolBinding
+Vais2.Agents.ProtocolBinding.<Clone>$() -> Vais2.Agents.ProtocolBinding!
+Vais2.Agents.ProtocolBinding.Deconstruct(out string! Kind, out string? Endpoint) -> void
+Vais2.Agents.ProtocolBinding.Endpoint.get -> string?
+Vais2.Agents.ProtocolBinding.Endpoint.init -> void
+Vais2.Agents.ProtocolBinding.Equals(Vais2.Agents.ProtocolBinding? other) -> bool
+Vais2.Agents.ProtocolBinding.Kind.get -> string!
+Vais2.Agents.ProtocolBinding.Kind.init -> void
+Vais2.Agents.ProtocolBinding.ProtocolBinding(string! Kind, string? Endpoint = null) -> void
+Vais2.Agents.ToolRef
+Vais2.Agents.ToolRef.<Clone>$() -> Vais2.Agents.ToolRef!
+Vais2.Agents.ToolRef.Deconstruct(out string! Name, out string? Source) -> void
+Vais2.Agents.ToolRef.Equals(Vais2.Agents.ToolRef? other) -> bool
+Vais2.Agents.ToolRef.Name.get -> string!
+Vais2.Agents.ToolRef.Name.init -> void
+Vais2.Agents.ToolRef.Source.get -> string?
+Vais2.Agents.ToolRef.Source.init -> void
+Vais2.Agents.ToolRef.ToolRef(string! Name, string? Source = null) -> void
+override Vais2.Agents.AgentHandle.Equals(object? obj) -> bool
+override Vais2.Agents.AgentHandle.GetHashCode() -> int
+override Vais2.Agents.AgentHandle.ToString() -> string!
+override Vais2.Agents.AgentHandlerRef.Equals(object? obj) -> bool
+override Vais2.Agents.AgentHandlerRef.GetHashCode() -> int
+override Vais2.Agents.AgentHandlerRef.ToString() -> string!
+override Vais2.Agents.AgentInvocationRequest.Equals(object? obj) -> bool
+override Vais2.Agents.AgentInvocationRequest.GetHashCode() -> int
+override Vais2.Agents.AgentInvocationRequest.ToString() -> string!
+override Vais2.Agents.AgentInvocationResult.Equals(object? obj) -> bool
+override Vais2.Agents.AgentInvocationResult.GetHashCode() -> int
+override Vais2.Agents.AgentInvocationResult.ToString() -> string!
+override Vais2.Agents.AgentManifest.Equals(object? obj) -> bool
+override Vais2.Agents.AgentManifest.GetHashCode() -> int
+override Vais2.Agents.AgentManifest.ToString() -> string!
+override Vais2.Agents.AgentPrincipal.Equals(object? obj) -> bool
+override Vais2.Agents.AgentPrincipal.GetHashCode() -> int
+override Vais2.Agents.AgentPrincipal.ToString() -> string!
+override Vais2.Agents.AgentSignal.Equals(object? obj) -> bool
+override Vais2.Agents.AgentSignal.GetHashCode() -> int
+override Vais2.Agents.AgentSignal.ToString() -> string!
+override Vais2.Agents.AutoscalingSpec.Equals(object? obj) -> bool
+override Vais2.Agents.AutoscalingSpec.GetHashCode() -> int
+override Vais2.Agents.AutoscalingSpec.ToString() -> string!
+override Vais2.Agents.IdentityRef.Equals(object? obj) -> bool
+override Vais2.Agents.IdentityRef.GetHashCode() -> int
+override Vais2.Agents.IdentityRef.ToString() -> string!
+override Vais2.Agents.MemoryRef.Equals(object? obj) -> bool
+override Vais2.Agents.MemoryRef.GetHashCode() -> int
+override Vais2.Agents.MemoryRef.ToString() -> string!
+override Vais2.Agents.OutboundCredential.Equals(object? obj) -> bool
+override Vais2.Agents.OutboundCredential.GetHashCode() -> int
+override Vais2.Agents.OutboundCredential.ToString() -> string!
+override Vais2.Agents.ProtocolBinding.Equals(object? obj) -> bool
+override Vais2.Agents.ProtocolBinding.GetHashCode() -> int
+override Vais2.Agents.ProtocolBinding.ToString() -> string!
+override Vais2.Agents.ToolRef.Equals(object? obj) -> bool
+override Vais2.Agents.ToolRef.GetHashCode() -> int
+override Vais2.Agents.ToolRef.ToString() -> string!
+static Vais2.Agents.AgentHandle.operator !=(Vais2.Agents.AgentHandle? left, Vais2.Agents.AgentHandle? right) -> bool
+static Vais2.Agents.AgentHandle.operator ==(Vais2.Agents.AgentHandle? left, Vais2.Agents.AgentHandle? right) -> bool
+static Vais2.Agents.AgentHandlerRef.operator !=(Vais2.Agents.AgentHandlerRef? left, Vais2.Agents.AgentHandlerRef? right) -> bool
+static Vais2.Agents.AgentHandlerRef.operator ==(Vais2.Agents.AgentHandlerRef? left, Vais2.Agents.AgentHandlerRef? right) -> bool
+static Vais2.Agents.AgentInvocationRequest.operator !=(Vais2.Agents.AgentInvocationRequest? left, Vais2.Agents.AgentInvocationRequest? right) -> bool
+static Vais2.Agents.AgentInvocationRequest.operator ==(Vais2.Agents.AgentInvocationRequest? left, Vais2.Agents.AgentInvocationRequest? right) -> bool
+static Vais2.Agents.AgentInvocationResult.operator !=(Vais2.Agents.AgentInvocationResult? left, Vais2.Agents.AgentInvocationResult? right) -> bool
+static Vais2.Agents.AgentInvocationResult.operator ==(Vais2.Agents.AgentInvocationResult? left, Vais2.Agents.AgentInvocationResult? right) -> bool
+static Vais2.Agents.AgentManifest.operator !=(Vais2.Agents.AgentManifest? left, Vais2.Agents.AgentManifest? right) -> bool
+static Vais2.Agents.AgentManifest.operator ==(Vais2.Agents.AgentManifest? left, Vais2.Agents.AgentManifest? right) -> bool
+static Vais2.Agents.AgentPrincipal.operator !=(Vais2.Agents.AgentPrincipal? left, Vais2.Agents.AgentPrincipal? right) -> bool
+static Vais2.Agents.AgentPrincipal.operator ==(Vais2.Agents.AgentPrincipal? left, Vais2.Agents.AgentPrincipal? right) -> bool
+static Vais2.Agents.AgentSignal.operator !=(Vais2.Agents.AgentSignal? left, Vais2.Agents.AgentSignal? right) -> bool
+static Vais2.Agents.AgentSignal.operator ==(Vais2.Agents.AgentSignal? left, Vais2.Agents.AgentSignal? right) -> bool
+static Vais2.Agents.AutoscalingSpec.operator !=(Vais2.Agents.AutoscalingSpec? left, Vais2.Agents.AutoscalingSpec? right) -> bool
+static Vais2.Agents.AutoscalingSpec.operator ==(Vais2.Agents.AutoscalingSpec? left, Vais2.Agents.AutoscalingSpec? right) -> bool
+static Vais2.Agents.IdentityRef.operator !=(Vais2.Agents.IdentityRef? left, Vais2.Agents.IdentityRef? right) -> bool
+static Vais2.Agents.IdentityRef.operator ==(Vais2.Agents.IdentityRef? left, Vais2.Agents.IdentityRef? right) -> bool
+static Vais2.Agents.MemoryRef.operator !=(Vais2.Agents.MemoryRef? left, Vais2.Agents.MemoryRef? right) -> bool
+static Vais2.Agents.MemoryRef.operator ==(Vais2.Agents.MemoryRef? left, Vais2.Agents.MemoryRef? right) -> bool
+static Vais2.Agents.OutboundCredential.operator !=(Vais2.Agents.OutboundCredential? left, Vais2.Agents.OutboundCredential? right) -> bool
+static Vais2.Agents.OutboundCredential.operator ==(Vais2.Agents.OutboundCredential? left, Vais2.Agents.OutboundCredential? right) -> bool
+static Vais2.Agents.ProtocolBinding.operator !=(Vais2.Agents.ProtocolBinding? left, Vais2.Agents.ProtocolBinding? right) -> bool
+static Vais2.Agents.ProtocolBinding.operator ==(Vais2.Agents.ProtocolBinding? left, Vais2.Agents.ProtocolBinding? right) -> bool
+static Vais2.Agents.ToolRef.operator !=(Vais2.Agents.ToolRef? left, Vais2.Agents.ToolRef? right) -> bool
+static Vais2.Agents.ToolRef.operator ==(Vais2.Agents.ToolRef? left, Vais2.Agents.ToolRef? right) -> bool

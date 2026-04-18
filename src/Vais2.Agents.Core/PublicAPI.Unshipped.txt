@@ -6,6 +6,12 @@ Vais2.Agents.Core.InMemoryAgentSession.History.get -> System.Collections.Generic
 Vais2.Agents.Core.InMemoryAgentSession.InMemoryAgentSession(string! agentId, string? sessionId = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? initialHistory = null) -> void
 Vais2.Agents.Core.InMemoryAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais2.Agents.Core.InMemoryAgentSession.SessionId.get -> string!
+Vais2.Agents.Core.InMemoryAgentRegistry
+Vais2.Agents.Core.InMemoryAgentRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.AgentManifest?>
+Vais2.Agents.Core.InMemoryAgentRegistry.InMemoryAgentRegistry() -> void
+Vais2.Agents.Core.InMemoryAgentRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.AgentManifest!>!
+Vais2.Agents.Core.InMemoryAgentRegistry.Register(Vais2.Agents.AgentManifest! manifest) -> Vais2.Agents.AgentManifest!
+Vais2.Agents.Core.InMemoryAgentRegistry.Remove(string! id, string! version) -> bool
 Vais2.Agents.Core.InMemoryMemoryStore
 Vais2.Agents.Core.InMemoryMemoryStore.DeleteAsync(Vais2.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Vais2.Agents.Core.InMemoryMemoryStore.InMemoryMemoryStore() -> void
