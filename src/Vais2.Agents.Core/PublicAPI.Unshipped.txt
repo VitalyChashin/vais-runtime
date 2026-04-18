@@ -1,1 +1,3 @@
 #nullable enable
+Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>?
+Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.init -> void

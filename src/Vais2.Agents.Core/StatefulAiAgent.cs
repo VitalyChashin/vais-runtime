@@ -66,6 +66,11 @@ public sealed class StatefulAiAgent : IAiAgent
         _agentName = options.AgentName;
 
         SystemPrompt = options.SystemPrompt;
+
+        if (options.InitialHistory is { Count: > 0 } seed)
+        {
+            _history.AddRange(seed);
+        }
     }
 
     /// <inheritdoc />

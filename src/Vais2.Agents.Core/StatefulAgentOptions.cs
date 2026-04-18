@@ -53,4 +53,13 @@ public sealed class StatefulAgentOptions
     /// auto-invocation enabled. Null means the agent operates without tools.
     /// </summary>
     public IToolRegistry? ToolRegistry { get; init; }
+
+    /// <summary>
+    /// Optional history to seed the agent with at construction. Intended for hosts that
+    /// persist chat state externally (e.g. Orleans grains, a database-backed history store)
+    /// and reconstruct <see cref="StatefulAiAgent"/> on activation. The supplied turns are
+    /// copied into the agent's internal history list in order; callers may safely hand in
+    /// a snapshot and mutate their source afterwards.
+    /// </summary>
+    public IReadOnlyList<ChatTurn>? InitialHistory { get; init; }
 }
