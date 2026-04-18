@@ -3,3 +3,4 @@ Vais2.Agents.Ai.SemanticKernel.SkCompletionProvider
 Vais2.Agents.Ai.SemanticKernel.SkCompletionProvider.CompleteAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais2.Agents.CompletionResponse!>!
 Vais2.Agents.Ai.SemanticKernel.SkCompletionProvider.ProviderName.get -> string!
 Vais2.Agents.Ai.SemanticKernel.SkCompletionProvider.SkCompletionProvider(Microsoft.SemanticKernel.Kernel! kernel) -> void
+Vais2.Agents.Ai.SemanticKernel.SkCompletionProvider.StreamAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.CompletionUpdate!>!

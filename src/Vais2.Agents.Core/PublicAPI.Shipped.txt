@@ -6,15 +6,28 @@ Vais2.Agents.Core.AsyncLocalAgentContextAccessor
 Vais2.Agents.Core.AsyncLocalAgentContextAccessor.AsyncLocalAgentContextAccessor() -> void
 Vais2.Agents.Core.AsyncLocalAgentContextAccessor.Current.get -> Vais2.Agents.AgentContext!
 Vais2.Agents.Core.AsyncLocalAgentContextAccessor.Push(Vais2.Agents.AgentContext! context) -> System.IDisposable!
+Vais2.Agents.Core.NullAgentEventBus
+Vais2.Agents.Core.NullAgentEventBus.PublishAsync(Vais2.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.NullAgentEventBus.Subscribe(System.Func<Vais2.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
 Vais2.Agents.Core.NullUsageSink
 Vais2.Agents.Core.NullUsageSink.ReportAsync(Vais2.Agents.UsageRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.RoundRobinOrchestrator
+Vais2.Agents.Core.RoundRobinOrchestrator.RoundRobinOrchestrator(System.Collections.Generic.IReadOnlyList<Vais2.Agents.AgentParticipant!>! participants, int maxRounds, Vais2.Agents.Core.TerminationPredicate? terminate = null) -> void
+Vais2.Agents.Core.RoundRobinOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.OrchestrationStep!>!
+Vais2.Agents.Core.SequentialOrchestrator
+Vais2.Agents.Core.SequentialOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.OrchestrationStep!>!
+Vais2.Agents.Core.SequentialOrchestrator.SequentialOrchestrator(System.Collections.Generic.IReadOnlyList<Vais2.Agents.AgentParticipant!>! participants) -> void
 Vais2.Agents.Core.StatefulAgentOptions
 Vais2.Agents.Core.StatefulAgentOptions.AgentName.get -> string?
 Vais2.Agents.Core.StatefulAgentOptions.AgentName.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.ContextAccessor.get -> Vais2.Agents.IAgentContextAccessor?
 Vais2.Agents.Core.StatefulAgentOptions.ContextAccessor.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.EventBus.get -> Vais2.Agents.IAgentEventBus?
+Vais2.Agents.Core.StatefulAgentOptions.EventBus.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.Filters.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IAgentFilter!>!
 Vais2.Agents.Core.StatefulAgentOptions.Filters.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>?
+Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.ResiliencePipeline.get -> Polly.ResiliencePipeline?
 Vais2.Agents.Core.StatefulAgentOptions.ResiliencePipeline.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.StatefulAgentOptions() -> void
@@ -29,8 +42,10 @@ Vais2.Agents.Core.StatefulAiAgent.AskAsync(string! userMessage, System.Threading
 Vais2.Agents.Core.StatefulAiAgent.History.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!
 Vais2.Agents.Core.StatefulAiAgent.Reset() -> void
 Vais2.Agents.Core.StatefulAiAgent.StatefulAiAgent(Vais2.Agents.ICompletionProvider! provider, Vais2.Agents.Core.StatefulAgentOptions? options = null, Microsoft.Extensions.Logging.ILogger<Vais2.Agents.Core.StatefulAiAgent!>? logger = null) -> void
+Vais2.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
 Vais2.Agents.Core.StatefulAiAgent.SystemPrompt.get -> string?
 Vais2.Agents.Core.StatefulAiAgent.SystemPrompt.set -> void
+Vais2.Agents.Core.TerminationPredicate
 const Vais2.Agents.Core.AgenticDiagnostics.ActivitySourceName = "Vais2.Agents" -> string!
 const Vais2.Agents.Core.AgenticDiagnostics.MeterName = "Vais2.Agents" -> string!
 const Vais2.Agents.Core.AgenticMetrics.OperationDuration = "gen_ai.client.operation.duration" -> string!
@@ -48,4 +63,6 @@ const Vais2.Agents.Core.AgenticTags.GenAiUsageOutputTokens = "gen_ai.usage.outpu
 const Vais2.Agents.Core.AgenticTags.TenantId = "vais2.tenant.id" -> string!
 const Vais2.Agents.Core.AgenticTags.UserId = "vais2.user.id" -> string!
 static readonly Vais2.Agents.Core.AgenticDiagnostics.ActivitySource -> System.Diagnostics.ActivitySource!
+static readonly Vais2.Agents.Core.NullAgentEventBus.Instance -> Vais2.Agents.Core.NullAgentEventBus!
 static readonly Vais2.Agents.Core.NullUsageSink.Instance -> Vais2.Agents.Core.NullUsageSink!
+virtual Vais2.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais2.Agents.OrchestrationStep!>! steps) -> bool
