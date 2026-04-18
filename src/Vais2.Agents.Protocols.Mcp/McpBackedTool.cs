@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace Vais2.Agents.Protocols.Mcp;
 
@@ -13,11 +14,11 @@ namespace Vais2.Agents.Protocols.Mcp;
 /// </summary>
 internal sealed class McpBackedTool : ITool
 {
-    private readonly IMcpClient _client;
+    private readonly McpClient _client;
     private readonly McpClientTool _tool;
     private readonly JsonSerializerOptions? _serializerOptions;
 
-    public McpBackedTool(IMcpClient client, McpClientTool tool, JsonSerializerOptions? serializerOptions)
+    public McpBackedTool(McpClient client, McpClientTool tool, JsonSerializerOptions? serializerOptions)
     {
         _client = client;
         _tool = tool;
@@ -34,16 +35,16 @@ internal sealed class McpBackedTool : ITool
     {
         var args = ToDictionary(arguments);
 
-        var response = await _client.CallToolAsync(
+        var result = await _client.CallToolAsync(
             Name,
             args,
             progress: null,
-            serializerOptions: _serializerOptions,
+            options: McpToolSource.BuildRequestOptions(_serializerOptions),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var text = ConcatenateTextContent(response.Content);
+        var text = ConcatenateTextContent(result.Content);
 
-        if (response.IsError == true)
+        if (result.IsError == true)
         {
             // Surface as a thrown exception so DefaultToolCallDispatcher captures it as
             // ToolCallOutcome.Error and feeds the error back to the model — same convention
@@ -76,7 +77,7 @@ internal sealed class McpBackedTool : ITool
         return dict;
     }
 
-    private static string ConcatenateTextContent(IReadOnlyList<ModelContextProtocol.Protocol.Types.Content>? content)
+    private static string ConcatenateTextContent(IList<ContentBlock>? content)
     {
         if (content is null || content.Count == 0)
         {
@@ -86,19 +87,14 @@ internal sealed class McpBackedTool : ITool
         var sb = new StringBuilder();
         foreach (var item in content)
         {
-            if (!string.Equals(item.Type, "text", StringComparison.Ordinal))
+            if (item is TextContentBlock text && !string.IsNullOrEmpty(text.Text))
             {
                 // Image / audio / resource blocks are ignored in v0.4.
-                continue;
-            }
-
-            if (!string.IsNullOrEmpty(item.Text))
-            {
                 if (sb.Length > 0)
                 {
                     sb.Append('\n');
                 }
-                sb.Append(item.Text);
+                sb.Append(text.Text);
             }
         }
         return sb.ToString();

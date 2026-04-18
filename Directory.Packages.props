@@ -26,8 +26,8 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="MCP (Vais2.Agents.Protocols.Mcp). Preview-pinned — latest stable 1.x isn't in our local mirror and our NuGet.config clears global sources. Bump with design-partner sync.">
-    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.10" />
+  <ItemGroup Label="MCP (Vais2.Agents.Protocols.Mcp). Stable 1.2.0 on nuget.org. ModelContextProtocol.Core keeps transitive deps minimal (no hosting extensions).">
+    <PackageVersion Include="ModelContextProtocol.Core" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup Label="A2A (Vais2.Agents.Protocols.A2A). Preview-pinned for the same reason as MCP — local mirror only has 0.3.1-preview.">
