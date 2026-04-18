@@ -26,9 +26,9 @@ public sealed class AiAgentGrainTests
 
             var history = await grain.GetHistoryAsync();
             history.Should().HaveCount(2);
-            history[0].Role.Should().Be(ChatRole.User);
+            history[0].Role.Should().Be(AgentChatRole.User);
             history[0].Text.Should().Be("hello");
-            history[1].Role.Should().Be(ChatRole.Assistant);
+            history[1].Role.Should().Be(AgentChatRole.Assistant);
             history[1].Text.Should().Be("history-size=1");
         }
         finally

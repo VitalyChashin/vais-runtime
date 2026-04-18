@@ -12,7 +12,7 @@ public struct ChatTurnSurrogate
 {
     /// <summary>Role of the turn speaker.</summary>
     [Id(0)]
-    public ChatRole Role;
+    public AgentChatRole Role;
 
     /// <summary>Turn text content.</summary>
     [Id(1)]

@@ -18,7 +18,7 @@ namespace Vais2.Agents.Core;
 /// encoded as assistant turns of the form <c>"[AgentName] text"</c>. Mixing the
 /// speaker's name into the text (rather than using a per-turn role) is the only
 /// stack-neutral option: <see cref="ChatTurn"/> has no "author" field beyond
-/// <see cref="ChatRole"/>, and different providers interpret multi-assistant
+/// <see cref="AgentChatRole"/>, and different providers interpret multi-assistant
 /// conversations differently. The prefix keeps things explicit.
 /// </para>
 /// <para>
@@ -107,11 +107,11 @@ public sealed class RoundRobinOrchestrator : IAgentOrchestrator
     {
         var turns = new List<ChatTurn>(capacity: steps.Count + 1)
         {
-            new(ChatRole.User, task),
+            new(AgentChatRole.User, task),
         };
         foreach (var step in steps)
         {
-            turns.Add(new ChatTurn(ChatRole.Assistant, $"[{step.AgentName}] {step.Text}"));
+            turns.Add(new ChatTurn(AgentChatRole.Assistant, $"[{step.AgentName}] {step.Text}"));
         }
         return turns;
     }

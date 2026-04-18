@@ -41,7 +41,7 @@ public sealed class StreamingParityTests
         collected.Should().Equal(ScriptedChunks);
         string.Concat(collected).Should().Be("Hello, world!");
         agent.History.Should().HaveCount(2);
-        agent.History[1].Should().Be(new ChatTurn(ChatRole.Assistant, "Hello, world!"));
+        agent.History[1].Should().Be(new ChatTurn(AgentChatRole.Assistant, "Hello, world!"));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class StreamingParityTests
         collected.Should().Equal(ScriptedChunks);
         string.Concat(collected).Should().Be("Hello, world!");
         agent.History.Should().HaveCount(2);
-        agent.History[1].Should().Be(new ChatTurn(ChatRole.Assistant, "Hello, world!"));
+        agent.History[1].Should().Be(new ChatTurn(AgentChatRole.Assistant, "Hello, world!"));
     }
 
     [Fact]

@@ -128,13 +128,13 @@ public sealed class RoundRobinOrchestratorTests
         // A was the first participant — sees only the user task.
         a.ReceivedHistories.Should().ContainSingle();
         a.ReceivedHistories[0].Select(t => (t.Role, t.Text)).Should().Equal(
-            (ChatRole.User, "discuss"));
+            (AgentChatRole.User, "discuss"));
 
         // B saw the same user task + A's labeled prior reply.
         b.ReceivedHistories.Should().ContainSingle();
         b.ReceivedHistories[0].Select(t => (t.Role, t.Text)).Should().Equal(
-            (ChatRole.User, "discuss"),
-            (ChatRole.Assistant, "[A] hello"));
+            (AgentChatRole.User, "discuss"),
+            (AgentChatRole.Assistant, "[A] hello"));
     }
 
     [Fact]
@@ -195,7 +195,7 @@ internal sealed class RecordingProvider : ICompletionProvider
     public Task<CompletionResponse> CompleteAsync(CompletionRequest request, CancellationToken cancellationToken = default)
     {
         // The most recent user turn is what this provider treats as its "input".
-        var userMsg = request.History.LastOrDefault(t => t.Role == ChatRole.User)?.Text ?? string.Empty;
+        var userMsg = request.History.LastOrDefault(t => t.Role == AgentChatRole.User)?.Text ?? string.Empty;
         ReceivedUserMessages.Add(userMsg);
         ReceivedSystemPrompts.Add(request.SystemPrompt);
         ReceivedHistories.Add(request.History.ToArray());

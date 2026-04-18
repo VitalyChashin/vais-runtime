@@ -19,7 +19,7 @@ public sealed class KnowledgeRetrievalFilterTests
         var filter = new KnowledgeRetrievalFilter(retriever);
 
         var request = new CompletionRequest(
-            History: new[] { new ChatTurn(ChatRole.User, "What do you know?") },
+            History: new[] { new ChatTurn(AgentChatRole.User, "What do you know?") },
             SystemPrompt: "Be brief.");
 
         CompletionRequest? observed = null;
@@ -44,7 +44,7 @@ public sealed class KnowledgeRetrievalFilterTests
         var filter = new KnowledgeRetrievalFilter(retriever);
 
         var request = new CompletionRequest(
-            History: new[] { new ChatTurn(ChatRole.System, "sys") },
+            History: new[] { new ChatTurn(AgentChatRole.System, "sys") },
             SystemPrompt: "Original.");
 
         CompletionRequest? observed = null;
@@ -64,7 +64,7 @@ public sealed class KnowledgeRetrievalFilterTests
         var filter = new KnowledgeRetrievalFilter(retriever);
 
         var request = new CompletionRequest(
-            History: new[] { new ChatTurn(ChatRole.User, "anything") },
+            History: new[] { new ChatTurn(AgentChatRole.User, "anything") },
             SystemPrompt: "Original.");
 
         CompletionRequest? observed = null;
@@ -84,7 +84,7 @@ public sealed class KnowledgeRetrievalFilterTests
         var filter = new KnowledgeRetrievalFilter(retriever);
 
         var request = new CompletionRequest(
-            History: new[] { new ChatTurn(ChatRole.User, "q") },
+            History: new[] { new ChatTurn(AgentChatRole.User, "q") },
             SystemPrompt: null);
 
         CompletionRequest? observed = null;
@@ -113,7 +113,7 @@ public sealed class KnowledgeRetrievalFilterTests
         });
 
         var request = new CompletionRequest(
-            History: new[] { new ChatTurn(ChatRole.User, "q") },
+            History: new[] { new ChatTurn(AgentChatRole.User, "q") },
             SystemPrompt: null);
 
         CompletionRequest? observed = null;
@@ -134,9 +134,9 @@ public sealed class KnowledgeRetrievalFilterTests
         var request = new CompletionRequest(
             History: new[]
             {
-                new ChatTurn(ChatRole.User, "first-question"),
-                new ChatTurn(ChatRole.Assistant, "first-answer"),
-                new ChatTurn(ChatRole.User, "latest-question"),
+                new ChatTurn(AgentChatRole.User, "first-question"),
+                new ChatTurn(AgentChatRole.Assistant, "first-answer"),
+                new ChatTurn(AgentChatRole.User, "latest-question"),
             },
             SystemPrompt: null);
 

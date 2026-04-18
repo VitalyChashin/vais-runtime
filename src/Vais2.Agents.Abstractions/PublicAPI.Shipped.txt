@@ -31,16 +31,16 @@ Vais2.Agents.AgentParticipant.Provider.get -> Vais2.Agents.ICompletionProvider!
 Vais2.Agents.AgentParticipant.Provider.init -> void
 Vais2.Agents.AgentParticipant.SystemPrompt.get -> string?
 Vais2.Agents.AgentParticipant.SystemPrompt.init -> void
-Vais2.Agents.ChatRole
-Vais2.Agents.ChatRole.Assistant = 2 -> Vais2.Agents.ChatRole
-Vais2.Agents.ChatRole.System = 0 -> Vais2.Agents.ChatRole
-Vais2.Agents.ChatRole.User = 1 -> Vais2.Agents.ChatRole
+Vais2.Agents.AgentChatRole
+Vais2.Agents.AgentChatRole.Assistant = 2 -> Vais2.Agents.AgentChatRole
+Vais2.Agents.AgentChatRole.System = 0 -> Vais2.Agents.AgentChatRole
+Vais2.Agents.AgentChatRole.User = 1 -> Vais2.Agents.AgentChatRole
 Vais2.Agents.ChatTurn
 Vais2.Agents.ChatTurn.<Clone>$() -> Vais2.Agents.ChatTurn!
-Vais2.Agents.ChatTurn.ChatTurn(Vais2.Agents.ChatRole Role, string! Text) -> void
-Vais2.Agents.ChatTurn.Deconstruct(out Vais2.Agents.ChatRole Role, out string! Text) -> void
+Vais2.Agents.ChatTurn.ChatTurn(Vais2.Agents.AgentChatRole Role, string! Text) -> void
+Vais2.Agents.ChatTurn.Deconstruct(out Vais2.Agents.AgentChatRole Role, out string! Text) -> void
 Vais2.Agents.ChatTurn.Equals(Vais2.Agents.ChatTurn? other) -> bool
-Vais2.Agents.ChatTurn.Role.get -> Vais2.Agents.ChatRole
+Vais2.Agents.ChatTurn.Role.get -> Vais2.Agents.AgentChatRole
 Vais2.Agents.ChatTurn.Role.init -> void
 Vais2.Agents.ChatTurn.Text.get -> string!
 Vais2.Agents.ChatTurn.Text.init -> void
@@ -138,10 +138,10 @@ Vais2.Agents.OrchestrationStep
 Vais2.Agents.OrchestrationStep.<Clone>$() -> Vais2.Agents.OrchestrationStep!
 Vais2.Agents.OrchestrationStep.AgentName.get -> string!
 Vais2.Agents.OrchestrationStep.AgentName.init -> void
-Vais2.Agents.OrchestrationStep.Deconstruct(out string! AgentName, out string! Text, out Vais2.Agents.ChatRole Role) -> void
+Vais2.Agents.OrchestrationStep.Deconstruct(out string! AgentName, out string! Text, out Vais2.Agents.AgentChatRole Role) -> void
 Vais2.Agents.OrchestrationStep.Equals(Vais2.Agents.OrchestrationStep? other) -> bool
-Vais2.Agents.OrchestrationStep.OrchestrationStep(string! AgentName, string! Text, Vais2.Agents.ChatRole Role = Vais2.Agents.ChatRole.Assistant) -> void
-Vais2.Agents.OrchestrationStep.Role.get -> Vais2.Agents.ChatRole
+Vais2.Agents.OrchestrationStep.OrchestrationStep(string! AgentName, string! Text, Vais2.Agents.AgentChatRole Role = Vais2.Agents.AgentChatRole.Assistant) -> void
+Vais2.Agents.OrchestrationStep.Role.get -> Vais2.Agents.AgentChatRole
 Vais2.Agents.OrchestrationStep.Role.init -> void
 Vais2.Agents.OrchestrationStep.Text.get -> string!
 Vais2.Agents.OrchestrationStep.Text.init -> void

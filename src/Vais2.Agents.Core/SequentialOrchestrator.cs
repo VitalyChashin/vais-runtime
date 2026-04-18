@@ -58,7 +58,7 @@ public sealed class SequentialOrchestrator : IAgentOrchestrator
             cancellationToken.ThrowIfCancellationRequested();
 
             var request = new CompletionRequest(
-                History: new[] { new ChatTurn(ChatRole.User, currentInput) },
+                History: new[] { new ChatTurn(AgentChatRole.User, currentInput) },
                 SystemPrompt: participant.SystemPrompt);
 
             var response = await participant.Provider.CompleteAsync(request, cancellationToken).ConfigureAwait(false);

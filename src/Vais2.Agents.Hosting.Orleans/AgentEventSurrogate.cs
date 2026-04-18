@@ -153,7 +153,7 @@ internal static class AgentEventSurrogateHelpers
 /// Converter for the abstract <see cref="AgentEvent"/> base type. Orleans uses exact-type
 /// dispatch for <see cref="IConverter{TValue, TSurrogate}"/>, so polymorphic sites that pass
 /// events as <see cref="AgentEvent"/> (e.g. <c>IAsyncStream&lt;AgentEvent&gt;</c>) resolve
-/// through this one.
+/// through this one. Confirmed still required under Orleans 10.1 (Phase C audit, 2026).
 /// </summary>
 [RegisterConverter]
 public sealed class AgentEventSurrogateConverter : IConverter<AgentEvent, AgentEventSurrogate>

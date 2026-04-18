@@ -8,4 +8,4 @@ namespace Vais2.Agents;
 /// </summary>
 /// <param name="Role">Who produced this turn.</param>
 /// <param name="Text">The message content. Non-null; may be empty.</param>
-public sealed record ChatTurn(ChatRole Role, string Text);
+public sealed record ChatTurn(AgentChatRole Role, string Text);

@@ -91,7 +91,7 @@ public sealed class StatefulAiAgent : IAiAgent
             throw new ArgumentException("User message must be non-empty.", nameof(userMessage));
         }
 
-        _history.Add(new ChatTurn(ChatRole.User, userMessage));
+        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
 
         // Snapshot: the provider must see a stable view of the history. The
         // in-process list keeps mutating across turns; handing out the live
@@ -151,7 +151,7 @@ public sealed class StatefulAiAgent : IAiAgent
         }
 
         var text = response!.Text;
-        _history.Add(new ChatTurn(ChatRole.Assistant, text));
+        _history.Add(new ChatTurn(AgentChatRole.Assistant, text));
 
         await PublishEventAsync(
             new TurnCompleted(DateTimeOffset.UtcNow, eventContext, text, response.ModelId, response.PromptTokens, response.CompletionTokens, sw.Elapsed),
@@ -206,7 +206,7 @@ public sealed class StatefulAiAgent : IAiAgent
                 "as one) or use AskAsync for non-streaming turns.");
         }
 
-        _history.Add(new ChatTurn(ChatRole.User, userMessage));
+        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
 
         var snapshot = _history.ToArray();
         var tools = _toolRegistry?.Tools;
@@ -308,7 +308,7 @@ public sealed class StatefulAiAgent : IAiAgent
         }
 
         var finalText = accumulator.ToString();
-        _history.Add(new ChatTurn(ChatRole.Assistant, finalText));
+        _history.Add(new ChatTurn(AgentChatRole.Assistant, finalText));
 
         await PublishEventAsync(
             new TurnCompleted(DateTimeOffset.UtcNow, eventContext, finalText, finalModelId, finalPromptTokens, finalCompletionTokens, sw.Elapsed),

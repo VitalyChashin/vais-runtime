@@ -72,7 +72,7 @@ public sealed class KnowledgeRetrievalFilter : IAgentFilter
         for (var i = request.History.Count - 1; i >= 0; i--)
         {
             var turn = request.History[i];
-            if (turn.Role == ChatRole.User && !string.IsNullOrWhiteSpace(turn.Text))
+            if (turn.Role == AgentChatRole.User && !string.IsNullOrWhiteSpace(turn.Text))
             {
                 return turn.Text;
             }

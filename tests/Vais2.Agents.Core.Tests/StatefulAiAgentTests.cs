@@ -36,8 +36,8 @@ public sealed class StatefulAiAgentTests
 
         reply.Should().Be("Paris.");
         agent.History.Should().HaveCount(2);
-        agent.History[0].Should().Be(new ChatTurn(ChatRole.User, "What is the capital of France?"));
-        agent.History[1].Should().Be(new ChatTurn(ChatRole.Assistant, "Paris."));
+        agent.History[0].Should().Be(new ChatTurn(AgentChatRole.User, "What is the capital of France?"));
+        agent.History[1].Should().Be(new ChatTurn(AgentChatRole.Assistant, "Paris."));
     }
 
     [Fact]

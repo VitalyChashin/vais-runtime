@@ -47,7 +47,7 @@ Vais2.Agents.Hosting.Orleans.AiAgentGrainState.SystemPrompt.get -> string?
 Vais2.Agents.Hosting.Orleans.AiAgentGrainState.SystemPrompt.set -> void
 Vais2.Agents.Hosting.Orleans.ChatTurnSurrogate
 Vais2.Agents.Hosting.Orleans.ChatTurnSurrogate.ChatTurnSurrogate() -> void
-Vais2.Agents.Hosting.Orleans.ChatTurnSurrogate.Role -> Vais2.Agents.ChatRole
+Vais2.Agents.Hosting.Orleans.ChatTurnSurrogate.Role -> Vais2.Agents.AgentChatRole
 Vais2.Agents.Hosting.Orleans.ChatTurnSurrogate.Text -> string!
 Vais2.Agents.Hosting.Orleans.ChatTurnSurrogateConverter
 Vais2.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ChatTurnSurrogateConverter() -> void

@@ -68,8 +68,8 @@ public sealed class StatefulAiAgentStreamingTests
         collected.Should().Equal("Hello", ", ", "world");
 
         agent.History.Should().HaveCount(2);
-        agent.History[0].Should().Be(new ChatTurn(ChatRole.User, "greet"));
-        agent.History[1].Should().Be(new ChatTurn(ChatRole.Assistant, "Hello, world"));
+        agent.History[0].Should().Be(new ChatTurn(AgentChatRole.User, "greet"));
+        agent.History[1].Should().Be(new ChatTurn(AgentChatRole.Assistant, "Hello, world"));
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class StatefulAiAgentStreamingTests
 
         // User turn was added before streaming started — stays. Assistant turn must NOT be appended
         // on failure: the caller got no coherent response to persist.
-        agent.History.Should().ContainSingle().Which.Role.Should().Be(ChatRole.User);
+        agent.History.Should().ContainSingle().Which.Role.Should().Be(AgentChatRole.User);
     }
 
     private static T Throw<T>(Exception ex) => throw ex;

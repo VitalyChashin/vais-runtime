@@ -6,7 +6,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
-using VaisChatRole = Vais2.Agents.ChatRole;
+using VaisChatRole = Vais2.Agents.AgentChatRole;
 
 namespace Vais2.Agents.Ai.MicrosoftAgentFramework;
 

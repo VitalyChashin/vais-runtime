@@ -127,13 +127,13 @@ public sealed class SkCompletionProvider : ICompletionProvider, IStreamingComple
         {
             switch (turn.Role)
             {
-                case ChatRole.System:
+                case AgentChatRole.System:
                     history.AddSystemMessage(turn.Text);
                     break;
-                case ChatRole.User:
+                case AgentChatRole.User:
                     history.AddUserMessage(turn.Text);
                     break;
-                case ChatRole.Assistant:
+                case AgentChatRole.Assistant:
                     history.AddAssistantMessage(turn.Text);
                     break;
                 default:
