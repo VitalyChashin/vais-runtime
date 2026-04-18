@@ -37,6 +37,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly List<ChatTurn> _history = new();
     private readonly IReadOnlyList<IAgentFilter> _filters;
     private readonly IUsageSink _usageSink;
+    private readonly IAgentEventBus _eventBus;
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ResiliencePipeline _pipeline;
     private readonly IToolRegistry? _toolRegistry;
@@ -62,6 +63,7 @@ public sealed class StatefulAiAgent : IAiAgent
         options ??= new StatefulAgentOptions();
         _filters = options.Filters;
         _usageSink = options.UsageSink ?? NullUsageSink.Instance;
+        _eventBus = options.EventBus ?? NullAgentEventBus.Instance;
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
         _toolRegistry = options.ToolRegistry;
@@ -103,10 +105,13 @@ public sealed class StatefulAiAgent : IAiAgent
             Tools: tools is { Count: > 0 } ? tools : null);
 
         var context = _contextAccessor.Current;
+        var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
+
+        await PublishEventAsync(new TurnStarted(startedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
 
         CompletionResponse? response = null;
         Exception? failure = null;
@@ -139,11 +144,19 @@ public sealed class StatefulAiAgent : IAiAgent
 
         if (failure is not null)
         {
+            await PublishEventAsync(
+                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, sw.Elapsed),
+                cancellationToken).ConfigureAwait(false);
             throw failure;
         }
 
         var text = response!.Text;
         _history.Add(new ChatTurn(ChatRole.Assistant, text));
+
+        await PublishEventAsync(
+            new TurnCompleted(DateTimeOffset.UtcNow, eventContext, text, response.ModelId, response.PromptTokens, response.CompletionTokens, sw.Elapsed),
+            cancellationToken).ConfigureAwait(false);
+
         return text;
     }
 
@@ -203,10 +216,13 @@ public sealed class StatefulAiAgent : IAiAgent
             Tools: tools is { Count: > 0 } ? tools : null);
 
         var context = _contextAccessor.Current;
+        var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
+
+        await PublishEventAsync(new TurnStarted(startedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
 
         var accumulator = new StringBuilder();
         string? finalModelId = null;
@@ -285,10 +301,18 @@ public sealed class StatefulAiAgent : IAiAgent
 
         if (failure is not null)
         {
+            await PublishEventAsync(
+                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, sw.Elapsed),
+                cancellationToken).ConfigureAwait(false);
             throw failure;
         }
 
-        _history.Add(new ChatTurn(ChatRole.Assistant, accumulator.ToString()));
+        var finalText = accumulator.ToString();
+        _history.Add(new ChatTurn(ChatRole.Assistant, finalText));
+
+        await PublishEventAsync(
+            new TurnCompleted(DateTimeOffset.UtcNow, eventContext, finalText, finalModelId, finalPromptTokens, finalCompletionTokens, sw.Elapsed),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -409,6 +433,37 @@ public sealed class StatefulAiAgent : IAiAgent
         {
             // Usage-sink failures must not break the main flow. Log and move on.
             _logger.LogWarning(ex, "Usage sink {SinkType} threw; swallowed.", _usageSink.GetType().Name);
+        }
+    }
+
+    private AgentContext BuildEventContext(AgentContext context)
+    {
+        // Overlay the options-level agent name onto the ambient context when the
+        // ambient one doesn't already carry a name. Keeps events self-descriptive
+        // for consumers that wire event-bus subscribers without also setting
+        // IAgentContextAccessor.Current.AgentName.
+        if (_agentName is not null && string.IsNullOrEmpty(context.AgentName))
+        {
+            return context with { AgentName = _agentName };
+        }
+        return context;
+    }
+
+    private async ValueTask PublishEventAsync(AgentEvent @event, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _eventBus.PublishAsync(@event, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Bus failures must not break the main flow — same discipline as usage sink.
+            _logger.LogWarning(ex, "Agent-event bus {BusType} threw on {EventType}; swallowed.",
+                _eventBus.GetType().Name, @event.GetType().Name);
         }
     }
 

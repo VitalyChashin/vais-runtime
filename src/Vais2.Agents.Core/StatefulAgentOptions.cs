@@ -62,4 +62,12 @@ public sealed class StatefulAgentOptions
     /// a snapshot and mutate their source afterwards.
     /// </summary>
     public IReadOnlyList<ChatTurn>? InitialHistory { get; init; }
+
+    /// <summary>
+    /// Optional semantic-event bus. When set, <see cref="StatefulAiAgent"/> publishes
+    /// <see cref="TurnStarted"/> before each provider call and <see cref="TurnCompleted"/>
+    /// / <see cref="TurnFailed"/> after each turn resolves. Default: <see cref="NullAgentEventBus.Instance"/>
+    /// (no-op). Bus failures are logged and swallowed; events never break the main flow.
+    /// </summary>
+    public IAgentEventBus? EventBus { get; init; }
 }

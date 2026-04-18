@@ -1,4 +1,75 @@
 #nullable enable
+abstract Vais2.Agents.AgentEvent.<Clone>$() -> Vais2.Agents.AgentEvent!
+override Vais2.Agents.AgentEvent.Equals(object? obj) -> bool
+override Vais2.Agents.AgentEvent.GetHashCode() -> int
+override Vais2.Agents.AgentEvent.ToString() -> string!
+override sealed Vais2.Agents.TurnCompleted.Equals(Vais2.Agents.AgentEvent? other) -> bool
+override sealed Vais2.Agents.TurnFailed.Equals(Vais2.Agents.AgentEvent? other) -> bool
+override sealed Vais2.Agents.TurnStarted.Equals(Vais2.Agents.AgentEvent? other) -> bool
+override Vais2.Agents.TurnCompleted.<Clone>$() -> Vais2.Agents.TurnCompleted!
+override Vais2.Agents.TurnCompleted.Equals(object? obj) -> bool
+override Vais2.Agents.TurnCompleted.GetHashCode() -> int
+override Vais2.Agents.TurnCompleted.ToString() -> string!
+override Vais2.Agents.TurnFailed.<Clone>$() -> Vais2.Agents.TurnFailed!
+override Vais2.Agents.TurnFailed.Equals(object? obj) -> bool
+override Vais2.Agents.TurnFailed.GetHashCode() -> int
+override Vais2.Agents.TurnFailed.ToString() -> string!
+override Vais2.Agents.TurnStarted.<Clone>$() -> Vais2.Agents.TurnStarted!
+override Vais2.Agents.TurnStarted.Equals(object? obj) -> bool
+override Vais2.Agents.TurnStarted.GetHashCode() -> int
+override Vais2.Agents.TurnStarted.ToString() -> string!
+static Vais2.Agents.AgentEvent.operator !=(Vais2.Agents.AgentEvent? left, Vais2.Agents.AgentEvent? right) -> bool
+static Vais2.Agents.AgentEvent.operator ==(Vais2.Agents.AgentEvent? left, Vais2.Agents.AgentEvent? right) -> bool
+static Vais2.Agents.TurnCompleted.operator !=(Vais2.Agents.TurnCompleted? left, Vais2.Agents.TurnCompleted? right) -> bool
+static Vais2.Agents.TurnCompleted.operator ==(Vais2.Agents.TurnCompleted? left, Vais2.Agents.TurnCompleted? right) -> bool
+static Vais2.Agents.TurnFailed.operator !=(Vais2.Agents.TurnFailed? left, Vais2.Agents.TurnFailed? right) -> bool
+static Vais2.Agents.TurnFailed.operator ==(Vais2.Agents.TurnFailed? left, Vais2.Agents.TurnFailed? right) -> bool
+static Vais2.Agents.TurnStarted.operator !=(Vais2.Agents.TurnStarted? left, Vais2.Agents.TurnStarted? right) -> bool
+static Vais2.Agents.TurnStarted.operator ==(Vais2.Agents.TurnStarted? left, Vais2.Agents.TurnStarted? right) -> bool
+Vais2.Agents.AgentEvent
+Vais2.Agents.AgentEvent.AgentEvent(Vais2.Agents.AgentEvent! original) -> void
+Vais2.Agents.AgentEvent.AgentEvent(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context) -> void
+Vais2.Agents.AgentEvent.At.get -> System.DateTimeOffset
+Vais2.Agents.AgentEvent.At.init -> void
+Vais2.Agents.AgentEvent.Context.get -> Vais2.Agents.AgentContext!
+Vais2.Agents.AgentEvent.Context.init -> void
+Vais2.Agents.AgentEvent.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context) -> void
+Vais2.Agents.IAgentEventBus
+Vais2.Agents.IAgentEventBus.PublishAsync(Vais2.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.IAgentEventBus.Subscribe(System.Func<Vais2.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais2.Agents.TurnCompleted
+Vais2.Agents.TurnCompleted.AssistantText.get -> string!
+Vais2.Agents.TurnCompleted.AssistantText.init -> void
+Vais2.Agents.TurnCompleted.CompletionTokens.get -> int?
+Vais2.Agents.TurnCompleted.CompletionTokens.init -> void
+Vais2.Agents.TurnCompleted.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out string! AssistantText, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.TimeSpan Duration) -> void
+Vais2.Agents.TurnCompleted.Duration.get -> System.TimeSpan
+Vais2.Agents.TurnCompleted.Duration.init -> void
+Vais2.Agents.TurnCompleted.Equals(Vais2.Agents.TurnCompleted? other) -> bool
+Vais2.Agents.TurnCompleted.ModelId.get -> string?
+Vais2.Agents.TurnCompleted.ModelId.init -> void
+Vais2.Agents.TurnCompleted.PromptTokens.get -> int?
+Vais2.Agents.TurnCompleted.PromptTokens.init -> void
+Vais2.Agents.TurnCompleted.TurnCompleted(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context, string! AssistantText, string? ModelId, int? PromptTokens, int? CompletionTokens, System.TimeSpan Duration) -> void
+Vais2.Agents.TurnFailed
+Vais2.Agents.TurnFailed.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out string! ErrorType, out string! ErrorMessage, out System.TimeSpan Duration) -> void
+Vais2.Agents.TurnFailed.Duration.get -> System.TimeSpan
+Vais2.Agents.TurnFailed.Duration.init -> void
+Vais2.Agents.TurnFailed.Equals(Vais2.Agents.TurnFailed? other) -> bool
+Vais2.Agents.TurnFailed.ErrorMessage.get -> string!
+Vais2.Agents.TurnFailed.ErrorMessage.init -> void
+Vais2.Agents.TurnFailed.ErrorType.get -> string!
+Vais2.Agents.TurnFailed.ErrorType.init -> void
+Vais2.Agents.TurnFailed.TurnFailed(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context, string! ErrorType, string! ErrorMessage, System.TimeSpan Duration) -> void
+Vais2.Agents.TurnStarted
+Vais2.Agents.TurnStarted.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out string! UserMessage) -> void
+Vais2.Agents.TurnStarted.Equals(Vais2.Agents.TurnStarted? other) -> bool
+Vais2.Agents.TurnStarted.TurnStarted(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context, string! UserMessage) -> void
+Vais2.Agents.TurnStarted.UserMessage.get -> string!
+Vais2.Agents.TurnStarted.UserMessage.init -> void
+virtual Vais2.Agents.AgentEvent.EqualityContract.get -> System.Type!
+virtual Vais2.Agents.AgentEvent.Equals(Vais2.Agents.AgentEvent? other) -> bool
+virtual Vais2.Agents.AgentEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
 Vais2.Agents.CompletionUpdate
 Vais2.Agents.CompletionUpdate.<Clone>$() -> Vais2.Agents.CompletionUpdate!
 Vais2.Agents.CompletionUpdate.CompletionTokens.get -> int?

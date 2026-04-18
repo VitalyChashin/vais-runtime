@@ -1,1 +1,5 @@
 #nullable enable
+Vais2.Agents.Hosting.InMemory.InMemoryAgentEventBus
+Vais2.Agents.Hosting.InMemory.InMemoryAgentEventBus.InMemoryAgentEventBus(Microsoft.Extensions.Logging.ILogger<Vais2.Agents.Hosting.InMemory.InMemoryAgentEventBus!>? logger = null) -> void
+Vais2.Agents.Hosting.InMemory.InMemoryAgentEventBus.PublishAsync(Vais2.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Hosting.InMemory.InMemoryAgentEventBus.Subscribe(System.Func<Vais2.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!

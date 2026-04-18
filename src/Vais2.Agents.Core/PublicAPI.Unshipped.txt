@@ -1,4 +1,10 @@
 #nullable enable
+static readonly Vais2.Agents.Core.NullAgentEventBus.Instance -> Vais2.Agents.Core.NullAgentEventBus!
+Vais2.Agents.Core.NullAgentEventBus
+Vais2.Agents.Core.NullAgentEventBus.PublishAsync(Vais2.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.NullAgentEventBus.Subscribe(System.Func<Vais2.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais2.Agents.Core.StatefulAgentOptions.EventBus.get -> Vais2.Agents.IAgentEventBus?
+Vais2.Agents.Core.StatefulAgentOptions.EventBus.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>?
 Vais2.Agents.Core.StatefulAgentOptions.InitialHistory.init -> void
 Vais2.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
