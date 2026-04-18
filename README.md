@@ -58,8 +58,8 @@ Full roadmap and design decisions: `../../plans/actor-agents-oss-extraction-rese
 ## Building
 
 - .NET 9 SDK (or newer).
-- Pinned deps resolve to SK 1.62, MAF `1.0.0-preview.251009.1`, MEAI 9.10.
-- `NU1608` (SK vs MEAI.OpenAI disagreement on `OpenAI` SDK version) is suppressed globally pending SK bumping its floor.
+- Pinned deps resolve to SK 1.74, MAF 1.1.0, MEAI 10.5, Orleans 10.1, OpenAI 2.10.
+- `Microsoft.Extensions.VectorData.Abstractions` is held at 10.1.0 because the SK 1.74 InMemory preview connector (used in tests) was built against that surface; lift in lockstep with SK.Connectors.InMemory.
 
 ## Contributing
 

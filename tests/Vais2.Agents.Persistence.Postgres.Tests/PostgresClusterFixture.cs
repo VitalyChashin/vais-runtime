@@ -33,9 +33,7 @@ public sealed class PostgresClusterFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
-            .Build();
+        _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
         await _postgres.StartAsync();
 
         ConnectionString = _postgres.GetConnectionString();

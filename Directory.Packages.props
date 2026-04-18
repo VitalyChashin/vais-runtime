@@ -4,73 +4,78 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <ItemGroup Label="Microsoft.Extensions.AI (MEAI) - unifying IChatClient abstraction">
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.10.0-preview.1.25513.3" />
-    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
+  <ItemGroup Label="Microsoft.Extensions.AI (MEAI) - unifying IChatClient abstraction. Aligned 10.x family.">
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
+    <!--
+      VectorData.Abstractions pinned at 10.1.0 — SK 1.74.0's InMemory connector (used in tests)
+      was compiled against 10.1's surface and references types (e.g. VectorSearchFilter) that
+      were removed in later 10.x patches. Bump in lockstep with SK.Connectors.InMemory.
+    -->
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.1.0" />
   </ItemGroup>
 
   <ItemGroup Label="Semantic Kernel adapter">
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.62.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.62.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.63.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.74.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.74.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
   </ItemGroup>
 
   <ItemGroup Label="Microsoft Agent Framework (MAF) adapter">
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.0.0-preview.251009.1" />
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="OpenAI SDK - pinned to match MEAI.OpenAI preview; SK 1.62's exact-version requirement tolerated via NU1608 suppression (SK adapter doesn't reference MEAI.OpenAI, so its graph is unaffected).">
-    <PackageVersion Include="OpenAI" Version="2.5.0" />
+  <ItemGroup Label="OpenAI SDK - floor set by SK 1.74 (≥2.9.1) and MEAI.OpenAI 10.5 (≥2.10.0).">
+    <PackageVersion Include="OpenAI" Version="2.10.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Logging / DI / resilience used across adapters (bumped to match transitive requirements from MEAI / MAF).">
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.10.0" />
+  <ItemGroup Label="Logging / DI / resilience.">
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.5.0" />
   </ItemGroup>
 
   <ItemGroup Label="Public API surface guard">
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.24629.2" />
   </ItemGroup>
 
-  <ItemGroup Label="Observability (OpenTelemetry). Version matches VAIS2's own OTel wiring.">
-    <PackageVersion Include="OpenTelemetry" Version="1.13.1" />
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.13.1" />
+  <ItemGroup Label="Observability (OpenTelemetry).">
+    <PackageVersion Include="OpenTelemetry" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.15.2" />
   </ItemGroup>
 
-  <ItemGroup Label="Orleans host (Vais2.Agents.Hosting.Orleans). Version matches VAIS2's own Orleans wiring.">
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
+  <ItemGroup Label="Orleans host (Vais2.Agents.Hosting.Orleans). Aligned 10.x family.">
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.1.0" />
   </ItemGroup>
 
   <ItemGroup Label="Redis persistence (Vais2.Agents.Persistence.Redis). Orleans Redis providers + StackExchange.Redis.">
-    <PackageVersion Include="Microsoft.Orleans.Clustering.Redis" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="9.2.1" />
-    <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.Redis" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="10.1.0" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.12.14" />
   </ItemGroup>
 
   <ItemGroup Label="Postgres persistence (Vais2.Agents.Persistence.Postgres). Orleans ADO.NET providers + Npgsql.">
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="9.2.1" />
-    <PackageVersion Include="Npgsql" Version="8.0.5" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.1.0" />
+    <PackageVersion Include="Npgsql" Version="9.0.5" />
   </ItemGroup>
 
   <ItemGroup Label="Testcontainers (integration tests that need real infrastructure).">
-    <PackageVersion Include="Testcontainers.Redis" Version="4.0.0" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.0.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.11.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.11.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Test dependencies">
+  <ItemGroup Label="Test dependencies. FluentAssertions pinned at 6.12.3 — v7+ switched to commercial Xceed licence.">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />

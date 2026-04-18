@@ -17,9 +17,8 @@
       Suppressions:
       - SKEXP0001 / SKEXP0010 / SKEXP0110 : Semantic Kernel experimental surface we intentionally use.
       - MEAI001                           : Microsoft.Extensions.AI experimental surface.
-      - NU1608                            : Tolerated until SK lifts its OpenAI 2.2.0 floor to match MEAI.OpenAI 9.10-preview's 2.5.0.
     -->
-    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0110;MEAI001;NU1608;NU1107</NoWarn>
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0110;MEAI001</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">

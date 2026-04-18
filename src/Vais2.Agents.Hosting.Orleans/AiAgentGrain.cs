@@ -85,11 +85,11 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     public async Task<string> AskAsync(string userMessage)
     {
         var agent = EnsureAgent();
-        var reply = await agent.AskAsync(userMessage).ConfigureAwait(false);
+        var reply = await agent.AskAsync(userMessage);
 
         _state.State.History = agent.History.ToList();
         _state.State.SystemPrompt = agent.SystemPrompt;
-        await _state.WriteStateAsync().ConfigureAwait(false);
+        await _state.WriteStateAsync();
 
         return reply;
     }
@@ -114,7 +114,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         var agent = EnsureAgent();
         agent.SystemPrompt = value;
         _state.State.SystemPrompt = value;
-        await _state.WriteStateAsync().ConfigureAwait(false);
+        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc />
@@ -123,13 +123,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         var agent = EnsureAgent();
         agent.Reset();
         _state.State.History = new List<ChatTurn>();
-        await _state.WriteStateAsync().ConfigureAwait(false);
+        await _state.WriteStateAsync();
     }
 
     /// <inheritdoc />
     public async Task DeleteAsync()
     {
-        await _state.ClearStateAsync().ConfigureAwait(false);
+        await _state.ClearStateAsync();
         _agent = null;
         DeactivateOnIdle();
     }

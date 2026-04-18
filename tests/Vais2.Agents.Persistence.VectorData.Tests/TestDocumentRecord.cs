@@ -19,6 +19,6 @@ public sealed class TestDocumentRecord
     [VectorStoreData]
     public required string Text { get; init; }
 
-    [VectorStoreVector(Dimensions: 8)]
+    [VectorStoreVector(8)]
     public required ReadOnlyMemory<float> Vector { get; init; }
 }

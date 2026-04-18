@@ -74,8 +74,8 @@ public sealed class CrossHostFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _redis = new RedisBuilder().WithImage("redis:7-alpine").Build();
-        _postgres = new PostgreSqlBuilder().WithImage("postgres:16-alpine").Build();
+        _redis = new RedisBuilder("redis:7-alpine").Build();
+        _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
         await Task.WhenAll(_redis.StartAsync(), _postgres.StartAsync()).ConfigureAwait(false);
 
         CurrentRedisConnectionString = _redis.GetConnectionString();

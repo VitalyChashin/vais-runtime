@@ -15,17 +15,16 @@ namespace Vais2.Agents.Ai.MicrosoftAgentFramework;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Uses MAF's <see cref="AIAgent"/> (constructed via the
-/// <c>IChatClient.CreateAIAgent(...)</c> extension) rather than hitting
+/// Uses MAF's <see cref="ChatClientAgent"/> (constructed directly around the
+/// injected <see cref="IChatClient"/>) rather than hitting
 /// <see cref="IChatClient"/> directly. That means the MAF-specific code path is
-/// exercised: agent options, tools (when added in a future milestone), and MAF's
-/// <c>AgentRunResponse</c> usage shape.
+/// exercised: agent options, tools, and MAF's <c>AgentRunResponse</c> usage shape.
 /// </para>
 /// <para>
 /// History is authoritative in the Vais2.Agents core; we pass the full turn list
-/// each call and intentionally supply no session / thread. That keeps the
-/// neutral core as the single source of truth for conversation state — important
-/// for Orleans-backed grain persistence in later milestones.
+/// each call and intentionally supply no <see cref="AgentSession"/>. That keeps
+/// the neutral core as the single source of truth for conversation state —
+/// important for Orleans-backed grain persistence.
 /// </para>
 /// </remarks>
 public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompletionProvider
@@ -76,10 +75,7 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         // Build a fresh MAF agent each call. Caching by (chatClient, instructions) is
         // a later optimisation — avoid it here to keep the adapter stateless and
         // obviously correct.
-        var agent = _chatClient.CreateAIAgent(
-            name: _agentName,
-            instructions: request.SystemPrompt,
-            description: "Vais2.Agents MAF-backed agent");
+        var agent = BuildAgent(request.SystemPrompt);
 
         var messages = request.History.Select(ToMeai).ToList();
 
@@ -97,7 +93,7 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
 
         var response = await agent
-            .RunAsync(messages, thread: null, options: options, cancellationToken: cancellationToken)
+            .RunAsync(messages, session: null, options: options, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         var text = response.Text ?? string.Empty;
@@ -120,10 +116,7 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var agent = _chatClient.CreateAIAgent(
-            name: _agentName,
-            instructions: request.SystemPrompt,
-            description: "Vais2.Agents MAF-backed agent");
+        var agent = BuildAgent(request.SystemPrompt);
 
         var messages = request.History.Select(ToMeai).ToList();
 
@@ -145,7 +138,7 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         // continues to auto-invoke tools on this path, so tool-calling streams work the same way
         // tool-calling on the non-streaming path does.
         await foreach (var update in agent
-            .RunStreamingAsync(messages, thread: null, options: options, cancellationToken: cancellationToken)
+            .RunStreamingAsync(messages, session: null, options: options, cancellationToken: cancellationToken)
             .ConfigureAwait(false))
         {
             var delta = update.Text ?? string.Empty;
@@ -162,6 +155,13 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
             yield return new CompletionUpdate(delta, _modelId, promptTokens, completionTokens);
         }
     }
+
+    private ChatClientAgent BuildAgent(string? systemPrompt) =>
+        new(
+            _chatClient,
+            name: _agentName,
+            instructions: systemPrompt,
+            description: "Vais2.Agents MAF-backed agent");
 
     private static MeaiChatMessage ToMeai(ChatTurn turn) => turn.Role switch
     {

@@ -46,9 +46,7 @@ public sealed class RedisClusterFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _redis = new RedisBuilder()
-            .WithImage("redis:7-alpine")
-            .Build();
+        _redis = new RedisBuilder("redis:7-alpine").Build();
         await _redis.StartAsync();
 
         ConnectionString = _redis.GetConnectionString();
