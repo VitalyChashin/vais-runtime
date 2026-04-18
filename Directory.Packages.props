@@ -50,6 +50,7 @@
     <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.1" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
   </ItemGroup>
 
   <ItemGroup Label="Redis persistence (Vais2.Agents.Persistence.Redis). Orleans Redis providers + StackExchange.Redis.">
