@@ -1,4 +1,25 @@
 #nullable enable
+Vais2.Agents.CompletionUpdate
+Vais2.Agents.CompletionUpdate.<Clone>$() -> Vais2.Agents.CompletionUpdate!
+Vais2.Agents.CompletionUpdate.CompletionTokens.get -> int?
+Vais2.Agents.CompletionUpdate.CompletionTokens.init -> void
+Vais2.Agents.CompletionUpdate.CompletionUpdate(string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null) -> void
+Vais2.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens) -> void
+Vais2.Agents.CompletionUpdate.Equals(Vais2.Agents.CompletionUpdate? other) -> bool
+Vais2.Agents.CompletionUpdate.ModelId.get -> string?
+Vais2.Agents.CompletionUpdate.ModelId.init -> void
+Vais2.Agents.CompletionUpdate.PromptTokens.get -> int?
+Vais2.Agents.CompletionUpdate.PromptTokens.init -> void
+Vais2.Agents.CompletionUpdate.TextDelta.get -> string!
+Vais2.Agents.CompletionUpdate.TextDelta.init -> void
+Vais2.Agents.IStreamingCompletionProvider
+Vais2.Agents.IStreamingCompletionProvider.ProviderName.get -> string!
+Vais2.Agents.IStreamingCompletionProvider.StreamAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.CompletionUpdate!>!
+override Vais2.Agents.CompletionUpdate.Equals(object? obj) -> bool
+override Vais2.Agents.CompletionUpdate.GetHashCode() -> int
+override Vais2.Agents.CompletionUpdate.ToString() -> string!
+static Vais2.Agents.CompletionUpdate.operator !=(Vais2.Agents.CompletionUpdate? left, Vais2.Agents.CompletionUpdate? right) -> bool
+static Vais2.Agents.CompletionUpdate.operator ==(Vais2.Agents.CompletionUpdate? left, Vais2.Agents.CompletionUpdate? right) -> bool
 Vais2.Agents.IKnowledgeRetriever
 Vais2.Agents.IKnowledgeRetriever.RetrieveAsync(string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais2.Agents.KnowledgeChunk!>!>!
 Vais2.Agents.KnowledgeChunk

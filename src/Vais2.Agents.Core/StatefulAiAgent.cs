@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
@@ -143,6 +145,150 @@ public sealed class StatefulAiAgent : IAiAgent
         var text = response!.Text;
         _history.Add(new ChatTurn(ChatRole.Assistant, text));
         return text;
+    }
+
+    /// <summary>
+    /// Stream the next assistant turn as it's produced by the provider. Yields
+    /// text deltas in order; after the stream drains, the accumulated text is
+    /// appended to <see cref="History"/> as a single assistant turn (so a caller
+    /// that alternates <see cref="AskAsync"/> and <c>StreamAsync</c> sees a
+    /// well-formed history in both cases).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// V1 scope: <see cref="StatefulAgentOptions.Filters"/> and
+    /// <see cref="StatefulAgentOptions.ResiliencePipeline"/> are NOT applied to
+    /// streaming turns. Filter and resilience surfaces are both synchronous
+    /// request→response; wrapping a stream in them either buffers the whole
+    /// response (defeating the point) or requires a streaming-filter API we
+    /// haven't designed yet. Consumers who need filter-mediated behaviour
+    /// (knowledge retrieval, prompt enrichment) on streaming turns should
+    /// either stay on <see cref="AskAsync"/> or run retrieval manually and
+    /// mutate <see cref="SystemPrompt"/> before calling <c>StreamAsync</c>.
+    /// </para>
+    /// <para>
+    /// Usage telemetry and the per-turn <see cref="Activity"/> ARE emitted —
+    /// usage is reported once after the stream drains, with aggregated token
+    /// counts from the final update when the provider supplies them.
+    /// </para>
+    /// </remarks>
+    /// <param name="userMessage">User-visible text to send as the new turn.</param>
+    /// <param name="cancellationToken">Cancels the stream; deltas already yielded are not retracted.</param>
+    /// <exception cref="ArgumentException"><paramref name="userMessage"/> is null or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">The injected provider doesn't implement <see cref="IStreamingCompletionProvider"/>.</exception>
+    public async IAsyncEnumerable<string> StreamAsync(
+        string userMessage,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userMessage))
+        {
+            throw new ArgumentException("User message must be non-empty.", nameof(userMessage));
+        }
+
+        if (_provider is not IStreamingCompletionProvider streamingProvider)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{_provider.ProviderName}' does not support streaming. " +
+                "Inject an IStreamingCompletionProvider (both the SK and MAF adapters ship " +
+                "as one) or use AskAsync for non-streaming turns.");
+        }
+
+        _history.Add(new ChatTurn(ChatRole.User, userMessage));
+
+        var snapshot = _history.ToArray();
+        var tools = _toolRegistry?.Tools;
+        var request = new CompletionRequest(
+            snapshot,
+            SystemPrompt,
+            Tools: tools is { Count: > 0 } ? tools : null);
+
+        var context = _contextAccessor.Current;
+        var startedAt = DateTimeOffset.UtcNow;
+        var sw = Stopwatch.StartNew();
+
+        using var activity = StartTurnActivity(context);
+
+        var accumulator = new StringBuilder();
+        string? finalModelId = null;
+        int? finalPromptTokens = null;
+        int? finalCompletionTokens = null;
+        Exception? failure = null;
+
+        IAsyncEnumerator<CompletionUpdate>? enumerator = null;
+        try
+        {
+            enumerator = streamingProvider.StreamAsync(request, cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+            while (true)
+            {
+                bool hasNext;
+                CompletionUpdate? update = null;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    if (hasNext)
+                    {
+                        update = enumerator.Current;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failure = ex;
+                    break;
+                }
+
+                if (!hasNext)
+                {
+                    break;
+                }
+
+                // Provider-side metadata on any update overwrites — final update's values win
+                // because it's emitted last.
+                if (update!.ModelId is not null)
+                {
+                    finalModelId = update.ModelId;
+                }
+                if (update.PromptTokens is not null)
+                {
+                    finalPromptTokens = update.PromptTokens;
+                }
+                if (update.CompletionTokens is not null)
+                {
+                    finalCompletionTokens = update.CompletionTokens;
+                }
+
+                if (update.TextDelta.Length > 0)
+                {
+                    accumulator.Append(update.TextDelta);
+                    yield return update.TextDelta;
+                }
+            }
+        }
+        finally
+        {
+            sw.Stop();
+            if (enumerator is not null)
+            {
+                await enumerator.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        var bufferedResponse = failure is null
+            ? new CompletionResponse(accumulator.ToString(), finalModelId, finalPromptTokens, finalCompletionTokens)
+            : null;
+        AnnotateTurnActivity(activity, bufferedResponse, failure);
+        await ReportUsageAsync(bufferedResponse, failure, context, startedAt, sw.Elapsed, cancellationToken).ConfigureAwait(false);
+
+        if (failure is not null)
+        {
+            throw failure;
+        }
+
+        _history.Add(new ChatTurn(ChatRole.Assistant, accumulator.ToString()));
     }
 
     /// <inheritdoc />

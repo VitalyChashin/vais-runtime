@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS2 Platform contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -17,7 +18,7 @@ namespace Vais2.Agents.Ai.SemanticKernel;
 /// of an adapter is to exercise the host stack's real machinery, so the abstraction
 /// gets tested against SK-specific quirks (prompt settings, usage metadata shape).
 /// </remarks>
-public sealed class SkCompletionProvider : ICompletionProvider
+public sealed class SkCompletionProvider : ICompletionProvider, IStreamingCompletionProvider
 {
     private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
@@ -76,6 +77,42 @@ public sealed class SkCompletionProvider : ICompletionProvider
         var (promptTokens, completionTokens) = ExtractUsage(result.Metadata);
 
         return new CompletionResponse(text, _modelId, promptTokens, completionTokens);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<CompletionUpdate> StreamAsync(
+        CompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var history = BuildChatHistory(request);
+        var settings = new OpenAIPromptExecutionSettings
+        {
+            MaxTokens = request.MaxTokens ?? 1024,
+            Temperature = request.Temperature ?? 0.2,
+        };
+
+        var kernel = _kernel;
+        if (request.Tools is { Count: > 0 } tools)
+        {
+            kernel = _kernel.Clone();
+            kernel.Plugins.Add(SkToolBinder.BuildPlugin(tools));
+            settings.FunctionChoiceBehavior = FunctionChoiceBehavior.Auto();
+        }
+
+        // SK's streaming surface emits one StreamingChatMessageContent per chunk. We map each
+        // to a CompletionUpdate — text goes in TextDelta; ModelId is piped through every update
+        // (cheap) so a consumer that only inspects the final update still sees it. Token usage
+        // is typically only on the last streamed item's Metadata dictionary.
+        await foreach (var chunk in _chatService
+            .GetStreamingChatMessageContentsAsync(history, settings, kernel, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            var delta = chunk.Content ?? string.Empty;
+            var (promptTokens, completionTokens) = ExtractUsage(chunk.Metadata);
+            yield return new CompletionUpdate(delta, _modelId, promptTokens, completionTokens);
+        }
     }
 
     private static ChatHistory BuildChatHistory(CompletionRequest request)

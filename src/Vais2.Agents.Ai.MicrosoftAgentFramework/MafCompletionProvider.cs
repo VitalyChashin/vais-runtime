@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS2 Platform contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -27,7 +28,7 @@ namespace Vais2.Agents.Ai.MicrosoftAgentFramework;
 /// for Orleans-backed grain persistence in later milestones.
 /// </para>
 /// </remarks>
-public sealed class MafCompletionProvider : ICompletionProvider
+public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompletionProvider
 {
     private readonly IChatClient _chatClient;
     private readonly string _agentName;
@@ -110,6 +111,56 @@ public sealed class MafCompletionProvider : ICompletionProvider
         }
 
         return new CompletionResponse(text, _modelId, promptTokens, completionTokens);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<CompletionUpdate> StreamAsync(
+        CompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var agent = _chatClient.CreateAIAgent(
+            name: _agentName,
+            instructions: request.SystemPrompt,
+            description: "Vais2.Agents MAF-backed agent");
+
+        var messages = request.History.Select(ToMeai).ToList();
+
+        var chatOptions = new ChatOptions
+        {
+            MaxOutputTokens = request.MaxTokens ?? 1024,
+            Temperature = request.Temperature ?? 0.2f,
+        };
+
+        if (request.Tools is { Count: > 0 } tools)
+        {
+            chatOptions.Tools = MafToolBinder.BuildTools(tools);
+        }
+
+        var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
+
+        // MAF's RunStreamingAsync emits AgentRunResponseUpdate items — each carries a Text fragment
+        // plus (typically only on the last item) the Usage block. The wrapping FunctionInvokingChatClient
+        // continues to auto-invoke tools on this path, so tool-calling streams work the same way
+        // tool-calling on the non-streaming path does.
+        await foreach (var update in agent
+            .RunStreamingAsync(messages, thread: null, options: options, cancellationToken: cancellationToken)
+            .ConfigureAwait(false))
+        {
+            var delta = update.Text ?? string.Empty;
+
+            int? promptTokens = null;
+            int? completionTokens = null;
+            var usageContent = update.Contents.OfType<UsageContent>().FirstOrDefault();
+            if (usageContent?.Details is { } usage)
+            {
+                promptTokens = (int?)usage.InputTokenCount;
+                completionTokens = (int?)usage.OutputTokenCount;
+            }
+
+            yield return new CompletionUpdate(delta, _modelId, promptTokens, completionTokens);
+        }
     }
 
     private static MeaiChatMessage ToMeai(ChatTurn turn) => turn.Role switch
