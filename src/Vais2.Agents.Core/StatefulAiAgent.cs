@@ -47,6 +47,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly ISystemPromptComposer? _systemPromptComposer;
     private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
+    private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
     private readonly string? _agentName;
 
     /// <summary>
@@ -88,6 +89,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _systemPromptComposer = options.SystemPromptComposer;
         _inputGuardrails = options.InputGuardrails;
         _outputGuardrails = options.OutputGuardrails;
+        _streamingFilters = options.StreamingFilters;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -330,6 +332,29 @@ public sealed class StatefulAiAgent : IAiAgent
                         break;
                     }
 
+                    // Run the streaming-filter chain on each delta. A filter may transform
+                    // the update (e.g., redact PII) or throw to abort the stream. Exceptions
+                    // surface on the next loop iteration via the inner try/catch.
+                    if (_streamingFilters.Count > 0)
+                    {
+                        try
+                        {
+                            foreach (var filter in _streamingFilters)
+                            {
+                                update = await filter.OnStreamDeltaAsync(update!, cancellationToken).ConfigureAwait(false);
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            failure = ex;
+                            break;
+                        }
+                    }
+
                     // Provider-side metadata on any update overwrites — final update's values win
                     // because it's emitted last.
                     if (update!.ModelId is not null)
@@ -365,6 +390,28 @@ public sealed class StatefulAiAgent : IAiAgent
         var bufferedResponse = failure is null
             ? new CompletionResponse(accumulator.ToString(), finalModelId, finalPromptTokens, finalCompletionTokens)
             : null;
+
+        // Streaming filters' OnStreamCompleteAsync fires after drain, before output
+        // guardrails. A complete hook throwing aborts the turn just like a provider
+        // fault; the assistant turn is not appended.
+        if (failure is null && bufferedResponse is not null && _streamingFilters.Count > 0)
+        {
+            try
+            {
+                foreach (var filter in _streamingFilters)
+                {
+                    await filter.OnStreamCompleteAsync(bufferedResponse, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        }
 
         // Output guardrails run AFTER the accumulator drains. Post-facto by design —
         // deltas have already gone to the consumer; strict pre-emit gating is AskAsync's job.

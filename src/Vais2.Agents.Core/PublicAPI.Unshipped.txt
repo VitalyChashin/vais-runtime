@@ -40,8 +40,12 @@ Vais2.Agents.Core.StatefulAgentOptions.ToolGuardrails.get -> System.Collections.
 Vais2.Agents.Core.StatefulAgentOptions.ToolGuardrails.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.get -> Vais2.Agents.IMemoryStore?
 Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.Budget.get -> Vais2.Agents.RunBudget?
+Vais2.Agents.Core.StatefulAgentOptions.Budget.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.Session.get -> Vais2.Agents.IAgentSession?
 Vais2.Agents.Core.StatefulAgentOptions.Session.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IStreamingAgentFilter!>!
+Vais2.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais2.Agents.ISystemPromptComposer?
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.init -> void
 Vais2.Agents.Core.StatefulAiAgent.Session.get -> Vais2.Agents.IAgentSession!

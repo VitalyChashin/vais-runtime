@@ -60,6 +60,9 @@ Vais2.Agents.IOutputGuardrail
 Vais2.Agents.IOutputGuardrail.EvaluateAsync(Vais2.Agents.CompletionResponse! response, Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.GuardrailOutcome!>
 Vais2.Agents.IPromptTemplate
 Vais2.Agents.IPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais2.Agents.IStreamingAgentFilter
+Vais2.Agents.IStreamingAgentFilter.OnStreamCompleteAsync(Vais2.Agents.CompletionResponse! final, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.IStreamingAgentFilter.OnStreamDeltaAsync(Vais2.Agents.CompletionUpdate! update, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.CompletionUpdate!>
 Vais2.Agents.ISystemPromptComposer
 Vais2.Agents.ISystemPromptComposer.ComposeAsync(Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
 Vais2.Agents.ISystemPromptContributor
@@ -103,6 +106,21 @@ Vais2.Agents.MemoryScope.TenantId.get -> string?
 Vais2.Agents.MemoryScope.TenantId.init -> void
 Vais2.Agents.MemorySearchResult
 Vais2.Agents.MemorySearchResult.<Clone>$() -> Vais2.Agents.MemorySearchResult!
+Vais2.Agents.RunBudget
+Vais2.Agents.RunBudget.<Clone>$() -> Vais2.Agents.RunBudget!
+Vais2.Agents.RunBudget.Deconstruct(out int? MaxTurns, out int? MaxToolCalls, out int? MaxPromptTokens, out int? MaxCompletionTokens, out System.TimeSpan? MaxDuration) -> void
+Vais2.Agents.RunBudget.Equals(Vais2.Agents.RunBudget? other) -> bool
+Vais2.Agents.RunBudget.MaxCompletionTokens.get -> int?
+Vais2.Agents.RunBudget.MaxCompletionTokens.init -> void
+Vais2.Agents.RunBudget.MaxDuration.get -> System.TimeSpan?
+Vais2.Agents.RunBudget.MaxDuration.init -> void
+Vais2.Agents.RunBudget.MaxPromptTokens.get -> int?
+Vais2.Agents.RunBudget.MaxPromptTokens.init -> void
+Vais2.Agents.RunBudget.MaxToolCalls.get -> int?
+Vais2.Agents.RunBudget.MaxToolCalls.init -> void
+Vais2.Agents.RunBudget.MaxTurns.get -> int?
+Vais2.Agents.RunBudget.MaxTurns.init -> void
+Vais2.Agents.RunBudget.RunBudget(int? MaxTurns = null, int? MaxToolCalls = null, int? MaxPromptTokens = null, int? MaxCompletionTokens = null, System.TimeSpan? MaxDuration = null) -> void
 Vais2.Agents.MemorySearchResult.Deconstruct(out string! Key, out Vais2.Agents.MemoryItem! Item, out float? Score) -> void
 Vais2.Agents.MemorySearchResult.Equals(Vais2.Agents.MemorySearchResult? other) -> bool
 Vais2.Agents.MemorySearchResult.Item.get -> Vais2.Agents.MemoryItem!
@@ -130,6 +148,9 @@ override Vais2.Agents.MemoryScope.ToString() -> string!
 override Vais2.Agents.MemorySearchResult.Equals(object? obj) -> bool
 override Vais2.Agents.MemorySearchResult.GetHashCode() -> int
 override Vais2.Agents.MemorySearchResult.ToString() -> string!
+override Vais2.Agents.RunBudget.Equals(object? obj) -> bool
+override Vais2.Agents.RunBudget.GetHashCode() -> int
+override Vais2.Agents.RunBudget.ToString() -> string!
 static Vais2.Agents.ContextContribution.Empty.get -> Vais2.Agents.ContextContribution!
 static Vais2.Agents.GuardrailOutcome.Deny(string? reason = null) -> Vais2.Agents.GuardrailOutcome!
 static Vais2.Agents.GuardrailOutcome.Pass.get -> Vais2.Agents.GuardrailOutcome!
@@ -145,3 +166,6 @@ static Vais2.Agents.MemoryScope.operator !=(Vais2.Agents.MemoryScope? left, Vais
 static Vais2.Agents.MemoryScope.operator ==(Vais2.Agents.MemoryScope? left, Vais2.Agents.MemoryScope? right) -> bool
 static Vais2.Agents.MemorySearchResult.operator !=(Vais2.Agents.MemorySearchResult? left, Vais2.Agents.MemorySearchResult? right) -> bool
 static Vais2.Agents.MemorySearchResult.operator ==(Vais2.Agents.MemorySearchResult? left, Vais2.Agents.MemorySearchResult? right) -> bool
+static Vais2.Agents.RunBudget.Unlimited.get -> Vais2.Agents.RunBudget!
+static Vais2.Agents.RunBudget.operator !=(Vais2.Agents.RunBudget? left, Vais2.Agents.RunBudget? right) -> bool
+static Vais2.Agents.RunBudget.operator ==(Vais2.Agents.RunBudget? left, Vais2.Agents.RunBudget? right) -> bool

@@ -154,4 +154,19 @@ public sealed class StatefulAgentOptions
     /// Default: empty.
     /// </summary>
     public IReadOnlyList<IToolGuardrail> ToolGuardrails { get; init; } = Array.Empty<IToolGuardrail>();
+
+    /// <summary>
+    /// Per-run caps (turns, tool calls, tokens, duration). Ships in v0.4 PR 8 for consumers to
+    /// wire now; enforcement lands in PR 9 when <c>StatefulAiAgent</c> takes over the outer
+    /// tool-call loop and "a run" becomes well-defined. Default: null (unlimited).
+    /// </summary>
+    public RunBudget? Budget { get; init; }
+
+    /// <summary>
+    /// Ordered pipeline of streaming filters applied by <c>StatefulAiAgent.StreamAsync</c>.
+    /// Each <see cref="CompletionUpdate"/> flowing from the provider passes through the chain
+    /// in order before being yielded to the caller; <see cref="IStreamingAgentFilter.OnStreamCompleteAsync"/>
+    /// fires on every filter after the accumulator drains. Default: empty.
+    /// </summary>
+    public IReadOnlyList<IStreamingAgentFilter> StreamingFilters { get; init; } = Array.Empty<IStreamingAgentFilter>();
 }
