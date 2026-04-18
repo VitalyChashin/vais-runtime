@@ -1,0 +1,12 @@
+#nullable enable
+Vais2.Agents.Protocols.A2A.A2AAgentInvocationException
+Vais2.Agents.Protocols.A2A.A2AAgentInvocationException.A2AAgentInvocationException(string! agentName, string! message) -> void
+Vais2.Agents.Protocols.A2A.A2AAgentInvocationException.AgentName.get -> string!
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.A2ARemoteAgentTool(A2A.IA2AClient! client, A2A.AgentCard! card) -> void
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.AgentName.get -> string!
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.Description.get -> string!
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.InvokeAsync(System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.Name.get -> string!
+Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.ParametersSchema.get -> System.Text.Json.JsonElement
+static Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool.CreateAsync(System.Uri! agentUrl, System.Net.Http.HttpClient? httpClient = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais2.Agents.Protocols.A2A.A2ARemoteAgentTool!>!

@@ -30,6 +30,10 @@
     <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.10" />
   </ItemGroup>
 
+  <ItemGroup Label="A2A (Vais2.Agents.Protocols.A2A). Preview-pinned for the same reason as MCP — local mirror only has 0.3.1-preview.">
+    <PackageVersion Include="A2A" Version="0.3.1-preview" />
+  </ItemGroup>
+
   <ItemGroup Label="OpenAI SDK - floor set by SK 1.74 (≥2.9.1) and MEAI.OpenAI 10.5 (≥2.10.0).">
     <PackageVersion Include="OpenAI" Version="2.10.0" />
   </ItemGroup>
