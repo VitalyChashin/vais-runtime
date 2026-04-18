@@ -120,4 +120,14 @@ public sealed class StatefulAgentOptions
     /// <see cref="NoopContextWindowPacker.Instance"/> (identity).
     /// </summary>
     public IContextWindowPacker? ContextWindowPacker { get; init; }
+
+    /// <summary>
+    /// Optional multi-part system prompt composer. When non-null, <see cref="StatefulAiAgent"/>
+    /// calls <see cref="ISystemPromptComposer.ComposeAsync"/> at the start of every turn
+    /// and uses the returned string as the base system prompt — the plain
+    /// <see cref="SystemPrompt"/> string is ignored in that case. Context-provider
+    /// <see cref="ContextContribution.SystemPromptAddendum"/> values still concatenate
+    /// on top of the composed base.
+    /// </summary>
+    public ISystemPromptComposer? SystemPromptComposer { get; init; }
 }

@@ -44,6 +44,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IHistoryReducer _historyReducer;
     private readonly IReadOnlyList<IContextProvider> _contextProviders;
     private readonly IContextWindowPacker _contextWindowPacker;
+    private readonly ISystemPromptComposer? _systemPromptComposer;
     private readonly string? _agentName;
 
     /// <summary>
@@ -82,6 +83,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
         _contextProviders = options.ContextProviders;
         _contextWindowPacker = options.ContextWindowPacker ?? NoopContextWindowPacker.Instance;
+        _systemPromptComposer = options.SystemPromptComposer;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -110,18 +112,21 @@ public sealed class StatefulAiAgent : IAiAgent
 
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
+        var context = _contextAccessor.Current;
+
         // Snapshot: the provider must see a stable view of the history. The
         // session may keep mutating across turns; handing out the live reference
         // would race with the next call or allow an adapter to mutate our state.
         var snapshot = _session.History.ToArray();
         var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
+        var baseSystemPrompt = _systemPromptComposer is null
+            ? SystemPrompt
+            : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
         var candidate = new CompletionRequest(
             reduced,
-            SystemPrompt,
+            baseSystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
-
-        var context = _contextAccessor.Current;
 
         // Context-provider chain: each provider reads the candidate + returns
         // a contribution the host merges into the request. Packer runs after
@@ -233,15 +238,18 @@ public sealed class StatefulAiAgent : IAiAgent
 
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
+        var context = _contextAccessor.Current;
+
         var snapshot = _session.History.ToArray();
         var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
+        var baseSystemPrompt = _systemPromptComposer is null
+            ? SystemPrompt
+            : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
         var candidate = new CompletionRequest(
             reduced,
-            SystemPrompt,
+            baseSystemPrompt,
             Tools: tools is { Count: > 0 } ? tools : null);
-
-        var context = _contextAccessor.Current;
 
         candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
         candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
