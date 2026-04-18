@@ -1,4 +1,1 @@
 #nullable enable
-Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider
-Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.InvokeAsync(Vais2.Agents.ContextInvocationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ContextContribution!>
-Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.KnowledgeRetrievalContextProvider(Vais2.Agents.IKnowledgeRetriever! retriever, Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? options = null) -> void

@@ -20,3 +20,6 @@ override Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.GetHashCo
 override Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.ToString() -> string!
 static Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.operator !=(Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? left, Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? right) -> bool
 static Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.operator ==(Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? left, Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? right) -> bool
+Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider
+Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.InvokeAsync(Vais2.Agents.ContextInvocationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ContextContribution!>
+Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.KnowledgeRetrievalContextProvider(Vais2.Agents.IKnowledgeRetriever! retriever, Vais2.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? options = null) -> void
