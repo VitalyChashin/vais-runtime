@@ -169,4 +169,12 @@ public sealed class StatefulAgentOptions
     /// fires on every filter after the accumulator drains. Default: empty.
     /// </summary>
     public IReadOnlyList<IStreamingAgentFilter> StreamingFilters { get; init; } = Array.Empty<IStreamingAgentFilter>();
+
+    /// <summary>
+    /// Dispatcher for tool calls surfaced by the provider. When null, <c>StatefulAiAgent</c>
+    /// constructs a <see cref="DefaultToolCallDispatcher"/> from <see cref="ToolRegistry"/> +
+    /// <see cref="ToolGuardrails"/> automatically. Supply your own to override — e.g., a
+    /// journaled dispatcher for durable execution.
+    /// </summary>
+    public IToolCallDispatcher? ToolCallDispatcher { get; init; }
 }

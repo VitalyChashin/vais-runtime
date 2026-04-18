@@ -1,8 +1,52 @@
 #nullable enable
+*REMOVED*Vais2.Agents.ChatTurn.ChatTurn(Vais2.Agents.AgentChatRole Role, string! Text) -> void
+*REMOVED*Vais2.Agents.ChatTurn.Deconstruct(out Vais2.Agents.AgentChatRole Role, out string! Text) -> void
+*REMOVED*Vais2.Agents.CompletionResponse.CompletionResponse(string! Text, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null) -> void
+*REMOVED*Vais2.Agents.CompletionResponse.Deconstruct(out string! Text, out string? ModelId, out int? PromptTokens, out int? CompletionTokens) -> void
+Vais2.Agents.AgentBudgetExceededException
+Vais2.Agents.AgentBudgetExceededException.AgentBudgetExceededException(string! budgetField, object! limit, object! observed) -> void
+Vais2.Agents.AgentBudgetExceededException.BudgetField.get -> string!
+Vais2.Agents.AgentBudgetExceededException.Limit.get -> object!
+Vais2.Agents.AgentBudgetExceededException.Observed.get -> object!
+Vais2.Agents.AgentChatRole.Tool = 3 -> Vais2.Agents.AgentChatRole
 Vais2.Agents.AgentGuardrailDeniedException
 Vais2.Agents.AgentGuardrailDeniedException.AgentGuardrailDeniedException(Vais2.Agents.GuardrailLayer layer, string? reason) -> void
 Vais2.Agents.AgentGuardrailDeniedException.Layer.get -> Vais2.Agents.GuardrailLayer
 Vais2.Agents.AgentGuardrailDeniedException.Reason.get -> string?
+Vais2.Agents.ChatTurn.ChatTurn(Vais2.Agents.AgentChatRole Role, string! Text, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls = null, string? ToolCallId = null) -> void
+Vais2.Agents.ChatTurn.Deconstruct(out Vais2.Agents.AgentChatRole Role, out string! Text, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls, out string? ToolCallId) -> void
+Vais2.Agents.ChatTurn.ToolCallId.get -> string?
+Vais2.Agents.ChatTurn.ToolCallId.init -> void
+Vais2.Agents.ChatTurn.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>?
+Vais2.Agents.ChatTurn.ToolCalls.init -> void
+Vais2.Agents.CompletionResponse.CompletionResponse(string! Text, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls = null) -> void
+Vais2.Agents.CompletionResponse.Deconstruct(out string! Text, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>? ToolCalls) -> void
+Vais2.Agents.CompletionResponse.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ToolCallRequest!>?
+Vais2.Agents.CompletionResponse.ToolCalls.init -> void
+Vais2.Agents.IToolCallDispatcher
+Vais2.Agents.IToolCallDispatcher.DispatchAsync(Vais2.Agents.ToolCallRequest! request, Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ToolCallOutcome!>
+Vais2.Agents.ToolCallOutcome
+Vais2.Agents.ToolCallOutcome.<Clone>$() -> Vais2.Agents.ToolCallOutcome!
+Vais2.Agents.ToolCallOutcome.CallId.get -> string!
+Vais2.Agents.ToolCallOutcome.CallId.init -> void
+Vais2.Agents.ToolCallOutcome.Deconstruct(out string! CallId, out string! Result, out string? Error) -> void
+Vais2.Agents.ToolCallOutcome.Equals(Vais2.Agents.ToolCallOutcome? other) -> bool
+Vais2.Agents.ToolCallOutcome.Error.get -> string?
+Vais2.Agents.ToolCallOutcome.Error.init -> void
+Vais2.Agents.ToolCallOutcome.Result.get -> string!
+Vais2.Agents.ToolCallOutcome.Result.init -> void
+Vais2.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string! Result, string? Error = null) -> void
+Vais2.Agents.ToolCallRequest
+Vais2.Agents.ToolCallRequest.<Clone>$() -> Vais2.Agents.ToolCallRequest!
+Vais2.Agents.ToolCallRequest.Arguments.get -> System.Text.Json.JsonElement
+Vais2.Agents.ToolCallRequest.Arguments.init -> void
+Vais2.Agents.ToolCallRequest.CallId.get -> string!
+Vais2.Agents.ToolCallRequest.CallId.init -> void
+Vais2.Agents.ToolCallRequest.Deconstruct(out string! ToolName, out System.Text.Json.JsonElement Arguments, out string! CallId) -> void
+Vais2.Agents.ToolCallRequest.Equals(Vais2.Agents.ToolCallRequest? other) -> bool
+Vais2.Agents.ToolCallRequest.ToolCallRequest(string! ToolName, System.Text.Json.JsonElement Arguments, string! CallId) -> void
+Vais2.Agents.ToolCallRequest.ToolName.get -> string!
+Vais2.Agents.ToolCallRequest.ToolName.init -> void
 Vais2.Agents.ContextContribution
 Vais2.Agents.ContextContribution.<Clone>$() -> Vais2.Agents.ContextContribution!
 Vais2.Agents.ContextContribution.AdditionalTools.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ITool!>?
@@ -130,6 +174,12 @@ Vais2.Agents.MemorySearchResult.Key.init -> void
 Vais2.Agents.MemorySearchResult.MemorySearchResult(string! Key, Vais2.Agents.MemoryItem! Item, float? Score = null) -> void
 Vais2.Agents.MemorySearchResult.Score.get -> float?
 Vais2.Agents.MemorySearchResult.Score.init -> void
+override Vais2.Agents.ToolCallOutcome.Equals(object? obj) -> bool
+override Vais2.Agents.ToolCallOutcome.GetHashCode() -> int
+override Vais2.Agents.ToolCallOutcome.ToString() -> string!
+override Vais2.Agents.ToolCallRequest.Equals(object? obj) -> bool
+override Vais2.Agents.ToolCallRequest.GetHashCode() -> int
+override Vais2.Agents.ToolCallRequest.ToString() -> string!
 override Vais2.Agents.ContextContribution.Equals(object? obj) -> bool
 override Vais2.Agents.GuardrailOutcome.Equals(object? obj) -> bool
 override Vais2.Agents.GuardrailOutcome.GetHashCode() -> int
@@ -151,6 +201,10 @@ override Vais2.Agents.MemorySearchResult.ToString() -> string!
 override Vais2.Agents.RunBudget.Equals(object? obj) -> bool
 override Vais2.Agents.RunBudget.GetHashCode() -> int
 override Vais2.Agents.RunBudget.ToString() -> string!
+static Vais2.Agents.ToolCallOutcome.operator !=(Vais2.Agents.ToolCallOutcome? left, Vais2.Agents.ToolCallOutcome? right) -> bool
+static Vais2.Agents.ToolCallOutcome.operator ==(Vais2.Agents.ToolCallOutcome? left, Vais2.Agents.ToolCallOutcome? right) -> bool
+static Vais2.Agents.ToolCallRequest.operator !=(Vais2.Agents.ToolCallRequest? left, Vais2.Agents.ToolCallRequest? right) -> bool
+static Vais2.Agents.ToolCallRequest.operator ==(Vais2.Agents.ToolCallRequest? left, Vais2.Agents.ToolCallRequest? right) -> bool
 static Vais2.Agents.ContextContribution.Empty.get -> Vais2.Agents.ContextContribution!
 static Vais2.Agents.GuardrailOutcome.Deny(string? reason = null) -> Vais2.Agents.GuardrailOutcome!
 static Vais2.Agents.GuardrailOutcome.Pass.get -> Vais2.Agents.GuardrailOutcome!

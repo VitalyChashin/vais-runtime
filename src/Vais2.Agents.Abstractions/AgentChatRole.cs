@@ -4,9 +4,7 @@
 namespace Vais2.Agents;
 
 /// <summary>
-/// Role of a participant in a conversation turn. Kept deliberately small —
-/// <c>Tool</c> / <c>Function</c> roles are deferred to a later milestone when
-/// tool-calling parity between adapters is in scope.
+/// Role of a participant in a conversation turn.
 /// </summary>
 /// <remarks>
 /// Named <c>AgentChatRole</c> (not plain <c>ChatRole</c>) to avoid colliding with
@@ -22,6 +20,13 @@ public enum AgentChatRole
     /// <summary>A message from the human end user.</summary>
     User = 1,
 
-    /// <summary>A message produced by an AI agent / assistant.</summary>
+    /// <summary>A message produced by an AI agent / assistant; may also carry tool calls via <see cref="ChatTurn.ToolCalls"/>.</summary>
     Assistant = 2,
+
+    /// <summary>
+    /// A tool-result message following an assistant turn that requested tool calls.
+    /// <see cref="ChatTurn.ToolCallId"/> correlates back to the originating
+    /// <see cref="ToolCallRequest.CallId"/>.
+    /// </summary>
+    Tool = 3,
 }

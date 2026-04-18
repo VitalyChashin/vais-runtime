@@ -48,6 +48,8 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
     private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
+    private readonly RunBudget _budget;
+    private readonly IToolCallDispatcher _toolCallDispatcher;
     private readonly string? _agentName;
 
     /// <summary>
@@ -90,6 +92,9 @@ public sealed class StatefulAiAgent : IAiAgent
         _inputGuardrails = options.InputGuardrails;
         _outputGuardrails = options.OutputGuardrails;
         _streamingFilters = options.StreamingFilters;
+        _budget = options.Budget ?? RunBudget.Unlimited;
+        _toolCallDispatcher = options.ToolCallDispatcher
+            ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails);
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -119,59 +124,122 @@ public sealed class StatefulAiAgent : IAiAgent
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
         var context = _contextAccessor.Current;
-
-        // Snapshot: the provider must see a stable view of the history. The
-        // session may keep mutating across turns; handing out the live reference
-        // would race with the next call or allow an adapter to mutate our state.
-        var snapshot = _session.History.ToArray();
-        var reduced = await _historyReducer.ReduceAsync(snapshot, cancellationToken).ConfigureAwait(false);
-        var baseSystemPrompt = _systemPromptComposer is null
-            ? SystemPrompt
-            : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
-        var tools = _toolRegistry?.Tools;
-        var candidate = new CompletionRequest(
-            reduced,
-            baseSystemPrompt,
-            Tools: tools is { Count: > 0 } ? tools : null);
-
-        // Context-provider chain: each provider reads the candidate + returns
-        // a contribution the host merges into the request. Packer runs after
-        // all providers so it sees the final pre-filter shape.
-        candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
-        candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
-        var request = candidate;
-
         var eventContext = BuildEventContext(context);
-        var startedAt = DateTimeOffset.UtcNow;
-        var sw = Stopwatch.StartNew();
+        var runStartedAt = DateTimeOffset.UtcNow;
+        var runStopwatch = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
 
-        await PublishEventAsync(new TurnStarted(startedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
+        await PublishEventAsync(new TurnStarted(runStartedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
 
-        CompletionResponse? response = null;
+        // Working history lives for the duration of this run. It starts from the session
+        // snapshot (which includes the just-appended user turn) and grows with the
+        // assistant-with-tool-calls + tool-result turns produced by each loop round.
+        // Session history stays clean — only user + final assistant turns land there.
+        var workingHistory = new List<ChatTurn>(_session.History);
+
+        var aggregatedPromptTokens = 0;
+        var aggregatedCompletionTokens = 0;
+        string? finalModelId = null;
+        var totalToolCalls = 0;
+        var turnIndex = 0;
+        CompletionResponse? lastResponse = null;
         Exception? failure = null;
 
         try
         {
-            // Input guardrails run inside the try so a denial is captured as `failure`
-            // and flows through the usual usage-sink + TurnFailed emission path.
-            await RunInputGuardrailsAsync(request, context, cancellationToken).ConfigureAwait(false);
+            while (true)
+            {
+                turnIndex++;
+                if (_budget.MaxTurns is int maxTurns && turnIndex > maxTurns)
+                {
+                    throw new AgentBudgetExceededException(nameof(RunBudget.MaxTurns), maxTurns, turnIndex);
+                }
+                if (_budget.MaxDuration is TimeSpan maxDuration && runStopwatch.Elapsed > maxDuration)
+                {
+                    throw new AgentBudgetExceededException(nameof(RunBudget.MaxDuration), maxDuration, runStopwatch.Elapsed);
+                }
 
-            response = await _pipeline.ExecuteAsync(
-                async ct => await InvokeThroughFiltersAsync(request, ct).ConfigureAwait(false),
-                cancellationToken).ConfigureAwait(false);
+                var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
+                var baseSystemPrompt = _systemPromptComposer is null
+                    ? SystemPrompt
+                    : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
+                var tools = _toolRegistry?.Tools;
+                var candidate = new CompletionRequest(
+                    reduced,
+                    baseSystemPrompt,
+                    Tools: tools is { Count: > 0 } ? tools : null);
 
-            // Output guardrails run on the response before it's appended to the session.
-            // Denial leaves the user turn in session history (the caller's message is still
-            // part of the record) but no assistant turn — same semantics as a provider fault.
-            await RunOutputGuardrailsAsync(response, context, cancellationToken).ConfigureAwait(false);
+                // Context-provider chain + packer run each round so providers can react
+                // to tool results landing in the working history between rounds.
+                candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
+                candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
+
+                // Input guardrails fire on every model invocation — tool-call loops
+                // should be able to block a mid-run escalation, not just the first turn.
+                await RunInputGuardrailsAsync(candidate, context, cancellationToken).ConfigureAwait(false);
+
+                var response = await _pipeline.ExecuteAsync(
+                    async ct => await InvokeThroughFiltersAsync(candidate, ct).ConfigureAwait(false),
+                    cancellationToken).ConfigureAwait(false);
+                lastResponse = response;
+
+                if (response.PromptTokens is int pt)
+                {
+                    aggregatedPromptTokens += pt;
+                }
+                if (response.CompletionTokens is int ct2)
+                {
+                    aggregatedCompletionTokens += ct2;
+                }
+                if (response.ModelId is not null)
+                {
+                    finalModelId = response.ModelId;
+                }
+
+                if (_budget.MaxPromptTokens is int maxPrompt && aggregatedPromptTokens > maxPrompt)
+                {
+                    throw new AgentBudgetExceededException(nameof(RunBudget.MaxPromptTokens), maxPrompt, aggregatedPromptTokens);
+                }
+                if (_budget.MaxCompletionTokens is int maxCompletion && aggregatedCompletionTokens > maxCompletion)
+                {
+                    throw new AgentBudgetExceededException(nameof(RunBudget.MaxCompletionTokens), maxCompletion, aggregatedCompletionTokens);
+                }
+
+                // Final-answer case: no tool calls requested. Run output guardrails
+                // and fall through to the success path below.
+                if (response.ToolCalls is null || response.ToolCalls.Count == 0)
+                {
+                    await RunOutputGuardrailsAsync(response, context, cancellationToken).ConfigureAwait(false);
+                    break;
+                }
+
+                // Tool-call round: append assistant-with-tool-calls to the working
+                // history, dispatch each call, append tool-role turns. The session
+                // is NOT mutated here — only the final assistant turn lands in it.
+                workingHistory.Add(new ChatTurn(
+                    AgentChatRole.Assistant,
+                    response.Text,
+                    ToolCalls: response.ToolCalls));
+
+                foreach (var toolCall in response.ToolCalls)
+                {
+                    totalToolCalls++;
+                    if (_budget.MaxToolCalls is int maxToolCalls && totalToolCalls > maxToolCalls)
+                    {
+                        throw new AgentBudgetExceededException(nameof(RunBudget.MaxToolCalls), maxToolCalls, totalToolCalls);
+                    }
+
+                    var outcome = await _toolCallDispatcher.DispatchAsync(toolCall, context, cancellationToken).ConfigureAwait(false);
+                    workingHistory.Add(new ChatTurn(
+                        AgentChatRole.Tool,
+                        outcome.Result,
+                        ToolCallId: outcome.CallId));
+                }
+            }
         }
         catch (OperationCanceledException)
         {
-            // Cancellation is not a "failure" for usage-sink purposes — it's the
-            // caller asking to stop. Re-throw without reporting; UsageRecord is
-            // reserved for completed or errored turns.
             throw;
         }
         catch (Exception ex)
@@ -180,29 +248,47 @@ public sealed class StatefulAiAgent : IAiAgent
         }
         finally
         {
-            sw.Stop();
+            runStopwatch.Stop();
         }
 
-        AnnotateTurnActivity(activity, response, failure);
+        // For usage reporting, synthesize an aggregated response carrying the
+        // cross-round token totals. Last-observed ModelId wins (providers can
+        // switch models mid-run in theory).
+        var aggregatedResponse = lastResponse is null
+            ? null
+            : new CompletionResponse(
+                lastResponse.Text,
+                finalModelId,
+                aggregatedPromptTokens > 0 ? aggregatedPromptTokens : null,
+                aggregatedCompletionTokens > 0 ? aggregatedCompletionTokens : null);
 
-        await ReportUsageAsync(response, failure, context, startedAt, sw.Elapsed, cancellationToken).ConfigureAwait(false);
+        AnnotateTurnActivity(activity, aggregatedResponse, failure);
+
+        await ReportUsageAsync(aggregatedResponse, failure, context, runStartedAt, runStopwatch.Elapsed, cancellationToken).ConfigureAwait(false);
 
         if (failure is not null)
         {
             await PublishEventAsync(
-                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, sw.Elapsed),
+                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, runStopwatch.Elapsed),
                 cancellationToken).ConfigureAwait(false);
             throw failure;
         }
 
-        var text = response!.Text;
-        await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, text), cancellationToken).ConfigureAwait(false);
+        var finalText = lastResponse!.Text;
+        await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, finalText), cancellationToken).ConfigureAwait(false);
 
         await PublishEventAsync(
-            new TurnCompleted(DateTimeOffset.UtcNow, eventContext, text, response.ModelId, response.PromptTokens, response.CompletionTokens, sw.Elapsed),
+            new TurnCompleted(
+                DateTimeOffset.UtcNow,
+                eventContext,
+                finalText,
+                finalModelId,
+                aggregatedPromptTokens > 0 ? aggregatedPromptTokens : null,
+                aggregatedCompletionTokens > 0 ? aggregatedCompletionTokens : null,
+                runStopwatch.Elapsed),
             cancellationToken).ConfigureAwait(false);
 
-        return text;
+        return finalText;
     }
 
     /// <summary>

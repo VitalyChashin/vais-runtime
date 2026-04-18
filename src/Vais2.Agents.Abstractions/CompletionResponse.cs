@@ -13,11 +13,20 @@ namespace Vais2.Agents;
 /// </param>
 /// <param name="PromptTokens">Tokens consumed by the input, if reported by the provider.</param>
 /// <param name="CompletionTokens">Tokens consumed by the output, if reported by the provider.</param>
+/// <param name="ToolCalls">
+/// Tool calls the model requested in this response, if any. Populated only when
+/// the provider is configured to surface tool calls rather than auto-invoke them
+/// (the SK and MAF adapters do this starting in v0.4). Null or empty means the
+/// assistant produced a final text response; <c>StatefulAiAgent</c>'s outer
+/// loop exits in that case. When non-empty, the loop dispatches each call via
+/// <see cref="IToolCallDispatcher"/> and re-invokes the provider on the next round.
+/// </param>
 public sealed record CompletionResponse(
     string Text,
     string? ModelId = null,
     int? PromptTokens = null,
-    int? CompletionTokens = null)
+    int? CompletionTokens = null,
+    IReadOnlyList<ToolCallRequest>? ToolCalls = null)
 {
     /// <summary>
     /// Total tokens consumed, derived from <see cref="PromptTokens"/> and

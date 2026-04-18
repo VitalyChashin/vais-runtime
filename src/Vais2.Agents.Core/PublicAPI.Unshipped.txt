@@ -17,6 +17,9 @@ Vais2.Agents.Core.AggregatingSystemPromptComposer.AggregatingSystemPromptCompose
 Vais2.Agents.Core.AggregatingSystemPromptComposer.ComposeAsync(Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
 Vais2.Agents.Core.FormatStringPromptTemplate
 Vais2.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais2.Agents.Core.DefaultToolCallDispatcher
+Vais2.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais2.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais2.Agents.IToolGuardrail!>? toolGuardrails = null) -> void
+Vais2.Agents.Core.DefaultToolCallDispatcher.DispatchAsync(Vais2.Agents.ToolCallRequest! request, Vais2.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.ToolCallOutcome!>
 Vais2.Agents.Core.NoopContextWindowPacker
 Vais2.Agents.Core.NoopContextWindowPacker.PackAsync(Vais2.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais2.Agents.CompletionRequest!>
 Vais2.Agents.Core.NoopHistoryReducer
@@ -46,6 +49,8 @@ Vais2.Agents.Core.StatefulAgentOptions.Session.get -> Vais2.Agents.IAgentSession
 Vais2.Agents.Core.StatefulAgentOptions.Session.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IStreamingAgentFilter!>!
 Vais2.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.get -> Vais2.Agents.IToolCallDispatcher?
+Vais2.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais2.Agents.ISystemPromptComposer?
 Vais2.Agents.Core.StatefulAgentOptions.SystemPromptComposer.init -> void
 Vais2.Agents.Core.StatefulAiAgent.Session.get -> Vais2.Agents.IAgentSession!

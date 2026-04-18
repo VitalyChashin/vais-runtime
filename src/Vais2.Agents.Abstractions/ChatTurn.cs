@@ -7,5 +7,19 @@ namespace Vais2.Agents;
 /// A single message in a conversation. Immutable, value-equal, serialisable.
 /// </summary>
 /// <param name="Role">Who produced this turn.</param>
-/// <param name="Text">The message content. Non-null; may be empty.</param>
-public sealed record ChatTurn(AgentChatRole Role, string Text);
+/// <param name="Text">The message content. Non-null; may be empty (e.g., an assistant turn that only carries tool calls).</param>
+/// <param name="ToolCalls">
+/// Tool calls attached to this turn. Populated when <paramref name="Role"/> is
+/// <see cref="AgentChatRole.Assistant"/> and the model requested tool invocations.
+/// Ignored for other roles. Null on regular assistant text.
+/// </param>
+/// <param name="ToolCallId">
+/// Correlation id for a tool result. Populated when <paramref name="Role"/> is
+/// <see cref="AgentChatRole.Tool"/> — matches the <see cref="ToolCallRequest.CallId"/>
+/// that produced the result. Null for other roles.
+/// </param>
+public sealed record ChatTurn(
+    AgentChatRole Role,
+    string Text,
+    IReadOnlyList<ToolCallRequest>? ToolCalls = null,
+    string? ToolCallId = null);
