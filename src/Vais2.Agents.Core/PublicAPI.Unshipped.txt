@@ -1,1 +1,11 @@
 #nullable enable
+Vais2.Agents.Core.InMemoryAgentSession
+Vais2.Agents.Core.InMemoryAgentSession.AgentId.get -> string!
+Vais2.Agents.Core.InMemoryAgentSession.AppendAsync(Vais2.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.InMemoryAgentSession.History.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>!
+Vais2.Agents.Core.InMemoryAgentSession.InMemoryAgentSession(string! agentId, string? sessionId = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? initialHistory = null) -> void
+Vais2.Agents.Core.InMemoryAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais2.Agents.Core.InMemoryAgentSession.SessionId.get -> string!
+Vais2.Agents.Core.StatefulAgentOptions.Session.get -> Vais2.Agents.IAgentSession?
+Vais2.Agents.Core.StatefulAgentOptions.Session.init -> void
+Vais2.Agents.Core.StatefulAiAgent.Session.get -> Vais2.Agents.IAgentSession!

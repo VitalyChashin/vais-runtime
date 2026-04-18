@@ -21,7 +21,14 @@ public interface IAiAgent
     /// </summary>
     string? SystemPrompt { get; set; }
 
+    /// <summary>
+    /// The conversation container this agent is bound to. History and per-conversation
+    /// state live here; <see cref="History"/> is a shim over <see cref="IAgentSession.History"/>.
+    /// </summary>
+    IAgentSession Session { get; }
+
     /// <summary>Read-only view of the conversation history known to this agent.</summary>
+    /// <remarks>Equivalent to <see cref="Session"/>.<see cref="IAgentSession.History"/>.</remarks>
     IReadOnlyList<ChatTurn> History { get; }
 
     /// <summary>

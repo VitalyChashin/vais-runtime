@@ -27,14 +27,19 @@ namespace Vais2.Agents.Hosting.Orleans;
 internal sealed class OrleansAiAgentProxy : IAiAgent
 {
     private readonly IAiAgentGrain _grain;
+    private readonly string _agentId;
+    private readonly GrainBackedAgentSession _session;
     private IReadOnlyList<ChatTurn> _historyCache = Array.Empty<ChatTurn>();
     private string? _systemPromptCache;
     private bool _cacheInitialised;
 
-    public OrleansAiAgentProxy(IAiAgentGrain grain)
+    public OrleansAiAgentProxy(IAiAgentGrain grain, string agentId)
     {
         ArgumentNullException.ThrowIfNull(grain);
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         _grain = grain;
+        _agentId = agentId;
+        _session = new GrainBackedAgentSession(this);
     }
 
     public string? SystemPrompt
@@ -51,6 +56,8 @@ internal sealed class OrleansAiAgentProxy : IAiAgent
             _cacheInitialised = true;
         }
     }
+
+    public IAgentSession Session => _session;
 
     public IReadOnlyList<ChatTurn> History
     {
@@ -86,5 +93,40 @@ internal sealed class OrleansAiAgentProxy : IAiAgent
         _historyCache = _grain.GetHistoryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         _systemPromptCache = _grain.GetSystemPromptAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         _cacheInitialised = true;
+    }
+
+    /// <summary>
+    /// <see cref="IAgentSession"/> view over the grain's authoritative state. PR 1 scope:
+    /// <see cref="History"/> is a live view onto the proxy's cache, <see cref="ResetAsync"/>
+    /// forwards to the grain, and <see cref="AppendAsync"/> throws — history is authored
+    /// by the grain via <see cref="IAiAgentGrain.AskAsync"/>, not by external writers.
+    /// Direct-append use cases are served by the dedicated per-session grain in PR 3.
+    /// </summary>
+    private sealed class GrainBackedAgentSession : IAgentSession
+    {
+        private readonly OrleansAiAgentProxy _owner;
+
+        public GrainBackedAgentSession(OrleansAiAgentProxy owner)
+        {
+            _owner = owner;
+        }
+
+        public string SessionId => _owner._agentId;
+
+        public string AgentId => _owner._agentId;
+
+        public IReadOnlyList<ChatTurn> History => _owner.History;
+
+        public ValueTask AppendAsync(ChatTurn turn, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException(
+                "OrleansAiAgentProxy.Session does not support direct appends in v0.4. " +
+                "History is authored by IAiAgentGrain.AskAsync on the silo. Use the " +
+                "per-session grain APIs (IAgentSessionGrain) when they ship in PR 3.");
+
+        public async ValueTask ResetAsync(CancellationToken cancellationToken = default)
+        {
+            await _owner._grain.ResetAsync().ConfigureAwait(false);
+            _owner._historyCache = Array.Empty<ChatTurn>();
+        }
     }
 }

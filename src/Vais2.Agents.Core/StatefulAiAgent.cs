@@ -34,7 +34,7 @@ public sealed class StatefulAiAgent : IAiAgent
 
     private readonly ICompletionProvider _provider;
     private readonly ILogger<StatefulAiAgent> _logger;
-    private readonly List<ChatTurn> _history = new();
+    private readonly IAgentSession _session;
     private readonly IReadOnlyList<IAgentFilter> _filters;
     private readonly IUsageSink _usageSink;
     private readonly IAgentEventBus _eventBus;
@@ -61,6 +61,15 @@ public sealed class StatefulAiAgent : IAiAgent
         _logger = logger ?? NullLogger<StatefulAiAgent>.Instance;
 
         options ??= new StatefulAgentOptions();
+
+        if (options.Session is not null && options.InitialHistory is { Count: > 0 })
+        {
+            throw new ArgumentException(
+                $"{nameof(StatefulAgentOptions)}: cannot set both {nameof(StatefulAgentOptions.Session)} and {nameof(StatefulAgentOptions.InitialHistory)}. " +
+                "When Session is supplied it owns the history; seed the session directly and leave InitialHistory null.",
+                nameof(options));
+        }
+
         _filters = options.Filters;
         _usageSink = options.UsageSink ?? NullUsageSink.Instance;
         _eventBus = options.EventBus ?? NullAgentEventBus.Instance;
@@ -68,20 +77,22 @@ public sealed class StatefulAiAgent : IAiAgent
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
         _toolRegistry = options.ToolRegistry;
         _agentName = options.AgentName;
+        _session = options.Session ?? new InMemoryAgentSession(
+            agentId: _agentName ?? "agent",
+            sessionId: null,
+            initialHistory: options.InitialHistory);
 
         SystemPrompt = options.SystemPrompt;
-
-        if (options.InitialHistory is { Count: > 0 } seed)
-        {
-            _history.AddRange(seed);
-        }
     }
 
     /// <inheritdoc />
     public string? SystemPrompt { get; set; }
 
     /// <inheritdoc />
-    public IReadOnlyList<ChatTurn> History => _history;
+    public IAgentSession Session => _session;
+
+    /// <inheritdoc />
+    public IReadOnlyList<ChatTurn> History => _session.History;
 
     /// <inheritdoc />
     public async Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
@@ -91,13 +102,12 @@ public sealed class StatefulAiAgent : IAiAgent
             throw new ArgumentException("User message must be non-empty.", nameof(userMessage));
         }
 
-        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
+        await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
         // Snapshot: the provider must see a stable view of the history. The
-        // in-process list keeps mutating across turns; handing out the live
-        // reference would race with the next call or allow an adapter to mutate
-        // our state.
-        var snapshot = _history.ToArray();
+        // session may keep mutating across turns; handing out the live reference
+        // would race with the next call or allow an adapter to mutate our state.
+        var snapshot = _session.History.ToArray();
         var tools = _toolRegistry?.Tools;
         var request = new CompletionRequest(
             snapshot,
@@ -151,7 +161,7 @@ public sealed class StatefulAiAgent : IAiAgent
         }
 
         var text = response!.Text;
-        _history.Add(new ChatTurn(AgentChatRole.Assistant, text));
+        await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, text), cancellationToken).ConfigureAwait(false);
 
         await PublishEventAsync(
             new TurnCompleted(DateTimeOffset.UtcNow, eventContext, text, response.ModelId, response.PromptTokens, response.CompletionTokens, sw.Elapsed),
@@ -206,9 +216,9 @@ public sealed class StatefulAiAgent : IAiAgent
                 "as one) or use AskAsync for non-streaming turns.");
         }
 
-        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
+        await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
-        var snapshot = _history.ToArray();
+        var snapshot = _session.History.ToArray();
         var tools = _toolRegistry?.Tools;
         var request = new CompletionRequest(
             snapshot,
@@ -308,7 +318,7 @@ public sealed class StatefulAiAgent : IAiAgent
         }
 
         var finalText = accumulator.ToString();
-        _history.Add(new ChatTurn(AgentChatRole.Assistant, finalText));
+        await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, finalText), cancellationToken).ConfigureAwait(false);
 
         await PublishEventAsync(
             new TurnCompleted(DateTimeOffset.UtcNow, eventContext, finalText, finalModelId, finalPromptTokens, finalCompletionTokens, sw.Elapsed),
@@ -316,7 +326,15 @@ public sealed class StatefulAiAgent : IAiAgent
     }
 
     /// <inheritdoc />
-    public void Reset() => _history.Clear();
+    public void Reset()
+    {
+        // The session contract is async, but in-process sessions complete synchronously.
+        // For Orleans-backed sessions this blocks on a grain call — the same pattern
+        // OrleansAiAgentProxy already uses for Reset/SystemPrompt. Callers in grain
+        // contexts must route through IAgentSession.ResetAsync directly to avoid the
+        // single-threaded scheduler deadlock.
+        _session.ResetAsync().AsTask().GetAwaiter().GetResult();
+    }
 
     private Activity? StartTurnActivity(AgentContext context)
     {

@@ -55,13 +55,29 @@ public sealed class StatefulAgentOptions
     public IToolRegistry? ToolRegistry { get; init; }
 
     /// <summary>
-    /// Optional history to seed the agent with at construction. Intended for hosts that
-    /// persist chat state externally (e.g. Orleans grains, a database-backed history store)
-    /// and reconstruct <see cref="StatefulAiAgent"/> on activation. The supplied turns are
-    /// copied into the agent's internal history list in order; callers may safely hand in
-    /// a snapshot and mutate their source afterwards.
+    /// Optional history to seed the agent's default session at construction. Intended for
+    /// hosts that persist chat state externally and reconstruct <see cref="StatefulAiAgent"/>
+    /// on activation. The supplied turns are copied into the default session's history in
+    /// order; callers may safely hand in a snapshot and mutate their source afterwards.
     /// </summary>
+    /// <remarks>
+    /// Ignored — and rejected at construction — when <see cref="Session"/> is also supplied.
+    /// The caller owns the session's state in that case.
+    /// </remarks>
     public IReadOnlyList<ChatTurn>? InitialHistory { get; init; }
+
+    /// <summary>
+    /// Conversation container this agent binds to. When null (the default), the agent
+    /// constructs a private <see cref="InMemoryAgentSession"/> using <see cref="AgentName"/>
+    /// as the agent identifier (falling back to <c>"agent"</c>) and a fresh GUID as the
+    /// session identifier. Supply a session explicitly to share state with other consumers
+    /// or to bind the agent to a persistent, externally managed conversation.
+    /// </summary>
+    /// <remarks>
+    /// When both <see cref="Session"/> and <see cref="InitialHistory"/> are set, construction
+    /// throws — the session owns its history and merging the two silently would hide bugs.
+    /// </remarks>
+    public IAgentSession? Session { get; init; }
 
     /// <summary>
     /// Optional semantic-event bus. When set, <see cref="StatefulAiAgent"/> publishes

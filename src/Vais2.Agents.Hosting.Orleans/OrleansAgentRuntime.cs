@@ -43,7 +43,7 @@ public sealed class OrleansAgentRuntime : IAgentRuntime
     public IAiAgent GetOrCreate(string agentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
-        return _proxies.GetOrAdd(agentId, id => new OrleansAiAgentProxy(_grainFactory.GetGrain<IAiAgentGrain>(id)));
+        return _proxies.GetOrAdd(agentId, id => new OrleansAiAgentProxy(_grainFactory.GetGrain<IAiAgentGrain>(id), id));
     }
 
     /// <inheritdoc />
