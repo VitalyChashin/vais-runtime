@@ -32,6 +32,12 @@ Vais2.Agents.Core.StatefulAgentOptions.ContextWindowPacker.get -> Vais2.Agents.I
 Vais2.Agents.Core.StatefulAgentOptions.ContextWindowPacker.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.HistoryReducer.get -> Vais2.Agents.IHistoryReducer?
 Vais2.Agents.Core.StatefulAgentOptions.HistoryReducer.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.InputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IInputGuardrail!>!
+Vais2.Agents.Core.StatefulAgentOptions.InputGuardrails.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.OutputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IOutputGuardrail!>!
+Vais2.Agents.Core.StatefulAgentOptions.OutputGuardrails.init -> void
+Vais2.Agents.Core.StatefulAgentOptions.ToolGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.IToolGuardrail!>!
+Vais2.Agents.Core.StatefulAgentOptions.ToolGuardrails.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.get -> Vais2.Agents.IMemoryStore?
 Vais2.Agents.Core.StatefulAgentOptions.MemoryStore.init -> void
 Vais2.Agents.Core.StatefulAgentOptions.Session.get -> Vais2.Agents.IAgentSession?

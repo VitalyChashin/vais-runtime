@@ -45,6 +45,8 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IReadOnlyList<IContextProvider> _contextProviders;
     private readonly IContextWindowPacker _contextWindowPacker;
     private readonly ISystemPromptComposer? _systemPromptComposer;
+    private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
+    private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
     private readonly string? _agentName;
 
     /// <summary>
@@ -84,6 +86,8 @@ public sealed class StatefulAiAgent : IAiAgent
         _contextProviders = options.ContextProviders;
         _contextWindowPacker = options.ContextWindowPacker ?? NoopContextWindowPacker.Instance;
         _systemPromptComposer = options.SystemPromptComposer;
+        _inputGuardrails = options.InputGuardrails;
+        _outputGuardrails = options.OutputGuardrails;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -148,9 +152,18 @@ public sealed class StatefulAiAgent : IAiAgent
 
         try
         {
+            // Input guardrails run inside the try so a denial is captured as `failure`
+            // and flows through the usual usage-sink + TurnFailed emission path.
+            await RunInputGuardrailsAsync(request, context, cancellationToken).ConfigureAwait(false);
+
             response = await _pipeline.ExecuteAsync(
                 async ct => await InvokeThroughFiltersAsync(request, ct).ConfigureAwait(false),
                 cancellationToken).ConfigureAwait(false);
+
+            // Output guardrails run on the response before it's appended to the session.
+            // Denial leaves the user turn in session history (the caller's message is still
+            // part of the record) but no assistant turn — same semantics as a provider fault.
+            await RunOutputGuardrailsAsync(response, context, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -272,54 +285,71 @@ public sealed class StatefulAiAgent : IAiAgent
         IAsyncEnumerator<CompletionUpdate>? enumerator = null;
         try
         {
-            enumerator = streamingProvider.StreamAsync(request, cancellationToken).GetAsyncEnumerator(cancellationToken);
-
-            while (true)
+            // Input guardrails — denial captured as `failure`, skipping the stream loop.
+            try
             {
-                bool hasNext;
-                CompletionUpdate? update = null;
-                try
+                await RunInputGuardrailsAsync(request, context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+
+            if (failure is null)
+            {
+                enumerator = streamingProvider.StreamAsync(request, cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+                while (true)
                 {
-                    hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                    if (hasNext)
+                    bool hasNext;
+                    CompletionUpdate? update = null;
+                    try
                     {
-                        update = enumerator.Current;
+                        hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                        if (hasNext)
+                        {
+                            update = enumerator.Current;
+                        }
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    failure = ex;
-                    break;
-                }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        failure = ex;
+                        break;
+                    }
 
-                if (!hasNext)
-                {
-                    break;
-                }
+                    if (!hasNext)
+                    {
+                        break;
+                    }
 
-                // Provider-side metadata on any update overwrites — final update's values win
-                // because it's emitted last.
-                if (update!.ModelId is not null)
-                {
-                    finalModelId = update.ModelId;
-                }
-                if (update.PromptTokens is not null)
-                {
-                    finalPromptTokens = update.PromptTokens;
-                }
-                if (update.CompletionTokens is not null)
-                {
-                    finalCompletionTokens = update.CompletionTokens;
-                }
+                    // Provider-side metadata on any update overwrites — final update's values win
+                    // because it's emitted last.
+                    if (update!.ModelId is not null)
+                    {
+                        finalModelId = update.ModelId;
+                    }
+                    if (update.PromptTokens is not null)
+                    {
+                        finalPromptTokens = update.PromptTokens;
+                    }
+                    if (update.CompletionTokens is not null)
+                    {
+                        finalCompletionTokens = update.CompletionTokens;
+                    }
 
-                if (update.TextDelta.Length > 0)
-                {
-                    accumulator.Append(update.TextDelta);
-                    yield return update.TextDelta;
+                    if (update.TextDelta.Length > 0)
+                    {
+                        accumulator.Append(update.TextDelta);
+                        yield return update.TextDelta;
+                    }
                 }
             }
         }
@@ -335,6 +365,25 @@ public sealed class StatefulAiAgent : IAiAgent
         var bufferedResponse = failure is null
             ? new CompletionResponse(accumulator.ToString(), finalModelId, finalPromptTokens, finalCompletionTokens)
             : null;
+
+        // Output guardrails run AFTER the accumulator drains. Post-facto by design —
+        // deltas have already gone to the consumer; strict pre-emit gating is AskAsync's job.
+        if (failure is null && bufferedResponse is not null)
+        {
+            try
+            {
+                await RunOutputGuardrailsAsync(bufferedResponse, context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        }
+
         AnnotateTurnActivity(activity, bufferedResponse, failure);
         await ReportUsageAsync(bufferedResponse, failure, context, startedAt, sw.Elapsed, cancellationToken).ConfigureAwait(false);
 
@@ -510,6 +559,46 @@ public sealed class StatefulAiAgent : IAiAgent
             SystemPrompt = systemPrompt,
             Tools = finalTools,
         };
+    }
+
+    private async Task RunInputGuardrailsAsync(
+        CompletionRequest request,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        if (_inputGuardrails.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var guardrail in _inputGuardrails)
+        {
+            var outcome = await guardrail.EvaluateAsync(request, context, cancellationToken).ConfigureAwait(false);
+            if (outcome.Decision == GuardrailDecision.Deny)
+            {
+                throw new AgentGuardrailDeniedException(GuardrailLayer.Input, outcome.Reason);
+            }
+        }
+    }
+
+    private async Task RunOutputGuardrailsAsync(
+        CompletionResponse response,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        if (_outputGuardrails.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var guardrail in _outputGuardrails)
+        {
+            var outcome = await guardrail.EvaluateAsync(response, context, cancellationToken).ConfigureAwait(false);
+            if (outcome.Decision == GuardrailDecision.Deny)
+            {
+                throw new AgentGuardrailDeniedException(GuardrailLayer.Output, outcome.Reason);
+            }
+        }
     }
 
     private Task<CompletionResponse> InvokeThroughFiltersAsync(

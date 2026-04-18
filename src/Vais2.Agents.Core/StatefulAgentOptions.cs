@@ -130,4 +130,28 @@ public sealed class StatefulAgentOptions
     /// on top of the composed base.
     /// </summary>
     public ISystemPromptComposer? SystemPromptComposer { get; init; }
+
+    /// <summary>
+    /// Ordered input guardrails. Run on the fully-prepared <see cref="CompletionRequest"/>
+    /// before any filter or provider call; first <see cref="GuardrailDecision.Deny"/> short-circuits
+    /// the turn with an <see cref="AgentGuardrailDeniedException"/>. Default: empty.
+    /// </summary>
+    public IReadOnlyList<IInputGuardrail> InputGuardrails { get; init; } = Array.Empty<IInputGuardrail>();
+
+    /// <summary>
+    /// Ordered output guardrails. Run on the <see cref="CompletionResponse"/> after the provider
+    /// returns, before the assistant turn is appended to the session; first
+    /// <see cref="GuardrailDecision.Deny"/> short-circuits with an
+    /// <see cref="AgentGuardrailDeniedException"/> (assistant turn is NOT appended). Default: empty.
+    /// In streaming turns, output guardrails run after the accumulator drains (post-facto).
+    /// </summary>
+    public IReadOnlyList<IOutputGuardrail> OutputGuardrails { get; init; } = Array.Empty<IOutputGuardrail>();
+
+    /// <summary>
+    /// Ordered tool guardrails. <b>Not wired in v0.4</b> — exposed for consumers to start writing
+    /// implementations against; the per-tool-call seam lands with the execution-loop pillar
+    /// (§9.5) when <c>IToolCallDispatcher</c> introduces a host-side invocation hook.
+    /// Default: empty.
+    /// </summary>
+    public IReadOnlyList<IToolGuardrail> ToolGuardrails { get; init; } = Array.Empty<IToolGuardrail>();
 }
