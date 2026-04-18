@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais2.Agents.Abstractions\Vais2.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Core\Vais2.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Hosting.InMemory\Vais2.Agents.Hosting.InMemory.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Hosting.Orleans\Vais2.Agents.Hosting.Orleans.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Persistence.Redis\Vais2.Agents.Persistence.Redis.csproj" />
+    <ProjectReference Include="..\..\src\Vais2.Agents.Persistence.Postgres\Vais2.Agents.Persistence.Postgres.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.TestingHost" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
+    <PackageReference Include="Microsoft.Orleans.Server" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Share the Orleans Postgres schema scripts from the Postgres test project via <Link> so we
+         don't duplicate the files. Resource names preserve the logical 'Sql\' path and end up as
+         Vais2.Agents.CrossHostTests.Sql.PostgreSQL-Main.sql / PostgreSQL-Persistence.sql. -->
+    <EmbeddedResource Include="..\Vais2.Agents.Persistence.Postgres.Tests\Sql\PostgreSQL-Main.sql">
+      <Link>Sql\PostgreSQL-Main.sql</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\Vais2.Agents.Persistence.Postgres.Tests\Sql\PostgreSQL-Persistence.sql">
+      <Link>Sql\PostgreSQL-Persistence.sql</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

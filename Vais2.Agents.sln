@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Persistence.Ve
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.Persistence.VectorData.Tests", "tests\Vais2.Agents.Persistence.VectorData.Tests\Vais2.Agents.Persistence.VectorData.Tests.csproj", "{D7A97931-2DC0-41C0-BEA4-6A6329C6CDFD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais2.Agents.CrossHostTests", "tests\Vais2.Agents.CrossHostTests\Vais2.Agents.CrossHostTests.csproj", "{9B0CF734-DA25-4860-BDC7-037012F422F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -132,6 +134,10 @@ Global
 		{D7A97931-2DC0-41C0-BEA4-6A6329C6CDFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7A97931-2DC0-41C0-BEA4-6A6329C6CDFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7A97931-2DC0-41C0-BEA4-6A6329C6CDFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B0CF734-DA25-4860-BDC7-037012F422F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B0CF734-DA25-4860-BDC7-037012F422F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B0CF734-DA25-4860-BDC7-037012F422F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B0CF734-DA25-4860-BDC7-037012F422F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -153,5 +159,6 @@ Global
 		{304214A7-FEC0-43F8-AF9B-9829B6B08422} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{0B1F2DD3-76D9-475C-9342-B52E49E5AA30} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{D7A97931-2DC0-41C0-BEA4-6A6329C6CDFD} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{9B0CF734-DA25-4860-BDC7-037012F422F2} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal
