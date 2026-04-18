@@ -1,4 +1,38 @@
 #nullable enable
+Vais2.Agents.AgentParticipant
+Vais2.Agents.AgentParticipant.<Clone>$() -> Vais2.Agents.AgentParticipant!
+Vais2.Agents.AgentParticipant.AgentParticipant(string! Name, Vais2.Agents.ICompletionProvider! Provider, string? SystemPrompt = null) -> void
+Vais2.Agents.AgentParticipant.Deconstruct(out string! Name, out Vais2.Agents.ICompletionProvider! Provider, out string? SystemPrompt) -> void
+Vais2.Agents.AgentParticipant.Equals(Vais2.Agents.AgentParticipant? other) -> bool
+Vais2.Agents.AgentParticipant.Name.get -> string!
+Vais2.Agents.AgentParticipant.Name.init -> void
+Vais2.Agents.AgentParticipant.Provider.get -> Vais2.Agents.ICompletionProvider!
+Vais2.Agents.AgentParticipant.Provider.init -> void
+Vais2.Agents.AgentParticipant.SystemPrompt.get -> string?
+Vais2.Agents.AgentParticipant.SystemPrompt.init -> void
+override Vais2.Agents.AgentParticipant.Equals(object? obj) -> bool
+override Vais2.Agents.AgentParticipant.GetHashCode() -> int
+override Vais2.Agents.AgentParticipant.ToString() -> string!
+static Vais2.Agents.AgentParticipant.operator !=(Vais2.Agents.AgentParticipant? left, Vais2.Agents.AgentParticipant? right) -> bool
+static Vais2.Agents.AgentParticipant.operator ==(Vais2.Agents.AgentParticipant? left, Vais2.Agents.AgentParticipant? right) -> bool
+Vais2.Agents.IAgentOrchestrator
+Vais2.Agents.IAgentOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.OrchestrationStep!>!
+Vais2.Agents.OrchestrationStep
+Vais2.Agents.OrchestrationStep.<Clone>$() -> Vais2.Agents.OrchestrationStep!
+Vais2.Agents.OrchestrationStep.AgentName.get -> string!
+Vais2.Agents.OrchestrationStep.AgentName.init -> void
+Vais2.Agents.OrchestrationStep.Deconstruct(out string! AgentName, out string! Text, out Vais2.Agents.ChatRole Role) -> void
+Vais2.Agents.OrchestrationStep.Equals(Vais2.Agents.OrchestrationStep? other) -> bool
+Vais2.Agents.OrchestrationStep.OrchestrationStep(string! AgentName, string! Text, Vais2.Agents.ChatRole Role = Vais2.Agents.ChatRole.Assistant) -> void
+Vais2.Agents.OrchestrationStep.Role.get -> Vais2.Agents.ChatRole
+Vais2.Agents.OrchestrationStep.Role.init -> void
+Vais2.Agents.OrchestrationStep.Text.get -> string!
+Vais2.Agents.OrchestrationStep.Text.init -> void
+override Vais2.Agents.OrchestrationStep.Equals(object? obj) -> bool
+override Vais2.Agents.OrchestrationStep.GetHashCode() -> int
+override Vais2.Agents.OrchestrationStep.ToString() -> string!
+static Vais2.Agents.OrchestrationStep.operator !=(Vais2.Agents.OrchestrationStep? left, Vais2.Agents.OrchestrationStep? right) -> bool
+static Vais2.Agents.OrchestrationStep.operator ==(Vais2.Agents.OrchestrationStep? left, Vais2.Agents.OrchestrationStep? right) -> bool
 abstract Vais2.Agents.AgentEvent.<Clone>$() -> Vais2.Agents.AgentEvent!
 override Vais2.Agents.AgentEvent.Equals(object? obj) -> bool
 override Vais2.Agents.AgentEvent.GetHashCode() -> int

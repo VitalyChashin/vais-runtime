@@ -1,4 +1,12 @@
 #nullable enable
+Vais2.Agents.Core.RoundRobinOrchestrator
+Vais2.Agents.Core.RoundRobinOrchestrator.RoundRobinOrchestrator(System.Collections.Generic.IReadOnlyList<Vais2.Agents.AgentParticipant!>! participants, int maxRounds, Vais2.Agents.Core.TerminationPredicate? terminate = null) -> void
+Vais2.Agents.Core.RoundRobinOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.OrchestrationStep!>!
+Vais2.Agents.Core.SequentialOrchestrator
+Vais2.Agents.Core.SequentialOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.OrchestrationStep!>!
+Vais2.Agents.Core.SequentialOrchestrator.SequentialOrchestrator(System.Collections.Generic.IReadOnlyList<Vais2.Agents.AgentParticipant!>! participants) -> void
+Vais2.Agents.Core.TerminationPredicate
+virtual Vais2.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais2.Agents.OrchestrationStep!>! steps) -> bool
 static readonly Vais2.Agents.Core.NullAgentEventBus.Instance -> Vais2.Agents.Core.NullAgentEventBus!
 Vais2.Agents.Core.NullAgentEventBus
 Vais2.Agents.Core.NullAgentEventBus.PublishAsync(Vais2.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
