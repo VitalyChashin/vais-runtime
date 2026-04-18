@@ -150,3 +150,18 @@ public sealed record InterruptRaised(
     string InterruptId,
     string Reason)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by a multi-agent orchestrator when a participant or the orchestrator
+/// itself signals a handoff from one agent to another. Carries the <see cref="Handoff"/>
+/// payload describing the transition; observers use it for audit trails, UI
+/// updates, or to drive cross-agent telemetry correlation.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient agent context at event-emission time.</param>
+/// <param name="Handoff">The handoff payload — source, target, optional message, optional history-to-carry.</param>
+public sealed record HandoffRequested(
+    DateTimeOffset At,
+    AgentContext Context,
+    Handoff Handoff)
+    : AgentEvent(At, Context);

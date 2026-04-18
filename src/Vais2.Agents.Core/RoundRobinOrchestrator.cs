@@ -32,10 +32,10 @@ public sealed class RoundRobinOrchestrator : IAgentOrchestrator
 {
     private readonly IReadOnlyList<AgentParticipant> _participants;
     private readonly int _maxRounds;
-    private readonly TerminationPredicate? _terminate;
+    private readonly ITerminationCondition? _terminate;
 
     /// <summary>
-    /// Create a round-robin orchestrator.
+    /// Create a round-robin orchestrator with a delegate-based termination predicate.
     /// </summary>
     /// <param name="participants">Participants, cycled in the order given.</param>
     /// <param name="maxRounds">
@@ -52,6 +52,28 @@ public sealed class RoundRobinOrchestrator : IAgentOrchestrator
         IReadOnlyList<AgentParticipant> participants,
         int maxRounds,
         TerminationPredicate? terminate = null)
+        : this(participants, maxRounds, terminate is null ? null : TerminationConditions.FromPredicate(terminate))
+    {
+    }
+
+    /// <summary>
+    /// Create a round-robin orchestrator with an <see cref="ITerminationCondition"/>.
+    /// Preferred for new code — supports async termination checks and composition.
+    /// </summary>
+    /// <param name="participants">Participants, cycled in the order given.</param>
+    /// <param name="maxRounds">
+    /// Maximum number of full rotations. Each round emits <c>participants.Count</c> steps
+    /// unless terminated early.
+    /// </param>
+    /// <param name="terminate">
+    /// Optional async termination check evaluated after each step. Null means run
+    /// for the full <paramref name="maxRounds"/>.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when participants is empty or maxRounds is non-positive.</exception>
+    public RoundRobinOrchestrator(
+        IReadOnlyList<AgentParticipant> participants,
+        int maxRounds,
+        ITerminationCondition? terminate)
     {
         ArgumentNullException.ThrowIfNull(participants);
         if (participants.Count == 0)
@@ -95,7 +117,7 @@ public sealed class RoundRobinOrchestrator : IAgentOrchestrator
                 steps.Add(step);
                 yield return step;
 
-                if (_terminate is not null && _terminate(steps))
+                if (_terminate is not null && await _terminate.ShouldTerminateAsync(steps, cancellationToken).ConfigureAwait(false))
                 {
                     yield break;
                 }

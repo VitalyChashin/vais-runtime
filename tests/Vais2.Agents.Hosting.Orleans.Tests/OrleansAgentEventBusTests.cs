@@ -254,6 +254,36 @@ public sealed class OrleansAgentEventBusTests
     }
 
     [Fact]
+    public async Task Publishes_And_Subscribes_HandoffRequested_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        HandoffRequested? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is HandoffRequested requested)
+            {
+                observed = requested;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new HandoffRequested(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty,
+            new Handoff("alice", "bob", "escalating to legal"));
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.Handoff.FromAgent.Should().Be("alice");
+        observed.Handoff.ToAgent.Should().Be("bob");
+        observed.Handoff.Message.Should().Be("escalating to legal");
+    }
+
+    [Fact]
     public async Task Dispose_Unsubscribes_And_Later_Events_Are_Not_Received()
     {
         var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);

@@ -57,6 +57,27 @@ Vais2.Agents.CompletionResponse.ToolCalls.get -> System.Collections.Generic.IRea
 Vais2.Agents.CompletionResponse.ToolCalls.init -> void
 Vais2.Agents.GuardrailTriggered
 Vais2.Agents.GuardrailTriggered.Decision.get -> Vais2.Agents.GuardrailDecision
+Vais2.Agents.Handoff
+Vais2.Agents.Handoff.<Clone>$() -> Vais2.Agents.Handoff!
+Vais2.Agents.Handoff.Deconstruct(out string! FromAgent, out string! ToAgent, out string? Message, out System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? HistoryToCarry) -> void
+Vais2.Agents.Handoff.Equals(Vais2.Agents.Handoff? other) -> bool
+Vais2.Agents.Handoff.FromAgent.get -> string!
+Vais2.Agents.Handoff.FromAgent.init -> void
+Vais2.Agents.Handoff.Handoff(string! FromAgent, string! ToAgent, string? Message = null, System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>? HistoryToCarry = null) -> void
+Vais2.Agents.Handoff.HistoryToCarry.get -> System.Collections.Generic.IReadOnlyList<Vais2.Agents.ChatTurn!>?
+Vais2.Agents.Handoff.HistoryToCarry.init -> void
+Vais2.Agents.Handoff.Message.get -> string?
+Vais2.Agents.Handoff.Message.init -> void
+Vais2.Agents.Handoff.ToAgent.get -> string!
+Vais2.Agents.Handoff.ToAgent.init -> void
+Vais2.Agents.HandoffRequested
+Vais2.Agents.HandoffRequested.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out Vais2.Agents.Handoff! Handoff) -> void
+Vais2.Agents.HandoffRequested.Equals(Vais2.Agents.HandoffRequested? other) -> bool
+Vais2.Agents.HandoffRequested.Handoff.get -> Vais2.Agents.Handoff!
+Vais2.Agents.HandoffRequested.Handoff.init -> void
+Vais2.Agents.HandoffRequested.HandoffRequested(System.DateTimeOffset At, Vais2.Agents.AgentContext! Context, Vais2.Agents.Handoff! Handoff) -> void
+Vais2.Agents.ITerminationCondition
+Vais2.Agents.ITerminationCondition.ShouldTerminateAsync(System.Collections.Generic.IReadOnlyList<Vais2.Agents.OrchestrationStep!>! steps, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Vais2.Agents.GuardrailTriggered.Decision.init -> void
 Vais2.Agents.GuardrailTriggered.Deconstruct(out System.DateTimeOffset At, out Vais2.Agents.AgentContext! Context, out Vais2.Agents.GuardrailLayer Layer, out Vais2.Agents.GuardrailDecision Decision, out string? Reason) -> void
 Vais2.Agents.GuardrailTriggered.Equals(Vais2.Agents.GuardrailTriggered? other) -> bool
@@ -249,6 +270,14 @@ override Vais2.Agents.GuardrailTriggered.<Clone>$() -> Vais2.Agents.GuardrailTri
 override Vais2.Agents.GuardrailTriggered.Equals(object? obj) -> bool
 override Vais2.Agents.GuardrailTriggered.GetHashCode() -> int
 override Vais2.Agents.GuardrailTriggered.ToString() -> string!
+override Vais2.Agents.Handoff.Equals(object? obj) -> bool
+override Vais2.Agents.Handoff.GetHashCode() -> int
+override Vais2.Agents.Handoff.ToString() -> string!
+override Vais2.Agents.HandoffRequested.<Clone>$() -> Vais2.Agents.HandoffRequested!
+override Vais2.Agents.HandoffRequested.Equals(object? obj) -> bool
+override Vais2.Agents.HandoffRequested.GetHashCode() -> int
+override Vais2.Agents.HandoffRequested.ToString() -> string!
+override sealed Vais2.Agents.HandoffRequested.Equals(Vais2.Agents.AgentEvent? other) -> bool
 override Vais2.Agents.InterruptRaised.<Clone>$() -> Vais2.Agents.InterruptRaised!
 override Vais2.Agents.InterruptRaised.Equals(object? obj) -> bool
 override Vais2.Agents.InterruptRaised.GetHashCode() -> int
@@ -299,6 +328,10 @@ static Vais2.Agents.AgentInterrupt.operator !=(Vais2.Agents.AgentInterrupt? left
 static Vais2.Agents.AgentInterrupt.operator ==(Vais2.Agents.AgentInterrupt? left, Vais2.Agents.AgentInterrupt? right) -> bool
 static Vais2.Agents.GuardrailTriggered.operator !=(Vais2.Agents.GuardrailTriggered? left, Vais2.Agents.GuardrailTriggered? right) -> bool
 static Vais2.Agents.GuardrailTriggered.operator ==(Vais2.Agents.GuardrailTriggered? left, Vais2.Agents.GuardrailTriggered? right) -> bool
+static Vais2.Agents.Handoff.operator !=(Vais2.Agents.Handoff? left, Vais2.Agents.Handoff? right) -> bool
+static Vais2.Agents.Handoff.operator ==(Vais2.Agents.Handoff? left, Vais2.Agents.Handoff? right) -> bool
+static Vais2.Agents.HandoffRequested.operator !=(Vais2.Agents.HandoffRequested? left, Vais2.Agents.HandoffRequested? right) -> bool
+static Vais2.Agents.HandoffRequested.operator ==(Vais2.Agents.HandoffRequested? left, Vais2.Agents.HandoffRequested? right) -> bool
 static Vais2.Agents.InterruptRaised.operator !=(Vais2.Agents.InterruptRaised? left, Vais2.Agents.InterruptRaised? right) -> bool
 static Vais2.Agents.InterruptRaised.operator ==(Vais2.Agents.InterruptRaised? left, Vais2.Agents.InterruptRaised? right) -> bool
 static Vais2.Agents.ResumeInput.operator !=(Vais2.Agents.ResumeInput? left, Vais2.Agents.ResumeInput? right) -> bool

@@ -24,6 +24,8 @@ public enum AgentEventKind
     GuardrailTriggered = 5,
     /// <summary><see cref="InterruptRaised"/>.</summary>
     InterruptRaised = 6,
+    /// <summary><see cref="HandoffRequested"/>.</summary>
+    HandoffRequested = 7,
 }
 
 /// <summary>
@@ -113,6 +115,18 @@ public struct AgentEventSurrogate
     /// <summary>Interrupt reason — populated for <see cref="AgentEventKind.InterruptRaised"/>.</summary>
     [Id(18)]
     public string? InterruptReason;
+
+    /// <summary>Handoff source agent — populated for <see cref="AgentEventKind.HandoffRequested"/>.</summary>
+    [Id(19)]
+    public string? HandoffFromAgent;
+
+    /// <summary>Handoff target agent — populated for <see cref="AgentEventKind.HandoffRequested"/>.</summary>
+    [Id(20)]
+    public string? HandoffToAgent;
+
+    /// <summary>Handoff message — populated for <see cref="AgentEventKind.HandoffRequested"/>.</summary>
+    [Id(21)]
+    public string? HandoffMessage;
 }
 
 /// <summary>
@@ -172,6 +186,14 @@ internal static class AgentEventSurrogateHelpers
                 context,
                 surrogate.InterruptId ?? string.Empty,
                 surrogate.InterruptReason ?? string.Empty),
+            AgentEventKind.HandoffRequested => new HandoffRequested(
+                surrogate.At,
+                context,
+                new Handoff(
+                    surrogate.HandoffFromAgent ?? string.Empty,
+                    surrogate.HandoffToAgent ?? string.Empty,
+                    surrogate.HandoffMessage,
+                    HistoryToCarry: null)),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -243,6 +265,15 @@ internal static class AgentEventSurrogateHelpers
                 Context = contextSurrogate,
                 InterruptId = i.InterruptId,
                 InterruptReason = i.Reason,
+            },
+            HandoffRequested h => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.HandoffRequested,
+                At = h.At,
+                Context = contextSurrogate,
+                HandoffFromAgent = h.Handoff.FromAgent,
+                HandoffToAgent = h.Handoff.ToAgent,
+                HandoffMessage = h.Handoff.Message,
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -359,5 +390,18 @@ public sealed class InterruptRaisedSurrogateConverter : IConverter<InterruptRais
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in InterruptRaised value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="HandoffRequested"/>.</summary>
+[RegisterConverter]
+public sealed class HandoffRequestedSurrogateConverter : IConverter<HandoffRequested, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public HandoffRequested ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (HandoffRequested)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in HandoffRequested value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }
