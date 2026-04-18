@@ -1,1 +1,19 @@
 #nullable enable
+Vais2.Agents.IKnowledgeRetriever
+Vais2.Agents.IKnowledgeRetriever.RetrieveAsync(string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais2.Agents.KnowledgeChunk!>!>!
+Vais2.Agents.KnowledgeChunk
+Vais2.Agents.KnowledgeChunk.<Clone>$() -> Vais2.Agents.KnowledgeChunk!
+Vais2.Agents.KnowledgeChunk.Deconstruct(out string! Text, out string? Id, out float? Score) -> void
+Vais2.Agents.KnowledgeChunk.Equals(Vais2.Agents.KnowledgeChunk? other) -> bool
+Vais2.Agents.KnowledgeChunk.Id.get -> string?
+Vais2.Agents.KnowledgeChunk.Id.init -> void
+Vais2.Agents.KnowledgeChunk.KnowledgeChunk(string! Text, string? Id = null, float? Score = null) -> void
+Vais2.Agents.KnowledgeChunk.Score.get -> float?
+Vais2.Agents.KnowledgeChunk.Score.init -> void
+Vais2.Agents.KnowledgeChunk.Text.get -> string!
+Vais2.Agents.KnowledgeChunk.Text.init -> void
+override Vais2.Agents.KnowledgeChunk.Equals(object? obj) -> bool
+override Vais2.Agents.KnowledgeChunk.GetHashCode() -> int
+override Vais2.Agents.KnowledgeChunk.ToString() -> string!
+static Vais2.Agents.KnowledgeChunk.operator !=(Vais2.Agents.KnowledgeChunk? left, Vais2.Agents.KnowledgeChunk? right) -> bool
+static Vais2.Agents.KnowledgeChunk.operator ==(Vais2.Agents.KnowledgeChunk? left, Vais2.Agents.KnowledgeChunk? right) -> bool
