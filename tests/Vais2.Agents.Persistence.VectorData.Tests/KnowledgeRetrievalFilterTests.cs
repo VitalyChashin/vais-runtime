@@ -6,6 +6,10 @@ using Xunit;
 
 namespace Vais2.Agents.Persistence.VectorData.Tests;
 
+// KnowledgeRetrievalFilter is [Obsolete] as of v0.4. Tests stay live to prove the
+// filter keeps working for one release window; removal planned for v0.5.
+#pragma warning disable VAIS2_0001
+
 public sealed class KnowledgeRetrievalFilterTests
 {
     [Fact]

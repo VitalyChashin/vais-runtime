@@ -11,6 +11,11 @@ namespace Vais2.Agents.Persistence.VectorData;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Obsolete as of v0.4.</b> Use <see cref="KnowledgeRetrievalContextProvider"/> — same
+/// semantics, cleaner shape for the architectural-review's context-provider chain.
+/// This filter continues to work for one release window; removal planned for v0.5.
+/// </para>
+/// <para>
 /// Retrieved chunks are never added to <see cref="IAiAgent.History"/> — that collection
 /// tracks real conversation, not retrieved context. Only the request's
 /// <see cref="CompletionRequest.SystemPrompt"/> is mutated (via <c>with</c>), and the
@@ -22,6 +27,7 @@ namespace Vais2.Agents.Persistence.VectorData;
 /// caching decorator.
 /// </para>
 /// </remarks>
+[Obsolete("Use KnowledgeRetrievalContextProvider. KnowledgeRetrievalFilter will be removed in v0.5.", DiagnosticId = "VAIS2_0001")]
 public sealed class KnowledgeRetrievalFilter : IAgentFilter
 {
     private readonly IKnowledgeRetriever _retriever;
