@@ -8,9 +8,7 @@ namespace Vais2.Agents.Hosting.Orleans;
 /// <summary>
 /// Orleans-streams-backed <see cref="IAgentEventBus"/>. Publishes every event to a
 /// single conventional stream; subscribers receive the fan-out through whatever
-/// stream provider the host has configured (memory streams for single-process
-/// dev/test, a durable provider like EventHubs or a future Redis/AdoNet streams
-/// integration for multi-silo production).
+/// stream provider the host has configured.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,13 +19,14 @@ namespace Vais2.Agents.Hosting.Orleans;
 /// an overload; the public surface stays additive.
 /// </para>
 /// <para>
-/// <b>Redis streams note.</b> At the time M3e-3b shipped, the only published
-/// version of <c>Microsoft.Orleans.Streaming.Redis</c> was a 10.1.0-alpha that
-/// requires Orleans 10.x — incompatible with our 9.2.1 pin. This bus is
-/// intentionally provider-neutral: consumers wire whichever stream provider
-/// their Orleans stack supports and pass the name through the constructor.
-/// For single-process dev use <c>AddMemoryStreams("vais2.agents.events")</c>;
-/// for Azure use <c>AddEventHubStreams("vais2.agents.events", ...)</c>.
+/// <b>Provider choice.</b> The bus is provider-neutral: consumers wire whichever
+/// Orleans stream provider their deployment risk profile allows and pass the
+/// name through the constructor. Shipped convenience helpers:
+/// <list type="bullet">
+///   <item><c>AddMemoryStreams("vais2.agents.events")</c> — single-process dev/test.</item>
+///   <item><c>Vais2.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.UseAgenticRedisStreaming</c> — cross-silo via Redis (depends on <c>Microsoft.Orleans.Streaming.Redis</c>, currently only in alpha — treat as preview-grade).</item>
+///   <item><c>AddEventHubStreams("vais2.agents.events", ...)</c> — Azure production.</item>
+/// </list>
 /// </para>
 /// <para>
 /// <b>Thread-safety.</b> Publish and subscribe are safe from multiple threads

@@ -61,6 +61,12 @@
   <ItemGroup Label="Redis persistence (Vais2.Agents.Persistence.Redis). Orleans Redis providers + StackExchange.Redis.">
     <PackageVersion Include="Microsoft.Orleans.Clustering.Redis" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="10.1.0" />
+    <!--
+      Streaming.Redis is alpha-only (10.1.0-alpha.1 is the single published build).
+      Needed for UseAgenticRedisStreaming. Risk noted in the package README and the
+      relevant XML doc remarks; revisit when a stable 10.x ships.
+    -->
+    <PackageVersion Include="Microsoft.Orleans.Streaming.Redis" Version="10.1.0-alpha.1" />
     <PackageVersion Include="StackExchange.Redis" Version="2.12.14" />
   </ItemGroup>
 
