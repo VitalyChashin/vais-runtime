@@ -94,7 +94,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _streamingFilters = options.StreamingFilters;
         _budget = options.Budget ?? RunBudget.Unlimited;
         _toolCallDispatcher = options.ToolCallDispatcher
-            ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus);
+            ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus, options.Journal);
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",

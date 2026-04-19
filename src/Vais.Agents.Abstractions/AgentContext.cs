@@ -19,4 +19,21 @@ public sealed record AgentContext(
 {
     /// <summary>An empty context with all fields null. Identity value for defaults.</summary>
     public static readonly AgentContext Empty = new();
+
+    /// <summary>
+    /// Opaque run identifier stamped by <c>StatefulAiAgent</c> for the duration of a
+    /// single run. When non-null, the default tool-call dispatcher scopes
+    /// <see cref="IAgentJournal"/> reads and writes to this run so the same tool call,
+    /// replayed after a crash or pause, returns its previously recorded outcome
+    /// instead of re-invoking the tool.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Left null by default to preserve pre-v0.5 behaviour — consumers who don't
+    /// wire <c>StatefulAgentOptions.Journal</c> keep the point-in-time execution
+    /// they had before. <c>StatefulAiAgent</c> fills this automatically starting
+    /// in v0.5 PR 3.
+    /// </para>
+    /// </remarks>
+    public string? RunId { get; init; }
 }

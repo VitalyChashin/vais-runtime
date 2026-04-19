@@ -1,4 +1,6 @@
 #nullable enable
+*REMOVED*Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null) -> void
+Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null) -> void
 Vais.Agents.Core.InMemoryAgentJournal
 Vais.Agents.Core.InMemoryAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.InMemoryAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

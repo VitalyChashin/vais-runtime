@@ -1,6 +1,8 @@
 #nullable enable
 *REMOVED*Vais.Agents.CompletionUpdate.CompletionUpdate(string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null) -> void
 *REMOVED*Vais.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens) -> void
+Vais.Agents.AgentContext.RunId.get -> string?
+Vais.Agents.AgentContext.RunId.init -> void
 Vais.Agents.CompletionUpdate.CompletionUpdate(string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls = null) -> void
 Vais.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls) -> void
 Vais.Agents.CompletionUpdate.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
