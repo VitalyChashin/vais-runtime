@@ -61,6 +61,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Manifes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Manifests.Yaml", "src\Vais.Agents.Control.Manifests.Yaml\Vais.Agents.Control.Manifests.Yaml.csproj", "{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Http.Server", "src\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj", "{C663B23A-45DA-4017-998F-7680149F98A6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Http.Client", "src\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj", "{047CCBDA-5B6F-44F0-9976-E85FAEA94A03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Http.Tests", "tests\Vais.Agents.Control.Http.Tests\Vais.Agents.Control.Http.Tests.csproj", "{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -178,6 +184,18 @@ Global
 		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C663B23A-45DA-4017-998F-7680149F98A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C663B23A-45DA-4017-998F-7680149F98A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C663B23A-45DA-4017-998F-7680149F98A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C663B23A-45DA-4017-998F-7680149F98A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{047CCBDA-5B6F-44F0-9976-E85FAEA94A03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{047CCBDA-5B6F-44F0-9976-E85FAEA94A03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{047CCBDA-5B6F-44F0-9976-E85FAEA94A03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{047CCBDA-5B6F-44F0-9976-E85FAEA94A03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -207,5 +225,8 @@ Global
 		{CDE7983E-9ADA-4943-80E4-5117E16C2DA8} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{C663B23A-45DA-4017-998F-7680149F98A6} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{047CCBDA-5B6F-44F0-9976-E85FAEA94A03} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{D770F0F5-2FF0-4E5A-A7CD-EC49C755B1F1} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal

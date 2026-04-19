@@ -100,4 +100,8 @@
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
+  <ItemGroup Label="ASP.NET Core TestHost — integration tests for the HTTP control plane.">
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.0" />
+  </ItemGroup>
+
 </Project>

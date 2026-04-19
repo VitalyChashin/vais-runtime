@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Control.Http</RootNamespace>
+    <AssemblyName>Vais.Agents.Control.Http.Client</AssemblyName>
+    <Description>Typed HTTP client for the Vais.Agents control plane. Mirrors IAgentLifecycleManager verbs; wraps HttpClient so consumers can plug into IHttpClientFactory, retry, and correlation middleware.</Description>
+    <PackageTags>agents;ai;llm;control-plane;http;client</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>
