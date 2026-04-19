@@ -1,8 +1,15 @@
 #nullable enable
+Vais.Agents.Control.AgentManifestValidationException
+Vais.Agents.Control.AgentManifestValidationException.AgentManifestValidationException(System.Collections.Generic.IEnumerable<string!>! errors) -> void
+Vais.Agents.Control.AgentManifestValidationException.Errors.get -> System.Collections.Immutable.ImmutableArray<string!>
 Vais.Agents.Control.AgentPolicyDeniedException
 Vais.Agents.Control.AgentPolicyDeniedException.AgentPolicyDeniedException(Vais.Agents.Control.PolicyOperation operation, string! reason) -> void
 Vais.Agents.Control.AgentPolicyDeniedException.Operation.get -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.AgentPolicyDeniedException.Reason.get -> string!
+Vais.Agents.Control.IAgentManifestLoader
+Vais.Agents.Control.IAgentManifestLoader.LoadFromDirectoryAsync(string! directory, string! searchPattern, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IAgentManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IAgentManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
 Vais.Agents.Control.AuditLogEntry
 Vais.Agents.Control.AuditLogEntry.AgentId.get -> string?
 Vais.Agents.Control.AuditLogEntry.AgentId.init -> void

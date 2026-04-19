@@ -57,6 +57,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Abstrac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.InProcess", "src\Vais.Agents.Control.InProcess\Vais.Agents.Control.InProcess.csproj", "{CDE7983E-9ADA-4943-80E4-5117E16C2DA8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Manifests.Json", "src\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj", "{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Manifests.Yaml", "src\Vais.Agents.Control.Manifests.Yaml\Vais.Agents.Control.Manifests.Yaml.csproj", "{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -166,6 +170,14 @@ Global
 		{CDE7983E-9ADA-4943-80E4-5117E16C2DA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDE7983E-9ADA-4943-80E4-5117E16C2DA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDE7983E-9ADA-4943-80E4-5117E16C2DA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -193,5 +205,7 @@ Global
 		{FA414DA0-8420-44A3-801A-45DDDB70FC1B} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{7FEC003D-5C81-4E90-BF67-379E45AD3262} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{CDE7983E-9ADA-4943-80E4-5117E16C2DA8} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{7231D4A0-2536-40A9-A4B3-D5DF0DCE0525} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{9CA3E3EA-E8AD-4C52-8155-538F7ED29D88} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 	EndGlobalSection
 EndGlobal

@@ -96,4 +96,8 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
   </ItemGroup>
 
+  <ItemGroup Label="YAML loader (Vais.Agents.Control.Manifests.Yaml). YamlDotNet is the de-facto .NET YAML parser.">
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
 </Project>

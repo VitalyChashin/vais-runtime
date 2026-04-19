@@ -1,0 +1,6 @@
+#nullable enable
+Vais.Agents.Control.Manifests.YamlAgentManifestLoader
+Vais.Agents.Control.Manifests.YamlAgentManifestLoader.LoadFromDirectoryAsync(string! directory, string! searchPattern, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.Manifests.YamlAgentManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.Manifests.YamlAgentManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.Manifests.YamlAgentManifestLoader.YamlAgentManifestLoader() -> void
