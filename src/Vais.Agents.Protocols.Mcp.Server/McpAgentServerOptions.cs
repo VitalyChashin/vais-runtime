@@ -11,17 +11,17 @@ namespace Vais.Agents.Protocols.Mcp.Server;
 public sealed class McpAgentServerOptions
 {
     /// <summary>Server name advertised in MCP's <c>initialize</c> handshake. Default <c>"Vais.Agents MCP Server"</c>.</summary>
-    public string Name { get; init; } = "Vais.Agents MCP Server";
+    public string Name { get; set; } = "Vais.Agents MCP Server";
 
     /// <summary>Server version advertised in MCP's <c>initialize</c> handshake. Default <c>"0.7"</c>.</summary>
-    public string Version { get; init; } = "0.7";
+    public string Version { get; set; } = "0.7";
 
     /// <summary>
     /// Optional free-form instructions sent to MCP clients on handshake. Claude Desktop
     /// and similar surfaces render these to the user; useful to hint "this server
     /// exposes Vais agents — call them via their ids".
     /// </summary>
-    public string? Instructions { get; init; }
+    public string? Instructions { get; set; }
 
     /// <summary>
     /// Optional label-prefix filter applied to the registry when enumerating tools.
@@ -29,5 +29,5 @@ public sealed class McpAgentServerOptions
     /// prefix argument — useful for multi-tenant deployments where one registry holds
     /// many tenants and a given MCP endpoint should surface a subset.
     /// </summary>
-    public string? LabelPrefixFilter { get; init; }
+    public string? LabelPrefixFilter { get; set; }
 }

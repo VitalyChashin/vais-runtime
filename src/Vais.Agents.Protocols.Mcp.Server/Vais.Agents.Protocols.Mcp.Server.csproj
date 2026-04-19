@@ -5,7 +5,15 @@
     <AssemblyName>Vais.Agents.Protocols.Mcp.Server</AssemblyName>
     <Description>Inbound MCP server for Vais.Agents. Exposes every agent registered in an IAgentRegistry as one MCP tool (name = agent.id); tool-call maps to IAgentLifecycleManager.Invoke. Mirrors the outbound Vais.Agents.Protocols.Mcp package.</Description>
     <PackageTags>agents;ai;llm;mcp;inbound;server</PackageTags>
+    <!-- IDE0005 reports ASP.NET Core usings as unnecessary when the call site
+         relies on extension methods (MapMcp, AddAuthentication etc). Same reason
+         Vais.Agents.Control.Http.Server suppresses it. -->
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
@@ -17,8 +25,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="ModelContextProtocol.Core" />
   </ItemGroup>
 

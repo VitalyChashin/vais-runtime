@@ -26,8 +26,10 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="MCP (Vais.Agents.Protocols.Mcp). Stable 1.2.0 on nuget.org. ModelContextProtocol.Core keeps transitive deps minimal (no hosting extensions).">
+  <ItemGroup Label="MCP (Vais.Agents.Protocols.Mcp + Vais.Agents.Protocols.Mcp.Server). ModelContextProtocol.Core is minimal for outbound; ModelContextProtocol.AspNetCore pulls DI + Map extensions for inbound HTTP.">
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.2.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="1.2.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup Label="A2A (Vais.Agents.Protocols.A2A). 1.0.0-preview2 on nuget.org. Same post-MCP-bump rationale — the Apr-18 pillar plan framed this as a local-mirror constraint, but nuget.org was always reachable via the repo-local NuGet.config whitelist.">
