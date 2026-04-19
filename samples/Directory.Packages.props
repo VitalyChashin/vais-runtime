@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Samples opt OUT of central package management — each csproj lists its own
+    <PackageReference ... Version="..." /> entries. This matches how an external
+    consumer of Vais.Agents.* would pin versions in their own app, and keeps
+    sample csprojs self-describing at the package level.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

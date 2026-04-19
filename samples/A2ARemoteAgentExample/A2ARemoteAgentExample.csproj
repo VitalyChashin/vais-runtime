@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>A2ARemoteAgentExample</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Protocols.A2A" Version="0.4.0-preview" />
+    <PackageReference Include="A2A" Version="1.0.0-preview2" />
+  </ItemGroup>
+</Project>
