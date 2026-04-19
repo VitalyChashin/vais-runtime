@@ -179,10 +179,28 @@ public sealed class StatefulAgentOptions
     public IToolCallDispatcher? ToolCallDispatcher { get; init; }
 
     /// <summary>
-    /// Durable-execution journal. Exposed in v0.5 for consumers building resume-capable
-    /// agents; dispatcher wiring (write on every outcome, cache-replay on resume) lands
-    /// in the next PR. Default: <see cref="NullAgentJournal.Instance"/> (no-op — preserves
+    /// Durable-execution journal. Every tool-call outcome is appended here when
+    /// <see cref="AgentContext.RunId"/> is stamped; re-dispatching the same call
+    /// within the same run returns the recorded outcome without re-invoking the
+    /// tool. Default: <see cref="NullAgentJournal.Instance"/> (no-op — preserves
     /// pre-0.5 behaviour).
     /// </summary>
     public IAgentJournal? Journal { get; init; }
+
+    /// <summary>
+    /// Factory that produces the <see cref="AgentContext.RunId"/> stamped on every
+    /// <c>AskAsync</c> / <c>StreamAsync</c> invocation. Default is
+    /// <c>Guid.NewGuid().ToString("N")</c> — a collision-free 32-hex identifier.
+    /// Override for structured ids (ULID, KSUID, Snowflake) when downstream systems
+    /// need time-sortable or otherwise structured run identifiers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The factory is consulted only when the caller hasn't already stamped a RunId
+    /// on the ambient <see cref="IAgentContextAccessor"/>. A non-null ambient
+    /// <see cref="AgentContext.RunId"/> always wins — this is how resume threads
+    /// the interrupted run's id back into the continuation (see v0.5 PR 4).
+    /// </para>
+    /// </remarks>
+    public Func<string>? RunIdFactory { get; init; }
 }

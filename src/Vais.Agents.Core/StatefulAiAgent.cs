@@ -50,6 +50,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
     private readonly RunBudget _budget;
     private readonly IToolCallDispatcher _toolCallDispatcher;
+    private readonly Func<string> _runIdFactory;
     private readonly string? _agentName;
 
     /// <summary>
@@ -95,6 +96,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _budget = options.Budget ?? RunBudget.Unlimited;
         _toolCallDispatcher = options.ToolCallDispatcher
             ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus, options.Journal);
+        _runIdFactory = options.RunIdFactory ?? DefaultRunIdFactory;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
@@ -123,7 +125,7 @@ public sealed class StatefulAiAgent : IAiAgent
 
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
-        var context = _contextAccessor.Current;
+        var context = StampRunId(_contextAccessor.Current);
         var eventContext = BuildEventContext(context);
         var runStartedAt = DateTimeOffset.UtcNow;
         var runStopwatch = Stopwatch.StartNew();
@@ -354,7 +356,7 @@ public sealed class StatefulAiAgent : IAiAgent
 
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
-        var context = _contextAccessor.Current;
+        var context = StampRunId(_contextAccessor.Current);
         var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
@@ -984,6 +986,19 @@ public sealed class StatefulAiAgent : IAiAgent
             // Usage-sink failures must not break the main flow. Log and move on.
             _logger.LogWarning(ex, "Usage sink {SinkType} threw; swallowed.", _usageSink.GetType().Name);
         }
+    }
+
+    private static string DefaultRunIdFactory() => Guid.NewGuid().ToString("N");
+
+    private AgentContext StampRunId(AgentContext context)
+    {
+        // Caller-supplied RunId wins — that's how resume threads the interrupted
+        // run's id back into the continuation. Only synthesise when unset.
+        if (context.RunId is not null)
+        {
+            return context;
+        }
+        return context with { RunId = _runIdFactory() };
     }
 
     private AgentContext BuildEventContext(AgentContext context)
