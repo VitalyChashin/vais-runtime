@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Protocols.Mcp.Server</RootNamespace>
+    <AssemblyName>Vais.Agents.Protocols.Mcp.Server</AssemblyName>
+    <Description>Inbound MCP server for Vais.Agents. Exposes every agent registered in an IAgentRegistry as one MCP tool (name = agent.id); tool-call maps to IAgentLifecycleManager.Invoke. Mirrors the outbound Vais.Agents.Protocols.Mcp package.</Description>
+    <PackageTags>agents;ai;llm;mcp;inbound;server</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Protocols.Mcp.Server.Tests" />
+  </ItemGroup>
+
+</Project>

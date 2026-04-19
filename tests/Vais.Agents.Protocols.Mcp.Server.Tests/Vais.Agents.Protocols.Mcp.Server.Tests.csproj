@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Protocols.Mcp.Server.Tests</RootNamespace>
+    <AssemblyName>Vais.Agents.Protocols.Mcp.Server.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.InProcess\Vais.Agents.Control.InProcess.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Protocols.Mcp.Server\Vais.Agents.Protocols.Mcp.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+</Project>

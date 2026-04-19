@@ -1,0 +1,18 @@
+#nullable enable
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerBuilder
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Instructions.get -> string?
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Instructions.init -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.LabelPrefixFilter.get -> string?
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.LabelPrefixFilter.init -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.McpAgentServerOptions() -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Name.get -> string!
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Name.init -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Version.get -> string!
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Version.init -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions
+Vais.Agents.Protocols.Mcp.Server.StdioAgentServerHost
+Vais.Agents.Protocols.Mcp.Server.StdioAgentServerHost.StdioAgentServerHost(Vais.Agents.IAgentRegistry! registry, Vais.Agents.IAgentLifecycleManager! lifecycle, Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions? options = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerBuilder.Build(Vais.Agents.IAgentRegistry! registry, Vais.Agents.IAgentLifecycleManager! lifecycle, Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions? options = null) -> ModelContextProtocol.Server.McpServerOptions!
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions.AddMcpAgentServerBuilder(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions.AddMcpAgentServerStdio(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
