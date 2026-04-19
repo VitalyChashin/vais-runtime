@@ -31,13 +31,13 @@ jobs:
             9.0.x
 
       - name: Restore
-        run: dotnet restore Vais2.Agents.sln
+        run: dotnet restore Vais.Agents.sln
 
       - name: Build
-        run: dotnet build Vais2.Agents.sln --configuration Release --no-restore
+        run: dotnet build Vais.Agents.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Vais2.Agents.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+        run: dotnet test Vais.Agents.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
 
       - name: Upload test results
         if: always()

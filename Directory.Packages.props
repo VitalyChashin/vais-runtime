@@ -26,12 +26,12 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="MCP (Vais2.Agents.Protocols.Mcp). Stable 1.2.0 on nuget.org. ModelContextProtocol.Core keeps transitive deps minimal (no hosting extensions).">
+  <ItemGroup Label="MCP (Vais.Agents.Protocols.Mcp). Stable 1.2.0 on nuget.org. ModelContextProtocol.Core keeps transitive deps minimal (no hosting extensions).">
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.2.0" />
   </ItemGroup>
 
-  <ItemGroup Label="A2A (Vais2.Agents.Protocols.A2A). Preview-pinned for the same reason as MCP — local mirror only has 0.3.1-preview.">
-    <PackageVersion Include="A2A" Version="0.3.1-preview" />
+  <ItemGroup Label="A2A (Vais.Agents.Protocols.A2A). 1.0.0-preview2 on nuget.org. Same post-MCP-bump rationale — the Apr-18 pillar plan framed this as a local-mirror constraint, but nuget.org was always reachable via the repo-local NuGet.config whitelist.">
+    <PackageVersion Include="A2A" Version="1.0.0-preview2" />
   </ItemGroup>
 
   <ItemGroup Label="OpenAI SDK - floor set by SK 1.74 (≥2.9.1) and MEAI.OpenAI 10.5 (≥2.10.0).">
@@ -54,7 +54,7 @@
     <PackageVersion Include="OpenTelemetry.Api" Version="1.15.2" />
   </ItemGroup>
 
-  <ItemGroup Label="Orleans host (Vais2.Agents.Hosting.Orleans). Aligned 10.x family.">
+  <ItemGroup Label="Orleans host (Vais.Agents.Hosting.Orleans). Aligned 10.x family.">
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Core" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.1.0" />
@@ -66,7 +66,7 @@
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Redis persistence (Vais2.Agents.Persistence.Redis). Orleans Redis providers + StackExchange.Redis.">
+  <ItemGroup Label="Redis persistence (Vais.Agents.Persistence.Redis). Orleans Redis providers + StackExchange.Redis.">
     <PackageVersion Include="Microsoft.Orleans.Clustering.Redis" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="10.1.0" />
     <!--
@@ -78,7 +78,7 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.12.14" />
   </ItemGroup>
 
-  <ItemGroup Label="Postgres persistence (Vais2.Agents.Persistence.Postgres). Orleans ADO.NET providers + Npgsql.">
+  <ItemGroup Label="Postgres persistence (Vais.Agents.Persistence.Postgres). Orleans ADO.NET providers + Npgsql.">
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.1.0" />
     <PackageVersion Include="Npgsql" Version="9.0.5" />

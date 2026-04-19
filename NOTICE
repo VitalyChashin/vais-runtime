@@ -1,7 +1,7 @@
-Vais2.Agents
-Copyright 2026 VAIS2 Platform contributors
+Vais.Agents
+Copyright 2026 VAIS contributors
 
-This product includes software developed by the VAIS2 Platform contributors.
+This product includes software developed by the VAIS contributors.
 
 This product uses the following third-party libraries, each governed by its own
 license (not redistributed here; pulled transitively via NuGet):

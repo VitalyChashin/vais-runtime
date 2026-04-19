@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Persistence.Postgres\Vais.Agents.Persistence.Postgres.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.TestingHost" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
+    <PackageReference Include="Microsoft.Orleans.Server" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SQL schema scripts sourced from the Orleans repo (https://github.com/dotnet/orleans,
+         MIT licence) and embedded as resources so the fixture can run them against the
+         Testcontainers-managed Postgres before the TestCluster deploys. Orleans' NuGet
+         packages do not ship these scripts, so we carry a frozen copy here. -->
+    <EmbeddedResource Include="Sql/PostgreSQL-Main.sql" />
+    <EmbeddedResource Include="Sql/PostgreSQL-Persistence.sql" />
+  </ItemGroup>
+
+</Project>

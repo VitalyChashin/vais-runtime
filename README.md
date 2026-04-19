@@ -1,65 +1,76 @@
-# Vais2.Agents
+# Vais.Agents
 
 > **Status: Phase 1 — pre-alpha, pre-release.** API unstable. NuGet not yet published.
-> Name is a working placeholder; a trademark / NuGet-existing-package clearance pass is pending before any public push.
+> A trademark / NuGet-existing-package clearance pass is pending before any public push of the `Vais.Agents.*` package ids.
 
-Durable, multi-tenant agent hosting for .NET — with pluggable AI stacks (**Microsoft Agent Framework** and **Semantic Kernel**) sitting behind a single neutral abstraction.
+Stack-neutral agent library for .NET — durable multi-tenant hosting with pluggable AI backends. Pick **Microsoft Agent Framework** or **Semantic Kernel** via DI; swap without rewriting your agent.
 
-Born from the [VAIS2 Platform](../..) internal `Vais2Agents.*` projects, extracted under Apache 2.0 so the framework can live without the surrounding product.
+## What you get
 
-## Why
+| Capability | Packages |
+|---|---|
+| Stack-neutral contracts — `IAiAgent`, `IAgentSession`, `ICompletionProvider`, `ITool`, guardrails, events | `Vais.Agents.Abstractions` |
+| Default stateful agent with tool-call outer loop, budget, interrupts, streaming | `Vais.Agents.Core` |
+| Adapters — exercise each stack's real machinery, not a `IChatClient` pass-through | `Vais.Agents.Ai.SemanticKernel`, `Vais.Agents.Ai.MicrosoftAgentFramework` |
+| In-memory host for dev / tests | `Vais.Agents.Hosting.InMemory` |
+| Orleans virtual-actor host — grain-per-(agent, session), durable state, event streams | `Vais.Agents.Hosting.Orleans` |
+| Persistence — Redis + Postgres for Orleans clustering / grain storage / streams | `Vais.Agents.Persistence.Redis`, `Vais.Agents.Persistence.Postgres` |
+| Observability — OTel GenAI semantic conventions + Langfuse enrichment | `Vais.Agents.Observability.OpenTelemetry`, `Vais.Agents.Observability.Langfuse` |
+| RAG via `Microsoft.Extensions.VectorData` | `Vais.Agents.Persistence.VectorData` |
+| Interop — MCP tool-source adapter, A2A remote-agent-as-tool adapter | `Vais.Agents.Protocols.Mcp`, `Vais.Agents.Protocols.A2A` |
 
-Today, picking an agent library also picks your LLM stack. We want the opposite: one library whose agents retain durable identity and state, with the completion stack swappable between SK and MAF (and more, later) via DI.
+## 30-second hello
+
+```csharp
+using Microsoft.SemanticKernel;
+using Vais.Agents;
+using Vais.Agents.Ai.SemanticKernel;
+using Vais.Agents.Core;
+
+var kernel = Kernel.CreateBuilder()
+    .AddOpenAIChatCompletion("gpt-4o-mini", Environment.GetEnvironmentVariable("OPENAI_API_KEY")!)
+    .Build();
+
+var agent = new StatefulAiAgent(
+    new SkCompletionProvider(kernel),
+    new StatefulAgentOptions { SystemPrompt = "Be concise." });
+
+Console.WriteLine(await agent.AskAsync("What is the capital of France?"));
+Console.WriteLine(await agent.AskAsync("And its population?"));  // History carries.
+```
+
+Swap the adapter to MAF — one `using` change, same agent class:
+
+```csharp
+using Microsoft.Extensions.AI;
+using Vais.Agents.Ai.MicrosoftAgentFramework;
+
+IChatClient client = /* your MEAI chat client */;
+var agent = new StatefulAiAgent(new MafCompletionProvider(client), options);
+```
+
+## Documentation
+
+Full docs live under **[`docs/`](docs/index.md)** — getting-started walkthrough, per-pillar concepts, how-to guides, API reference, ADR index. Start at [`docs/index.md`](docs/index.md).
 
 ## Design principles
 
-1. **Stack-neutral contracts.** `Vais2.Agents.Abstractions` references no SK, no MAF, no Orleans. Consumers depend on it without pulling either stack.
+1. **Stack-neutral contracts.** `Vais.Agents.Abstractions` references no SK, no MAF, no Orleans. Consumers depend on it without pulling either stack.
 2. **Native code paths, not shims.** Each adapter exercises its own stack's real machinery — SK's `IChatCompletionService`, MAF's `ChatClientAgent` — rather than reducing both to a common `IChatClient` pass-through.
 3. **History and identity live in the core.** The library owns conversation state; it does not delegate to a stack's per-invocation session unless explicitly asked.
 4. **Apache 2.0 across the stack** — library and (future) cloud runtime both.
 
-## Repository layout
-
-```
-src/
-  Vais2.Agents.Abstractions/          Neutral contracts (no SK/MAF refs)
-  Vais2.Agents.Core/                  Default stateful agent + state primitives
-  Vais2.Agents.Ai.SemanticKernel/     SK adapter
-  Vais2.Agents.Ai.MicrosoftAgentFramework/  MAF adapter
-tests/
-  Vais2.Agents.Core.Tests/            Unit tests (no network)
-samples/
-  HelloAgent/                         Runs the same agent twice — SK, then MAF
-```
-
-## Quick start
-
-```bash
-dotnet build
-dotnet test
-OPENAI_API_KEY=... dotnet run --project samples/HelloAgent
-```
-
-## Architecture decisions
-
-Short records of decisions that shape the public surface live in [`docs/adr/`](docs/adr/). The current set:
-
-- [ADR 0001 — Keyed `IChatClient` DI convention](docs/adr/0001-keyed-ichatclient-di-convention.md) — the colon-delimited string-key shape (`openai:gpt-4o:primary`) used when consumers register multiple providers side-by-side.
-
-## Roadmap (high level)
-
-- **M1 (current):** Core contracts + SK and MAF adapters + minimal sample + Core unit tests.
-- **M2:** In-memory agent runtime, parity tests, observability (OTel + Langfuse enricher).
-- **M3:** Orleans host, Redis and Postgres persistence, `VectorData`-based RAG package.
-- **M4:** Cloud runtime (A2A protocol-native, declarative agents, Helm chart).
-
-Full roadmap and design decisions: `../../plans/actor-agents-oss-extraction-research.md` in the parent VAIS2 repo (will move here when the OSS repo goes public).
-
 ## Building
 
 - .NET 9 SDK (or newer).
-- Pinned deps resolve to SK 1.74, MAF 1.1.0, MEAI 10.5, Orleans 10.1, OpenAI 2.10.
+- Pinned deps resolve to SK 1.74, MAF 1.1, MEAI 10.5, Orleans 10.1, OpenAI 2.10.
 - `Microsoft.Extensions.VectorData.Abstractions` is held at 10.1.0 because the SK 1.74 InMemory preview connector (used in tests) was built against that surface; lift in lockstep with SK.Connectors.InMemory.
+
+```bash
+dotnet build Vais.Agents.sln
+dotnet test Vais.Agents.sln
+OPENAI_API_KEY=... dotnet run --project samples/HelloAgent
+```
 
 ## Contributing
 

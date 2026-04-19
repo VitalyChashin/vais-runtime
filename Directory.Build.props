@@ -22,12 +22,12 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
-    <Authors>VAIS2 Platform contributors</Authors>
-    <Company>VAIS2 Platform contributors</Company>
-    <Copyright>Copyright (c) 2026 VAIS2 Platform contributors</Copyright>
+    <Authors>VAIS contributors</Authors>
+    <Company>VAIS contributors</Company>
+    <Copyright>Copyright (c) 2026 VAIS contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://example.invalid/vais2-agents</PackageProjectUrl>
-    <RepositoryUrl>https://example.invalid/vais2-agents.git</RepositoryUrl>
+    <PackageProjectUrl>https://example.invalid/vais-agents</PackageProjectUrl>
+    <RepositoryUrl>https://example.invalid/vais-agents.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>

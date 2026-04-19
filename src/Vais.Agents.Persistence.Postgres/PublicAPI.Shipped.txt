@@ -1,0 +1,6 @@
+#nullable enable
+Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions
+const Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.NpgsqlInvariant = "Npgsql" -> string!
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! connectionString) -> Orleans.Hosting.ISiloBuilder!
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.UseAgenticPostgresClustering(this Orleans.Hosting.IClientBuilder! clientBuilder, string! connectionString) -> Orleans.Hosting.IClientBuilder!
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.UseAgenticPostgresClustering(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! connectionString) -> Orleans.Hosting.ISiloBuilder!

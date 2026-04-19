@@ -1,8 +1,8 @@
 # ADR 0001: Keyed `IChatClient` DI convention
 
 - **Status:** Accepted — 2026-04-17 (M2a)
-- **Context bounded by:** Phase 1 of the Vais2.Agents OSS extraction (`plans/actor-agents-oss-extraction-research.md` in the parent VAIS2 repo).
-- **Replaces:** `SemanticKernelPooling` (retired, per decision §4.8 of the research doc).
+- **Context bounded by:** Phase 1 of the Vais.Agents library.
+- **Replaces:** the `SemanticKernelPooling`-style pool-by-scope API common in early SK-based deployments; superseded by `Microsoft.Extensions.DependencyInjection` keyed services.
 
 ## Context
 
@@ -42,14 +42,14 @@ Rules:
 | Option | Why rejected |
 |---|---|
 | Structured key record (`record ChatClientKey(string Provider, string Model, string? Purpose)`) | Requires consumers to import a type from our library just to register a client. The ergonomic win is small; the coupling is real. |
-| Reuse `SemanticKernelPooling`-style "scope" strings (`"openai_default"`, `"openai_fast"`) | Opaque. Nothing in the name tells a reader which model or which purpose. We got burned by this in VAIS2's `_kernelScope`. |
+| Reuse `SemanticKernelPooling`-style "scope" strings (`"openai_default"`, `"openai_fast"`) | Opaque. Nothing in the name tells a reader which model or which purpose. This mistake is common in early SK deployments — the string carries no context of its own. |
 | No convention; let each consumer pick | Works — until two libraries collide on a key. The whole point of a convention is you don't have to negotiate. |
 | `Microsoft.Extensions.AI`'s `ChatClientBuilder` chain without keys | Fine for the single-client case, which is already covered by resolving `IChatClient` without a key. Doesn't address the fan-out use case. |
 
 ## Consequences
 
 - **Positive:** keys are greppable; tooling-free; fit the existing `.AddKeyedSingleton<IChatClient>(...)` surface without any extension helpers on our side.
-- **Positive:** no coupling on a `Vais2.Agents`-owned key type. Consumers can reuse these keys with any DI-aware library that speaks `IChatClient`.
+- **Positive:** no coupling on a `Vais.Agents`-owned key type. Consumers can reuse these keys with any DI-aware library that speaks `IChatClient`.
 - **Negative:** strings are validated at runtime only. A typo (`"opeanai:gpt-4o"`) fails on the first resolution, not at build. We accept this — consumer code is small and the feedback loop is fast.
 - **Negative:** the convention is a convention, not a type-checked contract. Adopters who don't follow it lose the benefit; we don't police it.
 
@@ -57,4 +57,4 @@ Rules:
 
 - When the Orleans host lands (W3 / M3), grain code that needs a provider should accept `[FromKeyedServices(...)]` optional parameters with a documented default key.
 - A `LoadBalancingChatClient` decorator (decision §4.8) will fan out across keyed clients given a `IEnumerable<IChatClient>` — we'll document the naming convention it expects from that list there.
-- VAIS2 migration (W9) will need a compatibility shim mapping the old `_kernelScope` strings to the new convention. Tracked for W9, not implemented here.
+- Consumers migrating from bespoke `_kernelScope`-style pools in legacy SK deployments typically need a thin compatibility shim mapping those strings to the new `provider:model:purpose` convention; out of scope here, easy to add at the consumer layer.

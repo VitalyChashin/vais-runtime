@@ -1,0 +1,25 @@
+#nullable enable
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalFilter
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalFilter.KnowledgeRetrievalFilter(Vais.Agents.IKnowledgeRetriever! retriever, Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? options = null) -> void
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.<Clone>$() -> Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions!
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.ChunkSeparator.get -> string!
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.ChunkSeparator.init -> void
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.Equals(Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? other) -> bool
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.KnowledgeRetrievalOptions() -> void
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.Template.get -> string!
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.Template.init -> void
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.TopK.get -> int
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.TopK.init -> void
+Vais.Agents.Persistence.VectorData.VectorStoreKnowledgeRetriever<TKey, TRecord>
+Vais.Agents.Persistence.VectorData.VectorStoreKnowledgeRetriever<TKey, TRecord>.RetrieveAsync(string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.KnowledgeChunk!>!>!
+Vais.Agents.Persistence.VectorData.VectorStoreKnowledgeRetriever<TKey, TRecord>.VectorStoreKnowledgeRetriever(Microsoft.Extensions.VectorData.VectorStoreCollection<TKey, TRecord!>! collection, Microsoft.Extensions.AI.IEmbeddingGenerator<string!, Microsoft.Extensions.AI.Embedding<float>!>! embeddings, System.Func<TRecord!, Vais.Agents.KnowledgeChunk!>! toChunk) -> void
+override Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.Equals(object? obj) -> bool
+override Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.GetHashCode() -> int
+override Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.ToString() -> string!
+static Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.operator !=(Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? left, Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? right) -> bool
+static Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.operator ==(Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? left, Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? right) -> bool
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.InvokeAsync(Vais.Agents.ContextInvocationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContextContribution!>
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalContextProvider.KnowledgeRetrievalContextProvider(Vais.Agents.IKnowledgeRetriever! retriever, Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions? options = null) -> void

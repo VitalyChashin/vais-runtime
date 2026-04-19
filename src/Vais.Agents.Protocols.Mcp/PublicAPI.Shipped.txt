@@ -1,0 +1,7 @@
+#nullable enable
+Vais.Agents.Protocols.Mcp.McpToolInvocationException
+Vais.Agents.Protocols.Mcp.McpToolInvocationException.McpToolInvocationException(string! toolName, string! message) -> void
+Vais.Agents.Protocols.Mcp.McpToolInvocationException.ToolName.get -> string!
+Vais.Agents.Protocols.Mcp.McpToolSource
+Vais.Agents.Protocols.Mcp.McpToolSource.DiscoverAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.ITool!>!
+Vais.Agents.Protocols.Mcp.McpToolSource.McpToolSource(ModelContextProtocol.Client.McpClient! client, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> void

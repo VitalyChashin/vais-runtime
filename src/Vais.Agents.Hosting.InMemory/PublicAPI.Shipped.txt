@@ -1,0 +1,12 @@
+#nullable enable
+Vais.Agents.Hosting.InMemory.AgenticHostingInMemoryServiceCollectionExtensions
+Vais.Agents.Hosting.InMemory.InMemoryAgentEventBus
+Vais.Agents.Hosting.InMemory.InMemoryAgentEventBus.InMemoryAgentEventBus(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Hosting.InMemory.InMemoryAgentEventBus!>? logger = null) -> void
+Vais.Agents.Hosting.InMemory.InMemoryAgentEventBus.PublishAsync(Vais.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.InMemory.InMemoryAgentEventBus.Subscribe(System.Func<Vais.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.GetOrCreate(string! agentId) -> Vais.Agents.IAiAgent!
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.InMemoryAgentRuntime(Vais.Agents.ICompletionProvider! provider, System.Func<string!, Vais.Agents.Core.StatefulAgentOptions!>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.Remove(string! agentId) -> bool
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.TryGet(string! agentId, out Vais.Agents.IAiAgent? agent) -> bool
+static Vais.Agents.Hosting.InMemory.AgenticHostingInMemoryServiceCollectionExtensions.AddInMemoryAgentRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, string!, Vais.Agents.Core.StatefulAgentOptions!>? configureAgents = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

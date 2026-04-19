@@ -1,0 +1,7 @@
+#nullable enable
+Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions
+static Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.AddAgenticRedisGrainStorage(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! connectionString) -> Orleans.Hosting.ISiloBuilder!
+static Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.UseAgenticRedisClustering(this Orleans.Hosting.IClientBuilder! clientBuilder, string! connectionString) -> Orleans.Hosting.IClientBuilder!
+static Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.UseAgenticRedisClustering(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! connectionString) -> Orleans.Hosting.ISiloBuilder!
+static Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.UseAgenticRedisStreaming(this Orleans.Hosting.IClientBuilder! clientBuilder, string! connectionString) -> Orleans.Hosting.IClientBuilder!
+static Vais.Agents.Persistence.Redis.AgenticRedisPersistenceExtensions.UseAgenticRedisStreaming(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! connectionString) -> Orleans.Hosting.ISiloBuilder!

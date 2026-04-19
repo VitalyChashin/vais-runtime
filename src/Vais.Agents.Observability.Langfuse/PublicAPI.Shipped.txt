@@ -1,0 +1,27 @@
+#nullable enable
+Vais.Agents.Observability.Langfuse.AgenticLangfuseExtensions
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentFilter
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentFilter.LangfuseEnrichmentFilter(Vais.Agents.IAgentContextAccessor! contextAccessor, Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? options = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Observability.Langfuse.LangfuseEnrichmentFilter!>? logger = null) -> void
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.<Clone>$() -> Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions!
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.AnonymousUserId.get -> string?
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.AnonymousUserId.init -> void
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.DefaultTags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.DefaultTags.init -> void
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.Equals(Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? other) -> bool
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.LangfuseEnrichmentOptions() -> void
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.StaticMetadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.StaticMetadata.init -> void
+Vais.Agents.Observability.Langfuse.LangfuseTags
+const Vais.Agents.Observability.Langfuse.LangfuseTags.MetadataPrefix = "langfuse.trace.metadata." -> string!
+const Vais.Agents.Observability.Langfuse.LangfuseTags.SessionId = "langfuse.session.id" -> string!
+const Vais.Agents.Observability.Langfuse.LangfuseTags.Tags = "langfuse.tags" -> string!
+const Vais.Agents.Observability.Langfuse.LangfuseTags.TraceName = "langfuse.trace.name" -> string!
+const Vais.Agents.Observability.Langfuse.LangfuseTags.UserId = "langfuse.user.id" -> string!
+override Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.Equals(object? obj) -> bool
+override Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.GetHashCode() -> int
+override Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.ToString() -> string!
+static Vais.Agents.Observability.Langfuse.AgenticLangfuseExtensions.AddLangfuseEnrichment(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.operator !=(Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? left, Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? right) -> bool
+static Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions.operator ==(Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? left, Vais.Agents.Observability.Langfuse.LangfuseEnrichmentOptions? right) -> bool

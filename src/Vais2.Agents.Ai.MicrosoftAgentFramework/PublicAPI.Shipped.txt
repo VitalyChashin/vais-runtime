@@ -1,6 +1,0 @@
-#nullable enable
-Vais2.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider
-Vais2.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider.CompleteAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais2.Agents.CompletionResponse!>!
-Vais2.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider.MafCompletionProvider(Microsoft.Extensions.AI.IChatClient! chatClient, string! agentName = "vais2-agent", string? modelId = null) -> void
-Vais2.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider.ProviderName.get -> string!
-Vais2.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider.StreamAsync(Vais2.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais2.Agents.CompletionUpdate!>!

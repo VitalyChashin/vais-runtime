@@ -1,19 +1,19 @@
-// Copyright (c) 2026 VAIS2 Platform contributors.
+// Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
 using OpenAI;
-using Vais2.Agents;
-using Vais2.Agents.Ai.MicrosoftAgentFramework;
-using Vais2.Agents.Ai.SemanticKernel;
-using Vais2.Agents.Core;
+using Vais.Agents;
+using Vais.Agents.Ai.MicrosoftAgentFramework;
+using Vais.Agents.Ai.SemanticKernel;
+using Vais.Agents.Core;
 
 // -----------------------------------------------------------------------------
 // HelloAgent
 //
-// Runs the same Vais2.Agents StatefulAiAgent twice — first with the Semantic
+// Runs the same Vais.Agents StatefulAiAgent twice — first with the Semantic
 // Kernel adapter, then with the Microsoft Agent Framework adapter — and prints
 // both conversations side by side. The point is not that the two outputs match
 // word-for-word (they won't, because sampling is non-deterministic), but that
