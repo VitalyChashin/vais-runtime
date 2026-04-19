@@ -1,4 +1,21 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.A2ATaskGrain
+Vais.Agents.Hosting.Orleans.A2ATaskGrain.A2ATaskGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.A2ATaskGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.A2ATaskGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.A2ATaskGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.A2ATaskSurrogate?>!
+Vais.Agents.Hosting.Orleans.A2ATaskGrain.SaveAsync(Vais.Agents.Hosting.Orleans.A2ATaskSurrogate task) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState.A2ATaskGrainState() -> void
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState.HasTask.get -> bool
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState.HasTask.set -> void
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState.Task.get -> Vais.Agents.Hosting.Orleans.A2ATaskSurrogate
+Vais.Agents.Hosting.Orleans.A2ATaskGrainState.Task.set -> void
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate.A2ATaskSurrogate() -> void
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate.ContextId -> string!
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate.SavedAt -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate.TaskId -> string!
+Vais.Agents.Hosting.Orleans.A2ATaskSurrogate.TaskJson -> string!
 Vais.Agents.Hosting.Orleans.AgentConfigGrain
 Vais.Agents.Hosting.Orleans.AgentConfigGrain.AgentConfigGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentConfigGrainState!>! state) -> void
 Vais.Agents.Hosting.Orleans.AgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
@@ -107,6 +124,10 @@ Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter
 Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.HandoffRequested!
 Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.HandoffRequested! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
 Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.HandoffRequestedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.IA2ATaskGrain
+Vais.Agents.Hosting.Orleans.IA2ATaskGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IA2ATaskGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.A2ATaskSurrogate?>!
+Vais.Agents.Hosting.Orleans.IA2ATaskGrain.SaveAsync(Vais.Agents.Hosting.Orleans.A2ATaskSurrogate task) -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
@@ -176,6 +197,12 @@ Vais.Agents.Hosting.Orleans.OrleansAgentSession.OrleansAgentSession(Vais.Agents.
 Vais.Agents.Hosting.Orleans.OrleansAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansAgentSession.SessionId.get -> string!
 Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey
+Vais.Agents.Hosting.Orleans.OrleansTaskStore
+Vais.Agents.Hosting.Orleans.OrleansTaskStore.DeleteTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.OrleansTaskStore.GetTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<A2A.AgentTask?>!
+Vais.Agents.Hosting.Orleans.OrleansTaskStore.ListTasksAsync(A2A.ListTasksRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<A2A.ListTasksResponse!>!
+Vais.Agents.Hosting.Orleans.OrleansTaskStore.OrleansTaskStore(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansTaskStore.SaveTaskAsync(string! taskId, A2A.AgentTask! task, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter
 Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallCompleted!
 Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
@@ -207,6 +234,7 @@ Vais.Agents.Hosting.Orleans.TurnStartedSurrogateConverter.TurnStartedSurrogateCo
 const Vais.Agents.Hosting.Orleans.AiAgentGrain.StorageName = "vais.agents" -> string!
 const Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.StreamNamespace = "vais.agents.events" -> string!
 override Vais.Agents.Hosting.Orleans.AiAgentGrain.OnActivateAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansA2ATaskStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentEventBus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! streamProviderName = "vais.agents.events") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.ConfigureAgentGrains(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, string!, Vais.Agents.Core.StatefulAgentOptions!>? configureAgents = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
