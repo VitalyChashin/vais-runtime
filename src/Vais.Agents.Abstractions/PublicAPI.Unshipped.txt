@@ -5,3 +5,43 @@ Vais.Agents.CompletionUpdate.CompletionUpdate(string! TextDelta, string? ModelId
 Vais.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls) -> void
 Vais.Agents.CompletionUpdate.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
 Vais.Agents.CompletionUpdate.ToolCalls.init -> void
+Vais.Agents.IAgentJournal
+Vais.Agents.IAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+Vais.Agents.JournalEntry
+Vais.Agents.JournalEntry.At.get -> System.DateTimeOffset
+Vais.Agents.JournalEntry.At.init -> void
+Vais.Agents.JournalEntry.Deconstruct(out string! RunId, out System.DateTimeOffset At) -> void
+Vais.Agents.JournalEntry.JournalEntry(string! RunId, System.DateTimeOffset At) -> void
+Vais.Agents.JournalEntry.JournalEntry(Vais.Agents.JournalEntry! original) -> void
+Vais.Agents.JournalEntry.RunId.get -> string!
+Vais.Agents.JournalEntry.RunId.init -> void
+Vais.Agents.ToolCallRecorded
+Vais.Agents.ToolCallRecorded.Arguments.get -> System.Text.Json.JsonElement
+Vais.Agents.ToolCallRecorded.Arguments.init -> void
+Vais.Agents.ToolCallRecorded.CallId.get -> string!
+Vais.Agents.ToolCallRecorded.CallId.init -> void
+Vais.Agents.ToolCallRecorded.Deconstruct(out string! RunId, out string! CallId, out string! ToolName, out System.Text.Json.JsonElement Arguments, out Vais.Agents.ToolCallOutcome! Outcome, out System.DateTimeOffset At) -> void
+Vais.Agents.ToolCallRecorded.Equals(Vais.Agents.ToolCallRecorded? other) -> bool
+Vais.Agents.ToolCallRecorded.Outcome.get -> Vais.Agents.ToolCallOutcome!
+Vais.Agents.ToolCallRecorded.Outcome.init -> void
+Vais.Agents.ToolCallRecorded.ToolCallRecorded(string! RunId, string! CallId, string! ToolName, System.Text.Json.JsonElement Arguments, Vais.Agents.ToolCallOutcome! Outcome, System.DateTimeOffset At) -> void
+Vais.Agents.ToolCallRecorded.ToolName.get -> string!
+Vais.Agents.ToolCallRecorded.ToolName.init -> void
+abstract Vais.Agents.JournalEntry.<Clone>$() -> Vais.Agents.JournalEntry!
+override Vais.Agents.JournalEntry.Equals(object? obj) -> bool
+override Vais.Agents.JournalEntry.GetHashCode() -> int
+override Vais.Agents.JournalEntry.ToString() -> string!
+override Vais.Agents.ToolCallRecorded.<Clone>$() -> Vais.Agents.ToolCallRecorded!
+override Vais.Agents.ToolCallRecorded.Equals(object? obj) -> bool
+override Vais.Agents.ToolCallRecorded.GetHashCode() -> int
+override Vais.Agents.ToolCallRecorded.ToString() -> string!
+override sealed Vais.Agents.ToolCallRecorded.Equals(Vais.Agents.JournalEntry? other) -> bool
+static Vais.Agents.JournalEntry.operator !=(Vais.Agents.JournalEntry? left, Vais.Agents.JournalEntry? right) -> bool
+static Vais.Agents.JournalEntry.operator ==(Vais.Agents.JournalEntry? left, Vais.Agents.JournalEntry? right) -> bool
+static Vais.Agents.ToolCallRecorded.operator !=(Vais.Agents.ToolCallRecorded? left, Vais.Agents.ToolCallRecorded? right) -> bool
+static Vais.Agents.ToolCallRecorded.operator ==(Vais.Agents.ToolCallRecorded? left, Vais.Agents.ToolCallRecorded? right) -> bool
+virtual Vais.Agents.JournalEntry.Equals(Vais.Agents.JournalEntry? other) -> bool
+virtual Vais.Agents.JournalEntry.EqualityContract.get -> System.Type!
+virtual Vais.Agents.JournalEntry.PrintMembers(System.Text.StringBuilder! builder) -> bool

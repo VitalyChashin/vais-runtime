@@ -177,4 +177,12 @@ public sealed class StatefulAgentOptions
     /// journaled dispatcher for durable execution.
     /// </summary>
     public IToolCallDispatcher? ToolCallDispatcher { get; init; }
+
+    /// <summary>
+    /// Durable-execution journal. Exposed in v0.5 for consumers building resume-capable
+    /// agents; dispatcher wiring (write on every outcome, cache-replay on resume) lands
+    /// in the next PR. Default: <see cref="NullAgentJournal.Instance"/> (no-op — preserves
+    /// pre-0.5 behaviour).
+    /// </summary>
+    public IAgentJournal? Journal { get; init; }
 }

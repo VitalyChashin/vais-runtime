@@ -1,1 +1,13 @@
 #nullable enable
+Vais.Agents.Core.InMemoryAgentJournal
+Vais.Agents.Core.InMemoryAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentJournal.InMemoryAgentJournal() -> void
+Vais.Agents.Core.InMemoryAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+Vais.Agents.Core.NullAgentJournal
+Vais.Agents.Core.NullAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.NullAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.NullAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+static readonly Vais.Agents.Core.NullAgentJournal.Instance -> Vais.Agents.Core.NullAgentJournal!
+Vais.Agents.Core.StatefulAgentOptions.Journal.get -> Vais.Agents.IAgentJournal?
+Vais.Agents.Core.StatefulAgentOptions.Journal.init -> void
