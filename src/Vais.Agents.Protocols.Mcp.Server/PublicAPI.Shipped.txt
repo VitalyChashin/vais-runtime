@@ -1,1 +1,22 @@
 #nullable enable
+Vais.Agents.Protocols.Mcp.Server.HttpAgentServerExtensions
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerBuilder
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Instructions.get -> string?
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Instructions.set -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.LabelPrefixFilter.get -> string?
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.LabelPrefixFilter.set -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.McpAgentServerOptions() -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Name.get -> string!
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Name.set -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Version.get -> string!
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions.Version.set -> void
+Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions
+Vais.Agents.Protocols.Mcp.Server.StdioAgentServerHost
+Vais.Agents.Protocols.Mcp.Server.StdioAgentServerHost.StdioAgentServerHost(Vais.Agents.IAgentRegistry! registry, Vais.Agents.IAgentLifecycleManager! lifecycle, Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions? options = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+static Vais.Agents.Protocols.Mcp.Server.HttpAgentServerExtensions.AddMcpAgentServerHttp(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Protocols.Mcp.Server.HttpAgentServerExtensions.AddMcpAgentServerJwtAuth(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Protocols.Mcp.Server.HttpAgentServerExtensions.MapMcpAgentServer(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! pattern = "/mcp") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerBuilder.Build(Vais.Agents.IAgentRegistry! registry, Vais.Agents.IAgentLifecycleManager! lifecycle, Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions? options = null) -> ModelContextProtocol.Server.McpServerOptions!
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions.AddMcpAgentServerBuilder(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Protocols.Mcp.Server.McpAgentServerServiceCollectionExtensions.AddMcpAgentServerStdio(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Protocols.Mcp.Server.McpAgentServerOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
