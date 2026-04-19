@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
+
 namespace Vais.Agents;
 
 /// <summary>
@@ -10,6 +12,21 @@ namespace Vais.Agents;
 /// every surveyed agent runtime requires (AWS Bedrock AgentCore, Dapr Agents,
 /// OpenAI Assistants, Temporal, Knative).
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>v0.6 expansion.</b> The record ships with the original v0.4 positional
+/// parameters unchanged (<see cref="Id"/>, <see cref="Version"/>, <see cref="Handler"/>,
+/// <see cref="Protocols"/>, <see cref="Tools"/>, <see cref="Memory"/>,
+/// <see cref="Identity"/>, <see cref="Autoscaling"/>, <see cref="Description"/>,
+/// <see cref="Labels"/>) plus a set of new init-only properties covering the
+/// library layer (<see cref="Model"/>, <see cref="SystemPrompt"/>, <see cref="McpServers"/>,
+/// <see cref="Guardrails"/>, <see cref="Handoffs"/>, <see cref="Budget"/>,
+/// <see cref="ContextProviders"/>, <see cref="OutputSchema"/>), the reasoning
+/// layer (<see cref="AgentMode"/>, <see cref="Reasoning"/> — contract-only in v0.6),
+/// and the control-plane overlay (<see cref="Observability"/>, <see cref="Annotations"/>).
+/// Everything new is optional; consumers relying on the v0.4 ctor compile unchanged.
+/// </para>
+/// </remarks>
 /// <param name="Id">Stable identifier. Unique within the registry namespace / tenant scope.</param>
 /// <param name="Version">Immutable version tag. Updates create a new version; old versions remain for in-flight runs.</param>
 /// <param name="Handler">Code reference (class name / image ref) the runtime instantiates.</param>
@@ -30,7 +47,44 @@ public sealed record AgentManifest(
     IdentityRef? Identity = null,
     AutoscalingSpec? Autoscaling = null,
     string? Description = null,
-    IReadOnlyDictionary<string, string>? Labels = null);
+    IReadOnlyDictionary<string, string>? Labels = null)
+{
+    /// <summary>LLM model binding for declarative agents. Null when <see cref="Handler"/> carries custom behaviour.</summary>
+    public ModelSpec? Model { get; init; }
+
+    /// <summary>System prompt — inline text, template reference, or file reference. Exactly one shape set when non-null.</summary>
+    public SystemPromptSpec? SystemPrompt { get; init; }
+
+    /// <summary>Model Context Protocol server bindings. Each server contributes tools to the agent at activation time.</summary>
+    public IReadOnlyList<McpServerRef>? McpServers { get; init; }
+
+    /// <summary>Three-layer guardrail bindings (input / output / tool) — projected onto the equivalent <c>StatefulAgentOptions</c> fields at runtime.</summary>
+    public GuardrailsSpec? Guardrails { get; init; }
+
+    /// <summary>Declarative handoff targets — other agents this manifest can delegate to by id.</summary>
+    public IReadOnlyList<HandoffRef>? Handoffs { get; init; }
+
+    /// <summary>Per-run budget caps — projected onto <see cref="RunBudget"/> at runtime.</summary>
+    public RunBudget? Budget { get; init; }
+
+    /// <summary>Context providers bound to this agent — resolved against the host DI keyspace.</summary>
+    public IReadOnlyList<ContextProviderRef>? ContextProviders { get; init; }
+
+    /// <summary>Structured-output shape for the final assistant turn. Inline JSON Schema.</summary>
+    public JsonElement? OutputSchema { get; init; }
+
+    /// <summary>Execution-loop flavour — <see cref="Vais.Agents.AgentMode.ToolCalling"/> by default. Non-default values are contract-only in v0.6.</summary>
+    public AgentMode AgentMode { get; init; } = AgentMode.ToolCalling;
+
+    /// <summary>Schema-Guided Reasoning configuration. Contract-only in v0.6 — engine treats as <see cref="Vais.Agents.AgentMode.ToolCalling"/>.</summary>
+    public ReasoningSpec? Reasoning { get; init; }
+
+    /// <summary>Observability overlays — Langfuse project, sampling, custom tags.</summary>
+    public ObservabilitySpec? Observability { get; init; }
+
+    /// <summary>Free-form annotations — operator-visible metadata not indexed by the registry. Parallel to K8s annotations.</summary>
+    public IReadOnlyDictionary<string, string>? Annotations { get; init; }
+}
 
 /// <summary>Reference to the code or image that implements an agent's handler.</summary>
 /// <param name="TypeName">Fully-qualified .NET type name for in-process, or OCI image reference for containerized runtimes.</param>
@@ -50,15 +104,40 @@ public sealed record ToolRef(string Name, string? Source = null);
 /// <summary>Memory backing configuration for the agent.</summary>
 /// <param name="Provider">Provider name — e.g., "Redis", "Postgres", "VectorData". Consumer-defined.</param>
 /// <param name="ConnectionName">Optional connection / named-instance ref resolved at runtime.</param>
-public sealed record MemoryRef(string Provider, string? ConnectionName = null);
+public sealed record MemoryRef(string Provider, string? ConnectionName = null)
+{
+    /// <summary>Memory scope — <c>"session"</c> (per-conversation) or <c>"agent"</c> (shared across sessions). Null = runtime default.</summary>
+    public string? Scope { get; init; }
+
+    /// <summary>Optional history-reducer name — resolved against the host DI keyspace.</summary>
+    public string? HistoryReducer { get; init; }
+}
 
 /// <summary>Identity / auth configuration for the agent.</summary>
 /// <param name="InboundAuth">Inbound-auth scheme reference (e.g., OAuth issuer, mTLS profile name).</param>
-/// <param name="OutboundCredentials">Outbound-credentials reference (e.g., key-vault path prefix).</param>
-public sealed record IdentityRef(string? InboundAuth = null, string? OutboundCredentials = null);
+/// <param name="OutboundCredentials">Legacy single-credential reference. Kept for v0.4 back-compat; prefer <see cref="Credentials"/> for multi-credential manifests.</param>
+public sealed record IdentityRef(string? InboundAuth = null, string? OutboundCredentials = null)
+{
+    /// <summary>
+    /// List of outbound credentials the agent's tools / adapters can look up by name
+    /// at invocation time. Introduced in v0.6 — supersedes the single-valued
+    /// <see cref="OutboundCredentials"/> string when multiple credentials are needed.
+    /// </summary>
+    public IReadOnlyList<OutboundCredentialRef>? Credentials { get; init; }
+
+    /// <summary>Optional required-claims map for inbound JWT validation (e.g. <c>scope: "agent:invoke"</c>).</summary>
+    public IReadOnlyDictionary<string, string>? InboundClaims { get; init; }
+}
 
 /// <summary>Replica / concurrency autoscaling hints.</summary>
 /// <param name="MinReplicas">Minimum replicas. 0 means scale-to-zero is allowed.</param>
 /// <param name="MaxReplicas">Maximum replicas. Null means unbounded (runtime-default).</param>
 /// <param name="Target">Free-form target metric — e.g., "concurrent-requests", "cpu:70%". Consumer-defined.</param>
-public sealed record AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, string? Target = null);
+public sealed record AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, string? Target = null)
+{
+    /// <summary>Optional numeric target value paired with <see cref="Target"/> — e.g. <c>Target: "cpu", TargetValue: 0.7</c>.</summary>
+    public double? TargetValue { get; init; }
+
+    /// <summary>Deactivate idle replicas after this duration. Null = runtime default.</summary>
+    public TimeSpan? IdleTtl { get; init; }
+}

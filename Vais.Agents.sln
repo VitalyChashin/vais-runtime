@@ -53,6 +53,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Protocols.A2A",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Protocols.A2A.Tests", "tests\Vais.Agents.Protocols.A2A.Tests\Vais.Agents.Protocols.A2A.Tests.csproj", "{FA414DA0-8420-44A3-801A-45DDDB70FC1B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.Abstractions", "src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj", "{7FEC003D-5C81-4E90-BF67-379E45AD3262}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -154,6 +156,10 @@ Global
 		{FA414DA0-8420-44A3-801A-45DDDB70FC1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA414DA0-8420-44A3-801A-45DDDB70FC1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FA414DA0-8420-44A3-801A-45DDDB70FC1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FEC003D-5C81-4E90-BF67-379E45AD3262}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FEC003D-5C81-4E90-BF67-379E45AD3262}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FEC003D-5C81-4E90-BF67-379E45AD3262}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FEC003D-5C81-4E90-BF67-379E45AD3262}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -179,5 +185,6 @@ Global
 		{905E5BD8-54A6-493A-B3C6-5081310E516B} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{9A32B8BD-1130-469A-845D-C1AC617E589A} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{FA414DA0-8420-44A3-801A-45DDDB70FC1B} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{7FEC003D-5C81-4E90-BF67-379E45AD3262} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 	EndGlobalSection
 EndGlobal
