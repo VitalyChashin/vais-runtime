@@ -97,4 +97,12 @@ public sealed class OrleansAgentRuntime : IAgentRuntime
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         return _grainFactory.GetGrain<IAgentConfigGrain>(agentId);
     }
+
+    /// <summary>
+    /// Get an <see cref="IAgentJournal"/> backed by Orleans grains — each <c>RunId</c>
+    /// routes to an <see cref="IAgentRunJournalGrain"/> of the same key. Compose with
+    /// <see cref="Core.StatefulAiAgent"/> via <see cref="Core.StatefulAgentOptions.Journal"/>
+    /// to run the turn-loop locally while the durable-execution journal lives on the silo.
+    /// </summary>
+    public IAgentJournal GetJournal() => new OrleansAgentJournal(_grainFactory);
 }

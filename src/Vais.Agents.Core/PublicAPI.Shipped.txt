@@ -2,17 +2,66 @@
 Vais.Agents.Core.AgenticDiagnostics
 Vais.Agents.Core.AgenticMetrics
 Vais.Agents.Core.AgenticTags
+Vais.Agents.Core.AggregatingSystemPromptComposer
+Vais.Agents.Core.AggregatingSystemPromptComposer.AggregatingSystemPromptComposer(System.Collections.Generic.IEnumerable<Vais.Agents.ISystemPromptContributor!>! contributors) -> void
+Vais.Agents.Core.AggregatingSystemPromptComposer.ComposeAsync(Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Core.AggregatingToolRegistry
+Vais.Agents.Core.AggregatingToolRegistry.GetByName(string! name) -> Vais.Agents.ITool?
+Vais.Agents.Core.AggregatingToolRegistry.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!
 Vais.Agents.Core.AsyncLocalAgentContextAccessor
 Vais.Agents.Core.AsyncLocalAgentContextAccessor.AsyncLocalAgentContextAccessor() -> void
 Vais.Agents.Core.AsyncLocalAgentContextAccessor.Current.get -> Vais.Agents.AgentContext!
 Vais.Agents.Core.AsyncLocalAgentContextAccessor.Push(Vais.Agents.AgentContext! context) -> System.IDisposable!
+Vais.Agents.Core.DefaultToolCallDispatcher
+Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null) -> void
+Vais.Agents.Core.DefaultToolCallDispatcher.DispatchAsync(Vais.Agents.ToolCallRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome!>
+Vais.Agents.Core.FormatStringPromptTemplate
+Vais.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Core.InMemoryAgentJournal
+Vais.Agents.Core.InMemoryAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentJournal.InMemoryAgentJournal() -> void
+Vais.Agents.Core.InMemoryAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+Vais.Agents.Core.InMemoryAgentRegistry
+Vais.Agents.Core.InMemoryAgentRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentManifest?>
+Vais.Agents.Core.InMemoryAgentRegistry.InMemoryAgentRegistry() -> void
+Vais.Agents.Core.InMemoryAgentRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentManifest!>!
+Vais.Agents.Core.InMemoryAgentRegistry.Register(Vais.Agents.AgentManifest! manifest) -> Vais.Agents.AgentManifest!
+Vais.Agents.Core.InMemoryAgentRegistry.Remove(string! id, string! version) -> bool
+Vais.Agents.Core.InMemoryAgentSession
+Vais.Agents.Core.InMemoryAgentSession.AgentId.get -> string!
+Vais.Agents.Core.InMemoryAgentSession.AppendAsync(Vais.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentSession.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
+Vais.Agents.Core.InMemoryAgentSession.InMemoryAgentSession(string! agentId, string? sessionId = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>? initialHistory = null) -> void
+Vais.Agents.Core.InMemoryAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryAgentSession.SessionId.get -> string!
+Vais.Agents.Core.InMemoryMemoryStore
+Vais.Agents.Core.InMemoryMemoryStore.DeleteAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Core.InMemoryMemoryStore.InMemoryMemoryStore() -> void
+Vais.Agents.Core.InMemoryMemoryStore.ReadAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.MemoryItem?>
+Vais.Agents.Core.InMemoryMemoryStore.SearchAsync(Vais.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.MemorySearchResult!>!
+Vais.Agents.Core.InMemoryMemoryStore.WriteAsync(Vais.Agents.MemoryScope! scope, string! key, Vais.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.NoopContextWindowPacker
+Vais.Agents.Core.NoopContextWindowPacker.PackAsync(Vais.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionRequest!>
+Vais.Agents.Core.NoopHistoryReducer
+Vais.Agents.Core.NoopHistoryReducer.ReduceAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! history, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>
 Vais.Agents.Core.NullAgentEventBus
 Vais.Agents.Core.NullAgentEventBus.PublishAsync(Vais.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.NullAgentEventBus.Subscribe(System.Func<Vais.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais.Agents.Core.NullAgentJournal
+Vais.Agents.Core.NullAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.NullAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.NullAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+Vais.Agents.Core.NullMemoryStore
+Vais.Agents.Core.NullMemoryStore.DeleteAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Core.NullMemoryStore.ReadAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.MemoryItem?>
+Vais.Agents.Core.NullMemoryStore.SearchAsync(Vais.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.MemorySearchResult!>!
+Vais.Agents.Core.NullMemoryStore.WriteAsync(Vais.Agents.MemoryScope! scope, string! key, Vais.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.NullUsageSink
 Vais.Agents.Core.NullUsageSink.ReportAsync(Vais.Agents.UsageRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.RoundRobinOrchestrator
 Vais.Agents.Core.RoundRobinOrchestrator.RoundRobinOrchestrator(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentParticipant!>! participants, int maxRounds, Vais.Agents.Core.TerminationPredicate? terminate = null) -> void
+Vais.Agents.Core.RoundRobinOrchestrator.RoundRobinOrchestrator(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentParticipant!>! participants, int maxRounds, Vais.Agents.ITerminationCondition? terminate) -> void
 Vais.Agents.Core.RoundRobinOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.OrchestrationStep!>!
 Vais.Agents.Core.SequentialOrchestrator
 Vais.Agents.Core.SequentialOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.OrchestrationStep!>!
@@ -20,19 +69,47 @@ Vais.Agents.Core.SequentialOrchestrator.SequentialOrchestrator(System.Collection
 Vais.Agents.Core.StatefulAgentOptions
 Vais.Agents.Core.StatefulAgentOptions.AgentName.get -> string?
 Vais.Agents.Core.StatefulAgentOptions.AgentName.init -> void
+Vais.Agents.Core.StatefulAgentOptions.Budget.get -> Vais.Agents.RunBudget?
+Vais.Agents.Core.StatefulAgentOptions.Budget.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ContextAccessor.get -> Vais.Agents.IAgentContextAccessor?
 Vais.Agents.Core.StatefulAgentOptions.ContextAccessor.init -> void
+Vais.Agents.Core.StatefulAgentOptions.ContextProviders.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IContextProvider!>!
+Vais.Agents.Core.StatefulAgentOptions.ContextProviders.init -> void
+Vais.Agents.Core.StatefulAgentOptions.ContextWindowPacker.get -> Vais.Agents.IContextWindowPacker?
+Vais.Agents.Core.StatefulAgentOptions.ContextWindowPacker.init -> void
 Vais.Agents.Core.StatefulAgentOptions.EventBus.get -> Vais.Agents.IAgentEventBus?
 Vais.Agents.Core.StatefulAgentOptions.EventBus.init -> void
 Vais.Agents.Core.StatefulAgentOptions.Filters.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IAgentFilter!>!
 Vais.Agents.Core.StatefulAgentOptions.Filters.init -> void
+Vais.Agents.Core.StatefulAgentOptions.HistoryReducer.get -> Vais.Agents.IHistoryReducer?
+Vais.Agents.Core.StatefulAgentOptions.HistoryReducer.init -> void
 Vais.Agents.Core.StatefulAgentOptions.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>?
 Vais.Agents.Core.StatefulAgentOptions.InitialHistory.init -> void
+Vais.Agents.Core.StatefulAgentOptions.InputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IInputGuardrail!>!
+Vais.Agents.Core.StatefulAgentOptions.InputGuardrails.init -> void
+Vais.Agents.Core.StatefulAgentOptions.Journal.get -> Vais.Agents.IAgentJournal?
+Vais.Agents.Core.StatefulAgentOptions.Journal.init -> void
+Vais.Agents.Core.StatefulAgentOptions.MemoryStore.get -> Vais.Agents.IMemoryStore?
+Vais.Agents.Core.StatefulAgentOptions.MemoryStore.init -> void
+Vais.Agents.Core.StatefulAgentOptions.OutputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IOutputGuardrail!>!
+Vais.Agents.Core.StatefulAgentOptions.OutputGuardrails.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ResiliencePipeline.get -> Polly.ResiliencePipeline?
 Vais.Agents.Core.StatefulAgentOptions.ResiliencePipeline.init -> void
+Vais.Agents.Core.StatefulAgentOptions.RunIdFactory.get -> System.Func<string!>?
+Vais.Agents.Core.StatefulAgentOptions.RunIdFactory.init -> void
+Vais.Agents.Core.StatefulAgentOptions.Session.get -> Vais.Agents.IAgentSession?
+Vais.Agents.Core.StatefulAgentOptions.Session.init -> void
 Vais.Agents.Core.StatefulAgentOptions.StatefulAgentOptions() -> void
+Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IStreamingAgentFilter!>!
+Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
 Vais.Agents.Core.StatefulAgentOptions.SystemPrompt.get -> string?
 Vais.Agents.Core.StatefulAgentOptions.SystemPrompt.init -> void
+Vais.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais.Agents.ISystemPromptComposer?
+Vais.Agents.Core.StatefulAgentOptions.SystemPromptComposer.init -> void
+Vais.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.get -> Vais.Agents.IToolCallDispatcher?
+Vais.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.init -> void
+Vais.Agents.Core.StatefulAgentOptions.ToolGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>!
+Vais.Agents.Core.StatefulAgentOptions.ToolGuardrails.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ToolRegistry.get -> Vais.Agents.IToolRegistry?
 Vais.Agents.Core.StatefulAgentOptions.ToolRegistry.init -> void
 Vais.Agents.Core.StatefulAgentOptions.UsageSink.get -> Vais.Agents.IUsageSink?
@@ -41,11 +118,15 @@ Vais.Agents.Core.StatefulAiAgent
 Vais.Agents.Core.StatefulAiAgent.AskAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 Vais.Agents.Core.StatefulAiAgent.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
 Vais.Agents.Core.StatefulAiAgent.Reset() -> void
+Vais.Agents.Core.StatefulAiAgent.ResumeAsync(Vais.Agents.ResumeInput! input, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Core.StatefulAiAgent.Session.get -> Vais.Agents.IAgentSession!
 Vais.Agents.Core.StatefulAiAgent.StatefulAiAgent(Vais.Agents.ICompletionProvider! provider, Vais.Agents.Core.StatefulAgentOptions? options = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.StatefulAiAgent!>? logger = null) -> void
 Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
 Vais.Agents.Core.StatefulAiAgent.SystemPrompt.get -> string?
 Vais.Agents.Core.StatefulAiAgent.SystemPrompt.set -> void
+Vais.Agents.Core.TerminationConditions
 Vais.Agents.Core.TerminationPredicate
+Vais.Agents.Core.Tool
 const Vais.Agents.Core.AgenticDiagnostics.ActivitySourceName = "Vais.Agents" -> string!
 const Vais.Agents.Core.AgenticDiagnostics.MeterName = "Vais.Agents" -> string!
 const Vais.Agents.Core.AgenticMetrics.OperationDuration = "gen_ai.client.operation.duration" -> string!
@@ -62,83 +143,16 @@ const Vais.Agents.Core.AgenticTags.GenAiUsageInputTokens = "gen_ai.usage.input_t
 const Vais.Agents.Core.AgenticTags.GenAiUsageOutputTokens = "gen_ai.usage.output_tokens" -> string!
 const Vais.Agents.Core.AgenticTags.TenantId = "vais.tenant.id" -> string!
 const Vais.Agents.Core.AgenticTags.UserId = "vais.user.id" -> string!
-static readonly Vais.Agents.Core.AgenticDiagnostics.ActivitySource -> System.Diagnostics.ActivitySource!
-static readonly Vais.Agents.Core.NullAgentEventBus.Instance -> Vais.Agents.Core.NullAgentEventBus!
-static readonly Vais.Agents.Core.NullUsageSink.Instance -> Vais.Agents.Core.NullUsageSink!
-virtual Vais.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais.Agents.OrchestrationStep!>! steps) -> bool
-Vais.Agents.Core.InMemoryAgentSession
-Vais.Agents.Core.InMemoryAgentSession.AgentId.get -> string!
-Vais.Agents.Core.InMemoryAgentSession.AppendAsync(Vais.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Core.InMemoryAgentSession.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
-Vais.Agents.Core.InMemoryAgentSession.InMemoryAgentSession(string! agentId, string? sessionId = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>? initialHistory = null) -> void
-Vais.Agents.Core.InMemoryAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Core.InMemoryAgentSession.SessionId.get -> string!
-Vais.Agents.Core.InMemoryAgentRegistry
-Vais.Agents.Core.InMemoryAgentRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentManifest?>
-Vais.Agents.Core.InMemoryAgentRegistry.InMemoryAgentRegistry() -> void
-Vais.Agents.Core.InMemoryAgentRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentManifest!>!
-Vais.Agents.Core.InMemoryAgentRegistry.Register(Vais.Agents.AgentManifest! manifest) -> Vais.Agents.AgentManifest!
-Vais.Agents.Core.InMemoryAgentRegistry.Remove(string! id, string! version) -> bool
-Vais.Agents.Core.InMemoryMemoryStore
-Vais.Agents.Core.InMemoryMemoryStore.DeleteAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
-Vais.Agents.Core.InMemoryMemoryStore.InMemoryMemoryStore() -> void
-Vais.Agents.Core.InMemoryMemoryStore.ReadAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.MemoryItem?>
-Vais.Agents.Core.InMemoryMemoryStore.SearchAsync(Vais.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.MemorySearchResult!>!
-Vais.Agents.Core.InMemoryMemoryStore.WriteAsync(Vais.Agents.MemoryScope! scope, string! key, Vais.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Core.AggregatingToolRegistry
-Vais.Agents.Core.AggregatingToolRegistry.GetByName(string! name) -> Vais.Agents.ITool?
-Vais.Agents.Core.AggregatingToolRegistry.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!
-Vais.Agents.Core.Tool
-Vais.Agents.Core.RoundRobinOrchestrator.RoundRobinOrchestrator(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentParticipant!>! participants, int maxRounds, Vais.Agents.ITerminationCondition? terminate) -> void
-Vais.Agents.Core.TerminationConditions
-Vais.Agents.Core.AggregatingSystemPromptComposer
-Vais.Agents.Core.AggregatingSystemPromptComposer.AggregatingSystemPromptComposer(System.Collections.Generic.IEnumerable<Vais.Agents.ISystemPromptContributor!>! contributors) -> void
-Vais.Agents.Core.AggregatingSystemPromptComposer.ComposeAsync(Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
-Vais.Agents.Core.FormatStringPromptTemplate
-Vais.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
-Vais.Agents.Core.DefaultToolCallDispatcher
-Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null) -> void
-Vais.Agents.Core.DefaultToolCallDispatcher.DispatchAsync(Vais.Agents.ToolCallRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome!>
-Vais.Agents.Core.NoopContextWindowPacker
-Vais.Agents.Core.NoopContextWindowPacker.PackAsync(Vais.Agents.CompletionRequest! candidate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionRequest!>
-Vais.Agents.Core.NoopHistoryReducer
-Vais.Agents.Core.NoopHistoryReducer.ReduceAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! history, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>
-Vais.Agents.Core.NullMemoryStore
-Vais.Agents.Core.NullMemoryStore.DeleteAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
-Vais.Agents.Core.NullMemoryStore.ReadAsync(Vais.Agents.MemoryScope! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.MemoryItem?>
-Vais.Agents.Core.NullMemoryStore.SearchAsync(Vais.Agents.MemoryScope! scope, string! query, int topK = 5, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.MemorySearchResult!>!
-Vais.Agents.Core.NullMemoryStore.WriteAsync(Vais.Agents.MemoryScope! scope, string! key, Vais.Agents.MemoryItem! item, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Core.StatefulAgentOptions.ContextProviders.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IContextProvider!>!
-Vais.Agents.Core.StatefulAgentOptions.ContextProviders.init -> void
-Vais.Agents.Core.StatefulAgentOptions.ContextWindowPacker.get -> Vais.Agents.IContextWindowPacker?
-Vais.Agents.Core.StatefulAgentOptions.ContextWindowPacker.init -> void
-Vais.Agents.Core.StatefulAgentOptions.HistoryReducer.get -> Vais.Agents.IHistoryReducer?
-Vais.Agents.Core.StatefulAgentOptions.HistoryReducer.init -> void
-Vais.Agents.Core.StatefulAgentOptions.InputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IInputGuardrail!>!
-Vais.Agents.Core.StatefulAgentOptions.InputGuardrails.init -> void
-Vais.Agents.Core.StatefulAgentOptions.OutputGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IOutputGuardrail!>!
-Vais.Agents.Core.StatefulAgentOptions.OutputGuardrails.init -> void
-Vais.Agents.Core.StatefulAgentOptions.ToolGuardrails.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>!
-Vais.Agents.Core.StatefulAgentOptions.ToolGuardrails.init -> void
-Vais.Agents.Core.StatefulAgentOptions.MemoryStore.get -> Vais.Agents.IMemoryStore?
-Vais.Agents.Core.StatefulAgentOptions.MemoryStore.init -> void
-Vais.Agents.Core.StatefulAgentOptions.Budget.get -> Vais.Agents.RunBudget?
-Vais.Agents.Core.StatefulAgentOptions.Budget.init -> void
-Vais.Agents.Core.StatefulAgentOptions.Session.get -> Vais.Agents.IAgentSession?
-Vais.Agents.Core.StatefulAgentOptions.Session.init -> void
-Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IStreamingAgentFilter!>!
-Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
-Vais.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.get -> Vais.Agents.IToolCallDispatcher?
-Vais.Agents.Core.StatefulAgentOptions.ToolCallDispatcher.init -> void
-Vais.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais.Agents.ISystemPromptComposer?
-Vais.Agents.Core.StatefulAgentOptions.SystemPromptComposer.init -> void
-Vais.Agents.Core.StatefulAiAgent.ResumeAsync(Vais.Agents.ResumeInput! input, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
-Vais.Agents.Core.StatefulAiAgent.Session.get -> Vais.Agents.IAgentSession!
-static readonly Vais.Agents.Core.FormatStringPromptTemplate.Instance -> Vais.Agents.Core.FormatStringPromptTemplate!
-static readonly Vais.Agents.Core.NoopContextWindowPacker.Instance -> Vais.Agents.Core.NoopContextWindowPacker!
-static readonly Vais.Agents.Core.NoopHistoryReducer.Instance -> Vais.Agents.Core.NoopHistoryReducer!
-static readonly Vais.Agents.Core.NullMemoryStore.Instance -> Vais.Agents.Core.NullMemoryStore!
 static Vais.Agents.Core.AggregatingToolRegistry.BuildAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? staticTools, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolSource!>? sources, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Core.AggregatingToolRegistry!>!
 static Vais.Agents.Core.TerminationConditions.FromPredicate(Vais.Agents.Core.TerminationPredicate! predicate) -> Vais.Agents.ITerminationCondition!
 static Vais.Agents.Core.Tool.FromFunc<TInput, TOutput>(string! name, string! description, System.Func<TInput, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOutput>!>! handler) -> Vais.Agents.ITool!
 static Vais.Agents.Core.Tool.FromFunc<TOutput>(string! name, string! description, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TOutput>!>! handler) -> Vais.Agents.ITool!
+static readonly Vais.Agents.Core.AgenticDiagnostics.ActivitySource -> System.Diagnostics.ActivitySource!
+static readonly Vais.Agents.Core.FormatStringPromptTemplate.Instance -> Vais.Agents.Core.FormatStringPromptTemplate!
+static readonly Vais.Agents.Core.NoopContextWindowPacker.Instance -> Vais.Agents.Core.NoopContextWindowPacker!
+static readonly Vais.Agents.Core.NoopHistoryReducer.Instance -> Vais.Agents.Core.NoopHistoryReducer!
+static readonly Vais.Agents.Core.NullAgentEventBus.Instance -> Vais.Agents.Core.NullAgentEventBus!
+static readonly Vais.Agents.Core.NullAgentJournal.Instance -> Vais.Agents.Core.NullAgentJournal!
+static readonly Vais.Agents.Core.NullMemoryStore.Instance -> Vais.Agents.Core.NullMemoryStore!
+static readonly Vais.Agents.Core.NullUsageSink.Instance -> Vais.Agents.Core.NullUsageSink!
+virtual Vais.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais.Agents.OrchestrationStep!>! steps) -> bool

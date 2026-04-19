@@ -1,8 +1,18 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.AgentConfigGrain
+Vais.Agents.Hosting.Orleans.AgentConfigGrain.AgentConfigGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentConfigGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.AgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
+Vais.Agents.Hosting.Orleans.AgentConfigGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentConfigGrainState
+Vais.Agents.Hosting.Orleans.AgentConfigGrainState.AgentConfigGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentConfigGrainState.SystemPrompt.get -> string?
+Vais.Agents.Hosting.Orleans.AgentConfigGrainState.SystemPrompt.set -> void
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AgentContextSurrogate() -> void
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AgentName -> string?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.CorrelationId -> string?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.RunId -> string?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.TenantId -> string?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.UserId -> string?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogateConverter
@@ -12,24 +22,60 @@ Vais.Agents.Hosting.Orleans.AgentContextSurrogateConverter.ConvertToSurrogate(in
 Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventKind.Completed = 1 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventKind.Failed = 2 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.GuardrailTriggered = 5 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.HandoffRequested = 7 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.InterruptRaised = 6 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventKind.Started = 0 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallCompleted = 4 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallReplayed = 8 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallStarted = 3 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.AgentEventSurrogate() -> void
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.AssistantText -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.At -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.CallId -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.CompletionTokens -> int?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.Context -> Vais.Agents.Hosting.Orleans.AgentContextSurrogate
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.Duration -> System.TimeSpan?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ErrorMessage -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ErrorType -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailDecision -> Vais.Agents.GuardrailDecision?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailLayer -> Vais.Agents.GuardrailLayer?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailReason -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffFromAgent -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffMessage -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffToAgent -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptId -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptReason -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.Kind -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ModelId -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.PromptTokens -> int?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.Succeeded -> bool?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolName -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.UserMessage -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.AgentEventSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.AgentEvent!
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.ConvertToSurrogate(in Vais.Agents.AgentEvent! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrain
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.AgentRunJournalGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.AppendAsync(Vais.Agents.Hosting.Orleans.JournalEntrySurrogate entry) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.GetEntriesAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Hosting.Orleans.JournalEntrySurrogate>!>!
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState.AgentRunJournalGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState.Entries.get -> System.Collections.Generic.List<Vais.Agents.Hosting.Orleans.JournalEntrySurrogate>!
+Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState.Entries.set -> void
+Vais.Agents.Hosting.Orleans.AgentSessionGrain
+Vais.Agents.Hosting.Orleans.AgentSessionGrain.AgentSessionGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentSessionGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.AgentSessionGrain.AppendAsync(Vais.Agents.ChatTurn! turn) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentSessionGrain.DeleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentSessionGrain.GetHistoryAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>!
+Vais.Agents.Hosting.Orleans.AgentSessionGrain.ResetAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentSessionGrainState
+Vais.Agents.Hosting.Orleans.AgentSessionGrainState.AgentSessionGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.get -> System.Collections.Generic.List<Vais.Agents.ChatTurn!>!
+Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.set -> void
 Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions
 Vais.Agents.Hosting.Orleans.AiAgentGrain
 Vais.Agents.Hosting.Orleans.AiAgentGrain.AiAgentGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AiAgentGrainState!>! state, Vais.Agents.ICompletionProvider! provider, System.Func<string!, Vais.Agents.Core.StatefulAgentOptions!>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
@@ -53,6 +99,27 @@ Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ChatTurnSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.ChatTurnSurrogate surrogate) -> Vais.Agents.ChatTurn!
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ChatTurn! value) -> Vais.Agents.Hosting.Orleans.ChatTurnSurrogate
+Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter
+Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.GuardrailTriggered!
+Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GuardrailTriggered! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.GuardrailTriggeredSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter
+Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.HandoffRequested!
+Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.HandoffRequested! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.HandoffRequestedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.IAgentConfigGrain
+Vais.Agents.Hosting.Orleans.IAgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
+Vais.Agents.Hosting.Orleans.IAgentConfigGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain
+Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain.AppendAsync(Vais.Agents.Hosting.Orleans.JournalEntrySurrogate entry) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain.GetEntriesAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Hosting.Orleans.JournalEntrySurrogate>!>!
+Vais.Agents.Hosting.Orleans.IAgentSessionGrain
+Vais.Agents.Hosting.Orleans.IAgentSessionGrain.AppendAsync(Vais.Agents.ChatTurn! turn) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentSessionGrain.DeleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentSessionGrain.GetHistoryAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>!
+Vais.Agents.Hosting.Orleans.IAgentSessionGrain.ResetAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.AskAsync(string! userMessage) -> System.Threading.Tasks.Task<string!>!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.DeleteAsync() -> System.Threading.Tasks.Task!
@@ -60,6 +127,27 @@ Vais.Agents.Hosting.Orleans.IAiAgentGrain.GetHistoryAsync() -> System.Threading.
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.ResetAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter
+Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.InterruptRaised!
+Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.InterruptRaised! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.InterruptRaisedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.JournalEntryKind
+Vais.Agents.Hosting.Orleans.JournalEntryKind.ToolCallRecorded = 0 -> Vais.Agents.Hosting.Orleans.JournalEntryKind
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.ArgumentsJson -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.At -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.CallId -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.JournalEntrySurrogate() -> void
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.Kind -> Vais.Agents.Hosting.Orleans.JournalEntryKind
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.OutcomeCallId -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.OutcomeError -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.OutcomeResult -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.RunId -> string!
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.ToolName -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogateConverter
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.JournalEntrySurrogate surrogate) -> Vais.Agents.JournalEntry!
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogateConverter.ConvertToSurrogate(in Vais.Agents.JournalEntry! value) -> Vais.Agents.Hosting.Orleans.JournalEntrySurrogate
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogateConverter.JournalEntrySurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.OrleansAgentContextAccessor
 Vais.Agents.Hosting.Orleans.OrleansAgentContextAccessor.Current.get -> Vais.Agents.AgentContext!
 Vais.Agents.Hosting.Orleans.OrleansAgentContextAccessor.OrleansAgentContextAccessor() -> void
@@ -67,11 +155,43 @@ Vais.Agents.Hosting.Orleans.OrleansAgentEventBus
 Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.OrleansAgentEventBus(Orleans.IClusterClient! clusterClient, string! streamProviderName) -> void
 Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.PublishAsync(Vais.Agents.AgentEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.Subscribe(System.Func<Vais.Agents.AgentEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais.Agents.Hosting.Orleans.OrleansAgentJournal
+Vais.Agents.Hosting.Orleans.OrleansAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansAgentJournal.OrleansAgentJournal(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime
+Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetAgentConfig(string! agentId) -> Vais.Agents.Hosting.Orleans.IAgentConfigGrain!
+Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetJournal() -> Vais.Agents.IAgentJournal!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetOrCreate(string! agentId) -> Vais.Agents.IAiAgent!
+Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetSession(string! agentId, string! sessionId) -> Vais.Agents.IAgentSession!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.OrleansAgentRuntime(Orleans.IGrainFactory! grainFactory) -> void
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.Remove(string! agentId) -> bool
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.TryGet(string! agentId, out Vais.Agents.IAiAgent? agent) -> bool
+Vais.Agents.Hosting.Orleans.OrleansAgentSession
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.AgentId.get -> string!
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.AppendAsync(Vais.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.OrleansAgentSession(Vais.Agents.Hosting.Orleans.IAgentSessionGrain! grain, string! agentId, string! sessionId) -> void
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansAgentSession.SessionId.get -> string!
+Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey
+Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter
+Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallCompleted!
+Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ToolCallCompletedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.ToolCallRecordedSurrogateConverter
+Vais.Agents.Hosting.Orleans.ToolCallRecordedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.JournalEntrySurrogate surrogate) -> Vais.Agents.ToolCallRecorded!
+Vais.Agents.Hosting.Orleans.ToolCallRecordedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallRecorded! value) -> Vais.Agents.Hosting.Orleans.JournalEntrySurrogate
+Vais.Agents.Hosting.Orleans.ToolCallRecordedSurrogateConverter.ToolCallRecordedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallReplayed!
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallReplayed! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ToolCallReplayedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter
+Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallStarted!
+Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallStarted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ToolCallStartedSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.TurnCompletedSurrogateConverter
 Vais.Agents.Hosting.Orleans.TurnCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.TurnCompleted!
 Vais.Agents.Hosting.Orleans.TurnCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.TurnCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
@@ -90,80 +210,6 @@ override Vais.Agents.Hosting.Orleans.AiAgentGrain.OnActivateAsync(System.Threadi
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentEventBus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! streamProviderName = "vais.agents.events") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.ConfigureAgentGrains(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, string!, Vais.Agents.Core.StatefulAgentOptions!>? configureAgents = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static readonly Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.StreamKey -> System.Guid
-Vais.Agents.Hosting.Orleans.AgentEventKind.GuardrailTriggered = 5 -> Vais.Agents.Hosting.Orleans.AgentEventKind
-Vais.Agents.Hosting.Orleans.AgentEventKind.HandoffRequested = 7 -> Vais.Agents.Hosting.Orleans.AgentEventKind
-Vais.Agents.Hosting.Orleans.AgentEventKind.InterruptRaised = 6 -> Vais.Agents.Hosting.Orleans.AgentEventKind
-Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallCompleted = 4 -> Vais.Agents.Hosting.Orleans.AgentEventKind
-Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallStarted = 3 -> Vais.Agents.Hosting.Orleans.AgentEventKind
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.CallId -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailDecision -> Vais.Agents.GuardrailDecision?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailLayer -> Vais.Agents.GuardrailLayer?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.GuardrailReason -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffFromAgent -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffMessage -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.HandoffToAgent -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptId -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.InterruptReason -> string?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.Succeeded -> bool?
-Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolName -> string?
-Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter
-Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter
-Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.HandoffRequested!
-Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.HandoffRequested! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
-Vais.Agents.Hosting.Orleans.HandoffRequestedSurrogateConverter.HandoffRequestedSurrogateConverter() -> void
-Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.GuardrailTriggered!
-Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GuardrailTriggered! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
-Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.GuardrailTriggeredSurrogateConverter() -> void
-Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter
-Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.InterruptRaised!
-Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.InterruptRaised! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
-Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.InterruptRaisedSurrogateConverter() -> void
-Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter
-Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallCompleted!
-Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
-Vais.Agents.Hosting.Orleans.ToolCallCompletedSurrogateConverter.ToolCallCompletedSurrogateConverter() -> void
-Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter
-Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallStarted!
-Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallStarted! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
-Vais.Agents.Hosting.Orleans.ToolCallStartedSurrogateConverter.ToolCallStartedSurrogateConverter() -> void
-Vais.Agents.Hosting.Orleans.AgentConfigGrain
-Vais.Agents.Hosting.Orleans.AgentConfigGrain.AgentConfigGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentConfigGrainState!>! state) -> void
-Vais.Agents.Hosting.Orleans.AgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.AgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
-Vais.Agents.Hosting.Orleans.AgentConfigGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.AgentConfigGrainState
-Vais.Agents.Hosting.Orleans.AgentConfigGrainState.AgentConfigGrainState() -> void
-Vais.Agents.Hosting.Orleans.AgentConfigGrainState.SystemPrompt.get -> string?
-Vais.Agents.Hosting.Orleans.AgentConfigGrainState.SystemPrompt.set -> void
-Vais.Agents.Hosting.Orleans.AgentSessionGrain
-Vais.Agents.Hosting.Orleans.AgentSessionGrain.AgentSessionGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentSessionGrainState!>! state) -> void
-Vais.Agents.Hosting.Orleans.AgentSessionGrain.AppendAsync(Vais.Agents.ChatTurn! turn) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.AgentSessionGrain.DeleteAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.AgentSessionGrain.GetHistoryAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>!
-Vais.Agents.Hosting.Orleans.AgentSessionGrain.ResetAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.AgentSessionGrainState
-Vais.Agents.Hosting.Orleans.AgentSessionGrainState.AgentSessionGrainState() -> void
-Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.get -> System.Collections.Generic.List<Vais.Agents.ChatTurn!>!
-Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.set -> void
-Vais.Agents.Hosting.Orleans.IAgentConfigGrain
-Vais.Agents.Hosting.Orleans.IAgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IAgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
-Vais.Agents.Hosting.Orleans.IAgentConfigGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IAgentSessionGrain
-Vais.Agents.Hosting.Orleans.IAgentSessionGrain.AppendAsync(Vais.Agents.ChatTurn! turn) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IAgentSessionGrain.DeleteAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IAgentSessionGrain.GetHistoryAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>!
-Vais.Agents.Hosting.Orleans.IAgentSessionGrain.ResetAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetAgentConfig(string! agentId) -> Vais.Agents.Hosting.Orleans.IAgentConfigGrain!
-Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetSession(string! agentId, string! sessionId) -> Vais.Agents.IAgentSession!
-Vais.Agents.Hosting.Orleans.OrleansAgentSession
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.AgentId.get -> string!
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.AppendAsync(Vais.Agents.ChatTurn! turn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.OrleansAgentSession(Vais.Agents.Hosting.Orleans.IAgentSessionGrain! grain, string! agentId, string! sessionId) -> void
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Hosting.Orleans.OrleansAgentSession.SessionId.get -> string!
-Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Build(string! agentId, string! sessionId) -> string!
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Parse(string! key) -> (string! AgentId, string! SessionId)
+static readonly Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.StreamKey -> System.Guid
