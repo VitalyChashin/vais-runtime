@@ -97,28 +97,56 @@ Vais.Agents.AgentInvocationResult.Text.init -> void
 Vais.Agents.AgentManifest
 Vais.Agents.AgentManifest.<Clone>$() -> Vais.Agents.AgentManifest!
 Vais.Agents.AgentManifest.AgentManifest(string! Id, string! Version, Vais.Agents.AgentHandlerRef! Handler, System.Collections.Generic.IReadOnlyList<Vais.Agents.ProtocolBinding!>! Protocols, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolRef!>! Tools, Vais.Agents.MemoryRef? Memory = null, Vais.Agents.IdentityRef? Identity = null, Vais.Agents.AutoscalingSpec? Autoscaling = null, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.AgentManifest.AgentMode.get -> Vais.Agents.AgentMode
+Vais.Agents.AgentManifest.AgentMode.init -> void
+Vais.Agents.AgentManifest.Annotations.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.AgentManifest.Annotations.init -> void
 Vais.Agents.AgentManifest.Autoscaling.get -> Vais.Agents.AutoscalingSpec?
 Vais.Agents.AgentManifest.Autoscaling.init -> void
+Vais.Agents.AgentManifest.Budget.get -> Vais.Agents.RunBudget?
+Vais.Agents.AgentManifest.Budget.init -> void
+Vais.Agents.AgentManifest.ContextProviders.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ContextProviderRef!>?
+Vais.Agents.AgentManifest.ContextProviders.init -> void
 Vais.Agents.AgentManifest.Deconstruct(out string! Id, out string! Version, out Vais.Agents.AgentHandlerRef! Handler, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ProtocolBinding!>! Protocols, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolRef!>! Tools, out Vais.Agents.MemoryRef? Memory, out Vais.Agents.IdentityRef? Identity, out Vais.Agents.AutoscalingSpec? Autoscaling, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
 Vais.Agents.AgentManifest.Description.get -> string?
 Vais.Agents.AgentManifest.Description.init -> void
 Vais.Agents.AgentManifest.Equals(Vais.Agents.AgentManifest? other) -> bool
+Vais.Agents.AgentManifest.Guardrails.get -> Vais.Agents.GuardrailsSpec?
+Vais.Agents.AgentManifest.Guardrails.init -> void
 Vais.Agents.AgentManifest.Handler.get -> Vais.Agents.AgentHandlerRef!
 Vais.Agents.AgentManifest.Handler.init -> void
+Vais.Agents.AgentManifest.Handoffs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.HandoffRef!>?
+Vais.Agents.AgentManifest.Handoffs.init -> void
 Vais.Agents.AgentManifest.Id.get -> string!
 Vais.Agents.AgentManifest.Id.init -> void
 Vais.Agents.AgentManifest.Identity.get -> Vais.Agents.IdentityRef?
 Vais.Agents.AgentManifest.Identity.init -> void
 Vais.Agents.AgentManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
 Vais.Agents.AgentManifest.Labels.init -> void
+Vais.Agents.AgentManifest.McpServers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerRef!>?
+Vais.Agents.AgentManifest.McpServers.init -> void
 Vais.Agents.AgentManifest.Memory.get -> Vais.Agents.MemoryRef?
 Vais.Agents.AgentManifest.Memory.init -> void
+Vais.Agents.AgentManifest.Model.get -> Vais.Agents.ModelSpec?
+Vais.Agents.AgentManifest.Model.init -> void
+Vais.Agents.AgentManifest.Observability.get -> Vais.Agents.ObservabilitySpec?
+Vais.Agents.AgentManifest.Observability.init -> void
+Vais.Agents.AgentManifest.OutputSchema.get -> System.Text.Json.JsonElement?
+Vais.Agents.AgentManifest.OutputSchema.init -> void
 Vais.Agents.AgentManifest.Protocols.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ProtocolBinding!>!
 Vais.Agents.AgentManifest.Protocols.init -> void
+Vais.Agents.AgentManifest.Reasoning.get -> Vais.Agents.ReasoningSpec?
+Vais.Agents.AgentManifest.Reasoning.init -> void
+Vais.Agents.AgentManifest.SystemPrompt.get -> Vais.Agents.SystemPromptSpec?
+Vais.Agents.AgentManifest.SystemPrompt.init -> void
 Vais.Agents.AgentManifest.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolRef!>!
 Vais.Agents.AgentManifest.Tools.init -> void
 Vais.Agents.AgentManifest.Version.get -> string!
 Vais.Agents.AgentManifest.Version.init -> void
+Vais.Agents.AgentMode
+Vais.Agents.AgentMode.SchemaGuided = 1 -> Vais.Agents.AgentMode
+Vais.Agents.AgentMode.SchemaGuidedToolCalling = 2 -> Vais.Agents.AgentMode
+Vais.Agents.AgentMode.ToolCalling = 0 -> Vais.Agents.AgentMode
 Vais.Agents.AgentParticipant
 Vais.Agents.AgentParticipant.<Clone>$() -> Vais.Agents.AgentParticipant!
 Vais.Agents.AgentParticipant.AgentParticipant(string! Name, Vais.Agents.ICompletionProvider! Provider, string? SystemPrompt = null) -> void
@@ -161,12 +189,16 @@ Vais.Agents.AutoscalingSpec.<Clone>$() -> Vais.Agents.AutoscalingSpec!
 Vais.Agents.AutoscalingSpec.AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, string? Target = null) -> void
 Vais.Agents.AutoscalingSpec.Deconstruct(out int MinReplicas, out int? MaxReplicas, out string? Target) -> void
 Vais.Agents.AutoscalingSpec.Equals(Vais.Agents.AutoscalingSpec? other) -> bool
+Vais.Agents.AutoscalingSpec.IdleTtl.get -> System.TimeSpan?
+Vais.Agents.AutoscalingSpec.IdleTtl.init -> void
 Vais.Agents.AutoscalingSpec.MaxReplicas.get -> int?
 Vais.Agents.AutoscalingSpec.MaxReplicas.init -> void
 Vais.Agents.AutoscalingSpec.MinReplicas.get -> int
 Vais.Agents.AutoscalingSpec.MinReplicas.init -> void
 Vais.Agents.AutoscalingSpec.Target.get -> string?
 Vais.Agents.AutoscalingSpec.Target.init -> void
+Vais.Agents.AutoscalingSpec.TargetValue.get -> double?
+Vais.Agents.AutoscalingSpec.TargetValue.init -> void
 Vais.Agents.ChatTurn
 Vais.Agents.ChatTurn.<Clone>$() -> Vais.Agents.ChatTurn!
 Vais.Agents.ChatTurn.ChatTurn(Vais.Agents.AgentChatRole Role, string! Text, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls = null, string? ToolCallId = null) -> void
@@ -248,6 +280,15 @@ Vais.Agents.ContextInvocationContext.Deconstruct(out Vais.Agents.CompletionReque
 Vais.Agents.ContextInvocationContext.Equals(Vais.Agents.ContextInvocationContext? other) -> bool
 Vais.Agents.ContextInvocationContext.Session.get -> Vais.Agents.IAgentSession!
 Vais.Agents.ContextInvocationContext.Session.init -> void
+Vais.Agents.ContextProviderRef
+Vais.Agents.ContextProviderRef.<Clone>$() -> Vais.Agents.ContextProviderRef!
+Vais.Agents.ContextProviderRef.ContextProviderRef(string! Name, System.Text.Json.JsonElement? Params = null) -> void
+Vais.Agents.ContextProviderRef.Deconstruct(out string! Name, out System.Text.Json.JsonElement? Params) -> void
+Vais.Agents.ContextProviderRef.Equals(Vais.Agents.ContextProviderRef? other) -> bool
+Vais.Agents.ContextProviderRef.Name.get -> string!
+Vais.Agents.ContextProviderRef.Name.init -> void
+Vais.Agents.ContextProviderRef.Params.get -> System.Text.Json.JsonElement?
+Vais.Agents.ContextProviderRef.Params.init -> void
 Vais.Agents.GuardrailDecision
 Vais.Agents.GuardrailDecision.Deny = 1 -> Vais.Agents.GuardrailDecision
 Vais.Agents.GuardrailDecision.Interrupt = 2 -> Vais.Agents.GuardrailDecision
@@ -267,6 +308,15 @@ Vais.Agents.GuardrailOutcome.InterruptPayload.get -> Vais.Agents.AgentInterrupt?
 Vais.Agents.GuardrailOutcome.InterruptPayload.init -> void
 Vais.Agents.GuardrailOutcome.Reason.get -> string?
 Vais.Agents.GuardrailOutcome.Reason.init -> void
+Vais.Agents.GuardrailRef
+Vais.Agents.GuardrailRef.<Clone>$() -> Vais.Agents.GuardrailRef!
+Vais.Agents.GuardrailRef.Deconstruct(out string! Name, out System.Text.Json.JsonElement? Params) -> void
+Vais.Agents.GuardrailRef.Equals(Vais.Agents.GuardrailRef? other) -> bool
+Vais.Agents.GuardrailRef.GuardrailRef(string! Name, System.Text.Json.JsonElement? Params = null) -> void
+Vais.Agents.GuardrailRef.Name.get -> string!
+Vais.Agents.GuardrailRef.Name.init -> void
+Vais.Agents.GuardrailRef.Params.get -> System.Text.Json.JsonElement?
+Vais.Agents.GuardrailRef.Params.init -> void
 Vais.Agents.GuardrailTriggered
 Vais.Agents.GuardrailTriggered.Decision.get -> Vais.Agents.GuardrailDecision
 Vais.Agents.GuardrailTriggered.Decision.init -> void
@@ -277,6 +327,17 @@ Vais.Agents.GuardrailTriggered.Layer.get -> Vais.Agents.GuardrailLayer
 Vais.Agents.GuardrailTriggered.Layer.init -> void
 Vais.Agents.GuardrailTriggered.Reason.get -> string?
 Vais.Agents.GuardrailTriggered.Reason.init -> void
+Vais.Agents.GuardrailsSpec
+Vais.Agents.GuardrailsSpec.<Clone>$() -> Vais.Agents.GuardrailsSpec!
+Vais.Agents.GuardrailsSpec.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Input, out System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Output, out System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Tool) -> void
+Vais.Agents.GuardrailsSpec.Equals(Vais.Agents.GuardrailsSpec? other) -> bool
+Vais.Agents.GuardrailsSpec.GuardrailsSpec(System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Input = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Output = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>? Tool = null) -> void
+Vais.Agents.GuardrailsSpec.Input.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>?
+Vais.Agents.GuardrailsSpec.Input.init -> void
+Vais.Agents.GuardrailsSpec.Output.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>?
+Vais.Agents.GuardrailsSpec.Output.init -> void
+Vais.Agents.GuardrailsSpec.Tool.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.GuardrailRef!>?
+Vais.Agents.GuardrailsSpec.Tool.init -> void
 Vais.Agents.Handoff
 Vais.Agents.Handoff.<Clone>$() -> Vais.Agents.Handoff!
 Vais.Agents.Handoff.Deconstruct(out string! FromAgent, out string! ToAgent, out string? Message, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>? HistoryToCarry) -> void
@@ -290,6 +351,17 @@ Vais.Agents.Handoff.Message.get -> string?
 Vais.Agents.Handoff.Message.init -> void
 Vais.Agents.Handoff.ToAgent.get -> string!
 Vais.Agents.Handoff.ToAgent.init -> void
+Vais.Agents.HandoffRef
+Vais.Agents.HandoffRef.<Clone>$() -> Vais.Agents.HandoffRef!
+Vais.Agents.HandoffRef.CarryHistory.get -> bool?
+Vais.Agents.HandoffRef.CarryHistory.init -> void
+Vais.Agents.HandoffRef.Deconstruct(out string! ToAgent, out string? When, out bool? CarryHistory) -> void
+Vais.Agents.HandoffRef.Equals(Vais.Agents.HandoffRef? other) -> bool
+Vais.Agents.HandoffRef.HandoffRef(string! ToAgent, string? When = null, bool? CarryHistory = null) -> void
+Vais.Agents.HandoffRef.ToAgent.get -> string!
+Vais.Agents.HandoffRef.ToAgent.init -> void
+Vais.Agents.HandoffRef.When.get -> string?
+Vais.Agents.HandoffRef.When.init -> void
 Vais.Agents.HandoffRequested
 Vais.Agents.HandoffRequested.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out Vais.Agents.Handoff! Handoff) -> void
 Vais.Agents.HandoffRequested.Equals(Vais.Agents.HandoffRequested? other) -> bool
@@ -394,11 +466,15 @@ Vais.Agents.IUsageSink
 Vais.Agents.IUsageSink.ReportAsync(Vais.Agents.UsageRecord! record, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IdentityRef
 Vais.Agents.IdentityRef.<Clone>$() -> Vais.Agents.IdentityRef!
+Vais.Agents.IdentityRef.Credentials.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.OutboundCredentialRef!>?
+Vais.Agents.IdentityRef.Credentials.init -> void
 Vais.Agents.IdentityRef.Deconstruct(out string? InboundAuth, out string? OutboundCredentials) -> void
 Vais.Agents.IdentityRef.Equals(Vais.Agents.IdentityRef? other) -> bool
 Vais.Agents.IdentityRef.IdentityRef(string? InboundAuth = null, string? OutboundCredentials = null) -> void
 Vais.Agents.IdentityRef.InboundAuth.get -> string?
 Vais.Agents.IdentityRef.InboundAuth.init -> void
+Vais.Agents.IdentityRef.InboundClaims.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.IdentityRef.InboundClaims.init -> void
 Vais.Agents.IdentityRef.OutboundCredentials.get -> string?
 Vais.Agents.IdentityRef.OutboundCredentials.init -> void
 Vais.Agents.InterruptRaised
@@ -428,6 +504,27 @@ Vais.Agents.KnowledgeChunk.Score.get -> float?
 Vais.Agents.KnowledgeChunk.Score.init -> void
 Vais.Agents.KnowledgeChunk.Text.get -> string!
 Vais.Agents.KnowledgeChunk.Text.init -> void
+Vais.Agents.McpServerRef
+Vais.Agents.McpServerRef.<Clone>$() -> Vais.Agents.McpServerRef!
+Vais.Agents.McpServerRef.Args.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpServerRef.Args.init -> void
+Vais.Agents.McpServerRef.AuthRef.get -> string?
+Vais.Agents.McpServerRef.AuthRef.init -> void
+Vais.Agents.McpServerRef.Command.get -> string?
+Vais.Agents.McpServerRef.Command.init -> void
+Vais.Agents.McpServerRef.Deconstruct(out string! Name, out string! Transport, out string? Command, out System.Collections.Generic.IReadOnlyList<string!>? Args, out string? Url, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Env, out string? AuthRef, out System.Collections.Generic.IReadOnlyList<string!>? Tools) -> void
+Vais.Agents.McpServerRef.Env.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpServerRef.Env.init -> void
+Vais.Agents.McpServerRef.Equals(Vais.Agents.McpServerRef? other) -> bool
+Vais.Agents.McpServerRef.McpServerRef(string! Name, string! Transport, string? Command = null, System.Collections.Generic.IReadOnlyList<string!>? Args = null, string? Url = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Env = null, string? AuthRef = null, System.Collections.Generic.IReadOnlyList<string!>? Tools = null) -> void
+Vais.Agents.McpServerRef.Name.get -> string!
+Vais.Agents.McpServerRef.Name.init -> void
+Vais.Agents.McpServerRef.Tools.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpServerRef.Tools.init -> void
+Vais.Agents.McpServerRef.Transport.get -> string!
+Vais.Agents.McpServerRef.Transport.init -> void
+Vais.Agents.McpServerRef.Url.get -> string?
+Vais.Agents.McpServerRef.Url.init -> void
 Vais.Agents.MemoryDurability
 Vais.Agents.MemoryDurability.LongTerm = 1 -> Vais.Agents.MemoryDurability
 Vais.Agents.MemoryDurability.ShortTerm = 0 -> Vais.Agents.MemoryDurability
@@ -449,9 +546,13 @@ Vais.Agents.MemoryRef.ConnectionName.get -> string?
 Vais.Agents.MemoryRef.ConnectionName.init -> void
 Vais.Agents.MemoryRef.Deconstruct(out string! Provider, out string? ConnectionName) -> void
 Vais.Agents.MemoryRef.Equals(Vais.Agents.MemoryRef? other) -> bool
+Vais.Agents.MemoryRef.HistoryReducer.get -> string?
+Vais.Agents.MemoryRef.HistoryReducer.init -> void
 Vais.Agents.MemoryRef.MemoryRef(string! Provider, string? ConnectionName = null) -> void
 Vais.Agents.MemoryRef.Provider.get -> string!
 Vais.Agents.MemoryRef.Provider.init -> void
+Vais.Agents.MemoryRef.Scope.get -> string?
+Vais.Agents.MemoryRef.Scope.init -> void
 Vais.Agents.MemoryScope
 Vais.Agents.MemoryScope.<Clone>$() -> Vais.Agents.MemoryScope!
 Vais.Agents.MemoryScope.AgentId.get -> string?
@@ -476,6 +577,40 @@ Vais.Agents.MemorySearchResult.Key.init -> void
 Vais.Agents.MemorySearchResult.MemorySearchResult(string! Key, Vais.Agents.MemoryItem! Item, float? Score = null) -> void
 Vais.Agents.MemorySearchResult.Score.get -> float?
 Vais.Agents.MemorySearchResult.Score.init -> void
+Vais.Agents.ModelSpec
+Vais.Agents.ModelSpec.<Clone>$() -> Vais.Agents.ModelSpec!
+Vais.Agents.ModelSpec.ApiKeyRef.get -> string?
+Vais.Agents.ModelSpec.ApiKeyRef.init -> void
+Vais.Agents.ModelSpec.BaseUrlRef.get -> string?
+Vais.Agents.ModelSpec.BaseUrlRef.init -> void
+Vais.Agents.ModelSpec.Deconstruct(out string! Provider, out string! Id, out string? ApiKeyRef, out string? BaseUrlRef, out double? Temperature, out double? TopP, out int? MaxTokens, out string? ResponseFormat) -> void
+Vais.Agents.ModelSpec.Equals(Vais.Agents.ModelSpec? other) -> bool
+Vais.Agents.ModelSpec.Id.get -> string!
+Vais.Agents.ModelSpec.Id.init -> void
+Vais.Agents.ModelSpec.MaxTokens.get -> int?
+Vais.Agents.ModelSpec.MaxTokens.init -> void
+Vais.Agents.ModelSpec.ModelSpec(string! Provider, string! Id, string? ApiKeyRef = null, string? BaseUrlRef = null, double? Temperature = null, double? TopP = null, int? MaxTokens = null, string? ResponseFormat = null) -> void
+Vais.Agents.ModelSpec.Provider.get -> string!
+Vais.Agents.ModelSpec.Provider.init -> void
+Vais.Agents.ModelSpec.ResponseFormat.get -> string?
+Vais.Agents.ModelSpec.ResponseFormat.init -> void
+Vais.Agents.ModelSpec.Temperature.get -> double?
+Vais.Agents.ModelSpec.Temperature.init -> void
+Vais.Agents.ModelSpec.TopP.get -> double?
+Vais.Agents.ModelSpec.TopP.init -> void
+Vais.Agents.ObservabilitySpec
+Vais.Agents.ObservabilitySpec.<Clone>$() -> Vais.Agents.ObservabilitySpec!
+Vais.Agents.ObservabilitySpec.Deconstruct(out string? LangfuseProject, out double? SamplingRate, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Tags, out bool? TracingEnabled) -> void
+Vais.Agents.ObservabilitySpec.Equals(Vais.Agents.ObservabilitySpec? other) -> bool
+Vais.Agents.ObservabilitySpec.LangfuseProject.get -> string?
+Vais.Agents.ObservabilitySpec.LangfuseProject.init -> void
+Vais.Agents.ObservabilitySpec.ObservabilitySpec(string? LangfuseProject = null, double? SamplingRate = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Tags = null, bool? TracingEnabled = null) -> void
+Vais.Agents.ObservabilitySpec.SamplingRate.get -> double?
+Vais.Agents.ObservabilitySpec.SamplingRate.init -> void
+Vais.Agents.ObservabilitySpec.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ObservabilitySpec.Tags.init -> void
+Vais.Agents.ObservabilitySpec.TracingEnabled.get -> bool?
+Vais.Agents.ObservabilitySpec.TracingEnabled.init -> void
 Vais.Agents.OrchestrationStep
 Vais.Agents.OrchestrationStep.<Clone>$() -> Vais.Agents.OrchestrationStep!
 Vais.Agents.OrchestrationStep.AgentName.get -> string!
@@ -498,6 +633,17 @@ Vais.Agents.OutboundCredential.Kind.init -> void
 Vais.Agents.OutboundCredential.OutboundCredential(string! Kind, string! Value, System.DateTimeOffset? ExpiresAt = null) -> void
 Vais.Agents.OutboundCredential.Value.get -> string!
 Vais.Agents.OutboundCredential.Value.init -> void
+Vais.Agents.OutboundCredentialRef
+Vais.Agents.OutboundCredentialRef.<Clone>$() -> Vais.Agents.OutboundCredentialRef!
+Vais.Agents.OutboundCredentialRef.Deconstruct(out string! Name, out string! Ref, out string! Type) -> void
+Vais.Agents.OutboundCredentialRef.Equals(Vais.Agents.OutboundCredentialRef? other) -> bool
+Vais.Agents.OutboundCredentialRef.Name.get -> string!
+Vais.Agents.OutboundCredentialRef.Name.init -> void
+Vais.Agents.OutboundCredentialRef.OutboundCredentialRef(string! Name, string! Ref, string! Type) -> void
+Vais.Agents.OutboundCredentialRef.Ref.get -> string!
+Vais.Agents.OutboundCredentialRef.Ref.init -> void
+Vais.Agents.OutboundCredentialRef.Type.get -> string!
+Vais.Agents.OutboundCredentialRef.Type.init -> void
 Vais.Agents.ProtocolBinding
 Vais.Agents.ProtocolBinding.<Clone>$() -> Vais.Agents.ProtocolBinding!
 Vais.Agents.ProtocolBinding.Deconstruct(out string! Kind, out string? Endpoint) -> void
@@ -507,6 +653,25 @@ Vais.Agents.ProtocolBinding.Equals(Vais.Agents.ProtocolBinding? other) -> bool
 Vais.Agents.ProtocolBinding.Kind.get -> string!
 Vais.Agents.ProtocolBinding.Kind.init -> void
 Vais.Agents.ProtocolBinding.ProtocolBinding(string! Kind, string? Endpoint = null) -> void
+Vais.Agents.ReasoningPattern
+Vais.Agents.ReasoningPattern.Cascade = 0 -> Vais.Agents.ReasoningPattern
+Vais.Agents.ReasoningPattern.Cycle = 2 -> Vais.Agents.ReasoningPattern
+Vais.Agents.ReasoningPattern.Routing = 1 -> Vais.Agents.ReasoningPattern
+Vais.Agents.ReasoningSpec
+Vais.Agents.ReasoningSpec.<Clone>$() -> Vais.Agents.ReasoningSpec!
+Vais.Agents.ReasoningSpec.Deconstruct(out Vais.Agents.ReasoningPattern Pattern, out System.Text.Json.JsonElement? Schema, out string? SchemaRef, out int? MaxIterations, out int? MaxClarifications) -> void
+Vais.Agents.ReasoningSpec.Equals(Vais.Agents.ReasoningSpec? other) -> bool
+Vais.Agents.ReasoningSpec.MaxClarifications.get -> int?
+Vais.Agents.ReasoningSpec.MaxClarifications.init -> void
+Vais.Agents.ReasoningSpec.MaxIterations.get -> int?
+Vais.Agents.ReasoningSpec.MaxIterations.init -> void
+Vais.Agents.ReasoningSpec.Pattern.get -> Vais.Agents.ReasoningPattern
+Vais.Agents.ReasoningSpec.Pattern.init -> void
+Vais.Agents.ReasoningSpec.ReasoningSpec(Vais.Agents.ReasoningPattern Pattern, System.Text.Json.JsonElement? Schema = null, string? SchemaRef = null, int? MaxIterations = null, int? MaxClarifications = null) -> void
+Vais.Agents.ReasoningSpec.Schema.get -> System.Text.Json.JsonElement?
+Vais.Agents.ReasoningSpec.Schema.init -> void
+Vais.Agents.ReasoningSpec.SchemaRef.get -> string?
+Vais.Agents.ReasoningSpec.SchemaRef.init -> void
 Vais.Agents.ResumeInput
 Vais.Agents.ResumeInput.<Clone>$() -> Vais.Agents.ResumeInput!
 Vais.Agents.ResumeInput.Deconstruct(out string! InterruptId, out System.Text.Json.JsonElement Payload) -> void
@@ -533,6 +698,19 @@ Vais.Agents.RunBudget.MaxToolCalls.init -> void
 Vais.Agents.RunBudget.MaxTurns.get -> int?
 Vais.Agents.RunBudget.MaxTurns.init -> void
 Vais.Agents.RunBudget.RunBudget(int? MaxTurns = null, int? MaxToolCalls = null, int? MaxPromptTokens = null, int? MaxCompletionTokens = null, System.TimeSpan? MaxDuration = null) -> void
+Vais.Agents.SystemPromptSpec
+Vais.Agents.SystemPromptSpec.<Clone>$() -> Vais.Agents.SystemPromptSpec!
+Vais.Agents.SystemPromptSpec.Deconstruct(out string? Inline, out string? TemplateRef, out string? FileRef, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Variables) -> void
+Vais.Agents.SystemPromptSpec.Equals(Vais.Agents.SystemPromptSpec? other) -> bool
+Vais.Agents.SystemPromptSpec.FileRef.get -> string?
+Vais.Agents.SystemPromptSpec.FileRef.init -> void
+Vais.Agents.SystemPromptSpec.Inline.get -> string?
+Vais.Agents.SystemPromptSpec.Inline.init -> void
+Vais.Agents.SystemPromptSpec.SystemPromptSpec(string? Inline = null, string? TemplateRef = null, string? FileRef = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Variables = null) -> void
+Vais.Agents.SystemPromptSpec.TemplateRef.get -> string?
+Vais.Agents.SystemPromptSpec.TemplateRef.init -> void
+Vais.Agents.SystemPromptSpec.Variables.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.SystemPromptSpec.Variables.init -> void
 Vais.Agents.ToolCallCompleted
 Vais.Agents.ToolCallCompleted.CallId.get -> string!
 Vais.Agents.ToolCallCompleted.CallId.init -> void
@@ -722,16 +900,28 @@ override Vais.Agents.ContextContribution.ToString() -> string!
 override Vais.Agents.ContextInvocationContext.Equals(object? obj) -> bool
 override Vais.Agents.ContextInvocationContext.GetHashCode() -> int
 override Vais.Agents.ContextInvocationContext.ToString() -> string!
+override Vais.Agents.ContextProviderRef.Equals(object? obj) -> bool
+override Vais.Agents.ContextProviderRef.GetHashCode() -> int
+override Vais.Agents.ContextProviderRef.ToString() -> string!
 override Vais.Agents.GuardrailOutcome.Equals(object? obj) -> bool
 override Vais.Agents.GuardrailOutcome.GetHashCode() -> int
 override Vais.Agents.GuardrailOutcome.ToString() -> string!
+override Vais.Agents.GuardrailRef.Equals(object? obj) -> bool
+override Vais.Agents.GuardrailRef.GetHashCode() -> int
+override Vais.Agents.GuardrailRef.ToString() -> string!
 override Vais.Agents.GuardrailTriggered.<Clone>$() -> Vais.Agents.GuardrailTriggered!
 override Vais.Agents.GuardrailTriggered.Equals(object? obj) -> bool
 override Vais.Agents.GuardrailTriggered.GetHashCode() -> int
 override Vais.Agents.GuardrailTriggered.ToString() -> string!
+override Vais.Agents.GuardrailsSpec.Equals(object? obj) -> bool
+override Vais.Agents.GuardrailsSpec.GetHashCode() -> int
+override Vais.Agents.GuardrailsSpec.ToString() -> string!
 override Vais.Agents.Handoff.Equals(object? obj) -> bool
 override Vais.Agents.Handoff.GetHashCode() -> int
 override Vais.Agents.Handoff.ToString() -> string!
+override Vais.Agents.HandoffRef.Equals(object? obj) -> bool
+override Vais.Agents.HandoffRef.GetHashCode() -> int
+override Vais.Agents.HandoffRef.ToString() -> string!
 override Vais.Agents.HandoffRequested.<Clone>$() -> Vais.Agents.HandoffRequested!
 override Vais.Agents.HandoffRequested.Equals(object? obj) -> bool
 override Vais.Agents.HandoffRequested.GetHashCode() -> int
@@ -749,6 +939,9 @@ override Vais.Agents.JournalEntry.ToString() -> string!
 override Vais.Agents.KnowledgeChunk.Equals(object? obj) -> bool
 override Vais.Agents.KnowledgeChunk.GetHashCode() -> int
 override Vais.Agents.KnowledgeChunk.ToString() -> string!
+override Vais.Agents.McpServerRef.Equals(object? obj) -> bool
+override Vais.Agents.McpServerRef.GetHashCode() -> int
+override Vais.Agents.McpServerRef.ToString() -> string!
 override Vais.Agents.MemoryItem.Equals(object? obj) -> bool
 override Vais.Agents.MemoryItem.GetHashCode() -> int
 override Vais.Agents.MemoryItem.ToString() -> string!
@@ -761,21 +954,36 @@ override Vais.Agents.MemoryScope.ToString() -> string!
 override Vais.Agents.MemorySearchResult.Equals(object? obj) -> bool
 override Vais.Agents.MemorySearchResult.GetHashCode() -> int
 override Vais.Agents.MemorySearchResult.ToString() -> string!
+override Vais.Agents.ModelSpec.Equals(object? obj) -> bool
+override Vais.Agents.ModelSpec.GetHashCode() -> int
+override Vais.Agents.ModelSpec.ToString() -> string!
+override Vais.Agents.ObservabilitySpec.Equals(object? obj) -> bool
+override Vais.Agents.ObservabilitySpec.GetHashCode() -> int
+override Vais.Agents.ObservabilitySpec.ToString() -> string!
 override Vais.Agents.OrchestrationStep.Equals(object? obj) -> bool
 override Vais.Agents.OrchestrationStep.GetHashCode() -> int
 override Vais.Agents.OrchestrationStep.ToString() -> string!
 override Vais.Agents.OutboundCredential.Equals(object? obj) -> bool
 override Vais.Agents.OutboundCredential.GetHashCode() -> int
 override Vais.Agents.OutboundCredential.ToString() -> string!
+override Vais.Agents.OutboundCredentialRef.Equals(object? obj) -> bool
+override Vais.Agents.OutboundCredentialRef.GetHashCode() -> int
+override Vais.Agents.OutboundCredentialRef.ToString() -> string!
 override Vais.Agents.ProtocolBinding.Equals(object? obj) -> bool
 override Vais.Agents.ProtocolBinding.GetHashCode() -> int
 override Vais.Agents.ProtocolBinding.ToString() -> string!
+override Vais.Agents.ReasoningSpec.Equals(object? obj) -> bool
+override Vais.Agents.ReasoningSpec.GetHashCode() -> int
+override Vais.Agents.ReasoningSpec.ToString() -> string!
 override Vais.Agents.ResumeInput.Equals(object? obj) -> bool
 override Vais.Agents.ResumeInput.GetHashCode() -> int
 override Vais.Agents.ResumeInput.ToString() -> string!
 override Vais.Agents.RunBudget.Equals(object? obj) -> bool
 override Vais.Agents.RunBudget.GetHashCode() -> int
 override Vais.Agents.RunBudget.ToString() -> string!
+override Vais.Agents.SystemPromptSpec.Equals(object? obj) -> bool
+override Vais.Agents.SystemPromptSpec.GetHashCode() -> int
+override Vais.Agents.SystemPromptSpec.ToString() -> string!
 override Vais.Agents.ToolCallCompleted.<Clone>$() -> Vais.Agents.ToolCallCompleted!
 override Vais.Agents.ToolCallCompleted.Equals(object? obj) -> bool
 override Vais.Agents.ToolCallCompleted.GetHashCode() -> int
@@ -863,15 +1071,23 @@ static Vais.Agents.ContextContribution.operator !=(Vais.Agents.ContextContributi
 static Vais.Agents.ContextContribution.operator ==(Vais.Agents.ContextContribution? left, Vais.Agents.ContextContribution? right) -> bool
 static Vais.Agents.ContextInvocationContext.operator !=(Vais.Agents.ContextInvocationContext? left, Vais.Agents.ContextInvocationContext? right) -> bool
 static Vais.Agents.ContextInvocationContext.operator ==(Vais.Agents.ContextInvocationContext? left, Vais.Agents.ContextInvocationContext? right) -> bool
+static Vais.Agents.ContextProviderRef.operator !=(Vais.Agents.ContextProviderRef? left, Vais.Agents.ContextProviderRef? right) -> bool
+static Vais.Agents.ContextProviderRef.operator ==(Vais.Agents.ContextProviderRef? left, Vais.Agents.ContextProviderRef? right) -> bool
 static Vais.Agents.GuardrailOutcome.Deny(string? reason = null) -> Vais.Agents.GuardrailOutcome!
 static Vais.Agents.GuardrailOutcome.Interrupt(Vais.Agents.AgentInterrupt! interrupt, string? reason = null) -> Vais.Agents.GuardrailOutcome!
 static Vais.Agents.GuardrailOutcome.Pass.get -> Vais.Agents.GuardrailOutcome!
 static Vais.Agents.GuardrailOutcome.operator !=(Vais.Agents.GuardrailOutcome? left, Vais.Agents.GuardrailOutcome? right) -> bool
 static Vais.Agents.GuardrailOutcome.operator ==(Vais.Agents.GuardrailOutcome? left, Vais.Agents.GuardrailOutcome? right) -> bool
+static Vais.Agents.GuardrailRef.operator !=(Vais.Agents.GuardrailRef? left, Vais.Agents.GuardrailRef? right) -> bool
+static Vais.Agents.GuardrailRef.operator ==(Vais.Agents.GuardrailRef? left, Vais.Agents.GuardrailRef? right) -> bool
 static Vais.Agents.GuardrailTriggered.operator !=(Vais.Agents.GuardrailTriggered? left, Vais.Agents.GuardrailTriggered? right) -> bool
 static Vais.Agents.GuardrailTriggered.operator ==(Vais.Agents.GuardrailTriggered? left, Vais.Agents.GuardrailTriggered? right) -> bool
+static Vais.Agents.GuardrailsSpec.operator !=(Vais.Agents.GuardrailsSpec? left, Vais.Agents.GuardrailsSpec? right) -> bool
+static Vais.Agents.GuardrailsSpec.operator ==(Vais.Agents.GuardrailsSpec? left, Vais.Agents.GuardrailsSpec? right) -> bool
 static Vais.Agents.Handoff.operator !=(Vais.Agents.Handoff? left, Vais.Agents.Handoff? right) -> bool
 static Vais.Agents.Handoff.operator ==(Vais.Agents.Handoff? left, Vais.Agents.Handoff? right) -> bool
+static Vais.Agents.HandoffRef.operator !=(Vais.Agents.HandoffRef? left, Vais.Agents.HandoffRef? right) -> bool
+static Vais.Agents.HandoffRef.operator ==(Vais.Agents.HandoffRef? left, Vais.Agents.HandoffRef? right) -> bool
 static Vais.Agents.HandoffRequested.operator !=(Vais.Agents.HandoffRequested? left, Vais.Agents.HandoffRequested? right) -> bool
 static Vais.Agents.HandoffRequested.operator ==(Vais.Agents.HandoffRequested? left, Vais.Agents.HandoffRequested? right) -> bool
 static Vais.Agents.IdentityRef.operator !=(Vais.Agents.IdentityRef? left, Vais.Agents.IdentityRef? right) -> bool
@@ -882,6 +1098,8 @@ static Vais.Agents.JournalEntry.operator !=(Vais.Agents.JournalEntry? left, Vais
 static Vais.Agents.JournalEntry.operator ==(Vais.Agents.JournalEntry? left, Vais.Agents.JournalEntry? right) -> bool
 static Vais.Agents.KnowledgeChunk.operator !=(Vais.Agents.KnowledgeChunk? left, Vais.Agents.KnowledgeChunk? right) -> bool
 static Vais.Agents.KnowledgeChunk.operator ==(Vais.Agents.KnowledgeChunk? left, Vais.Agents.KnowledgeChunk? right) -> bool
+static Vais.Agents.McpServerRef.operator !=(Vais.Agents.McpServerRef? left, Vais.Agents.McpServerRef? right) -> bool
+static Vais.Agents.McpServerRef.operator ==(Vais.Agents.McpServerRef? left, Vais.Agents.McpServerRef? right) -> bool
 static Vais.Agents.MemoryItem.operator !=(Vais.Agents.MemoryItem? left, Vais.Agents.MemoryItem? right) -> bool
 static Vais.Agents.MemoryItem.operator ==(Vais.Agents.MemoryItem? left, Vais.Agents.MemoryItem? right) -> bool
 static Vais.Agents.MemoryRef.operator !=(Vais.Agents.MemoryRef? left, Vais.Agents.MemoryRef? right) -> bool
@@ -890,17 +1108,27 @@ static Vais.Agents.MemoryScope.operator !=(Vais.Agents.MemoryScope? left, Vais.A
 static Vais.Agents.MemoryScope.operator ==(Vais.Agents.MemoryScope? left, Vais.Agents.MemoryScope? right) -> bool
 static Vais.Agents.MemorySearchResult.operator !=(Vais.Agents.MemorySearchResult? left, Vais.Agents.MemorySearchResult? right) -> bool
 static Vais.Agents.MemorySearchResult.operator ==(Vais.Agents.MemorySearchResult? left, Vais.Agents.MemorySearchResult? right) -> bool
+static Vais.Agents.ModelSpec.operator !=(Vais.Agents.ModelSpec? left, Vais.Agents.ModelSpec? right) -> bool
+static Vais.Agents.ModelSpec.operator ==(Vais.Agents.ModelSpec? left, Vais.Agents.ModelSpec? right) -> bool
+static Vais.Agents.ObservabilitySpec.operator !=(Vais.Agents.ObservabilitySpec? left, Vais.Agents.ObservabilitySpec? right) -> bool
+static Vais.Agents.ObservabilitySpec.operator ==(Vais.Agents.ObservabilitySpec? left, Vais.Agents.ObservabilitySpec? right) -> bool
 static Vais.Agents.OrchestrationStep.operator !=(Vais.Agents.OrchestrationStep? left, Vais.Agents.OrchestrationStep? right) -> bool
 static Vais.Agents.OrchestrationStep.operator ==(Vais.Agents.OrchestrationStep? left, Vais.Agents.OrchestrationStep? right) -> bool
 static Vais.Agents.OutboundCredential.operator !=(Vais.Agents.OutboundCredential? left, Vais.Agents.OutboundCredential? right) -> bool
 static Vais.Agents.OutboundCredential.operator ==(Vais.Agents.OutboundCredential? left, Vais.Agents.OutboundCredential? right) -> bool
+static Vais.Agents.OutboundCredentialRef.operator !=(Vais.Agents.OutboundCredentialRef? left, Vais.Agents.OutboundCredentialRef? right) -> bool
+static Vais.Agents.OutboundCredentialRef.operator ==(Vais.Agents.OutboundCredentialRef? left, Vais.Agents.OutboundCredentialRef? right) -> bool
 static Vais.Agents.ProtocolBinding.operator !=(Vais.Agents.ProtocolBinding? left, Vais.Agents.ProtocolBinding? right) -> bool
 static Vais.Agents.ProtocolBinding.operator ==(Vais.Agents.ProtocolBinding? left, Vais.Agents.ProtocolBinding? right) -> bool
+static Vais.Agents.ReasoningSpec.operator !=(Vais.Agents.ReasoningSpec? left, Vais.Agents.ReasoningSpec? right) -> bool
+static Vais.Agents.ReasoningSpec.operator ==(Vais.Agents.ReasoningSpec? left, Vais.Agents.ReasoningSpec? right) -> bool
 static Vais.Agents.ResumeInput.operator !=(Vais.Agents.ResumeInput? left, Vais.Agents.ResumeInput? right) -> bool
 static Vais.Agents.ResumeInput.operator ==(Vais.Agents.ResumeInput? left, Vais.Agents.ResumeInput? right) -> bool
 static Vais.Agents.RunBudget.Unlimited.get -> Vais.Agents.RunBudget!
 static Vais.Agents.RunBudget.operator !=(Vais.Agents.RunBudget? left, Vais.Agents.RunBudget? right) -> bool
 static Vais.Agents.RunBudget.operator ==(Vais.Agents.RunBudget? left, Vais.Agents.RunBudget? right) -> bool
+static Vais.Agents.SystemPromptSpec.operator !=(Vais.Agents.SystemPromptSpec? left, Vais.Agents.SystemPromptSpec? right) -> bool
+static Vais.Agents.SystemPromptSpec.operator ==(Vais.Agents.SystemPromptSpec? left, Vais.Agents.SystemPromptSpec? right) -> bool
 static Vais.Agents.ToolCallCompleted.operator !=(Vais.Agents.ToolCallCompleted? left, Vais.Agents.ToolCallCompleted? right) -> bool
 static Vais.Agents.ToolCallCompleted.operator ==(Vais.Agents.ToolCallCompleted? left, Vais.Agents.ToolCallCompleted? right) -> bool
 static Vais.Agents.ToolCallOutcome.operator !=(Vais.Agents.ToolCallOutcome? left, Vais.Agents.ToolCallOutcome? right) -> bool

@@ -1,1 +1,51 @@
 #nullable enable
+Vais.Agents.Control.Http.AgentControlPlaneAuthServiceCollectionExtensions
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions
+Vais.Agents.Control.Http.AgentControlPlanePrincipalMiddlewareExtensions
+Vais.Agents.Control.Http.AgentControlPlaneServiceCollectionExtensions
+Vais.Agents.Control.Http.AgentListResponse
+Vais.Agents.Control.Http.AgentListResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentListResponse!
+Vais.Agents.Control.Http.AgentListResponse.AgentListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.AgentListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.AgentListResponse.Equals(Vais.Agents.Control.Http.AgentListResponse? other) -> bool
+Vais.Agents.Control.Http.AgentListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!
+Vais.Agents.Control.Http.AgentListResponse.Items.init -> void
+Vais.Agents.Control.Http.AgentListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.AgentListResponse.NextCursor.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse
+Vais.Agents.Control.Http.AgentQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentQueryResponse!
+Vais.Agents.Control.Http.AgentQueryResponse.AgentQueryResponse(Vais.Agents.AgentManifest! Manifest, Vais.Agents.AgentHandle! Handle, Vais.Agents.AgentStatus Status) -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Deconstruct(out Vais.Agents.AgentManifest! Manifest, out Vais.Agents.AgentHandle! Handle, out Vais.Agents.AgentStatus Status) -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Equals(Vais.Agents.Control.Http.AgentQueryResponse? other) -> bool
+Vais.Agents.Control.Http.AgentQueryResponse.Handle.get -> Vais.Agents.AgentHandle!
+Vais.Agents.Control.Http.AgentQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Manifest.get -> Vais.Agents.AgentManifest!
+Vais.Agents.Control.Http.AgentQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Status.get -> Vais.Agents.AgentStatus
+Vais.Agents.Control.Http.AgentQueryResponse.Status.init -> void
+Vais.Agents.Control.Http.DefaultPrincipalMapper
+Vais.Agents.Control.Http.DefaultPrincipalMapper.DefaultPrincipalMapper() -> void
+Vais.Agents.Control.Http.DefaultPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
+Vais.Agents.Control.Http.ProblemDetailsMapping
+const Vais.Agents.Control.Http.ProblemDetailsMapping.AgentNotFoundType = "urn:vais-agents:agent-not-found" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.BackendUnavailableType = "urn:vais-agents:backend-unavailable" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.BudgetExceededType = "urn:vais-agents:budget-exceeded" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.InterruptPendingType = "urn:vais-agents:interrupt-pending" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.ManifestInvalidType = "urn:vais-agents:manifest-invalid" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.PolicyDeniedType = "urn:vais-agents:policy-denied" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.TypePrefix = "urn:vais-agents:" -> string!
+override Vais.Agents.Control.Http.AgentListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentListResponse.ToString() -> string!
+override Vais.Agents.Control.Http.AgentQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.AgentControlPlaneAuthServiceCollectionExtensions.AddAgentControlPlaneJwtAuth(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapAgentControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Vais.Agents.Control.Http.AgentControlPlanePrincipalMiddlewareExtensions.UseAgentControlPlanePrincipalMapping(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static Vais.Agents.Control.Http.AgentControlPlaneServiceCollectionExtensions.AddAgentControlPlane(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Control.Http.AgentListResponse.operator !=(Vais.Agents.Control.Http.AgentListResponse? left, Vais.Agents.Control.Http.AgentListResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentListResponse.operator ==(Vais.Agents.Control.Http.AgentListResponse? left, Vais.Agents.Control.Http.AgentListResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentQueryResponse.operator !=(Vais.Agents.Control.Http.AgentQueryResponse? left, Vais.Agents.Control.Http.AgentQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentQueryResponse.operator ==(Vais.Agents.Control.Http.AgentQueryResponse? left, Vais.Agents.Control.Http.AgentQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.ProblemDetailsMapping.ToResult(System.Exception! ex, string? instance = null, string? agentId = null, Vais.Agents.Control.PolicyOperation? operation = null) -> Microsoft.AspNetCore.Http.IResult!

@@ -1,1 +1,27 @@
 #nullable enable
+Vais.Agents.Control.InProcess.AgentLifecycleManager
+Vais.Agents.Control.InProcess.AgentLifecycleManager.AgentLifecycleManager(Vais.Agents.IAgentRegistry! registry, Vais.Agents.IAgentRuntime! runtime, Vais.Agents.Control.IAgentPolicyEngine? policy = null, Vais.Agents.Control.IAuditLog? audit = null, Vais.Agents.IAgentContextAccessor? contextAccessor = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Control.InProcess.AgentLifecycleManager!>? logger = null) -> void
+Vais.Agents.Control.InProcess.AgentLifecycleManager.CancelAsync(Vais.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.InProcess.AgentLifecycleManager.CreateAsync(Vais.Agents.AgentManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentHandle!>
+Vais.Agents.Control.InProcess.AgentLifecycleManager.EvictAsync(Vais.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.InProcess.AgentLifecycleManager.InvokeAsync(Vais.Agents.AgentHandle! handle, Vais.Agents.AgentInvocationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentInvocationResult!>
+Vais.Agents.Control.InProcess.AgentLifecycleManager.QueryAsync(Vais.Agents.AgentHandle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentStatus>
+Vais.Agents.Control.InProcess.AgentLifecycleManager.SignalAsync(Vais.Agents.AgentHandle! handle, Vais.Agents.AgentSignal! signal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.InProcess.AgentLifecycleManager.UpdateAsync(Vais.Agents.AgentHandle! handle, Vais.Agents.AgentManifest! newManifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentHandle!>
+Vais.Agents.Control.InProcess.CompositeSecretResolver
+Vais.Agents.Control.InProcess.CompositeSecretResolver.CompositeSecretResolver(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.ISecretResolver!>! byScheme) -> void
+Vais.Agents.Control.InProcess.CompositeSecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.InProcess.ControlPlaneDiagnostics
+Vais.Agents.Control.InProcess.EnvironmentSecretResolver
+Vais.Agents.Control.InProcess.EnvironmentSecretResolver.EnvironmentSecretResolver() -> void
+Vais.Agents.Control.InProcess.EnvironmentSecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.InProcess.FileSecretResolver
+Vais.Agents.Control.InProcess.FileSecretResolver.FileSecretResolver() -> void
+Vais.Agents.Control.InProcess.FileSecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.InProcess.LoggerAuditLog
+Vais.Agents.Control.InProcess.LoggerAuditLog.AppendAsync(Vais.Agents.Control.AuditLogEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.InProcess.LoggerAuditLog.LoggerAuditLog(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Control.InProcess.LoggerAuditLog!>! logger) -> void
+const Vais.Agents.Control.InProcess.AgentLifecycleManager.UnknownAgentErrorType = "AgentHandleNotFound" -> string!
+const Vais.Agents.Control.InProcess.ControlPlaneDiagnostics.MeterName = "Vais.Agents.Control" -> string!
+const Vais.Agents.Control.InProcess.ControlPlaneDiagnostics.SourceName = "Vais.Agents.Control" -> string!
+static Vais.Agents.Control.InProcess.CompositeSecretResolver.CreateDefault() -> Vais.Agents.Control.InProcess.CompositeSecretResolver!

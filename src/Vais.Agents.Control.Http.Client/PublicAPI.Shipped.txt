@@ -1,1 +1,55 @@
 #nullable enable
+Vais.Agents.Control.Http.AgentControlPlaneClient
+Vais.Agents.Control.Http.AgentControlPlaneClient.AgentControlPlaneClient(System.Net.Http.HttpClient! httpClient) -> void
+Vais.Agents.Control.Http.AgentControlPlaneClient.CancelAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.CreateAsync(Vais.Agents.AgentManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentHandle!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.EvictAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.InvokeAsync(string! agentId, Vais.Agents.AgentInvocationRequest! request, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentInvocationResult!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListAsync(string? labelPrefix = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.QueryAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.AgentQueryResponse?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.SignalAsync(string! agentId, Vais.Agents.AgentSignal! signal, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.UpdateAsync(string! agentId, Vais.Agents.AgentManifest! newManifest, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentHandle!>!
+Vais.Agents.Control.Http.AgentControlPlaneException
+Vais.Agents.Control.Http.AgentControlPlaneException.AgentControlPlaneException(int statusCode, string? type, string? title, string? detail) -> void
+Vais.Agents.Control.Http.AgentControlPlaneException.StatusCode.get -> int
+Vais.Agents.Control.Http.AgentControlPlaneException.Title.get -> string?
+Vais.Agents.Control.Http.AgentControlPlaneException.Type.get -> string?
+Vais.Agents.Control.Http.AgentListResponse
+Vais.Agents.Control.Http.AgentListResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentListResponse!
+Vais.Agents.Control.Http.AgentListResponse.AgentListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.AgentListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.AgentListResponse.Equals(Vais.Agents.Control.Http.AgentListResponse? other) -> bool
+Vais.Agents.Control.Http.AgentListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!
+Vais.Agents.Control.Http.AgentListResponse.Items.init -> void
+Vais.Agents.Control.Http.AgentListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.AgentListResponse.NextCursor.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse
+Vais.Agents.Control.Http.AgentQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentQueryResponse!
+Vais.Agents.Control.Http.AgentQueryResponse.AgentQueryResponse(Vais.Agents.AgentManifest! Manifest, Vais.Agents.AgentHandle! Handle, Vais.Agents.AgentStatus Status) -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Deconstruct(out Vais.Agents.AgentManifest! Manifest, out Vais.Agents.AgentHandle! Handle, out Vais.Agents.AgentStatus Status) -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Equals(Vais.Agents.Control.Http.AgentQueryResponse? other) -> bool
+Vais.Agents.Control.Http.AgentQueryResponse.Handle.get -> Vais.Agents.AgentHandle!
+Vais.Agents.Control.Http.AgentQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Manifest.get -> Vais.Agents.AgentManifest!
+Vais.Agents.Control.Http.AgentQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.AgentQueryResponse.Status.get -> Vais.Agents.AgentStatus
+Vais.Agents.Control.Http.AgentQueryResponse.Status.init -> void
+Vais.Agents.Control.Http.IAgentControlPlaneClient
+Vais.Agents.Control.Http.IAgentControlPlaneClient.CancelAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.CreateAsync(Vais.Agents.AgentManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentHandle!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.EvictAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.InvokeAsync(string! agentId, Vais.Agents.AgentInvocationRequest! request, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentInvocationResult!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListAsync(string? labelPrefix = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.QueryAsync(string! agentId, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.AgentQueryResponse?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.SignalAsync(string! agentId, Vais.Agents.AgentSignal! signal, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.UpdateAsync(string! agentId, Vais.Agents.AgentManifest! newManifest, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.AgentHandle!>!
+override Vais.Agents.Control.Http.AgentListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentListResponse.ToString() -> string!
+override Vais.Agents.Control.Http.AgentQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.AgentListResponse.operator !=(Vais.Agents.Control.Http.AgentListResponse? left, Vais.Agents.Control.Http.AgentListResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentListResponse.operator ==(Vais.Agents.Control.Http.AgentListResponse? left, Vais.Agents.Control.Http.AgentListResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentQueryResponse.operator !=(Vais.Agents.Control.Http.AgentQueryResponse? left, Vais.Agents.Control.Http.AgentQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentQueryResponse.operator ==(Vais.Agents.Control.Http.AgentQueryResponse? left, Vais.Agents.Control.Http.AgentQueryResponse? right) -> bool

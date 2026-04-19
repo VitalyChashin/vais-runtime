@@ -1,1 +1,77 @@
 #nullable enable
+Vais.Agents.Control.AgentManifestValidationException
+Vais.Agents.Control.AgentManifestValidationException.AgentManifestValidationException(System.Collections.Generic.IEnumerable<string!>! errors) -> void
+Vais.Agents.Control.AgentManifestValidationException.Errors.get -> System.Collections.Immutable.ImmutableArray<string!>
+Vais.Agents.Control.AgentPolicyDeniedException
+Vais.Agents.Control.AgentPolicyDeniedException.AgentPolicyDeniedException(Vais.Agents.Control.PolicyOperation operation, string! reason) -> void
+Vais.Agents.Control.AgentPolicyDeniedException.Operation.get -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.AgentPolicyDeniedException.Reason.get -> string!
+Vais.Agents.Control.AuditLogEntry
+Vais.Agents.Control.AuditLogEntry.<Clone>$() -> Vais.Agents.Control.AuditLogEntry!
+Vais.Agents.Control.AuditLogEntry.AgentId.get -> string?
+Vais.Agents.Control.AuditLogEntry.AgentId.init -> void
+Vais.Agents.Control.AuditLogEntry.AgentVersion.get -> string?
+Vais.Agents.Control.AuditLogEntry.AgentVersion.init -> void
+Vais.Agents.Control.AuditLogEntry.Allowed.get -> bool
+Vais.Agents.Control.AuditLogEntry.Allowed.init -> void
+Vais.Agents.Control.AuditLogEntry.At.get -> System.DateTimeOffset
+Vais.Agents.Control.AuditLogEntry.At.init -> void
+Vais.Agents.Control.AuditLogEntry.AuditLogEntry(System.DateTimeOffset At, Vais.Agents.Control.PolicyOperation Operation, string? AgentId, string? AgentVersion, string! PrincipalId, string? TenantId, bool Allowed, string? DenyReason, string? ErrorType) -> void
+Vais.Agents.Control.AuditLogEntry.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.Control.PolicyOperation Operation, out string? AgentId, out string? AgentVersion, out string! PrincipalId, out string? TenantId, out bool Allowed, out string? DenyReason, out string? ErrorType) -> void
+Vais.Agents.Control.AuditLogEntry.DenyReason.get -> string?
+Vais.Agents.Control.AuditLogEntry.DenyReason.init -> void
+Vais.Agents.Control.AuditLogEntry.Equals(Vais.Agents.Control.AuditLogEntry? other) -> bool
+Vais.Agents.Control.AuditLogEntry.ErrorType.get -> string?
+Vais.Agents.Control.AuditLogEntry.ErrorType.init -> void
+Vais.Agents.Control.AuditLogEntry.Operation.get -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.AuditLogEntry.Operation.init -> void
+Vais.Agents.Control.AuditLogEntry.PrincipalId.get -> string!
+Vais.Agents.Control.AuditLogEntry.PrincipalId.init -> void
+Vais.Agents.Control.AuditLogEntry.TenantId.get -> string?
+Vais.Agents.Control.AuditLogEntry.TenantId.init -> void
+Vais.Agents.Control.IAgentManifestLoader
+Vais.Agents.Control.IAgentManifestLoader.LoadFromDirectoryAsync(string! directory, string! searchPattern, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IAgentManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IAgentManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IAgentPolicyEngine
+Vais.Agents.Control.IAgentPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
+Vais.Agents.Control.IAuditLog
+Vais.Agents.Control.IAuditLog.AppendAsync(Vais.Agents.Control.AuditLogEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IPrincipalMapper
+Vais.Agents.Control.IPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
+Vais.Agents.Control.ISecretResolver
+Vais.Agents.Control.ISecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.NullAgentPolicyEngine
+Vais.Agents.Control.NullAgentPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
+Vais.Agents.Control.NullAuditLog
+Vais.Agents.Control.NullAuditLog.AppendAsync(Vais.Agents.Control.AuditLogEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.PolicyDecision
+Vais.Agents.Control.PolicyDecision.Equals(Vais.Agents.Control.PolicyDecision other) -> bool
+Vais.Agents.Control.PolicyDecision.IsAllowed.get -> bool
+Vais.Agents.Control.PolicyDecision.PolicyDecision() -> void
+Vais.Agents.Control.PolicyDecision.Reason.get -> string?
+Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Cancel = 4 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Create = 0 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Evict = 6 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Invoke = 1 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Query = 3 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Signal = 2 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.Update = 5 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.SecretNotFoundException
+Vais.Agents.Control.SecretNotFoundException.SecretNotFoundException(string! secretUri) -> void
+Vais.Agents.Control.SecretNotFoundException.SecretUri.get -> string!
+override Vais.Agents.Control.AuditLogEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.AuditLogEntry.GetHashCode() -> int
+override Vais.Agents.Control.AuditLogEntry.ToString() -> string!
+override Vais.Agents.Control.PolicyDecision.GetHashCode() -> int
+static Vais.Agents.Control.AuditLogEntry.operator !=(Vais.Agents.Control.AuditLogEntry? left, Vais.Agents.Control.AuditLogEntry? right) -> bool
+static Vais.Agents.Control.AuditLogEntry.operator ==(Vais.Agents.Control.AuditLogEntry? left, Vais.Agents.Control.AuditLogEntry? right) -> bool
+static Vais.Agents.Control.PolicyDecision.Allow.get -> Vais.Agents.Control.PolicyDecision
+static Vais.Agents.Control.PolicyDecision.Deny(string! reason) -> Vais.Agents.Control.PolicyDecision
+static Vais.Agents.Control.PolicyDecision.operator !=(Vais.Agents.Control.PolicyDecision left, Vais.Agents.Control.PolicyDecision right) -> bool
+static Vais.Agents.Control.PolicyDecision.operator ==(Vais.Agents.Control.PolicyDecision left, Vais.Agents.Control.PolicyDecision right) -> bool
+static readonly Vais.Agents.Control.NullAgentPolicyEngine.Instance -> Vais.Agents.Control.NullAgentPolicyEngine!
+static readonly Vais.Agents.Control.NullAuditLog.Instance -> Vais.Agents.Control.NullAuditLog!
+~override Vais.Agents.Control.PolicyDecision.Equals(object obj) -> bool
+~override Vais.Agents.Control.PolicyDecision.ToString() -> string

@@ -1,1 +1,6 @@
 #nullable enable
+Vais.Agents.Control.Manifests.JsonAgentManifestLoader
+Vais.Agents.Control.Manifests.JsonAgentManifestLoader.JsonAgentManifestLoader() -> void
+Vais.Agents.Control.Manifests.JsonAgentManifestLoader.LoadFromDirectoryAsync(string! directory, string! searchPattern, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.Manifests.JsonAgentManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.Manifests.JsonAgentManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
