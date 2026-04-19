@@ -50,6 +50,7 @@ public static class HttpAgentServerExtensions
                 srvOptions.Capabilities = new ModelContextProtocol.Protocol.ServerCapabilities
                 {
                     Tools = new ModelContextProtocol.Protocol.ToolsCapability { ListChanged = true },
+                    Resources = new ModelContextProtocol.Protocol.ResourcesCapability { ListChanged = true },
                 };
                 // List + Call handlers resolve their dependencies via the request-scoped
                 // IServiceProvider injected into McpServerHandler delegates.
@@ -63,6 +64,16 @@ public static class HttpAgentServerExtensions
                     var registry = ctx.Services!.GetRequiredService<IAgentRegistry>();
                     var lifecycle = ctx.Services!.GetRequiredService<IAgentLifecycleManager>();
                     return await McpAgentServerBuilder.HandleCallToolAsync(registry, lifecycle, ctx.Params, ct).ConfigureAwait(false);
+                };
+                srvOptions.Handlers.ListResourcesHandler = async (ctx, ct) =>
+                {
+                    var registry = ctx.Services!.GetRequiredService<IAgentRegistry>();
+                    return await McpAgentServerBuilder.HandleListResourcesAsync(registry, options, ct).ConfigureAwait(false);
+                };
+                srvOptions.Handlers.ReadResourceHandler = async (ctx, ct) =>
+                {
+                    var registry = ctx.Services!.GetRequiredService<IAgentRegistry>();
+                    return await McpAgentServerBuilder.HandleReadResourceAsync(registry, ctx.Params, ct).ConfigureAwait(false);
                 };
             })
             .WithHttpTransport();

@@ -67,11 +67,14 @@ public static class McpAgentServerBuilder
             Capabilities = new ServerCapabilities
             {
                 Tools = new ToolsCapability { ListChanged = true },
+                Resources = new ResourcesCapability { ListChanged = true },
             },
             Handlers = new McpServerHandlers
             {
                 ListToolsHandler = (ctx, ct) => HandleListToolsAsync(registry, options, ct),
                 CallToolHandler = (ctx, ct) => HandleCallToolAsync(registry, lifecycle, ctx.Params, ct),
+                ListResourcesHandler = (ctx, ct) => HandleListResourcesAsync(registry, options, ct),
+                ReadResourceHandler = (ctx, ct) => HandleReadResourceAsync(registry, ctx.Params, ct),
             },
         };
         return serverOptions;
@@ -250,4 +253,90 @@ public static class McpAgentServerBuilder
         Content = [new TextContentBlock { Text = text }],
         IsError = true,
     };
+
+    /// <summary>MCP resource URI prefix for agent manifests: <c>agent://{id}/{version}/manifest</c>.</summary>
+    internal const string ManifestUriScheme = "agent";
+    private const string ManifestUriSuffix = "/manifest";
+
+    internal static string BuildManifestUri(string agentId, string version)
+        => $"{ManifestUriScheme}://{agentId}/{version}{ManifestUriSuffix}";
+
+    internal static async ValueTask<ListResourcesResult> HandleListResourcesAsync(
+        IAgentRegistry registry,
+        McpAgentServerOptions options,
+        CancellationToken ct)
+    {
+        var resources = new List<Resource>();
+        await foreach (var manifest in registry.ListAsync(options.LabelPrefixFilter, ct).ConfigureAwait(false))
+        {
+            resources.Add(new Resource
+            {
+                Uri = BuildManifestUri(manifest.Id, manifest.Version),
+                Name = $"{manifest.Id}@{manifest.Version}",
+                Title = $"{manifest.Id} v{manifest.Version} manifest",
+                Description = manifest.Description ?? $"Manifest for agent {manifest.Id}.",
+                MimeType = "application/json",
+            });
+        }
+        return new ListResourcesResult { Resources = resources };
+    }
+
+    internal static async ValueTask<ReadResourceResult> HandleReadResourceAsync(
+        IAgentRegistry registry,
+        ReadResourceRequestParams? request,
+        CancellationToken ct)
+    {
+        if (request is null || string.IsNullOrEmpty(request.Uri))
+        {
+            throw new ArgumentException("Missing resource uri.", nameof(request));
+        }
+        if (!TryParseManifestUri(request.Uri, out var agentId, out var version))
+        {
+            throw new ArgumentException($"Unknown resource uri '{request.Uri}'. Expected '{ManifestUriScheme}://<id>/<version>/manifest'.", nameof(request));
+        }
+        var manifest = await registry.GetAsync(agentId, version, ct).ConfigureAwait(false);
+        if (manifest is null)
+        {
+            throw new InvalidOperationException($"Agent '{agentId}' version '{version ?? "latest"}' is not registered.");
+        }
+        var envelopeJson = ManifestEnvelopeSerializer.Serialize(manifest);
+        return new ReadResourceResult
+        {
+            Contents =
+            [
+                new TextResourceContents
+                {
+                    Uri = request.Uri,
+                    MimeType = "application/json",
+                    Text = envelopeJson,
+                },
+            ],
+        };
+    }
+
+    internal static bool TryParseManifestUri(string uri, out string agentId, out string? version)
+    {
+        agentId = string.Empty;
+        version = null;
+        if (string.IsNullOrEmpty(uri)) return false;
+        const string schemePrefix = ManifestUriScheme + "://";
+        if (!uri.StartsWith(schemePrefix, StringComparison.Ordinal)) return false;
+        var rest = uri[schemePrefix.Length..];
+        if (!rest.EndsWith(ManifestUriSuffix, StringComparison.Ordinal)) return false;
+        var path = rest[..^ManifestUriSuffix.Length];
+        // Accept either "<id>" (latest) or "<id>/<version>".
+        var slash = path.IndexOf('/');
+        if (slash < 0)
+        {
+            if (path.Length == 0) return false;
+            agentId = path;
+            return true;
+        }
+        var id = path[..slash];
+        var ver = path[(slash + 1)..];
+        if (id.Length == 0 || ver.Length == 0 || ver.Contains('/')) return false;
+        agentId = id;
+        version = ver;
+        return true;
+    }
 }

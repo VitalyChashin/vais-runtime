@@ -243,8 +243,11 @@ public sealed class McpAgentServerBuilderTests
         serverOptions.ServerInstructions.Should().Be("Talk to my agents.");
         serverOptions.Capabilities.Should().NotBeNull();
         serverOptions.Capabilities!.Tools.Should().NotBeNull();
+        serverOptions.Capabilities.Resources.Should().NotBeNull();
         serverOptions.Handlers.ListToolsHandler.Should().NotBeNull();
         serverOptions.Handlers.CallToolHandler.Should().NotBeNull();
+        serverOptions.Handlers.ListResourcesHandler.Should().NotBeNull();
+        serverOptions.Handlers.ReadResourceHandler.Should().NotBeNull();
     }
 
     [Fact]
@@ -253,6 +256,87 @@ public sealed class McpAgentServerBuilderTests
         var (registry, lifecycle) = BuildHarness();
         FluentActions.Invoking(() => McpAgentServerBuilder.Build(null!, lifecycle)).Should().Throw<ArgumentNullException>();
         FluentActions.Invoking(() => McpAgentServerBuilder.Build(registry, null!)).Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task ListResources_Emits_Manifest_Uri_Per_Registered_Agent()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("support", "1.0", "Support agent"));
+        await lifecycle.CreateAsync(ManifestFor("billing", "1.0", null));
+
+        var result = await McpAgentServerBuilder.HandleListResourcesAsync(registry, new McpAgentServerOptions(), CancellationToken.None);
+
+        result.Resources.Should().HaveCount(2);
+        result.Resources.Select(r => r.Uri).Should().BeEquivalentTo(new[]
+        {
+            "agent://support/1.0/manifest",
+            "agent://billing/1.0/manifest",
+        });
+        result.Resources.Should().AllSatisfy(r => r.MimeType.Should().Be("application/json"));
+    }
+
+    [Fact]
+    public async Task ReadResource_Returns_EnvelopeJson_For_Registered_Agent()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("support", "1.0", "Support agent"));
+
+        var result = await McpAgentServerBuilder.HandleReadResourceAsync(
+            registry,
+            new ReadResourceRequestParams { Uri = "agent://support/1.0/manifest" },
+            CancellationToken.None);
+
+        result.Contents.Should().HaveCount(1);
+        var text = result.Contents[0].Should().BeOfType<TextResourceContents>().Subject;
+        text.MimeType.Should().Be("application/json");
+        var envelope = JsonDocument.Parse(text.Text!).RootElement;
+        envelope.GetProperty("apiVersion").GetString().Should().Be("vais.agents/v1");
+        envelope.GetProperty("kind").GetString().Should().Be("Agent");
+        envelope.GetProperty("metadata").GetProperty("id").GetString().Should().Be("support");
+        envelope.GetProperty("metadata").GetProperty("version").GetString().Should().Be("1.0");
+    }
+
+    [Fact]
+    public async Task ListResources_Emits_Separate_Entry_Per_Version_For_Multi_Version_Agent()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("support", "1.0", "v1.0 description"));
+        await lifecycle.CreateAsync(ManifestFor("support", "1.1", "v1.1 description"));
+
+        var list = await McpAgentServerBuilder.HandleListResourcesAsync(registry, new McpAgentServerOptions(), CancellationToken.None);
+
+        list.Resources.Select(r => r.Uri).Should().BeEquivalentTo(new[]
+        {
+            "agent://support/1.0/manifest",
+            "agent://support/1.1/manifest",
+        });
+
+        // And read_resource disambiguates per version.
+        var v10 = await McpAgentServerBuilder.HandleReadResourceAsync(
+            registry,
+            new ReadResourceRequestParams { Uri = "agent://support/1.0/manifest" },
+            CancellationToken.None);
+        var v11 = await McpAgentServerBuilder.HandleReadResourceAsync(
+            registry,
+            new ReadResourceRequestParams { Uri = "agent://support/1.1/manifest" },
+            CancellationToken.None);
+        var v10Text = ((TextResourceContents)v10.Contents[0]).Text!;
+        var v11Text = ((TextResourceContents)v11.Contents[0]).Text!;
+        v10Text.Should().Contain("\"version\":\"1.0\"");
+        v11Text.Should().Contain("\"version\":\"1.1\"");
+    }
+
+    [Fact]
+    public async Task ReadResource_Rejects_Unknown_Uri_Shape()
+    {
+        var (registry, _) = BuildHarness();
+
+        await FluentActions.Invoking(() => McpAgentServerBuilder.HandleReadResourceAsync(
+                registry,
+                new ReadResourceRequestParams { Uri = "http://support/manifest" },
+                CancellationToken.None).AsTask())
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     // ---- helpers ----
