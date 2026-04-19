@@ -3,8 +3,8 @@
   <PropertyGroup>
     <RootNamespace>Vais.Agents.Hosting.Orleans</RootNamespace>
     <AssemblyName>Vais.Agents.Hosting.Orleans</AssemblyName>
-    <Description>Orleans-backed IAgentRuntime for Vais.Agents. Wraps the neutral StatefulAiAgent inside virtual-actor grains with IPersistentState-based history retention and RequestContext-based IAgentContextAccessor.</Description>
-    <PackageTags>agents;ai;llm;hosting;orleans;actors</PackageTags>
+    <Description>Orleans-backed IAgentRuntime + ITaskStore for Vais.Agents. Wraps StatefulAiAgent inside virtual-actor grains with IPersistentState-based history retention; also ships OrleansTaskStore for A2A task persistence across silo restart.</Description>
+    <PackageTags>agents;ai;llm;hosting;orleans;actors;a2a</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="A2A" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
     <PackageReference Include="Microsoft.Orleans.Runtime" />
     <PackageReference Include="Microsoft.Orleans.Streaming" />

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Protocols.A2A.Server</RootNamespace>
+    <AssemblyName>Vais.Agents.Protocols.A2A.Server</AssemblyName>
+    <Description>Inbound A2A server for Vais.Agents. Exposes every agent registered in an IAgentRegistry as its own A2A endpoint (/agents/{id}) with a derived AgentCard; message/send unary calls route through IAgentLifecycleManager. Mirrors the outbound Vais.Agents.Protocols.A2A package.</Description>
+    <PackageTags>agents;ai;llm;a2a;agent-to-agent;inbound;server</PackageTags>
+    <!-- Same IDE0005 suppression as Vais.Agents.Protocols.Mcp.Server — ASP.NET Core
+         usings look unused at the call site when everything runs through extension
+         methods (MapA2A, AddAuthentication, etc.). -->
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="A2A" />
+    <PackageReference Include="A2A.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Protocols.A2A.Server.Tests" />
+  </ItemGroup>
+
+</Project>

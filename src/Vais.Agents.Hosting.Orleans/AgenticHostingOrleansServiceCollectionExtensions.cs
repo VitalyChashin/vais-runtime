@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using A2A;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Vais.Agents.Core;
@@ -81,6 +82,25 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
             configureAgents is null
                 ? id => new StatefulAgentOptions { AgentName = id }
                 : id => configureAgents(sp, id));
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="OrleansTaskStore"/> as the <see cref="ITaskStore"/> for the
+    /// A2A inbound server. Survives silo restart — input-required tasks can be resumed
+    /// days or weeks later without losing the interrupt envelope.
+    /// </summary>
+    /// <remarks>
+    /// Call this <em>before</em> <c>AddA2AAgentServer</c> so the <c>TryAddSingleton</c>
+    /// in that extension skips its default <c>InMemoryTaskStore</c> registration.
+    /// Requires an <see cref="IGrainFactory"/> in the DI container (provided by the
+    /// Orleans client/silo).
+    /// </remarks>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansA2ATaskStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<ITaskStore>(sp => new OrleansTaskStore(sp.GetRequiredService<IGrainFactory>()));
         return services;
     }
 }

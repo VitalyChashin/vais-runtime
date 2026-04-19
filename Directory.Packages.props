@@ -32,8 +32,9 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>
 
-  <ItemGroup Label="A2A (Vais.Agents.Protocols.A2A). 1.0.0-preview2 on nuget.org. Same post-MCP-bump rationale — the Apr-18 pillar plan framed this as a local-mirror constraint, but nuget.org was always reachable via the repo-local NuGet.config whitelist.">
+  <ItemGroup Label="A2A (Vais.Agents.Protocols.A2A + Vais.Agents.Protocols.A2A.Server). 1.0.0-preview2 on nuget.org. A2A.AspNetCore pulls the route-builder + DI helpers used by the inbound server; same split as ModelContextProtocol vs ModelContextProtocol.AspNetCore.">
     <PackageVersion Include="A2A" Version="1.0.0-preview2" />
+    <PackageVersion Include="A2A.AspNetCore" Version="1.0.0-preview2" />
   </ItemGroup>
 
   <ItemGroup Label="OpenAI SDK - floor set by SK 1.74 (≥2.9.1) and MEAI.OpenAI 10.5 (≥2.10.0).">
