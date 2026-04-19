@@ -41,6 +41,20 @@ Vais.Agents.Control.IPrincipalMapper
 Vais.Agents.Control.IPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
 Vais.Agents.Control.ISecretResolver
 Vais.Agents.Control.ISecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.ManifestResource
+Vais.Agents.Control.ManifestResource.AgentCase
+Vais.Agents.Control.ManifestResource.AgentCase.AgentCase(Vais.Agents.AgentManifest! Manifest) -> void
+Vais.Agents.Control.ManifestResource.AgentCase.Deconstruct(out Vais.Agents.AgentManifest! Manifest) -> void
+Vais.Agents.Control.ManifestResource.AgentCase.Equals(Vais.Agents.Control.ManifestResource.AgentCase? other) -> bool
+Vais.Agents.Control.ManifestResource.AgentCase.Manifest.get -> Vais.Agents.AgentManifest!
+Vais.Agents.Control.ManifestResource.AgentCase.Manifest.init -> void
+Vais.Agents.Control.ManifestResource.AgentGraphCase
+Vais.Agents.Control.ManifestResource.AgentGraphCase.AgentGraphCase(Vais.Agents.AgentGraphManifest! Graph) -> void
+Vais.Agents.Control.ManifestResource.AgentGraphCase.Deconstruct(out Vais.Agents.AgentGraphManifest! Graph) -> void
+Vais.Agents.Control.ManifestResource.AgentGraphCase.Equals(Vais.Agents.Control.ManifestResource.AgentGraphCase? other) -> bool
+Vais.Agents.Control.ManifestResource.AgentGraphCase.Graph.get -> Vais.Agents.AgentGraphManifest!
+Vais.Agents.Control.ManifestResource.AgentGraphCase.Graph.init -> void
+Vais.Agents.Control.ManifestResource.ManifestResource(Vais.Agents.Control.ManifestResource! original) -> void
 Vais.Agents.Control.NullAgentPolicyEngine
 Vais.Agents.Control.NullAgentPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
 Vais.Agents.Control.NullAuditLog
@@ -61,17 +75,40 @@ Vais.Agents.Control.PolicyOperation.Update = 5 -> Vais.Agents.Control.PolicyOper
 Vais.Agents.Control.SecretNotFoundException
 Vais.Agents.Control.SecretNotFoundException.SecretNotFoundException(string! secretUri) -> void
 Vais.Agents.Control.SecretNotFoundException.SecretUri.get -> string!
+abstract Vais.Agents.Control.ManifestResource.<Clone>$() -> Vais.Agents.Control.ManifestResource!
 override Vais.Agents.Control.AuditLogEntry.Equals(object? obj) -> bool
 override Vais.Agents.Control.AuditLogEntry.GetHashCode() -> int
 override Vais.Agents.Control.AuditLogEntry.ToString() -> string!
+override Vais.Agents.Control.ManifestResource.AgentCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.AgentCase!
+override Vais.Agents.Control.ManifestResource.AgentCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.AgentCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.AgentCase.ToString() -> string!
+override Vais.Agents.Control.ManifestResource.AgentGraphCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.AgentGraphCase!
+override Vais.Agents.Control.ManifestResource.AgentGraphCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.AgentGraphCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.AgentGraphCase.ToString() -> string!
+override Vais.Agents.Control.ManifestResource.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.ToString() -> string!
 override Vais.Agents.Control.PolicyDecision.GetHashCode() -> int
+override sealed Vais.Agents.Control.ManifestResource.AgentCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+override sealed Vais.Agents.Control.ManifestResource.AgentGraphCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
 static Vais.Agents.Control.AuditLogEntry.operator !=(Vais.Agents.Control.AuditLogEntry? left, Vais.Agents.Control.AuditLogEntry? right) -> bool
 static Vais.Agents.Control.AuditLogEntry.operator ==(Vais.Agents.Control.AuditLogEntry? left, Vais.Agents.Control.AuditLogEntry? right) -> bool
+static Vais.Agents.Control.ManifestResource.AgentCase.operator !=(Vais.Agents.Control.ManifestResource.AgentCase? left, Vais.Agents.Control.ManifestResource.AgentCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.AgentCase.operator ==(Vais.Agents.Control.ManifestResource.AgentCase? left, Vais.Agents.Control.ManifestResource.AgentCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.AgentGraphCase.operator !=(Vais.Agents.Control.ManifestResource.AgentGraphCase? left, Vais.Agents.Control.ManifestResource.AgentGraphCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.AgentGraphCase.operator ==(Vais.Agents.Control.ManifestResource.AgentGraphCase? left, Vais.Agents.Control.ManifestResource.AgentGraphCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.operator !=(Vais.Agents.Control.ManifestResource? left, Vais.Agents.Control.ManifestResource? right) -> bool
+static Vais.Agents.Control.ManifestResource.operator ==(Vais.Agents.Control.ManifestResource? left, Vais.Agents.Control.ManifestResource? right) -> bool
 static Vais.Agents.Control.PolicyDecision.Allow.get -> Vais.Agents.Control.PolicyDecision
 static Vais.Agents.Control.PolicyDecision.Deny(string! reason) -> Vais.Agents.Control.PolicyDecision
 static Vais.Agents.Control.PolicyDecision.operator !=(Vais.Agents.Control.PolicyDecision left, Vais.Agents.Control.PolicyDecision right) -> bool
 static Vais.Agents.Control.PolicyDecision.operator ==(Vais.Agents.Control.PolicyDecision left, Vais.Agents.Control.PolicyDecision right) -> bool
 static readonly Vais.Agents.Control.NullAgentPolicyEngine.Instance -> Vais.Agents.Control.NullAgentPolicyEngine!
 static readonly Vais.Agents.Control.NullAuditLog.Instance -> Vais.Agents.Control.NullAuditLog!
+virtual Vais.Agents.Control.ManifestResource.EqualityContract.get -> System.Type!
+virtual Vais.Agents.Control.ManifestResource.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+virtual Vais.Agents.Control.ManifestResource.PrintMembers(System.Text.StringBuilder! builder) -> bool
 ~override Vais.Agents.Control.PolicyDecision.Equals(object obj) -> bool
 ~override Vais.Agents.Control.PolicyDecision.ToString() -> string

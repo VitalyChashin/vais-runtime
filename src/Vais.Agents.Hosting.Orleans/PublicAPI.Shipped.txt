@@ -116,6 +116,25 @@ Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ChatTurnSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.ChatTurnSurrogate surrogate) -> Vais.Agents.ChatTurn!
 Vais.Agents.Hosting.Orleans.ChatTurnSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ChatTurn! value) -> Vais.Agents.Hosting.Orleans.ChatTurnSurrogate
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrain
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate?>!
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrain.GraphCheckpointGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrain.SaveAsync(Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate checkpoint) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState.Checkpoint.get -> Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState.Checkpoint.set -> void
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState.GraphCheckpointGrainState() -> void
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState.HasCheckpoint.get -> bool
+Vais.Agents.Hosting.Orleans.GraphCheckpointGrainState.HasCheckpoint.set -> void
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.CheckpointJson -> string!
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.GraphCheckpointSurrogate() -> void
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.GraphId -> string!
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.GraphVersion -> string!
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.IsComplete -> bool
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.RunId -> string!
+Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate.SavedAt -> System.DateTimeOffset
 Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter
 Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.GuardrailTriggered!
 Vais.Agents.Hosting.Orleans.GuardrailTriggeredSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GuardrailTriggered! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
@@ -148,6 +167,10 @@ Vais.Agents.Hosting.Orleans.IAiAgentGrain.GetHistoryAsync() -> System.Threading.
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.ResetAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain
+Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.ClearAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate?>!
+Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.SaveAsync(Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate checkpoint) -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.InterruptRaised!
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.InterruptRaised! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
@@ -196,6 +219,11 @@ Vais.Agents.Hosting.Orleans.OrleansAgentSession.History.get -> System.Collection
 Vais.Agents.Hosting.Orleans.OrleansAgentSession.OrleansAgentSession(Vais.Agents.Hosting.Orleans.IAgentSessionGrain! grain, string! agentId, string! sessionId) -> void
 Vais.Agents.Hosting.Orleans.OrleansAgentSession.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansAgentSession.SessionId.get -> string!
+Vais.Agents.Hosting.Orleans.OrleansCheckpointer
+Vais.Agents.Hosting.Orleans.OrleansCheckpointer.DeleteAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansCheckpointer.LoadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GraphCheckpoint?>
+Vais.Agents.Hosting.Orleans.OrleansCheckpointer.OrleansCheckpointer(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansCheckpointer.SaveAsync(Vais.Agents.GraphCheckpoint! checkpoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey
 Vais.Agents.Hosting.Orleans.OrleansTaskStore
 Vais.Agents.Hosting.Orleans.OrleansTaskStore.DeleteTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
@@ -237,6 +265,7 @@ override Vais.Agents.Hosting.Orleans.AiAgentGrain.OnActivateAsync(System.Threadi
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansA2ATaskStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentEventBus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! streamProviderName = "vais.agents.events") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansGraphCheckpointer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.ConfigureAgentGrains(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, string!, Vais.Agents.Core.StatefulAgentOptions!>? configureAgents = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Build(string! agentId, string! sessionId) -> string!
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Parse(string! key) -> (string! AgentId, string! SessionId)

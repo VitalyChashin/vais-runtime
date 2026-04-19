@@ -1,10 +1,1 @@
 #nullable enable
-Vais.Agents.Control.Manifests.AgentGraphManifestEnvelope
-Vais.Agents.Control.Manifests.AgentGraphManifestValidator
-Vais.Agents.Control.Manifests.JsonAgentGraphManifestLoader
-Vais.Agents.Control.Manifests.JsonAgentGraphManifestLoader.JsonAgentGraphManifestLoader() -> void
-Vais.Agents.Control.Manifests.JsonAgentGraphManifestLoader.LoadAllResourcesFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ManifestResource!>!>
-Vais.Agents.Control.Manifests.JsonAgentGraphManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentGraphManifest!>!>
-Vais.Agents.Control.Manifests.JsonAgentGraphManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentGraphManifest!>!>
-static Vais.Agents.Control.Manifests.AgentGraphManifestEnvelope.Serialize(Vais.Agents.AgentGraphManifest! manifest) -> string!
-static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.Validate(Vais.Agents.AgentGraphManifest! manifest, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
