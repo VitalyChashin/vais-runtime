@@ -165,3 +165,26 @@ public sealed record HandoffRequested(
     AgentContext Context,
     Handoff Handoff)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by the tool-call dispatcher when a cache hit on the durable-execution
+/// journal short-circuits a tool invocation. Paired semantically with the
+/// originating <see cref="ToolCallCompleted"/> from the first dispatch in the
+/// run; the replay itself doesn't re-emit <see cref="ToolCallStarted"/> to avoid
+/// double-counting in observability backends.
+/// </summary>
+/// <remarks>
+/// Only fires when the dispatcher has a real <see cref="IAgentJournal"/> wired
+/// and <see cref="AgentContext.RunId"/> is set; consumers that haven't opted
+/// into the durable-execution pillar will never see this event.
+/// </remarks>
+/// <param name="At">UTC timestamp when the replay was served.</param>
+/// <param name="Context">Ambient agent context at replay time.</param>
+/// <param name="CallId">Correlation id of the originally-dispatched tool call.</param>
+/// <param name="ToolName">Name of the tool whose outcome was replayed from the journal.</param>
+public sealed record ToolCallReplayed(
+    DateTimeOffset At,
+    AgentContext Context,
+    string CallId,
+    string ToolName)
+    : AgentEvent(At, Context);

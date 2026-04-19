@@ -26,6 +26,8 @@ public enum AgentEventKind
     InterruptRaised = 6,
     /// <summary><see cref="HandoffRequested"/>.</summary>
     HandoffRequested = 7,
+    /// <summary><see cref="ToolCallReplayed"/>.</summary>
+    ToolCallReplayed = 8,
 }
 
 /// <summary>
@@ -194,6 +196,11 @@ internal static class AgentEventSurrogateHelpers
                     surrogate.HandoffToAgent ?? string.Empty,
                     surrogate.HandoffMessage,
                     HistoryToCarry: null)),
+            AgentEventKind.ToolCallReplayed => new ToolCallReplayed(
+                surrogate.At,
+                context,
+                surrogate.CallId ?? string.Empty,
+                surrogate.ToolName ?? string.Empty),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -274,6 +281,14 @@ internal static class AgentEventSurrogateHelpers
                 HandoffFromAgent = h.Handoff.FromAgent,
                 HandoffToAgent = h.Handoff.ToAgent,
                 HandoffMessage = h.Handoff.Message,
+            },
+            ToolCallReplayed r => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.ToolCallReplayed,
+                At = r.At,
+                Context = contextSurrogate,
+                CallId = r.CallId,
+                ToolName = r.ToolName,
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -403,5 +418,18 @@ public sealed class HandoffRequestedSurrogateConverter : IConverter<HandoffReque
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in HandoffRequested value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="ToolCallReplayed"/>.</summary>
+[RegisterConverter]
+public sealed class ToolCallReplayedSurrogateConverter : IConverter<ToolCallReplayed, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public ToolCallReplayed ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (ToolCallReplayed)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in ToolCallReplayed value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

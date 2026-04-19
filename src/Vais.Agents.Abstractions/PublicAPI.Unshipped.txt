@@ -3,6 +3,8 @@
 *REMOVED*Vais.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens) -> void
 Vais.Agents.AgentContext.RunId.get -> string?
 Vais.Agents.AgentContext.RunId.init -> void
+Vais.Agents.AgentInterrupt.RunId.get -> string?
+Vais.Agents.AgentInterrupt.RunId.init -> void
 Vais.Agents.CompletionUpdate.CompletionUpdate(string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls = null) -> void
 Vais.Agents.CompletionUpdate.Deconstruct(out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls) -> void
 Vais.Agents.CompletionUpdate.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
@@ -19,6 +21,8 @@ Vais.Agents.JournalEntry.JournalEntry(string! RunId, System.DateTimeOffset At) -
 Vais.Agents.JournalEntry.JournalEntry(Vais.Agents.JournalEntry! original) -> void
 Vais.Agents.JournalEntry.RunId.get -> string!
 Vais.Agents.JournalEntry.RunId.init -> void
+Vais.Agents.ResumeInput.RunId.get -> string?
+Vais.Agents.ResumeInput.RunId.init -> void
 Vais.Agents.ToolCallRecorded
 Vais.Agents.ToolCallRecorded.Arguments.get -> System.Text.Json.JsonElement
 Vais.Agents.ToolCallRecorded.Arguments.init -> void
@@ -31,6 +35,14 @@ Vais.Agents.ToolCallRecorded.Outcome.init -> void
 Vais.Agents.ToolCallRecorded.ToolCallRecorded(string! RunId, string! CallId, string! ToolName, System.Text.Json.JsonElement Arguments, Vais.Agents.ToolCallOutcome! Outcome, System.DateTimeOffset At) -> void
 Vais.Agents.ToolCallRecorded.ToolName.get -> string!
 Vais.Agents.ToolCallRecorded.ToolName.init -> void
+Vais.Agents.ToolCallReplayed
+Vais.Agents.ToolCallReplayed.CallId.get -> string!
+Vais.Agents.ToolCallReplayed.CallId.init -> void
+Vais.Agents.ToolCallReplayed.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! CallId, out string! ToolName) -> void
+Vais.Agents.ToolCallReplayed.Equals(Vais.Agents.ToolCallReplayed? other) -> bool
+Vais.Agents.ToolCallReplayed.ToolCallReplayed(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! CallId, string! ToolName) -> void
+Vais.Agents.ToolCallReplayed.ToolName.get -> string!
+Vais.Agents.ToolCallReplayed.ToolName.init -> void
 abstract Vais.Agents.JournalEntry.<Clone>$() -> Vais.Agents.JournalEntry!
 override Vais.Agents.JournalEntry.Equals(object? obj) -> bool
 override Vais.Agents.JournalEntry.GetHashCode() -> int
@@ -39,11 +51,18 @@ override Vais.Agents.ToolCallRecorded.<Clone>$() -> Vais.Agents.ToolCallRecorded
 override Vais.Agents.ToolCallRecorded.Equals(object? obj) -> bool
 override Vais.Agents.ToolCallRecorded.GetHashCode() -> int
 override Vais.Agents.ToolCallRecorded.ToString() -> string!
+override Vais.Agents.ToolCallReplayed.<Clone>$() -> Vais.Agents.ToolCallReplayed!
+override Vais.Agents.ToolCallReplayed.Equals(object? obj) -> bool
+override Vais.Agents.ToolCallReplayed.GetHashCode() -> int
+override Vais.Agents.ToolCallReplayed.ToString() -> string!
 override sealed Vais.Agents.ToolCallRecorded.Equals(Vais.Agents.JournalEntry? other) -> bool
+override sealed Vais.Agents.ToolCallReplayed.Equals(Vais.Agents.AgentEvent? other) -> bool
 static Vais.Agents.JournalEntry.operator !=(Vais.Agents.JournalEntry? left, Vais.Agents.JournalEntry? right) -> bool
 static Vais.Agents.JournalEntry.operator ==(Vais.Agents.JournalEntry? left, Vais.Agents.JournalEntry? right) -> bool
 static Vais.Agents.ToolCallRecorded.operator !=(Vais.Agents.ToolCallRecorded? left, Vais.Agents.ToolCallRecorded? right) -> bool
 static Vais.Agents.ToolCallRecorded.operator ==(Vais.Agents.ToolCallRecorded? left, Vais.Agents.ToolCallRecorded? right) -> bool
+static Vais.Agents.ToolCallReplayed.operator !=(Vais.Agents.ToolCallReplayed? left, Vais.Agents.ToolCallReplayed? right) -> bool
+static Vais.Agents.ToolCallReplayed.operator ==(Vais.Agents.ToolCallReplayed? left, Vais.Agents.ToolCallReplayed? right) -> bool
 virtual Vais.Agents.JournalEntry.Equals(Vais.Agents.JournalEntry? other) -> bool
 virtual Vais.Agents.JournalEntry.EqualityContract.get -> System.Type!
 virtual Vais.Agents.JournalEntry.PrintMembers(System.Text.StringBuilder! builder) -> bool

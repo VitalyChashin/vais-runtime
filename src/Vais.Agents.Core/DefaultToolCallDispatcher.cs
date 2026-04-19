@@ -73,6 +73,13 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             {
                 if (entry is ToolCallRecorded recorded && recorded.CallId == request.CallId)
                 {
+                    // Cache hit — emit a single ToolCallReplayed event so observability
+                    // backends can tell the difference between "tool ran" and "tool
+                    // outcome served from the journal". No ToolCallStarted/Completed
+                    // pair to avoid double-counting against the first dispatch.
+                    await _eventBus.PublishAsync(
+                        new ToolCallReplayed(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName),
+                        cancellationToken).ConfigureAwait(false);
                     return recorded.Outcome;
                 }
             }
@@ -193,10 +200,12 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
                         "Tool guardrail returned Interrupt without an AgentInterrupt payload. " +
                         "Use GuardrailOutcome.Interrupt(AgentInterrupt, reason?) to construct this outcome.");
                 }
+                // Stamp RunId so callers can round-trip it into ResumeInput.
+                var stamped = outcome.InterruptPayload with { RunId = context.RunId };
                 await _eventBus.PublishAsync(
-                    new InterruptRaised(DateTimeOffset.UtcNow, context, outcome.InterruptPayload.InterruptId, outcome.InterruptPayload.Reason),
+                    new InterruptRaised(DateTimeOffset.UtcNow, context, stamped.InterruptId, stamped.Reason),
                     cancellationToken).ConfigureAwait(false);
-                throw new AgentInterruptedException(outcome.InterruptPayload);
+                throw new AgentInterruptedException(stamped);
         }
     }
 }

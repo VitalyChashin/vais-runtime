@@ -24,6 +24,10 @@ public struct AgentContextSurrogate
     /// <summary>Optional stable agent name.</summary>
     [Id(3)]
     public string? AgentName;
+
+    /// <summary>Optional run id stamped by <c>StatefulAiAgent</c> for durable execution (v0.5+).</summary>
+    [Id(4)]
+    public string? RunId;
 }
 
 /// <summary>
@@ -34,11 +38,14 @@ public sealed class AgentContextSurrogateConverter : IConverter<AgentContext, Ag
 {
     /// <inheritdoc />
     public AgentContext ConvertFromSurrogate(in AgentContextSurrogate surrogate) =>
-        new(
+        new AgentContext(
             UserId: surrogate.UserId,
             TenantId: surrogate.TenantId,
             CorrelationId: surrogate.CorrelationId,
-            AgentName: surrogate.AgentName);
+            AgentName: surrogate.AgentName)
+        {
+            RunId = surrogate.RunId,
+        };
 
     /// <inheritdoc />
     public AgentContextSurrogate ConvertToSurrogate(in AgentContext value) =>
@@ -48,5 +55,6 @@ public sealed class AgentContextSurrogateConverter : IConverter<AgentContext, Ag
             TenantId = value.TenantId,
             CorrelationId = value.CorrelationId,
             AgentName = value.AgentName,
+            RunId = value.RunId,
         };
 }

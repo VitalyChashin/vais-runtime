@@ -116,7 +116,10 @@ public sealed class StatefulAiAgent : IAiAgent
     public IReadOnlyList<ChatTurn> History => _session.History;
 
     /// <inheritdoc />
-    public async Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
+    public Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
+        => AskAsyncCore(userMessage, runIdOverride: null, cancellationToken);
+
+    private async Task<string> AskAsyncCore(string userMessage, string? runIdOverride, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
         {
@@ -125,7 +128,7 @@ public sealed class StatefulAiAgent : IAiAgent
 
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
-        var context = StampRunId(_contextAccessor.Current);
+        var context = StampRunId(_contextAccessor.Current, runIdOverride);
         var eventContext = BuildEventContext(context);
         var runStartedAt = DateTimeOffset.UtcNow;
         var runStopwatch = Stopwatch.StartNew();
@@ -680,22 +683,37 @@ public sealed class StatefulAiAgent : IAiAgent
     }
 
     /// <summary>
-    /// v0.4 shim for human-in-the-loop resume. Treats the supplied <see cref="ResumeInput"/>
-    /// as the caller's decision and continues the conversation by dispatching
-    /// <paramref name="input"/>'s JSON-payload string as the next user turn.
+    /// Continue a run that paused on an <see cref="AgentInterrupt"/>. Threads
+    /// <see cref="ResumeInput.RunId"/> through as the next run's id so the
+    /// tool-call dispatcher can cache-replay any journaled outcomes from the
+    /// paused run — tools that already produced a result are not re-invoked.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// True mid-loop resume (picking up where the interrupt paused, with working-history
-    /// replay) lands with the durable-execution pillar. In v0.4 the method is a typed
-    /// alias over <see cref="AskAsync"/> — consumers handle the
-    /// <see cref="AgentInterruptedException"/>, gather human input, build a
-    /// <see cref="ResumeInput"/>, and call this method. The interrupt's <c>InterruptId</c>
-    /// correlation still flows through for observability; the behaviour is a new turn,
-    /// not a continuation.
+    /// <b>How the payload is routed.</b> v0.5 appends <see cref="ResumeInput.Payload"/>
+    /// as the next user turn in the session — same shape as the v0.4 shim. The
+    /// substantive change in v0.5 is the <see cref="ResumeInput.RunId"/> thread-through:
+    /// when set, the dispatcher's cache-replay path lights up for any tool calls
+    /// the LLM produces with the same <c>CallId</c>s the journal already knows
+    /// about, avoiding side-effect duplication. Callers pull the <c>RunId</c>
+    /// from <see cref="AgentInterruptedException.Interrupt"/>'s
+    /// <see cref="AgentInterrupt.RunId"/>.
+    /// </para>
+    /// <para>
+    /// <b>Resume without <see cref="ResumeInput.RunId"/>.</b> When <see cref="ResumeInput.RunId"/>
+    /// is null, resume falls back to the v0.4 shim semantics — a fresh run with
+    /// a freshly-generated <c>RunId</c>, no cache-replay. Consumers that want
+    /// the shim explicitly can leave <c>RunId</c> unset.
+    /// </para>
+    /// <para>
+    /// <b>Working-history replay.</b> v0.5 still doesn't reconstruct the
+    /// interrupted run's intermediate assistant-with-tool-calls turns into the
+    /// session — the resume is a new turn, not a continuation of the paused
+    /// turn. Consumers that need graph-level replay will get it once the
+    /// graph-orchestration pillar lands.
     /// </para>
     /// </remarks>
-    /// <param name="input">Caller's decision payload plus the originating interrupt id.</param>
+    /// <param name="input">Caller's decision payload plus the originating interrupt id and run id.</param>
     /// <param name="cancellationToken">Cancels the resume turn.</param>
     /// <returns>Assistant reply for the resume turn.</returns>
     public Task<string> ResumeAsync(ResumeInput input, CancellationToken cancellationToken = default)
@@ -710,10 +728,10 @@ public sealed class StatefulAiAgent : IAiAgent
         if (string.IsNullOrWhiteSpace(userMessage))
         {
             throw new ArgumentException(
-                "ResumeInput.Payload must contain a non-empty string or object; v0.4 resume forwards the payload as the next user turn.",
+                "ResumeInput.Payload must contain a non-empty string or object; resume forwards the payload as the next user turn.",
                 nameof(input));
         }
-        return AskAsync(userMessage, cancellationToken);
+        return AskAsyncCore(userMessage, runIdOverride: input.RunId, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -930,10 +948,12 @@ public sealed class StatefulAiAgent : IAiAgent
                         $"Guardrail ({layer}) returned Interrupt without an AgentInterrupt payload. " +
                         "Use GuardrailOutcome.Interrupt(AgentInterrupt, reason?) to construct this outcome.");
                 }
+                // Stamp RunId so callers can round-trip it into ResumeInput.
+                var stamped = outcome.InterruptPayload with { RunId = context.RunId };
                 await PublishEventAsync(
-                    new InterruptRaised(DateTimeOffset.UtcNow, context, outcome.InterruptPayload.InterruptId, outcome.InterruptPayload.Reason),
+                    new InterruptRaised(DateTimeOffset.UtcNow, context, stamped.InterruptId, stamped.Reason),
                     cancellationToken).ConfigureAwait(false);
-                throw new AgentInterruptedException(outcome.InterruptPayload);
+                throw new AgentInterruptedException(stamped);
         }
     }
 
@@ -990,15 +1010,14 @@ public sealed class StatefulAiAgent : IAiAgent
 
     private static string DefaultRunIdFactory() => Guid.NewGuid().ToString("N");
 
-    private AgentContext StampRunId(AgentContext context)
+    private AgentContext StampRunId(AgentContext context, string? runIdOverride = null)
     {
-        // Caller-supplied RunId wins — that's how resume threads the interrupted
-        // run's id back into the continuation. Only synthesise when unset.
-        if (context.RunId is not null)
-        {
-            return context;
-        }
-        return context with { RunId = _runIdFactory() };
+        // Precedence: explicit override (resume) wins over ambient context.RunId,
+        // which wins over the factory. This is how resume threads the interrupted
+        // run's id back into the continuation so the dispatcher's cache-replay
+        // path lights up on re-dispatch.
+        var runId = runIdOverride ?? context.RunId ?? _runIdFactory();
+        return context.RunId == runId ? context : context with { RunId = runId };
     }
 
     private AgentContext BuildEventContext(AgentContext context)

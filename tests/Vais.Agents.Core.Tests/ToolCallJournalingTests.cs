@@ -161,7 +161,7 @@ public sealed class DefaultToolCallDispatcherJournalingTests
     }
 
     [Fact]
-    public async Task Cache_Replay_Is_Silent_On_Event_Bus()
+    public async Task Cache_Replay_Emits_Single_ToolCallReplayed_Event()
     {
         var tool = new FakeTool("echo", _ => "ok");
         var journal = new InMemoryAgentJournal();
@@ -172,13 +172,15 @@ public sealed class DefaultToolCallDispatcherJournalingTests
         var first = new DefaultToolCallDispatcher(
             new FakeRegistry(tool), toolGuardrails: null, eventBus: firstBus, journal: journal);
         await first.DispatchAsync(call, ctx);
-        firstBus.Events.Should().HaveCount(2); // Started + Completed
+        firstBus.Events.Should().HaveCount(2); // ToolCallStarted + ToolCallCompleted on first run.
 
         var secondBus = new RecordingEventBus();
         var second = new DefaultToolCallDispatcher(
             new FakeRegistry(tool), toolGuardrails: null, eventBus: secondBus, journal: journal);
         await second.DispatchAsync(call, ctx);
-        secondBus.Events.Should().BeEmpty(); // cache-replay is silent in PR 2
+        // PR 4: replay emits a single ToolCallReplayed rather than the Started/Completed pair.
+        // Keeps observability backends from double-counting against the first dispatch.
+        secondBus.Events.Should().ContainSingle().Which.Should().BeOfType<ToolCallReplayed>();
     }
 
     [Fact]

@@ -1,1 +1,7 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.RunId -> string?
+Vais.Agents.Hosting.Orleans.AgentEventKind.ToolCallReplayed = 8 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.ToolCallReplayed!
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.ToolCallReplayed! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.ToolCallReplayedSurrogateConverter.ToolCallReplayedSurrogateConverter() -> void

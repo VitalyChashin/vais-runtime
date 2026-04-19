@@ -284,6 +284,37 @@ public sealed class OrleansAgentEventBusTests
     }
 
     [Fact]
+    public async Task Publishes_And_Subscribes_ToolCallReplayed_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        ToolCallReplayed? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is ToolCallReplayed replayed)
+            {
+                observed = replayed;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var @event = new ToolCallReplayed(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty with { RunId = "run-42" },
+            "call-1",
+            "weather");
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.CallId.Should().Be("call-1");
+        observed.ToolName.Should().Be("weather");
+        observed.Context.RunId.Should().Be("run-42");
+    }
+
+    [Fact]
     public async Task Dispose_Unsubscribes_And_Later_Events_Are_Not_Received()
     {
         var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
