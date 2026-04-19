@@ -1,4 +1,8 @@
 #nullable enable
+Vais.Agents.Control.AgentPolicyDeniedException
+Vais.Agents.Control.AgentPolicyDeniedException.AgentPolicyDeniedException(Vais.Agents.Control.PolicyOperation operation, string! reason) -> void
+Vais.Agents.Control.AgentPolicyDeniedException.Operation.get -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.AgentPolicyDeniedException.Reason.get -> string!
 Vais.Agents.Control.AuditLogEntry
 Vais.Agents.Control.AuditLogEntry.AgentId.get -> string?
 Vais.Agents.Control.AuditLogEntry.AgentId.init -> void
