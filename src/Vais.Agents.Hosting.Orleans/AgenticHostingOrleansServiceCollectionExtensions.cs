@@ -103,4 +103,25 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<ITaskStore>(sp => new OrleansTaskStore(sp.GetRequiredService<IGrainFactory>()));
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansCheckpointer"/> as the <see cref="IGraphCheckpointer"/>
+    /// for the v0.9 graph orchestrator. Interrupted graphs survive silo restart — a
+    /// <c>GraphInterrupted</c> pause persisted via this checkpointer can be resumed
+    /// days or weeks later without losing graph state.
+    /// </summary>
+    /// <remarks>
+    /// Call this <em>before</em> constructing an <c>InProcessGraphOrchestrator</c>
+    /// (or any other <see cref="IAgentGraph{TState}"/> impl) so the orchestrator
+    /// picks up the durable checkpointer from DI rather than the in-memory default.
+    /// Requires an <see cref="IGrainFactory"/> in the DI container (provided by the
+    /// Orleans client/silo).
+    /// </remarks>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansGraphCheckpointer(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<IGraphCheckpointer>(sp => new OrleansCheckpointer(sp.GetRequiredService<IGrainFactory>()));
+        return services;
+    }
 }

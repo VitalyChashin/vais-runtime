@@ -1,0 +1,584 @@
+// Copyright (c) 2026 VAIS contributors.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+
+namespace Vais.Agents.Core;
+
+/// <summary>
+/// Neutral in-process <see cref="IAgentGraph{TState}"/> implementation. Pregel/BSP
+/// runtime: one node per super-step; outgoing edges evaluated in manifest order;
+/// first-match-wins; checkpoint per super-step boundary. Zero external deps beyond
+/// <c>Vais.Agents.Core</c>'s existing stack — works with any <see cref="ICompletionProvider"/>
+/// (SK, MAF, or fake) and any <see cref="IAgentLifecycleManager"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Same contract for typed + bag state.</b> Internally always operates on an
+/// <see cref="IDictionary{TKey,TValue}"/> of <see cref="JsonElement"/>; the
+/// <typeparamref name="TState"/> wrapper serialises the initial POCO via System.Text.Json
+/// at <see cref="InvokeAsync"/> entry and deserialises the merged bag back into
+/// <typeparamref name="TState"/> at exit. Bag-state callers (<see cref="IAgentGraph"/>)
+/// use <see cref="IDictionary{String, JsonElement}"/> as <typeparamref name="TState"/>
+/// directly, so the trips are no-ops.
+/// </para>
+/// </remarks>
+public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>
+{
+    /// <summary>Default max-step ceiling matching LangGraph's <c>recursion_limit</c>.</summary>
+    public const int DefaultMaxSteps = 1000;
+
+    private readonly AgentGraphManifest _manifest;
+    private readonly IAgentRegistry _registry;
+    private readonly IAgentLifecycleManager _lifecycle;
+    private readonly IGraphCheckpointer _checkpointer;
+    private readonly Func<GraphHandlerRef, IGraphEdgePredicate>? _predicateResolver;
+    private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
+    private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
+    private readonly Func<string>? _runIdFactory;
+
+    /// <summary>Construct the orchestrator.</summary>
+    /// <param name="manifest">Graph to run. Validated eagerly on first invocation.</param>
+    /// <param name="registry">Agent registry — used to resolve <see cref="GraphAgentRef.Version"/> = null (latest) to a concrete version for lifecycle-manager handles.</param>
+    /// <param name="lifecycle">Lifecycle manager for resolving + invoking <c>Agent</c>-kind nodes.</param>
+    /// <param name="checkpointer">Checkpoint store. Pass <see cref="InMemoryCheckpointer"/> for tests.</param>
+    /// <param name="predicateResolver">Resolver for <see cref="GraphEdgePredicate.HandlerRef"/> nodes. Null means handler-ref predicates throw.</param>
+    /// <param name="effectResolver">Resolver for <see cref="GraphEdgeEffect.HandlerRef"/> nodes. Null means handler-ref effects throw.</param>
+    /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s. Null means code-kind nodes throw.</param>
+    /// <param name="runIdFactory">Factory for the run id stamped on events + checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
+    public InProcessGraphOrchestrator(
+        AgentGraphManifest manifest,
+        IAgentRegistry registry,
+        IAgentLifecycleManager lifecycle,
+        IGraphCheckpointer checkpointer,
+        Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
+        Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
+        Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<string>? runIdFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(lifecycle);
+        ArgumentNullException.ThrowIfNull(checkpointer);
+        _manifest = manifest;
+        _registry = registry;
+        _lifecycle = lifecycle;
+        _checkpointer = checkpointer;
+        _predicateResolver = predicateResolver;
+        _effectResolver = effectResolver;
+        _codeNodeResolver = codeNodeResolver;
+        _runIdFactory = runIdFactory;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<TState> InvokeAsync(TState initial, AgentContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        IDictionary<string, JsonElement> bag = ToBag(initial);
+
+        await foreach (var _ in RunAsync(bag, context, startingNodeId: null, resumedRunId: null, cancellationToken).ConfigureAwait(false))
+        {
+            // Drain the event stream; state is mutated in-place via `bag`.
+        }
+
+        return FromBag(bag);
+    }
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<AgentGraphEvent> StreamAsync(TState initial, AgentContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var bag = ToBag(initial);
+        return RunAsync(bag, context, startingNodeId: null, resumedRunId: null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<TState> ResumeAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        ArgumentNullException.ThrowIfNull(context);
+        if (checkpoint.NextNodeId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot resume from checkpoint '{checkpoint.RunId}' — no NextNodeId (was the graph already completed?).");
+        }
+        if (!string.Equals(checkpoint.GraphId, _manifest.Id, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Checkpoint belongs to graph '{checkpoint.GraphId}'; this orchestrator hosts '{_manifest.Id}'.");
+        }
+
+        // Rehydrate state from the checkpoint, then splice in the caller's resume payload
+        // under the well-known key.
+        var bag = new Dictionary<string, JsonElement>(checkpoint.State, StringComparer.Ordinal);
+        if (resumePayload is not null)
+        {
+            bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
+        }
+
+        await foreach (var _ in RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken).ConfigureAwait(false))
+        {
+            // Drain.
+        }
+
+        return FromBag(bag);
+    }
+
+    /// <summary>
+    /// Stream variant of <see cref="ResumeAsync"/> — yields the full <see cref="AgentGraphEvent"/>
+    /// taxonomy (starting with <see cref="GraphResumed"/>) just like <see cref="StreamAsync"/>.
+    /// </summary>
+    public IAsyncEnumerable<AgentGraphEvent> ResumeStreamAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        ArgumentNullException.ThrowIfNull(context);
+        if (checkpoint.NextNodeId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot resume from checkpoint '{checkpoint.RunId}' — no NextNodeId.");
+        }
+        var bag = new Dictionary<string, JsonElement>(checkpoint.State, StringComparer.Ordinal);
+        if (resumePayload is not null)
+        {
+            bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
+        }
+        return RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken);
+    }
+
+    private static IDictionary<string, JsonElement> ToBag(TState initial)
+    {
+        if (initial is IDictionary<string, JsonElement> already)
+        {
+            // Bag-state callers (IAgentGraph) skip the round-trip.
+            return new Dictionary<string, JsonElement>(already, StringComparer.Ordinal);
+        }
+        if (initial is null)
+        {
+            return new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        }
+        var json = JsonSerializer.SerializeToElement(initial);
+        var bag = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        if (json.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in json.EnumerateObject())
+            {
+                bag[prop.Name] = prop.Value;
+            }
+        }
+        return bag;
+    }
+
+    private static TState FromBag(IDictionary<string, JsonElement> bag)
+    {
+        if (typeof(TState) == typeof(IDictionary<string, JsonElement>))
+        {
+            return (TState)(object)bag;
+        }
+        var json = JsonSerializer.SerializeToElement(bag);
+        return JsonSerializer.Deserialize<TState>(json)!;
+    }
+
+    private async IAsyncEnumerable<AgentGraphEvent> RunAsync(
+        IDictionary<string, JsonElement> state,
+        AgentContext context,
+        string? startingNodeId,
+        string? resumedRunId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var runId = resumedRunId ?? _runIdFactory?.Invoke() ?? Guid.NewGuid().ToString("N");
+        var maxSteps = _manifest.MaxSteps ?? DefaultMaxSteps;
+        var nodesById = _manifest.Nodes.ToDictionary(n => n.Id, StringComparer.Ordinal);
+        if (!nodesById.ContainsKey(_manifest.Entry))
+        {
+            throw new InvalidOperationException($"Entry node '{_manifest.Entry}' not found in graph '{_manifest.Id}'.");
+        }
+
+        var watch = Stopwatch.StartNew();
+        var superStep = 0;
+        var currentNodeId = startingNodeId ?? _manifest.Entry;
+        var isResume = startingNodeId is not null;
+
+        if (isResume)
+        {
+            // Resume semantics: the starting node WAS an Interrupt that paused the graph.
+            // Emit GraphResumed, then skip directly to evaluating the interrupt node's
+            // outgoing edges. The interrupt node's body does not re-fire.
+            var resumedInterruptId = state.TryGetValue("resume.interruptId", out var ii) && ii.ValueKind == JsonValueKind.String
+                ? ii.GetString() ?? string.Empty
+                : string.Empty;
+            yield return new GraphResumed(
+                DateTimeOffset.UtcNow, context, runId, superStep,
+                startingNodeId!, resumedInterruptId);
+        }
+        else
+        {
+            yield return new GraphStarted(
+                DateTimeOffset.UtcNow, context, runId, superStep,
+                _manifest.Id, _manifest.Version, _manifest.Entry);
+        }
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (superStep >= maxSteps)
+            {
+                var ex = new GraphRecursionException(_manifest.Id, maxSteps);
+                yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                    ex.GetType().Name, ex.Message, watch.Elapsed);
+                throw ex;
+            }
+
+            if (!nodesById.TryGetValue(currentNodeId, out var node))
+            {
+                var err = new InvalidOperationException($"Graph references unknown node '{currentNodeId}'.");
+                yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                    err.GetType().Name, err.Message, watch.Elapsed);
+                throw err;
+            }
+
+            // Terminal — End kind completes the graph.
+            if (string.Equals(node.Kind, "End", StringComparison.Ordinal))
+            {
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
+                    NextNodeId: null, SuperStepIndex: superStep, PendingInterruptId: null,
+                    IsComplete: true, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+                yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                    currentNodeId, watch.Elapsed);
+                yield break;
+            }
+
+            // Interrupt kind — emit event, checkpoint, pause.
+            // On resume (isResume && first iteration), we intentionally SKIP re-firing
+            // the interrupt so the graph continues past it via the outgoing-edge evaluation
+            // below. Any subsequent interrupt hit in this run is a fresh pause.
+            if (string.Equals(node.Kind, "Interrupt", StringComparison.Ordinal) && !isResume)
+            {
+                var interruptId = Guid.NewGuid().ToString("N");
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
+                    NextNodeId: currentNodeId, SuperStepIndex: superStep, PendingInterruptId: interruptId,
+                    IsComplete: false, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+                yield return new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
+                    currentNodeId, interruptId, node.InterruptReason);
+                yield break;
+            }
+
+            // Resume path on the first iteration: skip the interrupt node's body execution
+            // (it would just pause again) and jump to edge evaluation below. After the first
+            // iteration `isResume` is reset so any subsequent interrupts fire normally.
+            var skipNodeBody = isResume;
+            if (isResume)
+            {
+                isResume = false;
+            }
+
+            if (!skipNodeBody)
+            {
+                // Node execution.
+                yield return new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
+                var nodeWatch = Stopwatch.StartNew();
+                IReadOnlyDictionary<string, JsonElement>? nodeOutput = null;
+                Exception? nodeFailure = null;
+                try
+                {
+                    nodeOutput = await ExecuteNodeAsync(node, state, context, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    nodeFailure = ex;
+                }
+                if (nodeFailure is not null)
+                {
+                    yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                        nodeFailure.GetType().Name, nodeFailure.Message, watch.Elapsed);
+                    throw nodeFailure;
+                }
+                nodeWatch.Stop();
+                yield return new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                    currentNodeId, node.Kind, nodeWatch.Elapsed);
+
+                // Merge node output into state (honouring the node's StateBindings.Output filter if any).
+                if (nodeOutput is { Count: > 0 })
+                {
+                    var filtered = FilterByOutputBinding(nodeOutput, node.StateBindings);
+                    var changed = GraphStateReducers.Merge(state, filtered);
+                    if (changed.Count > 0)
+                    {
+                        yield return new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, changed);
+                    }
+                }
+
+                // Persist per-super-step.
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
+                    NextNodeId: currentNodeId, SuperStepIndex: superStep, PendingInterruptId: null,
+                    IsComplete: false, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+            }
+
+            // Select next node via the first matching outgoing edge.
+            string? nextNodeId = null;
+            foreach (var edge in _manifest.Edges.Where(e => string.Equals(e.From, currentNodeId, StringComparison.Ordinal)))
+            {
+                var matches = await GraphPredicateEvaluator.EvaluateAsync(
+                    edge.When, AsReadOnly(state), _predicateResolver, cancellationToken).ConfigureAwait(false);
+                if (!matches)
+                {
+                    continue;
+                }
+
+                // Apply edge side-effect if any.
+                var effectChanges = await GraphEffectApplier.ApplyAsync(
+                    edge.OnTraverse, state, _effectResolver, cancellationToken).ConfigureAwait(false);
+                if (effectChanges.Count > 0)
+                {
+                    yield return new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, effectChanges);
+                }
+
+                yield return new EdgeTraversed(DateTimeOffset.UtcNow, context, runId, superStep, edge.From, edge.To);
+                nextNodeId = edge.To;
+                break;
+            }
+
+            if (nextNodeId is null)
+            {
+                // No matching outgoing edge — treat as implicit completion.
+                yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                    currentNodeId, watch.Elapsed);
+                yield break;
+            }
+
+            currentNodeId = nextNodeId;
+            superStep++;
+        }
+    }
+
+    private async ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteNodeAsync(
+        GraphNode node,
+        IDictionary<string, JsonElement> state,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(node.Kind, "Agent", StringComparison.Ordinal))
+        {
+            if (node.Ref is null)
+            {
+                throw new InvalidOperationException($"Agent-kind node '{node.Id}' has no Ref.");
+            }
+
+            // Resolve to a concrete version via the registry — "latest" / null lookups must
+            // land on the actual version the lifecycle manager keyed on at CreateAsync time.
+            var resolvedManifest = await _registry.GetAsync(node.Ref.Id, node.Ref.Version, cancellationToken).ConfigureAwait(false);
+            if (resolvedManifest is null)
+            {
+                throw new InvalidOperationException(
+                    $"Node '{node.Id}' references agent '{node.Ref.Id}' version '{node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
+            }
+
+            // Build invocation request from state bindings.
+            var text = BuildAgentInputText(state, node.StateBindings);
+            var metadata = BuildMetadata(state, node.StateBindings);
+
+            var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
+            var result = await _lifecycle.InvokeAsync(
+                handle,
+                new AgentInvocationRequest(text, context.UserId, metadata),
+                cancellationToken).ConfigureAwait(false);
+
+            // Project the agent's reply into state: raw text under "lastAssistantText",
+            // plus parsed structured output if the reply is JSON (StateBindings.Output
+            // filters which fields land in state).
+            var updates = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+            {
+                ["lastAssistantText"] = JsonSerializer.SerializeToElement(result.Text),
+            };
+
+            // Append the turn to messages history (AppendMessages reducer handles it).
+            var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text));
+            updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
+
+            // If the reply text parses as JSON object and the node has an output binding,
+            // merge the parsed shape into state.
+            if (node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(result.Text, out var parsed))
+            {
+                foreach (var prop in parsed.EnumerateObject())
+                {
+                    updates[prop.Name] = prop.Value;
+                }
+            }
+            return updates;
+        }
+
+        if (string.Equals(node.Kind, "Code", StringComparison.Ordinal))
+        {
+            if (node.HandlerRef is null)
+            {
+                throw new InvalidOperationException($"Code-kind node '{node.Id}' has no HandlerRef.");
+            }
+            if (_codeNodeResolver is null)
+            {
+                throw new InvalidOperationException(
+                    $"Code-kind node '{node.Id}' references handler '{node.HandlerRef.TypeName}' but no code-node resolver was supplied.");
+            }
+            var handler = _codeNodeResolver(node.HandlerRef);
+            var input = FilterByInputBinding(state, node.StateBindings);
+            return await handler.ExecuteAsync(input, context, cancellationToken).ConfigureAwait(false);
+        }
+
+        throw new NotSupportedException($"Unknown node kind '{node.Kind}' on node '{node.Id}'.");
+    }
+
+    /// <summary>Placeholder text used when a graph step has no message + no query in state. Non-empty so downstream agents' non-empty-text validation doesn't trip.</summary>
+    internal const string DefaultAgentInputText = "(continue)";
+
+    private static string BuildAgentInputText(
+        IDictionary<string, JsonElement> state,
+        GraphStateBindings? bindings)
+    {
+        // Resolve order: last message in `messages` → `query` state key → placeholder.
+        // Richer templating (input-binding interpolation into a prompt) is post-v0.9.
+        if (state.TryGetValue(GraphStateReducers.WellKnownKey.Messages, out var messages) &&
+            messages.ValueKind == JsonValueKind.Array && messages.GetArrayLength() > 0)
+        {
+            var last = messages[messages.GetArrayLength() - 1];
+            if (last.ValueKind == JsonValueKind.Object && last.TryGetProperty("Text", out var textProp))
+            {
+                var text = textProp.GetString();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    return text;
+                }
+            }
+        }
+
+        if (state.TryGetValue("query", out var query) && query.ValueKind == JsonValueKind.String)
+        {
+            var qtext = query.GetString();
+            if (!string.IsNullOrEmpty(qtext))
+            {
+                return qtext;
+            }
+        }
+
+        return DefaultAgentInputText;
+    }
+
+    private static IReadOnlyDictionary<string, string>? BuildMetadata(
+        IDictionary<string, JsonElement> state,
+        GraphStateBindings? bindings)
+    {
+        if (bindings?.Input is not { Count: > 0 } keys)
+        {
+            return null;
+        }
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            if (state.TryGetValue(key, out var value))
+            {
+                metadata[key] = value.ValueKind == JsonValueKind.String ? value.GetString()! : value.GetRawText();
+            }
+        }
+        return metadata.Count == 0 ? null : metadata;
+    }
+
+    private static IReadOnlyDictionary<string, JsonElement> FilterByInputBinding(
+        IDictionary<string, JsonElement> state,
+        GraphStateBindings? bindings)
+    {
+        if (bindings?.Input is not { Count: > 0 } keys)
+        {
+            return new Dictionary<string, JsonElement>(state, StringComparer.Ordinal);
+        }
+        var result = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            if (state.TryGetValue(key, out var value))
+            {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, JsonElement> FilterByOutputBinding(
+        IReadOnlyDictionary<string, JsonElement> nodeOutput,
+        GraphStateBindings? bindings)
+    {
+        if (bindings?.Output is not { Count: > 0 } keys)
+        {
+            return nodeOutput;
+        }
+        // Always allow the well-known messages key through — agent nodes emit it unconditionally
+        // via the AppendMessages reducer convention.
+        var allowed = new HashSet<string>(keys, StringComparer.Ordinal) { GraphStateReducers.WellKnownKey.Messages, "lastAssistantText" };
+        var result = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var (key, value) in nodeOutput)
+        {
+            if (allowed.Contains(key))
+            {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, JsonElement> AsReadOnly(IDictionary<string, JsonElement> state)
+        => state as IReadOnlyDictionary<string, JsonElement> ?? new Dictionary<string, JsonElement>(state, StringComparer.Ordinal);
+
+    private static bool TryParseJsonObject(string text, out JsonElement element)
+    {
+        element = default;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+        try
+        {
+            var trimmed = text.TrimStart();
+            if (!trimmed.StartsWith('{'))
+            {
+                return false;
+            }
+            var doc = JsonDocument.Parse(trimmed);
+            element = doc.RootElement.Clone();
+            return element.ValueKind == JsonValueKind.Object;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+}
+
+/// <summary>
+/// Non-generic <see cref="InProcessGraphOrchestrator{TState}"/> specialisation over
+/// <see cref="IDictionary{TKey,TValue}"/> of <see cref="JsonElement"/> — the state
+/// shape used by declarative YAML-authored graphs.
+/// </summary>
+public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDictionary<string, JsonElement>>, IAgentGraph
+{
+    /// <inheritdoc />
+    public InProcessGraphOrchestrator(
+        AgentGraphManifest manifest,
+        IAgentRegistry registry,
+        IAgentLifecycleManager lifecycle,
+        IGraphCheckpointer checkpointer,
+        Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
+        Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
+        Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<string>? runIdFactory = null)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory)
+    {
+    }
+}

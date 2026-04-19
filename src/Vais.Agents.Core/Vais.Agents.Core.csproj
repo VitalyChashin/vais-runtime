@@ -23,6 +23,8 @@
   <ItemGroup>
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Core.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework" />
   </ItemGroup>
 
 </Project>

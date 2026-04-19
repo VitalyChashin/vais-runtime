@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework</RootNamespace>
+    <AssemblyName>Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework</AssemblyName>
+    <Description>Microsoft Agent Framework Workflows adapter for Vais.Agents graph orchestration. Projects an AgentGraphManifest onto a MAF Workflow so consumers on the MAF stack can run graphs through the same contract as the in-process orchestrator, with MAF-native cycles + streaming events + checkpoints.</Description>
+    <PackageTags>agents;ai;llm;graph;orchestration;microsoft-agent-framework;maf;workflows</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests" />
+  </ItemGroup>
+
+</Project>

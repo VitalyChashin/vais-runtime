@@ -1,0 +1,46 @@
+// Copyright (c) 2026 VAIS contributors.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+namespace Vais.Agents;
+
+/// <summary>
+/// Marks an <see cref="IAgentGraph{TState}"/> implementation as capable of resuming
+/// from a persisted <see cref="GraphCheckpoint"/>. Paired with <see cref="IGraphCheckpointer"/>
+/// to give consumers durable pause/resume on <c>Interrupt</c>-kind nodes — the v0.9
+/// analogue of A2A's <c>Task(input-required)</c> resume pattern.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Why a separate interface?</b> Not every orchestrator supports resume in v0.9
+/// — <c>InProcessGraphOrchestrator</c> does; the MAF adapter defers to v0.10 (MAF's
+/// <c>CheckpointManager</c> has its own checkpoint format; bridging to our
+/// <see cref="GraphCheckpoint"/> shape is non-trivial and lands when the MAF
+/// integration lands broadly). Keeping resume on a capability interface lets
+/// consumers query <c>graph is IResumableAgentGraph&lt;TState&gt;</c> at runtime.
+/// </para>
+/// <para>
+/// <b>Resume semantics.</b> The checkpoint captures state at the interrupt boundary.
+/// Calling <c>ResumeAsync</c> loads that state, applies the caller's resume payload
+/// under the well-known <c>"resume.payload"</c> key, and continues the graph from
+/// the interrupt node's outgoing edges — the interrupt node itself does NOT re-fire.
+/// Re-entering an interrupt produces another <see cref="GraphCheckpoint"/> + a
+/// fresh <see cref="GraphInterrupted"/> event, just like a two-step form.
+/// </para>
+/// </remarks>
+public interface IResumableAgentGraph<TState>
+{
+    /// <summary>
+    /// Resume a previously-interrupted run from <paramref name="checkpoint"/>. Applies
+    /// <paramref name="resumePayload"/> to state under the well-known
+    /// <c>"resume.payload"</c> key, then continues the graph past the interrupt node.
+    /// </summary>
+    /// <param name="checkpoint">Checkpoint loaded from an <see cref="IGraphCheckpointer"/>. Must have non-null <see cref="GraphCheckpoint.NextNodeId"/>.</param>
+    /// <param name="resumePayload">The value the caller wants to supply at the interrupt boundary. Null merges nothing; non-null is serialised to JSON and placed under state's <c>"resume.payload"</c> key.</param>
+    /// <param name="context">Ambient agent context stamped on events emitted during the resumed run.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    ValueTask<TState> ResumeAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default);
+}
