@@ -72,6 +72,8 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.Create, manifest, principal, cancellationToken).ConfigureAwait(false);
 
+        using var activity = StartVerbActivity(PolicyOperation.Create, manifest, principal);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         string? errorType = null;
         try
         {
@@ -86,11 +88,14 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         catch (Exception ex)
         {
             errorType = ex.GetType().Name;
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
             throw;
         }
         finally
         {
+            sw.Stop();
             await AuditAsync(PolicyOperation.Create, manifest.Id, manifest.Version, principal, allowed: true, denyReason: null, errorType).ConfigureAwait(false);
+            RecordVerb(PolicyOperation.Create, outcome: errorType is null ? "allowed" : "errored", duration: sw.Elapsed.TotalMilliseconds);
         }
     }
 
@@ -107,9 +112,12 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         if (!_state.TryGetValue((handle.AgentId, handle.Version), out var state))
         {
             await AuditAsync(PolicyOperation.Invoke, handle.AgentId, handle.Version, principal, allowed: true, denyReason: null, errorType: UnknownAgentErrorType).ConfigureAwait(false);
+            RecordVerb(PolicyOperation.Invoke, outcome: "errored", duration: null);
             throw new InvalidOperationException($"Unknown agent handle: {handle.AgentId}/{handle.Version}. Call CreateAsync first.");
         }
 
+        using var activity = StartVerbActivity(PolicyOperation.Invoke, manifest, principal);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         state.Register(cts);
         string? errorType = null;
@@ -125,12 +133,15 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             errorType = ex.GetType().Name;
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
             throw;
         }
         finally
         {
+            sw.Stop();
             state.Unregister(cts);
             await AuditAsync(PolicyOperation.Invoke, handle.AgentId, handle.Version, principal, allowed: true, denyReason: null, errorType).ConfigureAwait(false);
+            RecordVerb(PolicyOperation.Invoke, outcome: errorType is null ? "allowed" : "errored", duration: sw.Elapsed.TotalMilliseconds);
         }
     }
 
@@ -273,7 +284,40 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         }
         var reason = decision.Reason ?? "policy denied";
         await AuditAsync(op, manifest?.Id, manifest?.Version, principal, allowed: false, denyReason: reason, errorType: null).ConfigureAwait(false);
+        RecordVerb(op, outcome: "denied", duration: null);
         throw new AgentPolicyDeniedException(op, reason);
+    }
+
+    private static System.Diagnostics.Activity? StartVerbActivity(PolicyOperation op, AgentManifest? manifest, AgentPrincipal? principal)
+    {
+        var activity = ControlPlaneDiagnostics.ActivitySource.StartActivity($"control.{op.ToString().ToLowerInvariant()}", System.Diagnostics.ActivityKind.Server);
+        if (activity is null) return null;
+        activity.SetTag("vais.control.verb", op.ToString());
+        if (manifest is not null)
+        {
+            activity.SetTag("vais.agent.id", manifest.Id);
+            activity.SetTag("vais.agent.version", manifest.Version);
+        }
+        if (principal is not null)
+        {
+            activity.SetTag("vais.principal.id", principal.Id);
+            if (principal.TenantId is not null) activity.SetTag("vais.principal.tenant", principal.TenantId);
+        }
+        return activity;
+    }
+
+    private static void RecordVerb(PolicyOperation op, string outcome, double? duration)
+    {
+        var tags = new System.Collections.Generic.KeyValuePair<string, object?>[]
+        {
+            new("vais.control.verb", op.ToString()),
+            new("vais.control.outcome", outcome),
+        };
+        ControlPlaneDiagnostics.VerbCount.Add(1, tags);
+        if (duration is double d)
+        {
+            ControlPlaneDiagnostics.VerbDuration.Record(d, tags);
+        }
     }
 
     private async ValueTask AuditAsync(

@@ -10,6 +10,13 @@ Vais.Agents.Control.IAgentManifestLoader
 Vais.Agents.Control.IAgentManifestLoader.LoadFromDirectoryAsync(string! directory, string! searchPattern, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
 Vais.Agents.Control.IAgentManifestLoader.LoadFromFileAsync(string! path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
 Vais.Agents.Control.IAgentManifestLoader.LoadFromStringAsync(string! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>!>
+Vais.Agents.Control.IPrincipalMapper
+Vais.Agents.Control.IPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
+Vais.Agents.Control.ISecretResolver
+Vais.Agents.Control.ISecretResolver.ResolveAsync(string! secretUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Control.SecretNotFoundException
+Vais.Agents.Control.SecretNotFoundException.SecretNotFoundException(string! secretUri) -> void
+Vais.Agents.Control.SecretNotFoundException.SecretUri.get -> string!
 Vais.Agents.Control.AuditLogEntry
 Vais.Agents.Control.AuditLogEntry.AgentId.get -> string?
 Vais.Agents.Control.AuditLogEntry.AgentId.init -> void

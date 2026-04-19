@@ -1,6 +1,13 @@
 #nullable enable
+Vais.Agents.Control.Http.AgentControlPlaneAuthServiceCollectionExtensions
 Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions
+Vais.Agents.Control.Http.AgentControlPlanePrincipalMiddlewareExtensions
 Vais.Agents.Control.Http.AgentControlPlaneServiceCollectionExtensions
+Vais.Agents.Control.Http.DefaultPrincipalMapper
+Vais.Agents.Control.Http.DefaultPrincipalMapper.DefaultPrincipalMapper() -> void
+Vais.Agents.Control.Http.DefaultPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
+static Vais.Agents.Control.Http.AgentControlPlaneAuthServiceCollectionExtensions.AddAgentControlPlaneJwtAuth(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Control.Http.AgentControlPlanePrincipalMiddlewareExtensions.UseAgentControlPlanePrincipalMapping(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 Vais.Agents.Control.Http.AgentListResponse
 Vais.Agents.Control.Http.AgentListResponse.AgentListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, string? NextCursor = null) -> void
 Vais.Agents.Control.Http.AgentListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentManifest!>! Items, out string? NextCursor) -> void
