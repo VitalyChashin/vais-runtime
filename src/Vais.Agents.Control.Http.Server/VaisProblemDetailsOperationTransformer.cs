@@ -38,6 +38,7 @@ public sealed class VaisProblemDetailsOperationTransformer : IOpenApiOperationTr
         },
         ["422"] = new[] { ProblemDetailsMapping.IdempotencyMismatchType },
         ["429"] = new[] { ProblemDetailsMapping.BudgetExceededType },
+        ["501"] = new[] { ProblemDetailsMapping.StreamingNotSupportedType },
         ["503"] = new[] { ProblemDetailsMapping.BackendUnavailableType },
     };
 

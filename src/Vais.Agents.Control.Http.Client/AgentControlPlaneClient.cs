@@ -2,7 +2,10 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -191,6 +194,94 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         {
             request.Headers.TryAddWithoutValidation(IdempotencyHeaderName, effective);
         }
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<string> InvokeStreamAsync(
+        string agentId,
+        AgentInvocationRequest request,
+        string? version,
+        string? idempotencyKey,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Thin text-only projection over the full-events stream.
+        await foreach (var evt in InvokeStreamEventsAsync(agentId, request, version, idempotencyKey, cancellationToken).ConfigureAwait(false))
+        {
+            if (evt is CompletionDelta d && d.TextDelta.Length > 0)
+            {
+                yield return d.TextDelta;
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<AgentEvent> InvokeStreamEventsAsync(
+        string agentId,
+        AgentInvocationRequest request,
+        string? version,
+        string? idempotencyKey,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var path = version is null
+            ? $"/v1/agents/{Uri.EscapeDataString(agentId)}/invoke/stream"
+            : $"/v1/agents/{Uri.EscapeDataString(agentId)}/invoke/stream?version={Uri.EscapeDataString(version)}";
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(request, options: JsonOptions),
+        };
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        AttachIdempotencyKey(httpRequest, idempotencyKey);
+
+        using var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        if (!string.Equals(contentType, "text/event-stream", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new AgentControlPlaneException(
+                (int)response.StatusCode,
+                type: null,
+                title: "Unexpected content type",
+                detail: $"Expected text/event-stream, got '{contentType ?? "<none>"}'.");
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using (stream.ConfigureAwait(false))
+        {
+            var parser = SseParser.Create(stream, ParseAgentEventFrame);
+            await foreach (var item in parser.EnumerateAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (item.Data is { } evt)
+                {
+                    yield return evt;
+                }
+            }
+        }
+    }
+
+    private static AgentEvent? ParseAgentEventFrame(string eventType, ReadOnlySpan<byte> data)
+    {
+        // SSE event name is the wire discriminator; body JSON carries the concrete record's
+        // fields with no type-discriminator property. Unknown event names are skipped
+        // (forward-compat: the shipped hierarchy can grow new subtypes additively).
+        return eventType switch
+        {
+            "turn.started"         => JsonSerializer.Deserialize<TurnStarted>(data, JsonOptions),
+            "turn.completed"       => JsonSerializer.Deserialize<TurnCompleted>(data, JsonOptions),
+            "turn.failed"          => JsonSerializer.Deserialize<TurnFailed>(data, JsonOptions),
+            "tool.started"         => JsonSerializer.Deserialize<ToolCallStarted>(data, JsonOptions),
+            "tool.completed"       => JsonSerializer.Deserialize<ToolCallCompleted>(data, JsonOptions),
+            "tool.replayed"        => JsonSerializer.Deserialize<ToolCallReplayed>(data, JsonOptions),
+            "guardrail.triggered"  => JsonSerializer.Deserialize<GuardrailTriggered>(data, JsonOptions),
+            "interrupt.raised"     => JsonSerializer.Deserialize<InterruptRaised>(data, JsonOptions),
+            "handoff.requested"    => JsonSerializer.Deserialize<HandoffRequested>(data, JsonOptions),
+            "delta"                => JsonSerializer.Deserialize<CompletionDelta>(data, JsonOptions),
+            _                      => null,
+        };
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)

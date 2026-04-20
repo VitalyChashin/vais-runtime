@@ -71,4 +71,35 @@ public interface IAgentControlPlaneClient
     /// <summary>POST /v1/agents/{id}/signal — signal delivery with an explicit idempotency key.</summary>
     Task SignalAsync(string agentId, AgentSignal signal, string? version, string? idempotencyKey, CancellationToken cancellationToken)
         => SignalAsync(agentId, signal, version, cancellationToken);
+
+    /// <summary>
+    /// POST /v1/agents/{id}/invoke/stream — stream an invocation as SSE, yielding
+    /// only <see cref="CompletionDelta.TextDelta"/> values. Filters the full event
+    /// stream to text. Default implementation throws <see cref="NotSupportedException"/>
+    /// so mock implementations don't need to handle streaming.
+    /// </summary>
+    IAsyncEnumerable<string> InvokeStreamAsync(
+        string agentId,
+        AgentInvocationRequest request,
+        string? version,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+        => throw new NotSupportedException(
+            "This IAgentControlPlaneClient implementation does not support streaming invoke. " +
+            "Use AgentControlPlaneClient (shipped) or override this method.");
+
+    /// <summary>
+    /// POST /v1/agents/{id}/invoke/stream — stream an invocation as SSE, yielding
+    /// the full <see cref="AgentEvent"/> taxonomy. Default implementation throws
+    /// <see cref="NotSupportedException"/>.
+    /// </summary>
+    IAsyncEnumerable<AgentEvent> InvokeStreamEventsAsync(
+        string agentId,
+        AgentInvocationRequest request,
+        string? version,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+        => throw new NotSupportedException(
+            "This IAgentControlPlaneClient implementation does not support streaming invoke. " +
+            "Use AgentControlPlaneClient (shipped) or override this method.");
 }

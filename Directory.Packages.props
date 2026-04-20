@@ -55,6 +55,10 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
   </ItemGroup>
 
+  <ItemGroup Label="SSE parser for v0.12 streaming-invoke HTTP client.">
+    <PackageVersion Include="System.Net.ServerSentEvents" Version="10.0.2" />
+  </ItemGroup>
+
   <ItemGroup Label="Public API surface guard">
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.24629.2" />
   </ItemGroup>

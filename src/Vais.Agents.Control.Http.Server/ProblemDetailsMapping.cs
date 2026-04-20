@@ -41,6 +41,9 @@ public static class ProblemDetailsMapping
     /// <summary>Another request with the same <c>Idempotency-Key</c> is still executing (v0.11).</summary>
     public const string IdempotencyInFlightType = TypePrefix + "idempotency-in-flight";
 
+    /// <summary>Requested streaming endpoint, but the target agent's runtime (e.g. Orleans proxy) doesn't implement <c>IStreamingAiAgent</c> (v0.12).</summary>
+    public const string StreamingNotSupportedType = TypePrefix + "streaming-not-supported";
+
     /// <summary>
     /// Translate a control-plane exception into an <see cref="IResult"/> carrying
     /// Problem Details with an appropriate status code + type URN.
@@ -88,6 +91,27 @@ public static class ProblemDetailsMapping
         };
         pd.Extensions["idempotencyKey"] = key;
         if (existingFingerprint is not null) pd.Extensions["existingFingerprint"] = existingFingerprint;
+        return Results.Problem(pd);
+    }
+
+    /// <summary>
+    /// Build a 501 Problem Details response when the requested streaming
+    /// endpoint targets an agent whose runtime doesn't implement
+    /// <c>IStreamingAiAgent</c> (e.g. Orleans-proxied agents in v0.12).
+    /// </summary>
+    public static IResult StreamingNotSupported(string agentId, string? instance = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+        var pd = new ProblemDetails
+        {
+            Type = StreamingNotSupportedType,
+            Title = "Streaming not supported",
+            Status = StatusCodes.Status501NotImplemented,
+            Detail = $"Agent '{agentId}' is hosted on a runtime that does not support streaming. " +
+                     "Use POST /v1/agents/{id}/invoke for buffered responses.",
+            Instance = instance,
+        };
+        pd.Extensions["agentId"] = agentId;
         return Results.Problem(pd);
     }
 

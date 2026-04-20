@@ -79,6 +79,17 @@ public sealed class AgentControlPlaneIdempotencyMiddleware
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // Streaming endpoints decorated with [StreamingEndpoint] metadata bypass
+        // the whole idempotency path — body-buffering is incompatible with SSE's
+        // flush-as-you-go semantics; caching + replay is incompatible with a live
+        // stream. v0.11's content-type-based opt-out covered CompleteAsync but
+        // still buffered the body; the metadata check here opts out earlier.
+        if (context.GetEndpoint()?.Metadata.GetMetadata<StreamingEndpointAttribute>() is not null)
+        {
+            await _next(context).ConfigureAwait(false);
+            return;
+        }
+
         if (ShouldSkip(context))
         {
             await _next(context).ConfigureAwait(false);

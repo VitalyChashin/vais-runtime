@@ -28,7 +28,7 @@ namespace Vais.Agents.Core;
 /// race on the history list. Agents are typically addressed by stable identifiers
 /// (e.g. Orleans grain keys) at a higher layer that serialises calls per instance.
 /// </remarks>
-public sealed class StatefulAiAgent : IAiAgent
+public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
 {
     private static readonly ResiliencePipeline _defaultPipeline = BuildDefaultPipeline();
     private static readonly ResiliencePipeline _defaultStreamingPipeline = BuildDefaultStreamingPipeline();
@@ -357,12 +357,15 @@ public sealed class StatefulAiAgent : IAiAgent
         string userMessage,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        // Source-compat delegation: the v0.10 `StreamAsync(string) : IAsyncEnumerable<string>`
+        // surface is preserved by projecting the v0.12 full-event stream to text-only
+        // via CompletionDelta.TextDelta. Input validation + ambient context stamping
+        // happens here; the event-yielding core picks it up.
         if (string.IsNullOrWhiteSpace(userMessage))
         {
             throw new ArgumentException("User message must be non-empty.", nameof(userMessage));
         }
-
-        if (_provider is not IStreamingCompletionProvider streamingProvider)
+        if (_provider is not IStreamingCompletionProvider)
         {
             throw new InvalidOperationException(
                 $"Provider '{_provider.ProviderName}' does not support streaming. " +
@@ -370,16 +373,68 @@ public sealed class StatefulAiAgent : IAiAgent
                 "as one) or use AskAsync for non-streaming turns.");
         }
 
+        var context = StampRunId(_contextAccessor.Current);
+        await foreach (var evt in StreamEventsCoreAsync(userMessage, context, cancellationToken).ConfigureAwait(false))
+        {
+            if (evt is CompletionDelta d && d.TextDelta.Length > 0)
+            {
+                yield return d.TextDelta;
+            }
+        }
+    }
+
+    /// <summary>
+    /// v0.12 implementation of <see cref="IStreamingAiAgent.StreamAsync"/>. Yields
+    /// the full <see cref="AgentEvent"/> taxonomy in ordering-contract order:
+    /// <see cref="TurnStarted"/> → per-delta <see cref="CompletionDelta"/>s (interleaved
+    /// with <see cref="ToolCallStarted"/> / <see cref="ToolCallCompleted"/> on tool-call
+    /// loops) → terminal <see cref="TurnCompleted"/> or <see cref="TurnFailed"/>.
+    /// Guardrail denials yield <see cref="GuardrailTriggered"/> before the final
+    /// <see cref="TurnFailed"/>; interrupts yield <see cref="InterruptRaised"/>.
+    /// </summary>
+    public async IAsyncEnumerable<AgentEvent> StreamAsync(
+        string userMessage,
+        AgentContext context,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userMessage))
+        {
+            throw new ArgumentException("User message must be non-empty.", nameof(userMessage));
+        }
+        ArgumentNullException.ThrowIfNull(context);
+        if (_provider is not IStreamingCompletionProvider)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{_provider.ProviderName}' does not support streaming. " +
+                "Inject an IStreamingCompletionProvider (both the SK and MAF adapters ship " +
+                "as one) or use AskAsync for non-streaming turns.");
+        }
+
+        var stamped = StampRunId(context);
+        await foreach (var evt in StreamEventsCoreAsync(userMessage, stamped, cancellationToken).ConfigureAwait(false))
+        {
+            yield return evt;
+        }
+    }
+
+    private async IAsyncEnumerable<AgentEvent> StreamEventsCoreAsync(
+        string userMessage,
+        AgentContext context,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var streamingProvider = (IStreamingCompletionProvider)_provider;
+
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken).ConfigureAwait(false);
 
-        var context = StampRunId(_contextAccessor.Current);
         var eventContext = BuildEventContext(context);
         var startedAt = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
 
-        await PublishEventAsync(new TurnStarted(startedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
+        var turnStarted = new TurnStarted(startedAt, eventContext, userMessage);
+        await PublishEventAsync(turnStarted, cancellationToken).ConfigureAwait(false);
+        yield return turnStarted;
 
         // Working history starts from the session snapshot (which includes the just-
         // appended user turn) and grows with assistant-with-tool-calls + tool-result
@@ -582,8 +637,20 @@ public sealed class StatefulAiAgent : IAiAgent
                         if (update.TextDelta.Length > 0)
                         {
                             turnAccumulator.Append(update.TextDelta);
-                            yield return update.TextDelta;
                         }
+
+                        // Always yield a CompletionDelta, even when TextDelta is empty — terminal
+                        // updates carrying ToolCalls / final token usage / model id are important
+                        // observability data for IStreamingAiAgent consumers. The string-returning
+                        // overload filters to non-empty TextDelta (preserves v0.10 behaviour).
+                        yield return new CompletionDelta(
+                            DateTimeOffset.UtcNow,
+                            eventContext,
+                            update.TextDelta,
+                            update.ModelId,
+                            update.PromptTokens,
+                            update.CompletionTokens,
+                            update.ToolCalls);
 
                         // Advance — post-first-delta MoveNextAsync failures surface on `failure`
                         // and are NOT retried (yielded deltas are committed).
@@ -713,6 +780,16 @@ public sealed class StatefulAiAgent : IAiAgent
                     break;
                 }
 
+                // Yield ToolCallStarted BEFORE the dispatcher call — bus subscribers see the
+                // same event from `DefaultToolCallDispatcher` during DispatchAsync; streaming
+                // callers see it from the yield. Each observer sees it once.
+                yield return new ToolCallStarted(
+                    DateTimeOffset.UtcNow,
+                    eventContext,
+                    toolCall.CallId,
+                    toolCall.ToolName);
+
+                var dispatchStartedAt = DateTimeOffset.UtcNow;
                 ToolCallOutcome outcome;
                 try
                 {
@@ -728,6 +805,14 @@ public sealed class StatefulAiAgent : IAiAgent
                     toolFailure = true;
                     break;
                 }
+                yield return new ToolCallCompleted(
+                    DateTimeOffset.UtcNow,
+                    eventContext,
+                    outcome.CallId,
+                    toolCall.ToolName,
+                    Succeeded: outcome.Error is null,
+                    Error: outcome.Error,
+                    Duration: DateTimeOffset.UtcNow - dispatchStartedAt);
                 workingHistory.Add(new ChatTurn(
                     AgentChatRole.Tool,
                     outcome.Result,
@@ -754,25 +839,53 @@ public sealed class StatefulAiAgent : IAiAgent
 
         if (failure is not null)
         {
-            await PublishEventAsync(
-                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, sw.Elapsed),
-                cancellationToken).ConfigureAwait(false);
+            // For guardrail / interrupt failures, synthesise the semantic event before
+            // TurnFailed so streaming callers see the same signal bus subscribers do.
+            // HandleGuardrailOutcomeAsync already published GuardrailTriggered /
+            // InterruptRaised to the bus before throwing, so bus consumers get it once;
+            // these yields deliver the same event to streaming consumers once.
+            if (failure is AgentGuardrailDeniedException guardrailEx)
+            {
+                yield return new GuardrailTriggered(
+                    DateTimeOffset.UtcNow,
+                    eventContext,
+                    guardrailEx.Layer,
+                    GuardrailDecision.Deny,
+                    guardrailEx.Reason);
+            }
+            else if (failure is AgentInterruptedException interruptEx)
+            {
+                yield return new InterruptRaised(
+                    DateTimeOffset.UtcNow,
+                    eventContext,
+                    interruptEx.Interrupt.InterruptId,
+                    interruptEx.Interrupt.Reason);
+            }
+
+            var turnFailed = new TurnFailed(
+                DateTimeOffset.UtcNow,
+                eventContext,
+                failure.GetType().Name,
+                failure.Message,
+                sw.Elapsed);
+            await PublishEventAsync(turnFailed, cancellationToken).ConfigureAwait(false);
+            yield return turnFailed;
             throw failure;
         }
 
         var finalText = turnAccumulator.ToString();
         await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, finalText), cancellationToken).ConfigureAwait(false);
 
-        await PublishEventAsync(
-            new TurnCompleted(
-                DateTimeOffset.UtcNow,
-                eventContext,
-                finalText,
-                finalModelId,
-                aggregatedPromptTokens > 0 ? aggregatedPromptTokens : null,
-                aggregatedCompletionTokens > 0 ? aggregatedCompletionTokens : null,
-                sw.Elapsed),
-            cancellationToken).ConfigureAwait(false);
+        var turnCompleted = new TurnCompleted(
+            DateTimeOffset.UtcNow,
+            eventContext,
+            finalText,
+            finalModelId,
+            aggregatedPromptTokens > 0 ? aggregatedPromptTokens : null,
+            aggregatedCompletionTokens > 0 ? aggregatedCompletionTokens : null,
+            sw.Elapsed);
+        await PublishEventAsync(turnCompleted, cancellationToken).ConfigureAwait(false);
+        yield return turnCompleted;
     }
 
     /// <summary>

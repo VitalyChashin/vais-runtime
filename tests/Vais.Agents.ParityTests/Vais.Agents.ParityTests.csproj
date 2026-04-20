@@ -9,10 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Ai.SemanticKernel\Vais.Agents.Ai.SemanticKernel.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Ai.MicrosoftAgentFramework\Vais.Agents.Ai.MicrosoftAgentFramework.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.InProcess\Vais.Agents.Control.InProcess.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +38,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
   </ItemGroup>
 
 </Project>

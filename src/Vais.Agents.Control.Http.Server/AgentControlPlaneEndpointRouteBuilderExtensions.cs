@@ -1,10 +1,14 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Vais.Agents.Control.Manifests;
 
 namespace Vais.Agents.Control.Http;
@@ -112,6 +116,27 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /agents/{id}/invoke/stream — streaming Invoke (SSE)
+        group.MapPost("/agents/{id}/invoke/stream", InvokeStreamAsync)
+            .WithMetadata(new StreamingEndpointAttribute())
+            .WithName("Agents.InvokeStream")
+            .WithSummary("Stream an invocation as Server-Sent Events.")
+            .WithDescription(
+                "Emits the full AgentEvent taxonomy as SSE: turn.started → delta (per text chunk) → " +
+                "tool.started / tool.completed (if the model requests tools) → terminal turn.completed " +
+                "or turn.failed. SSE event names are stable; body JSON carries the concrete AgentEvent " +
+                "record shape. Agents hosted on runtimes that don't implement IStreamingAiAgent return " +
+                "501 urn:vais-agents:streaming-not-supported — use POST /v1/agents/{id}/invoke for " +
+                "buffered responses. Honours the v0.11 Idempotency-Key middleware opt-out " +
+                "(text/event-stream responses bypass the cache).")
+            .Accepts<AgentInvocationRequest>("application/json")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // POST /agents/{id}/signal — Signal
@@ -390,5 +415,149 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.Signal);
         }
+    }
+
+    private static async Task InvokeStreamAsync(
+        HttpContext http,
+        IAgentRegistry registry,
+        IAgentRuntime runtime,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        // Read the body first so early-exit Problem Details paths can write JSON + set 4xx status
+        // before the SSE handshake commits the response.
+        AgentInvocationRequest? request;
+        try
+        {
+            request = await http.Request.ReadFromJsonAsync<AgentInvocationRequest>(ct).ConfigureAwait(false);
+        }
+        catch (JsonException ex)
+        {
+            await WriteProblemAsync(http, ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.Invoke)).ConfigureAwait(false);
+            return;
+        }
+        if (request is null || string.IsNullOrWhiteSpace(request.Text))
+        {
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await http.Response.WriteAsJsonAsync(new { error = "request body must contain non-empty 'text'" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        // Resolve agent (no lifecycle-manager middleware for v0.12 — streaming bypasses
+        // policy + audit by design; documented limitation).
+        var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+        if (resolvedVersion is null)
+        {
+            http.Response.StatusCode = StatusCodes.Status404NotFound;
+            await http.Response.WriteAsJsonAsync(new { error = $"agent '{id}' not found" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        IAiAgent agent;
+        try
+        {
+            agent = runtime.GetOrCreate(id);
+        }
+        catch (Exception ex)
+        {
+            await WriteProblemAsync(http, ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.Invoke)).ConfigureAwait(false);
+            return;
+        }
+
+        if (agent is not IStreamingAiAgent streamable)
+        {
+            await WriteProblemAsync(http, ProblemDetailsMapping.StreamingNotSupported(id, http.Request.Path)).ConfigureAwait(false);
+            return;
+        }
+
+        // SSE handshake — set content-type FIRST so the v0.11 idempotency middleware's
+        // post-next(ctx) content-type check sees text/event-stream and opts out of caching.
+        http.Response.StatusCode = StatusCodes.Status200OK;
+        http.Response.ContentType = "text/event-stream";
+        http.Response.Headers["Cache-Control"] = "no-cache";
+        http.Response.Headers["X-Accel-Buffering"] = "no"; // disable nginx response buffering
+        await http.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        // Channel-multiplex design: agent-event loop writes event frames; heartbeat timer
+        // writes ':' comment lines. Single SSE-writer task drains to the response body.
+        // Linked CTS coordinates shutdown on client abort.
+        var heartbeat = http.RequestServices.GetService<IOptions<StreamingInvokeOptions>>()?.Value.HeartbeatInterval
+                        ?? TimeSpan.FromSeconds(15);
+        var channel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false,
+        });
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var writerCt = linkedCts.Token;
+
+        Timer? heartbeatTimer = null;
+        if (heartbeat > TimeSpan.Zero)
+        {
+            heartbeatTimer = new Timer(
+                _ => channel.Writer.TryWrite($": heartbeat {DateTimeOffset.UtcNow:O}\n\n"),
+                state: null,
+                dueTime: heartbeat,
+                period: heartbeat);
+        }
+
+        // Agent producer task — drives StreamEventsCore, serialises each event to SSE,
+        // writes to the channel. Terminates on completion or on cancellation.
+        var principal = http.User?.Identity?.IsAuthenticated == true
+            ? new AgentContext(
+                UserId: http.User.FindFirst("sub")?.Value,
+                TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
+            : AgentContext.Empty;
+
+        var producerTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in streamable.StreamAsync(request.Text, principal, writerCt).ConfigureAwait(false))
+                {
+                    var (eventName, dataJson) = AgentEventSerializer.Serialize(evt);
+                    var frame = $"event: {eventName}\ndata: {dataJson}\n\n";
+                    await channel.Writer.WriteAsync(frame, writerCt).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) { /* cooperative shutdown */ }
+            catch (Exception ex)
+            {
+                // Mid-stream exception the agent didn't translate to TurnFailed — emit a
+                // synthetic turn.failed event so the client sees a clean terminal.
+                var turnFailed = new TurnFailed(DateTimeOffset.UtcNow, principal, ex.GetType().Name, ex.Message, TimeSpan.Zero);
+                var (eventName, dataJson) = AgentEventSerializer.Serialize(turnFailed);
+                var frame = $"event: {eventName}\ndata: {dataJson}\n\n";
+                try { await channel.Writer.WriteAsync(frame, writerCt).ConfigureAwait(false); }
+                catch { /* swallow — writer already gone */ }
+            }
+            finally
+            {
+                channel.Writer.TryComplete();
+            }
+        }, writerCt);
+
+        try
+        {
+            await foreach (var frame in channel.Reader.ReadAllAsync(writerCt).ConfigureAwait(false))
+            {
+                var bytes = Encoding.UTF8.GetBytes(frame);
+                await http.Response.Body.WriteAsync(bytes, writerCt).ConfigureAwait(false);
+                await http.Response.Body.FlushAsync(writerCt).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { /* client aborted — producer task shuts down via linked CTS */ }
+        finally
+        {
+            linkedCts.Cancel();
+            heartbeatTimer?.Dispose();
+            try { await producerTask.ConfigureAwait(false); } catch { /* already surfaced via frame or cancelled */ }
+        }
+    }
+
+    private static async Task WriteProblemAsync(HttpContext http, IResult result)
+    {
+        await result.ExecuteAsync(http).ConfigureAwait(false);
     }
 }

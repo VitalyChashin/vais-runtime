@@ -188,3 +188,46 @@ public sealed record ToolCallReplayed(
     string CallId,
     string ToolName)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by <see cref="IStreamingAiAgent.StreamAsync"/> per streamed text chunk —
+/// the event-stream analogue of <see cref="CompletionUpdate"/>. Mirrors the same
+/// five fields so the streaming-invoke wire can carry text deltas + metadata
+/// (ModelId, token counts, terminal tool-calls) without introducing a second
+/// shape. Consumers who want "just text" filter the event stream to this type
+/// and read <see cref="TextDelta"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// v0.12 addition. <see cref="TextDelta"/> is always non-null; may be empty on
+/// a terminal update that carries only metadata or tool-calls. Consumers
+/// aggregating a run should sum deltas and take the final non-null
+/// <see cref="ModelId"/> / <see cref="PromptTokens"/> /
+/// <see cref="CompletionTokens"/> as authoritative — same rule as
+/// <see cref="CompletionUpdate"/>.
+/// </para>
+/// <para>
+/// <see cref="ToolCalls"/> is populated on terminal pre-dispatch updates when
+/// the model requests tool invocations. Inside the default agent's tool-call
+/// loop, <c>ToolCalls</c> fires just before the dispatcher runs and
+/// surfaces each tool call's payload to observing consumers — actual dispatch
+/// events (<see cref="ToolCallStarted"/> / <see cref="ToolCallCompleted"/>)
+/// follow separately.
+/// </para>
+/// </remarks>
+/// <param name="At">UTC timestamp when the chunk was emitted.</param>
+/// <param name="Context">Ambient agent context at emission time.</param>
+/// <param name="TextDelta">Next fragment of assistant text. Non-null; may be empty.</param>
+/// <param name="ModelId">Model id, typically populated on the final update only.</param>
+/// <param name="PromptTokens">Prompt-side token count, typically populated on the final update only.</param>
+/// <param name="CompletionTokens">Completion-side token count, typically populated on the final update only.</param>
+/// <param name="ToolCalls">Tool calls the model requested on this turn, populated on the terminal pre-dispatch update only.</param>
+public sealed record CompletionDelta(
+    DateTimeOffset At,
+    AgentContext Context,
+    string TextDelta,
+    string? ModelId = null,
+    int? PromptTokens = null,
+    int? CompletionTokens = null,
+    IReadOnlyList<ToolCallRequest>? ToolCalls = null)
+    : AgentEvent(At, Context);

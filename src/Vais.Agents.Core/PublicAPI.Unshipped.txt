@@ -1,1 +1,2 @@
 #nullable enable
+Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
