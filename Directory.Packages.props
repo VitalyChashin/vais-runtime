@@ -65,6 +65,12 @@
     <PackageVersion Include="KubeOps.Abstractions" Version="10.3.4" />
   </ItemGroup>
 
+  <ItemGroup Label="CLI (v0.15 vais dotnet-tool pillar). Spectre pulls its console renderer family transitively.">
+    <PackageVersion Include="Spectre.Console" Version="0.55.0" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <PackageVersion Include="Spectre.Console.Testing" Version="0.55.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Public API surface guard">
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.24629.2" />
   </ItemGroup>

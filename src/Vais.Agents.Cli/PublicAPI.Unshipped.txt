@@ -1,0 +1,41 @@
+#nullable enable
+Vais.Agents.Cli.ClientFactory
+Vais.Agents.Cli.VaisCliConfig
+Vais.Agents.Cli.VaisCliConfig.ApiVersion.get -> string!
+Vais.Agents.Cli.VaisCliConfig.ApiVersion.set -> void
+Vais.Agents.Cli.VaisCliConfig.Clusters.get -> System.Collections.Generic.IList<Vais.Agents.Cli.VaisCluster!>!
+Vais.Agents.Cli.VaisCliConfig.Clusters.set -> void
+Vais.Agents.Cli.VaisCliConfig.Contexts.get -> System.Collections.Generic.IList<Vais.Agents.Cli.VaisContext!>!
+Vais.Agents.Cli.VaisCliConfig.Contexts.set -> void
+Vais.Agents.Cli.VaisCliConfig.CurrentContext.get -> string?
+Vais.Agents.Cli.VaisCliConfig.CurrentContext.set -> void
+Vais.Agents.Cli.VaisCliConfig.Kind.get -> string!
+Vais.Agents.Cli.VaisCliConfig.Kind.set -> void
+Vais.Agents.Cli.VaisCliConfig.Users.get -> System.Collections.Generic.IList<Vais.Agents.Cli.VaisUser!>!
+Vais.Agents.Cli.VaisCliConfig.Users.set -> void
+Vais.Agents.Cli.VaisCliConfig.VaisCliConfig() -> void
+Vais.Agents.Cli.VaisCluster
+Vais.Agents.Cli.VaisCluster.InsecureSkipTlsVerify.get -> bool
+Vais.Agents.Cli.VaisCluster.InsecureSkipTlsVerify.set -> void
+Vais.Agents.Cli.VaisCluster.Name.get -> string!
+Vais.Agents.Cli.VaisCluster.Name.set -> void
+Vais.Agents.Cli.VaisCluster.Server.get -> string!
+Vais.Agents.Cli.VaisCluster.Server.set -> void
+Vais.Agents.Cli.VaisCluster.VaisCluster() -> void
+Vais.Agents.Cli.VaisContext
+Vais.Agents.Cli.VaisContext.Cluster.get -> string!
+Vais.Agents.Cli.VaisContext.Cluster.set -> void
+Vais.Agents.Cli.VaisContext.Name.get -> string!
+Vais.Agents.Cli.VaisContext.Name.set -> void
+Vais.Agents.Cli.VaisContext.User.get -> string!
+Vais.Agents.Cli.VaisContext.User.set -> void
+Vais.Agents.Cli.VaisContext.VaisContext() -> void
+Vais.Agents.Cli.VaisUser
+Vais.Agents.Cli.VaisUser.Name.get -> string!
+Vais.Agents.Cli.VaisUser.Name.set -> void
+Vais.Agents.Cli.VaisUser.Token.get -> string?
+Vais.Agents.Cli.VaisUser.Token.set -> void
+Vais.Agents.Cli.VaisUser.TokenFile.get -> string?
+Vais.Agents.Cli.VaisUser.TokenFile.set -> void
+Vais.Agents.Cli.VaisUser.VaisUser() -> void
+static Vais.Agents.Cli.ClientFactory.Create(Vais.Agents.Cli.VaisCliConfig! config, string? contextOverride = null, string? tokenFlag = null) -> Vais.Agents.Control.Http.AgentControlPlaneClient!

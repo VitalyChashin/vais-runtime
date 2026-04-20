@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Cli</RootNamespace>
+    <AssemblyName>Vais.Agents.Cli</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>vais</ToolCommandName>
+    <Description>First-party command-line tool for the Vais.Agents HTTP control plane. Install with `dotnet tool install -g Vais.Agents.Cli`, invoke as `vais` (apply / get / invoke / logs / signal / delete / cancel / config / init / version).</Description>
+    <PackageTags>agents;ai;llm;control-plane;cli;vais;dotnet-tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Manifests.Yaml\Vais.Agents.Control.Manifests.Yaml.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Cli.Tests" />
+  </ItemGroup>
+
+</Project>
