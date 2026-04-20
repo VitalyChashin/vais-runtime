@@ -31,6 +31,7 @@ namespace Vais.Agents.Core;
 public sealed class StatefulAiAgent : IAiAgent
 {
     private static readonly ResiliencePipeline _defaultPipeline = BuildDefaultPipeline();
+    private static readonly ResiliencePipeline _defaultStreamingPipeline = BuildDefaultStreamingPipeline();
 
     private readonly ICompletionProvider _provider;
     private readonly ILogger<StatefulAiAgent> _logger;
@@ -40,6 +41,7 @@ public sealed class StatefulAiAgent : IAiAgent
     private readonly IAgentEventBus _eventBus;
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ResiliencePipeline _pipeline;
+    private readonly ResiliencePipeline _streamingPipeline;
     private readonly IToolRegistry? _toolRegistry;
     private readonly IHistoryReducer _historyReducer;
     private readonly IReadOnlyList<IContextProvider> _contextProviders;
@@ -85,6 +87,7 @@ public sealed class StatefulAiAgent : IAiAgent
         _eventBus = options.EventBus ?? NullAgentEventBus.Instance;
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
         _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
+        _streamingPipeline = options.StreamingResiliencePipeline ?? _defaultStreamingPipeline;
         _toolRegistry = options.ToolRegistry;
         _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
         _contextProviders = options.ContextProviders;
@@ -317,16 +320,26 @@ public sealed class StatefulAiAgent : IAiAgent
     /// <see cref="AgentInterruptedException"/> as they do in AskAsync.
     /// </para>
     /// <para>
-    /// <b>V0.4.1 scope gaps.</b> <see cref="StatefulAgentOptions.Filters"/> and
-    /// <see cref="StatefulAgentOptions.ResiliencePipeline"/> are still NOT
-    /// applied to streaming turns (same reason as v0.4 — filter and resilience
-    /// surfaces are request→response shaped). Consumers needing filter-mediated
-    /// behaviour stay on <see cref="AskAsync"/>. Input guardrails fire on every
-    /// streamed turn (just like AskAsync); output guardrails fire once at the
-    /// end of the final (non-tool-call) turn — post-facto relative to deltas
-    /// already yielded, same as v0.4. The <see cref="IStreamingAgentFilter"/>
-    /// chain runs on deltas across every turn and on the single final
-    /// <see cref="IStreamingAgentFilter.OnStreamCompleteAsync"/> invocation.
+    /// <b>Filter + resilience (v0.10+).</b> The
+    /// <see cref="StatefulAgentOptions.StreamingFilters"/> chain wraps the
+    /// provider call on every streamed turn via
+    /// <see cref="IStreamingAgentFilter.InvokeAsync"/> (around-provider); the
+    /// agent fires <see cref="IStreamingAgentFilter.OnStreamDeltaAsync"/> on
+    /// every filter for each yielded delta and
+    /// <see cref="IStreamingAgentFilter.OnStreamCompleteAsync"/> once at end of
+    /// the final (non-tool-call) turn, before output guardrails.
+    /// <see cref="StatefulAgentOptions.StreamingResiliencePipeline"/> wraps the
+    /// enumerator-open + first <c>MoveNextAsync</c> on each turn — transient
+    /// failures that surface before the first delta are retried; once the
+    /// stream is producing, yielded deltas are committed and retries stop.
+    /// Filter-domain exceptions (guardrail denial, budget trip, interrupt,
+    /// cancellation) are excluded from the retry predicate and surface on
+    /// first firing. Input guardrails fire on every streamed turn (like
+    /// <see cref="AskAsync"/>); output guardrails fire once at the end of the
+    /// final turn — post-facto relative to deltas already yielded. The
+    /// <see cref="StatefulAgentOptions.Filters"/> (non-streaming) chain is NOT
+    /// applied on the streaming path; consumers who want request→response
+    /// filter semantics use <see cref="AskAsync"/>.
     /// </para>
     /// <para>
     /// A single <see cref="TurnStarted"/> event fires at call entry and a single
@@ -439,48 +452,149 @@ public sealed class StatefulAiAgent : IAiAgent
             int? turnPromptTokens = null;
             int? turnCompletionTokens = null;
 
+            // Phase 1 — retry boundary. `_streamingPipeline` retries the streaming-
+            // filter chain's enumerator-open + first `MoveNextAsync` only. Once we
+            // observe the first delta, yielded content is committed; mid-stream
+            // failures in Phase 2 surface on `failure` without replay. Filter-domain
+            // exceptions are excluded from the retry predicate (see
+            // `IsFilterDomainException`) so a filter-thrown denial/interrupt/budget
+            // trip reaches the caller on first firing.
             IAsyncEnumerator<CompletionUpdate>? enumerator = null;
+            CompletionUpdate? firstUpdate = null;
+            var streamLive = false;
+
             try
             {
-                enumerator = streamingProvider.StreamAsync(request, cancellationToken).GetAsyncEnumerator(cancellationToken);
-
-                while (true)
+                await _streamingPipeline.ExecuteAsync(async attemptCt =>
                 {
-                    bool hasNext;
-                    CompletionUpdate? update = null;
+                    // Reset state from any prior attempt before re-entering the provider.
+                    if (enumerator is not null)
+                    {
+                        await enumerator.DisposeAsync().ConfigureAwait(false);
+                        enumerator = null;
+                    }
+                    firstUpdate = null;
+                    streamLive = false;
+
+                    var stream = InvokeThroughStreamingFilters(streamingProvider, request, attemptCt);
+                    var e = stream.GetAsyncEnumerator(attemptCt);
                     try
                     {
-                        hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                        if (hasNext)
+                        if (await e.MoveNextAsync().ConfigureAwait(false))
                         {
-                            update = enumerator.Current;
+                            enumerator = e;
+                            firstUpdate = e.Current;
+                            streamLive = true;
+                            e = null!; // ownership transferred to outer-scope enumerator
                         }
                     }
-                    catch (OperationCanceledException)
+                    finally
                     {
-                        throw;
+                        // Empty-stream attempt — dispose the enumerator we never promoted.
+                        if (e is not null)
+                        {
+                            await e.DisposeAsync().ConfigureAwait(false);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        failure = ex;
-                        break;
-                    }
+                }, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
 
-                    if (!hasNext)
-                    {
-                        break;
-                    }
+            if (failure is not null)
+            {
+                // Ensure any partially-promoted enumerator from the last attempt is disposed.
+                if (enumerator is not null)
+                {
+                    await enumerator.DisposeAsync().ConfigureAwait(false);
+                }
+                break;
+            }
 
-                    // Streaming-filter chain per delta. A filter may transform the
-                    // update or throw to abort. Exceptions break out to the
-                    // outer-loop failure path.
-                    if (_streamingFilters.Count > 0)
+            // Phase 2 — drain. `try { yield return ... } finally { dispose }` only;
+            // C# forbids `yield return` inside a `try` with `catch`, so inner
+            // MoveNextAsync exceptions go through local try/catch that captures
+            // `failure` and breaks out of the delta loop, leaving the outer
+            // try/finally to dispose the enumerator cleanly.
+            if (streamLive)
+            {
+                var currentUpdate = firstUpdate;
+                try
+                {
+                    while (currentUpdate is not null)
                     {
+                        var update = currentUpdate;
+
+                        // Streaming-filter delta chain per delta. A filter may transform
+                        // the update or throw to abort — exceptions set `failure` and
+                        // break out to the outer-loop failure path.
+                        if (_streamingFilters.Count > 0)
+                        {
+                            var filterFailed = false;
+                            try
+                            {
+                                foreach (var filter in _streamingFilters)
+                                {
+                                    update = await filter.OnStreamDeltaAsync(update, cancellationToken).ConfigureAwait(false);
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                failure = ex;
+                                filterFailed = true;
+                            }
+                            if (filterFailed)
+                            {
+                                break;
+                            }
+                        }
+
+                        // Last-update-wins metadata aggregation per turn; ModelId also
+                        // survives across turns so TurnCompleted carries the last seen.
+                        if (update.ModelId is not null)
+                        {
+                            turnModelId = update.ModelId;
+                            finalModelId = update.ModelId;
+                        }
+                        if (update.PromptTokens is not null)
+                        {
+                            turnPromptTokens = update.PromptTokens;
+                        }
+                        if (update.CompletionTokens is not null)
+                        {
+                            turnCompletionTokens = update.CompletionTokens;
+                        }
+                        if (update.ToolCalls is { Count: > 0 })
+                        {
+                            turnToolCalls = update.ToolCalls;
+                        }
+
+                        if (update.TextDelta.Length > 0)
+                        {
+                            turnAccumulator.Append(update.TextDelta);
+                            yield return update.TextDelta;
+                        }
+
+                        // Advance — post-first-delta MoveNextAsync failures surface on `failure`
+                        // and are NOT retried (yielded deltas are committed).
+                        var advanced = false;
+                        CompletionUpdate? nextUpdate = null;
                         try
                         {
-                            foreach (var filter in _streamingFilters)
+                            if (await enumerator!.MoveNextAsync().ConfigureAwait(false))
                             {
-                                update = await filter.OnStreamDeltaAsync(update!, cancellationToken).ConfigureAwait(false);
+                                nextUpdate = enumerator.Current;
+                                advanced = true;
                             }
                         }
                         catch (OperationCanceledException)
@@ -490,42 +604,21 @@ public sealed class StatefulAiAgent : IAiAgent
                         catch (Exception ex)
                         {
                             failure = ex;
+                        }
+
+                        if (failure is not null || !advanced)
+                        {
                             break;
                         }
-                    }
-
-                    // Last-update-wins metadata aggregation per turn; ModelId also
-                    // survives across turns so TurnCompleted carries the last seen.
-                    if (update!.ModelId is not null)
-                    {
-                        turnModelId = update.ModelId;
-                        finalModelId = update.ModelId;
-                    }
-                    if (update.PromptTokens is not null)
-                    {
-                        turnPromptTokens = update.PromptTokens;
-                    }
-                    if (update.CompletionTokens is not null)
-                    {
-                        turnCompletionTokens = update.CompletionTokens;
-                    }
-                    if (update.ToolCalls is { Count: > 0 })
-                    {
-                        turnToolCalls = update.ToolCalls;
-                    }
-
-                    if (update.TextDelta.Length > 0)
-                    {
-                        turnAccumulator.Append(update.TextDelta);
-                        yield return update.TextDelta;
+                        currentUpdate = nextUpdate;
                     }
                 }
-            }
-            finally
-            {
-                if (enumerator is not null)
+                finally
                 {
-                    await enumerator.DisposeAsync().ConfigureAwait(false);
+                    if (enumerator is not null)
+                    {
+                        await enumerator.DisposeAsync().ConfigureAwait(false);
+                    }
                 }
             }
 
@@ -975,6 +1068,28 @@ public sealed class StatefulAiAgent : IAiAgent
         return next(request, cancellationToken);
     }
 
+    private IAsyncEnumerable<CompletionUpdate> InvokeThroughStreamingFilters(
+        IStreamingCompletionProvider streamingProvider,
+        CompletionRequest request,
+        CancellationToken cancellationToken)
+    {
+        // Same lazy right-to-left chain build as InvokeThroughFiltersAsync, adapted
+        // to the streaming contract. Terminal step calls the provider's StreamAsync;
+        // each filter's InvokeAsync wraps the next step in the chain. Filters that
+        // don't override InvokeAsync pass through via the DIM default.
+        Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next =
+            (req, ct) => streamingProvider.StreamAsync(req, ct);
+
+        for (var i = _streamingFilters.Count - 1; i >= 0; i--)
+        {
+            var filter = _streamingFilters[i];
+            var inner = next;
+            next = (req, ct) => filter.InvokeAsync(req, inner, ct);
+        }
+
+        return next(request, cancellationToken);
+    }
+
     private async ValueTask ReportUsageAsync(
         CompletionResponse? response,
         Exception? failure,
@@ -1059,7 +1174,33 @@ public sealed class StatefulAiAgent : IAiAgent
                 BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,
                 Delay = TimeSpan.FromSeconds(1),
-                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => ex is not OperationCanceledException),
+                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => !IsFilterDomainException(ex)),
             })
             .Build();
+
+    private static ResiliencePipeline BuildDefaultStreamingPipeline() =>
+        new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 2, // 3 total attempts (1 + 2 retries)
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromSeconds(1),
+                // Streaming-side predicate uses the same filter-domain exclusion as the non-
+                // streaming default. The caller-level distinction between the two pipelines
+                // is the *scope* of retry (pre-first-delta only on the streaming path),
+                // enforced by where the pipeline is wired into StreamAsync's per-turn loop,
+                // not by the predicate.
+                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => !IsFilterDomainException(ex)),
+            })
+            .Build();
+
+    // Centralises the rule "don't retry agent-domain exceptions" for both pipelines.
+    // Filter-domain exceptions express deliberate outcomes (denial, budget trip, interrupt,
+    // cancellation) that callers need to see on the first firing, not after retries mask them.
+    internal static bool IsFilterDomainException(Exception ex) =>
+        ex is OperationCanceledException
+            or AgentGuardrailDeniedException
+            or AgentBudgetExceededException
+            or AgentInterruptedException;
 }

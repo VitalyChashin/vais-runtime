@@ -40,11 +40,31 @@ public sealed class StatefulAgentOptions
     public IAgentContextAccessor? ContextAccessor { get; init; }
 
     /// <summary>
-    /// Resilience pipeline wrapping the provider call. When null, the core uses a
-    /// default pipeline with 3 retries and exponential back-off — matching the
-    /// behaviour of the previous <c>AiAgent&lt;T&gt;.CallFunction</c> in earlier SK-based deployments.
+    /// Resilience pipeline wrapping the provider call on the non-streaming path
+    /// (<c>StatefulAiAgent.AskAsync</c>). When null, the core uses a default
+    /// pipeline with 3 retries and exponential back-off — matching the behaviour
+    /// of the previous <c>AiAgent&lt;T&gt;.CallFunction</c> in earlier SK-based
+    /// deployments. Filter-domain exceptions
+    /// (<see cref="AgentGuardrailDeniedException"/>,
+    /// <see cref="AgentBudgetExceededException"/>,
+    /// <see cref="AgentInterruptedException"/>,
+    /// <see cref="OperationCanceledException"/>) are excluded from retry.
     /// </summary>
     public ResiliencePipeline? ResiliencePipeline { get; init; }
+
+    /// <summary>
+    /// Resilience pipeline wrapping the streaming provider call on
+    /// <c>StatefulAiAgent.StreamAsync</c>. When null, the core uses an internal
+    /// default pipeline with the same retry cadence as
+    /// <see cref="ResiliencePipeline"/> but narrowed to only apply before the
+    /// first <see cref="CompletionUpdate"/> is yielded — once the stream is
+    /// producing deltas, yielded content is considered committed and retries stop.
+    /// Filter-domain exceptions are excluded from retry on the same terms as the
+    /// non-streaming pipeline. Consumers who want identical retry budgets on both
+    /// paths assign the same <see cref="Polly.ResiliencePipeline"/> instance to
+    /// both properties; consumers who want separate budgets assign two.
+    /// </summary>
+    public ResiliencePipeline? StreamingResiliencePipeline { get; init; }
 
     /// <summary>
     /// Tools made available to the model on every turn. When set, the registry's

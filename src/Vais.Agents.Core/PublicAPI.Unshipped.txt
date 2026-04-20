@@ -1,1 +1,3 @@
 #nullable enable
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.init -> void

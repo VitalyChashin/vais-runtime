@@ -43,6 +43,25 @@ public interface IStreamingCompletionProvider
     /// Cancels the underlying provider call. Cancellation mid-stream stops further
     /// updates from being emitted; already-yielded deltas are not retracted.
     /// </param>
+    /// <remarks>
+    /// <para>
+    /// <b>Idempotence contract (v0.10+).</b> Implementations must guarantee that any
+    /// exception thrown from <see cref="StreamAsync"/>, its synchronous setup before
+    /// the first iteration of the returned enumerable, or the first
+    /// <c>MoveNextAsync()</c> on the returned async enumerator leaves no observable
+    /// side-effect on shared state — underlying HTTP connections, telemetry spans
+    /// that the implementation did not also dispose with error status, session
+    /// storage, or cached connector state. The agent core is entitled to retry by
+    /// constructing a fresh enumerator from a new <see cref="StreamAsync"/> call on
+    /// the same provider instance with the same <paramref name="request"/>.
+    /// Exceptions raised after the first <see cref="CompletionUpdate"/> is yielded
+    /// are <b>not</b> retryable and surface to the caller as-is. In practice both
+    /// shipped adapters satisfy this by construction: Semantic Kernel clones its
+    /// <c>Kernel</c> when tools are attached, and the Microsoft Agent Framework
+    /// adapter constructs a fresh <c>ChatClientAgent</c> per call — no cross-call
+    /// connector state exists before the first delta.
+    /// </para>
+    /// </remarks>
     IAsyncEnumerable<CompletionUpdate> StreamAsync(
         CompletionRequest request,
         CancellationToken cancellationToken = default);
