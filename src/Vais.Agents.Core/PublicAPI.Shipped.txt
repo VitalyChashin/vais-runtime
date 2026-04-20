@@ -178,3 +178,4 @@ static readonly Vais.Agents.Core.NullUsageSink.Instance -> Vais.Agents.Core.Null
 virtual Vais.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais.Agents.OrchestrationStep!>! steps) -> bool
 Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?
 Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.init -> void
+Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!

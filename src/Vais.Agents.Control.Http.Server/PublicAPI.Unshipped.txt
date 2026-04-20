@@ -1,9 +1,1 @@
 #nullable enable
-const Vais.Agents.Control.Http.ProblemDetailsMapping.StreamingNotSupportedType = "urn:vais-agents:streaming-not-supported" -> string!
-static Vais.Agents.Control.Http.ProblemDetailsMapping.StreamingNotSupported(string! agentId, string? instance = null) -> Microsoft.AspNetCore.Http.IResult!
-Vais.Agents.Control.Http.StreamingEndpointAttribute
-Vais.Agents.Control.Http.StreamingEndpointAttribute.StreamingEndpointAttribute() -> void
-Vais.Agents.Control.Http.StreamingInvokeOptions
-Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.get -> System.TimeSpan
-Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.set -> void
-Vais.Agents.Control.Http.StreamingInvokeOptions.StreamingInvokeOptions() -> void

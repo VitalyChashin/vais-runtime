@@ -84,3 +84,11 @@ Vais.Agents.Control.Http.VaisProblemDetailsOperationTransformer.VaisProblemDetai
 const Vais.Agents.Control.Http.AgentControlPlaneOpenApiServiceCollectionExtensions.DefaultDocumentName = "v1" -> string!
 static Vais.Agents.Control.Http.AgentControlPlaneOpenApiServiceCollectionExtensions.AddAgentControlPlaneOpenApi(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! documentName = "v1", System.Action<Microsoft.AspNetCore.OpenApi.OpenApiOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Control.Http.AgentControlPlaneOpenApiServiceCollectionExtensions.MapAgentControlPlaneOpenApi(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! pattern = "/openapi/{documentName}.json") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.StreamingNotSupportedType = "urn:vais-agents:streaming-not-supported" -> string!
+static Vais.Agents.Control.Http.ProblemDetailsMapping.StreamingNotSupported(string! agentId, string? instance = null) -> Microsoft.AspNetCore.Http.IResult!
+Vais.Agents.Control.Http.StreamingEndpointAttribute
+Vais.Agents.Control.Http.StreamingEndpointAttribute.StreamingEndpointAttribute() -> void
+Vais.Agents.Control.Http.StreamingInvokeOptions
+Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.get -> System.TimeSpan
+Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.set -> void
+Vais.Agents.Control.Http.StreamingInvokeOptions.StreamingInvokeOptions() -> void
