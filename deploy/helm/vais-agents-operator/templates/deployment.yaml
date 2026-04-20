@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vais-agents-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vais-agents-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vais-agents-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vais-agents-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "vais-agents-operator.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: operator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Vais__KubernetesOperator__ControlPlaneBaseUrl
+              value: {{ required "controlPlane.baseUrl is required" .Values.controlPlane.baseUrl | quote }}
+            - name: Vais__KubernetesOperator__ControlPlaneAudience
+              value: {{ .Values.controlPlane.audience | quote }}
+            - name: Vais__KubernetesOperator__TokenPath
+              value: {{ .Values.auth.tokenPath | quote }}
+            - name: Vais__KubernetesOperator__AuthMode
+              value: {{ .Values.auth.mode | quote }}
+            {{- if .Values.watchNamespaces }}
+            - name: Vais__KubernetesOperator__WatchNamespaces__0
+              value: {{ index .Values.watchNamespaces 0 | quote }}
+            {{- range $i, $ns := .Values.watchNamespaces }}
+            {{- if ne $i 0 }}
+            - name: Vais__KubernetesOperator__WatchNamespaces__{{ $i }}
+              value: {{ $ns | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+          {{- if eq .Values.auth.mode "ServiceAccount" }}
+          volumeMounts:
+            - name: vais-runtime-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          {{- else }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if eq .Values.auth.mode "ServiceAccount" }}
+        - name: vais-runtime-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: {{ .Values.controlPlane.audience | quote }}
+                  expirationSeconds: {{ .Values.auth.tokenExpirationSeconds }}
+                  path: {{ base .Values.auth.tokenPath | quote }}
+        {{- end }}

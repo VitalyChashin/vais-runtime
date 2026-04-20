@@ -1,0 +1,18 @@
+apiVersion: v2
+name: vais-agents-operator
+description: >-
+  Vais.Agents Kubernetes operator — reconciles Agent custom resources
+  against the v0.6 HTTP control plane via AgentControlPlaneClient.
+type: application
+version: 0.1.0
+appVersion: "0.13.0-preview"
+kubeVersion: ">=1.28.0-0"
+keywords:
+  - agents
+  - ai
+  - llm
+  - kubernetes
+  - operator
+home: https://example.invalid/vais-agents
+maintainers:
+  - name: VAIS contributors

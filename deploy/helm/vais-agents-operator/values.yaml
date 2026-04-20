@@ -1,0 +1,66 @@
+# Default values for vais-agents-operator.
+# Override with `helm install ... --set key=value` or a custom values.yaml.
+
+# Container image to deploy. Consumers build `docker build -t vais-agents-operator:0.13.0-preview .`
+# from the repo root and push to their own registry.
+image:
+  repository: vais-agents-operator
+  tag: 0.13.0-preview
+  pullPolicy: IfNotPresent
+
+# Replica count — v0.13 targets single-replica (no leader election yet).
+replicaCount: 1
+
+# Control-plane (runtime) configuration.
+controlPlane:
+  # Required — URL of the v0.6 HTTP control plane the operator reconciles against.
+  # Example: https://vais-runtime.vais.svc.cluster.local:443
+  baseUrl: ""
+  # JWT audience the operator requests on its projected ServiceAccount token
+  # and the runtime validates against on the receiving side.
+  audience: vais-agents-runtime
+
+# Auth mode. "ServiceAccount" uses the projected-token volume below;
+# "ClientCredentials" skips the handler and expects the consumer to wire
+# their own auth via env / config.
+auth:
+  mode: ServiceAccount
+  tokenPath: /var/run/secrets/tokens/vais-runtime-token
+  tokenExpirationSeconds: 3600
+
+# Watch-namespace scoping. Empty list = cluster-wide (requires
+# ClusterRoleBinding); narrow for per-tenant deployments.
+watchNamespaces: []
+
+# RBAC creation — when false, cluster operators manage SA + ClusterRole
+# out-of-band. Default true for simple installs.
+rbac:
+  create: true
+  # Install the CRD as a Helm pre-install/pre-upgrade hook.
+  installCrd: true
+
+# Resource limits. Defaults tuned for a lean reconcile loop.
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Pod-level knobs.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Labels merged onto all resources.
+labels: {}
+
+# Image pull secrets (when using a private registry).
+imagePullSecrets: []

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Control.Kubernetes</RootNamespace>
+    <AssemblyName>Vais.Agents.Control.KubernetesOperator</AssemblyName>
+    <Description>Kubernetes operator for Vais.Agents — declarative Agent custom resources reconciled against the v0.6 HTTP control plane via AgentControlPlaneClient. Ships CRD types, the reconcile controller, a ServiceAccount-projected-token HTTP handler, and a KubernetesSecretResolver. KubeOps 10.x backbone.</Description>
+    <PackageTags>agents;ai;llm;kubernetes;operator;crd;kubeops</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KubeOps.Abstractions" />
+    <PackageReference Include="KubeOps.Operator" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Control.KubernetesOperator.Tests" />
+  </ItemGroup>
+
+</Project>

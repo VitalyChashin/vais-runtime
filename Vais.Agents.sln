@@ -79,6 +79,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Orchestration.G
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests", "tests\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests.csproj", "{E88A6588-24FD-4836-A84C-2682D00FD5E2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.KubernetesOperator", "src\Vais.Agents.Control.KubernetesOperator\Vais.Agents.Control.KubernetesOperator.csproj", "{3E928784-BECD-4F9F-BDB4-87AD675FB1D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.KubernetesOperator.Tests", "tests\Vais.Agents.Control.KubernetesOperator.Tests\Vais.Agents.Control.KubernetesOperator.Tests.csproj", "{F803256B-0CAF-46B8-895B-3A2064F1E8D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Control.KubernetesOperator.Host", "src\Vais.Agents.Control.KubernetesOperator.Host\Vais.Agents.Control.KubernetesOperator.Host.csproj", "{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -232,6 +238,18 @@ Global
 		{E88A6588-24FD-4836-A84C-2682D00FD5E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E88A6588-24FD-4836-A84C-2682D00FD5E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E88A6588-24FD-4836-A84C-2682D00FD5E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E928784-BECD-4F9F-BDB4-87AD675FB1D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E928784-BECD-4F9F-BDB4-87AD675FB1D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E928784-BECD-4F9F-BDB4-87AD675FB1D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E928784-BECD-4F9F-BDB4-87AD675FB1D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F803256B-0CAF-46B8-895B-3A2064F1E8D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F803256B-0CAF-46B8-895B-3A2064F1E8D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F803256B-0CAF-46B8-895B-3A2064F1E8D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F803256B-0CAF-46B8-895B-3A2064F1E8D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -270,5 +288,8 @@ Global
 		{3417B1D4-CD19-4101-973A-802D7A81E1AE} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{0F86DE3F-7CDB-49FE-9016-07C39E621ABC} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{E88A6588-24FD-4836-A84C-2682D00FD5E2} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{3E928784-BECD-4F9F-BDB4-87AD675FB1D8} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{F803256B-0CAF-46B8-895B-3A2064F1E8D2} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{602B39A9-F80A-4B8B-ABD0-1B40DDC4EC86} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 	EndGlobalSection
 EndGlobal

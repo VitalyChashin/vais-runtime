@@ -1,0 +1,164 @@
+{{- if .Values.rbac.installCrd -}}
+# CRD install hook — runs at helm install/upgrade time with weight -10
+# (before the Deployment). Helm waits for the CRD to be registered before
+# creating workloads that reference it.
+#
+# NOTE: this block mirrors oss/agentic/deploy/crds/vais.io_agents.yaml.
+# Chart-embedded copy so `helm install` is self-contained; the standalone
+# file under deploy/crds/ is for kubectl-apply installs that don't use
+# Helm. Keep the two in sync.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agents.vais.io
+  annotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  labels:
+    {{- include "vais-agents-operator.labels" . | nindent 4 }}
+spec:
+  group: vais.io
+  scope: Namespaced
+  names:
+    kind: Agent
+    listKind: AgentList
+    plural: agents
+    singular: agent
+    shortNames:
+      - vagent
+      - vagents
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: AgentId
+          type: string
+          jsonPath: .spec.agentId
+        - name: Version
+          type: string
+          jsonPath: .spec.version
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+              required:
+                - agentId
+                - version
+                - handler
+                - protocols
+                - tools
+              properties:
+                agentId:
+                  type: string
+                version:
+                  type: string
+                handler:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                protocols:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                tools:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                preserveOnDelete:
+                  type: boolean
+                  default: false
+                secretRefs:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    required:
+                      - name
+                      - key
+                    properties:
+                      name:
+                        type: string
+                      key:
+                        type: string
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Creating
+                    - Active
+                    - Updating
+                    - Error
+                    - Terminating
+                manifestRevision:
+                  type: string
+                observedGeneration:
+                  type: integer
+                  format: int64
+                lastReconciledAt:
+                  type: string
+                  format: date-time
+                lastError:
+                  type: string
+                agentHandle:
+                  type: object
+                  properties:
+                    agentId:
+                      type: string
+                    version:
+                      type: string
+                    instanceId:
+                      type: string
+                      nullable: true
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+{{- end }}

@@ -1,0 +1,8 @@
+**/bin
+**/obj
+**/*.user
+**/.vs
+**/.idea
+**/.git
+**/node_modules
+**/artifacts

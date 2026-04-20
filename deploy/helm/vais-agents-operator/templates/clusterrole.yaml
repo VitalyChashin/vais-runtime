@@ -1,0 +1,27 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "vais-agents-operator.fullname" . }}
+  labels:
+    {{- include "vais-agents-operator.labels" . | nindent 4 }}
+rules:
+  # Watch + reconcile AgentEntity custom resources.
+  - apiGroups: ["vais.io"]
+    resources: ["agents"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["vais.io"]
+    resources: ["agents/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["vais.io"]
+    resources: ["agents/finalizers"]
+    verbs: ["update", "patch"]
+  # Resolve secretRefs on Agent specs.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  # Emit events for observability.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+{{- end }}
