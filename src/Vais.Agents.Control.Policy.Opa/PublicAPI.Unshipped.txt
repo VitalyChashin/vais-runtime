@@ -1,0 +1,25 @@
+#nullable enable
+Vais.Agents.Control.Policy.Opa.OpaFailMode
+Vais.Agents.Control.Policy.Opa.OpaFailMode.Closed = 0 -> Vais.Agents.Control.Policy.Opa.OpaFailMode
+Vais.Agents.Control.Policy.Opa.OpaFailMode.Open = 1 -> Vais.Agents.Control.Policy.Opa.OpaFailMode
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.BaseUrl.get -> System.Uri!
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.BaseUrl.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DataPath.get -> string!
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DataPath.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DecisionCacheMaxEntries.get -> int
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DecisionCacheMaxEntries.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DecisionCacheTtl.get -> System.TimeSpan
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.DecisionCacheTtl.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.FailMode.get -> Vais.Agents.Control.Policy.Opa.OpaFailMode
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.FailMode.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.LogPolicyVersionOnStartup.get -> bool
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.LogPolicyVersionOnStartup.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.OpaPolicyEngineOptions() -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.Timeout.get -> System.TimeSpan
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions.Timeout.set -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngine
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngine.OpaPolicyEngine(System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Options.IOptionsMonitor<Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions!>! options, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Control.Policy.Opa.OpaPolicyEngine!>! logger) -> void
+Vais.Agents.Control.Policy.Opa.OpaPolicyEngineServiceCollectionExtensions
+static Vais.Agents.Control.Policy.Opa.OpaPolicyEngineServiceCollectionExtensions.AddOpaPolicyEngine(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Control.Policy.Opa.OpaPolicyEngineOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

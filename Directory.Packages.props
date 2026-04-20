@@ -105,6 +105,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Testcontainers (integration tests that need real infrastructure).">
+    <PackageVersion Include="Testcontainers" Version="4.11.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="4.11.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.11.0" />
   </ItemGroup>

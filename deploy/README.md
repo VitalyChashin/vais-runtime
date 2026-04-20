@@ -66,3 +66,15 @@ kubectl delete crd agents.vais.io
 
 See the chart [README](helm/vais-agents-operator/README.md) for the full
 values reference and v0.13.0-preview known limitations.
+
+## Related
+
+- [`../samples/opa-sidecar/README.md`](../samples/opa-sidecar/README.md) —
+  wiring `Vais.Agents.Control.Policy.Opa` (v0.14) as an OPA sidecar
+  alongside the operator / runtime for admission-control policy.
+- [`../samples/opa-policies/README.md`](../samples/opa-policies/README.md) —
+  ready-to-use Rego samples (tenant-scoped / model-provider allowlist /
+  budget cap).
+- [`../contracts/opa-input-schema.md`](../contracts/opa-input-schema.md) —
+  v1 schema contract for Rego policies against the v0.6
+  `IAgentPolicyEngine` verbs.

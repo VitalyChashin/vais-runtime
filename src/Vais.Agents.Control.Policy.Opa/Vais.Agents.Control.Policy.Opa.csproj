@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Control.Policy.Opa</RootNamespace>
+    <AssemblyName>Vais.Agents.Control.Policy.Opa</AssemblyName>
+    <Description>OPA/Rego adapter for the Vais.Agents IAgentPolicyEngine contract. Talks HTTP to a sidecar OPA instance (POST /v1/data/{path}/allow), resolves both boolean and structured-object decision shapes, and caches decisions via a SHA-256-keyed TTL store. Fail-closed by default.</Description>
+    <PackageTags>agents;ai;llm;control-plane;policy;opa;rego</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Control.Policy.Opa.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Control.Policy.Opa.IntegrationTests" />
+  </ItemGroup>
+
+</Project>
