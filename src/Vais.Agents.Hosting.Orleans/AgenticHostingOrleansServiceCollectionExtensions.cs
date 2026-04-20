@@ -124,4 +124,23 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IGraphCheckpointer>(sp => new OrleansCheckpointer(sp.GetRequiredService<IGrainFactory>()));
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansIdempotencyStore"/> as the durable
+    /// <see cref="Vais.Agents.Control.IIdempotencyStore"/>. Call <b>before</b>
+    /// <c>AddAgentControlPlaneIdempotency</c> so the <c>TryAddSingleton</c>
+    /// discipline picks this Orleans implementation over the InMemory default.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    /// <param name="ttl">Optional TTL override. Pass the same value as the HTTP
+    /// middleware's <c>IdempotencyOptions.Ttl</c> so both sides agree on when
+    /// entries expire. Null defaults to <see cref="OrleansIdempotencyStore.DefaultTtl"/> (24h).</param>
+    public static IServiceCollection AddOrleansIdempotencyStore(this IServiceCollection services, TimeSpan? ttl = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<Vais.Agents.Control.IIdempotencyStore>(sp => new OrleansIdempotencyStore(
+            sp.GetRequiredService<IGrainFactory>(),
+            ttl ?? OrleansIdempotencyStore.DefaultTtl));
+        return services;
+    }
 }

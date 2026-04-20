@@ -1,1 +1,40 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState.Completed = 1 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState.InFlight = 0 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.CachedResponseJson -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.ExistingFingerprint -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.IdempotencyGrainBeginResult() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.Status -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.IdempotencyKeyGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.get -> Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.set -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.get -> bool
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.set -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.IdempotencyKeyGrainState() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ExpiresAt -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.Fingerprint -> string!
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.GrainKey -> string!
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.IdempotencyKeySurrogate() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ResponseJson -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.State -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.CompleteAsync(Vais.Agents.Control.IdempotencyKey key, Vais.Agents.Control.CachedResponse! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory, System.TimeSpan ttl) -> void
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.ReleaseAsync(Vais.Agents.Control.IdempotencyKey key, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.TryBeginAsync(Vais.Agents.Control.IdempotencyKey key, string! fingerprint, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.IdempotencyBeginResult!>
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansIdempotencyStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.TimeSpan? ttl = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.BuildGrainKey(Vais.Agents.Control.IdempotencyKey key) -> string!
+static readonly Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.DefaultTtl -> System.TimeSpan

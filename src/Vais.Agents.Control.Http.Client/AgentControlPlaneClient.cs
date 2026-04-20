@@ -25,23 +25,44 @@ namespace Vais.Agents.Control.Http;
 /// </remarks>
 public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
 {
+    private const string IdempotencyHeaderName = "Idempotency-Key";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _http;
+    private readonly AgentControlPlaneClientOptions _options;
 
-    /// <summary>Construct over a pre-configured <see cref="HttpClient"/>.</summary>
+    /// <summary>Construct over a pre-configured <see cref="HttpClient"/> with default options.</summary>
     public AgentControlPlaneClient(HttpClient httpClient)
+        : this(httpClient, new AgentControlPlaneClientOptions())
+    {
+    }
+
+    /// <summary>
+    /// Construct over a pre-configured <see cref="HttpClient"/> + client options.
+    /// Options govern idempotency-key auto-generation + factory overrides.
+    /// </summary>
+    public AgentControlPlaneClient(HttpClient httpClient, AgentControlPlaneClientOptions options)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(options);
         _http = httpClient;
+        _options = options;
     }
 
     /// <inheritdoc />
-    public async Task<AgentHandle> CreateAsync(AgentManifest manifest, CancellationToken cancellationToken = default)
+    public Task<AgentHandle> CreateAsync(AgentManifest manifest, CancellationToken cancellationToken = default)
+        => CreateAsync(manifest, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<AgentHandle> CreateAsync(AgentManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        using var content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json");
-        using var response = await _http.PostAsync("/v1/agents", content, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/agents")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         var handle = await response.Content.ReadFromJsonAsync<AgentHandle>(JsonOptions, cancellationToken).ConfigureAwait(false);
         return handle ?? throw new InvalidOperationException("Server returned empty body on Create.");
@@ -72,7 +93,11 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
-    public async Task<AgentHandle> UpdateAsync(string agentId, AgentManifest newManifest, string? version = null, CancellationToken cancellationToken = default)
+    public Task<AgentHandle> UpdateAsync(string agentId, AgentManifest newManifest, string? version = null, CancellationToken cancellationToken = default)
+        => UpdateAsync(agentId, newManifest, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<AgentHandle> UpdateAsync(string agentId, AgentManifest newManifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         ArgumentNullException.ThrowIfNull(newManifest);
@@ -81,6 +106,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         {
             Content = new StringContent(EnvelopeSerializer.Serialize(newManifest), Encoding.UTF8, "application/json"),
         };
+        AttachIdempotencyKey(request, idempotencyKey);
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         var handle = await response.Content.ReadFromJsonAsync<AgentHandle>(JsonOptions, cancellationToken).ConfigureAwait(false);
@@ -89,42 +115,82 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
 
     /// <inheritdoc />
     public Task CancelAsync(string agentId, string? version = null, CancellationToken cancellationToken = default)
-        => DeleteAsync(agentId, version, mode: "cancel", cancellationToken);
+        => DeleteAsync(agentId, version, mode: "cancel", idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task CancelAsync(string agentId, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => DeleteAsync(agentId, version, mode: "cancel", idempotencyKey, cancellationToken);
 
     /// <inheritdoc />
     public Task EvictAsync(string agentId, string? version = null, CancellationToken cancellationToken = default)
-        => DeleteAsync(agentId, version, mode: "evict", cancellationToken);
+        => DeleteAsync(agentId, version, mode: "evict", idempotencyKey: null, cancellationToken);
 
-    private async Task DeleteAsync(string agentId, string? version, string mode, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public Task EvictAsync(string agentId, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => DeleteAsync(agentId, version, mode: "evict", idempotencyKey, cancellationToken);
+
+    private async Task DeleteAsync(string agentId, string? version, string mode, string? idempotencyKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         var qs = new List<string> { $"mode={mode}" };
         if (!string.IsNullOrWhiteSpace(version)) qs.Add($"version={Uri.EscapeDataString(version)}");
         var path = $"/v1/agents/{Uri.EscapeDataString(agentId)}?{string.Join('&', qs)}";
-        using var response = await _http.DeleteAsync(path, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<AgentInvocationResult> InvokeAsync(string agentId, AgentInvocationRequest request, string? version = null, CancellationToken cancellationToken = default)
+    public Task<AgentInvocationResult> InvokeAsync(string agentId, AgentInvocationRequest request, string? version = null, CancellationToken cancellationToken = default)
+        => InvokeAsync(agentId, request, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<AgentInvocationResult> InvokeAsync(string agentId, AgentInvocationRequest request, string? version, string? idempotencyKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         ArgumentNullException.ThrowIfNull(request);
         var path = version is null ? $"/v1/agents/{Uri.EscapeDataString(agentId)}/invoke" : $"/v1/agents/{Uri.EscapeDataString(agentId)}/invoke?version={Uri.EscapeDataString(version)}";
-        using var response = await _http.PostAsJsonAsync(path, request, JsonOptions, cancellationToken).ConfigureAwait(false);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(request, options: JsonOptions),
+        };
+        AttachIdempotencyKey(httpRequest, idempotencyKey);
+        using var response = await _http.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         var result = await response.Content.ReadFromJsonAsync<AgentInvocationResult>(JsonOptions, cancellationToken).ConfigureAwait(false);
         return result ?? throw new InvalidOperationException("Server returned empty body on Invoke.");
     }
 
     /// <inheritdoc />
-    public async Task SignalAsync(string agentId, AgentSignal signal, string? version = null, CancellationToken cancellationToken = default)
+    public Task SignalAsync(string agentId, AgentSignal signal, string? version = null, CancellationToken cancellationToken = default)
+        => SignalAsync(agentId, signal, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task SignalAsync(string agentId, AgentSignal signal, string? version, string? idempotencyKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         ArgumentNullException.ThrowIfNull(signal);
         var path = version is null ? $"/v1/agents/{Uri.EscapeDataString(agentId)}/signal" : $"/v1/agents/{Uri.EscapeDataString(agentId)}/signal?version={Uri.EscapeDataString(version)}";
-        using var response = await _http.PostAsJsonAsync(path, signal, JsonOptions, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(signal, options: JsonOptions),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void AttachIdempotencyKey(HttpRequestMessage request, string? explicitKey)
+    {
+        var effective = explicitKey
+            ?? (_options.AutoGenerateIdempotencyKey
+                ? (_options.IdempotencyKeyFactory?.Invoke() ?? Guid.NewGuid().ToString("N"))
+                : null);
+        if (!string.IsNullOrEmpty(effective))
+        {
+            request.Headers.TryAddWithoutValidation(IdempotencyHeaderName, effective);
+        }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)

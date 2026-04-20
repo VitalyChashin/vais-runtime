@@ -34,39 +34,109 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
 
-        var group = builder.MapGroup(prefix);
+        var group = builder.MapGroup(prefix).WithTags("Agents");
 
         // POST /agents — Create
         group.MapPost("/agents", CreateAsync)
-            .WithName("Agents.Create");
+            .WithName("Agents.Create")
+            .WithSummary("Create an agent from a manifest.")
+            .WithDescription(
+                "Accepts an AgentManifest as JSON or YAML (Content-Type: application/json or application/yaml). " +
+                "Honours the Idempotency-Key header when the idempotency middleware is mounted — retries with " +
+                "the same key + same body replay the original response; different body ⇒ 422 " +
+                "urn:vais-agents:idempotency-mismatch.")
+            .Accepts<AgentManifest>("application/json", "application/yaml")
+            .Produces<AgentHandle>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // GET /agents — List (optional label filter, optional cursor / limit)
         group.MapGet("/agents", ListAsync)
-            .WithName("Agents.List");
+            .WithName("Agents.List")
+            .WithSummary("List registered agents with optional label-prefix filter.")
+            .WithDescription("Query parameters: labels (prefix filter), limit (1..500, default 50).")
+            .Produces<AgentListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // GET /agents/{id} — Query (latest version by default, ?version=X for specific)
         group.MapGet("/agents/{id}", QueryAsync)
-            .WithName("Agents.Query");
+            .WithName("Agents.Query")
+            .WithSummary("Fetch a specific agent manifest + current lifecycle status.")
+            .WithDescription("Returns the latest version by default; pass ?version=X to pin.")
+            .Produces<AgentQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // PATCH /agents/{id} — Update
         group.MapPatch("/agents/{id}", UpdateAsync)
-            .WithName("Agents.Update");
+            .WithName("Agents.Update")
+            .WithSummary("Publish a new manifest version for an existing agent.")
+            .WithDescription(
+                "PATCH semantics: supply the full new manifest; the server records it as a new version. " +
+                "Honours the Idempotency-Key header when the idempotency middleware is mounted.")
+            .Accepts<AgentManifest>("application/json", "application/yaml")
+            .Produces<AgentHandle>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // DELETE /agents/{id} — Cancel or Evict
         group.MapDelete("/agents/{id}", CancelOrEvictAsync)
-            .WithName("Agents.CancelOrEvict");
+            .WithName("Agents.CancelOrEvict")
+            .WithSummary("Cancel in-flight work (?mode=cancel) or remove the manifest (?mode=evict).")
+            .WithDescription("Default mode is evict. Cancel leaves the manifest registered; Evict removes it.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // POST /agents/{id}/invoke — Invoke (sync)
         group.MapPost("/agents/{id}/invoke", InvokeAsync)
-            .WithName("Agents.Invoke");
+            .WithName("Agents.Invoke")
+            .WithSummary("Synchronously invoke an agent; returns the assistant reply.")
+            .WithDescription(
+                "Body is an AgentInvocationRequest (text + optional metadata). The server routes to the " +
+                "target silo/tenant and returns an AgentInvocationResult. Honours Idempotency-Key.")
+            .Accepts<AgentInvocationRequest>("application/json")
+            .Produces<AgentInvocationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // POST /agents/{id}/signal — Signal
         group.MapPost("/agents/{id}/signal", SignalAsync)
-            .WithName("Agents.Signal");
+            .WithName("Agents.Signal")
+            .WithSummary("Fire-and-forget signal delivery to a running agent.")
+            .WithDescription("Body is an AgentSignal (kind + opaque payload). Returns 202 on acceptance.")
+            .Accepts<AgentSignal>("application/json")
+            .Produces(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // Health + readiness
-        group.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).WithName("Agents.Healthz");
-        group.MapGet("/readyz", () => Results.Ok(new { status = "ready" })).WithName("Agents.Readyz");
+        group.MapGet("/healthz", () => Results.Ok(new { status = "ok" }))
+            .WithName("Agents.Healthz")
+            .WithSummary("Liveness probe.")
+            .WithTags("Health");
+        group.MapGet("/readyz", () => Results.Ok(new { status = "ready" }))
+            .WithName("Agents.Readyz")
+            .WithSummary("Readiness probe.")
+            .WithTags("Health");
 
         return builder;
     }

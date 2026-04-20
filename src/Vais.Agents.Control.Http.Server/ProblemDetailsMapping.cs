@@ -35,6 +35,12 @@ public static class ProblemDetailsMapping
     /// <summary>Catch-all for mid-verb exceptions that don't map to a specific type URN.</summary>
     public const string BackendUnavailableType = TypePrefix + "backend-unavailable";
 
+    /// <summary>Client reused an <c>Idempotency-Key</c> with a different request body (v0.11).</summary>
+    public const string IdempotencyMismatchType = TypePrefix + "idempotency-mismatch";
+
+    /// <summary>Another request with the same <c>Idempotency-Key</c> is still executing (v0.11).</summary>
+    public const string IdempotencyInFlightType = TypePrefix + "idempotency-in-flight";
+
     /// <summary>
     /// Translate a control-plane exception into an <see cref="IResult"/> carrying
     /// Problem Details with an appropriate status code + type URN.
@@ -62,6 +68,65 @@ public static class ProblemDetailsMapping
             pd.Extensions["errors"] = validation.Errors.ToArray();
         }
         return Results.Problem(pd);
+    }
+
+    /// <summary>
+    /// Build a 422 Problem Details response for an <c>Idempotency-Key</c> reuse
+    /// with a different body. Called by the idempotency middleware when
+    /// <see cref="IdempotencyBeginStatus.Mismatch"/> is observed.
+    /// </summary>
+    public static IResult IdempotencyMismatch(string key, string? existingFingerprint = null, string? instance = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        var pd = new ProblemDetails
+        {
+            Type = IdempotencyMismatchType,
+            Title = "Idempotency-Key reused with a different body",
+            Status = StatusCodes.Status422UnprocessableEntity,
+            Detail = $"Idempotency-Key '{key}' was already used with a different request body.",
+            Instance = instance,
+        };
+        pd.Extensions["idempotencyKey"] = key;
+        if (existingFingerprint is not null) pd.Extensions["existingFingerprint"] = existingFingerprint;
+        return Results.Problem(pd);
+    }
+
+    /// <summary>
+    /// Build a 409 Problem Details response for a concurrent request holding the
+    /// same <c>Idempotency-Key</c>. Adds a <c>Retry-After</c> header hint.
+    /// </summary>
+    public static IResult IdempotencyInFlight(string key, TimeSpan? retryAfter = null, string? instance = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        var pd = new ProblemDetails
+        {
+            Type = IdempotencyInFlightType,
+            Title = "Idempotency-Key request in progress",
+            Status = StatusCodes.Status409Conflict,
+            Detail = $"Another request with Idempotency-Key '{key}' is currently executing. Retry after it completes.",
+            Instance = instance,
+        };
+        pd.Extensions["idempotencyKey"] = key;
+        var seconds = (int)Math.Max(1, (retryAfter ?? TimeSpan.FromSeconds(1)).TotalSeconds);
+        return new RetryAfterResult(Results.Problem(pd), seconds);
+    }
+
+    private sealed class RetryAfterResult : IResult
+    {
+        private readonly IResult _inner;
+        private readonly int _retryAfterSeconds;
+
+        public RetryAfterResult(IResult inner, int retryAfterSeconds)
+        {
+            _inner = inner;
+            _retryAfterSeconds = retryAfterSeconds;
+        }
+
+        public Task ExecuteAsync(HttpContext httpContext)
+        {
+            httpContext.Response.Headers["Retry-After"] = _retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return _inner.ExecuteAsync(httpContext);
+        }
     }
 
     private static (int Status, string Type, string Title) Classify(Exception ex) => ex switch

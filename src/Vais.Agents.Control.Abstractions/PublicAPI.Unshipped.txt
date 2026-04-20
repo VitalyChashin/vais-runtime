@@ -1,1 +1,62 @@
 #nullable enable
+Vais.Agents.Control.CachedResponse
+Vais.Agents.Control.CachedResponse.<Clone>$() -> Vais.Agents.Control.CachedResponse!
+Vais.Agents.Control.CachedResponse.Body.get -> byte[]!
+Vais.Agents.Control.CachedResponse.Body.init -> void
+Vais.Agents.Control.CachedResponse.CachedResponse(int StatusCode, string! ContentType, byte[]! Body, System.DateTimeOffset CompletedAt) -> void
+Vais.Agents.Control.CachedResponse.CompletedAt.get -> System.DateTimeOffset
+Vais.Agents.Control.CachedResponse.CompletedAt.init -> void
+Vais.Agents.Control.CachedResponse.ContentType.get -> string!
+Vais.Agents.Control.CachedResponse.ContentType.init -> void
+Vais.Agents.Control.CachedResponse.Deconstruct(out int StatusCode, out string! ContentType, out byte[]! Body, out System.DateTimeOffset CompletedAt) -> void
+Vais.Agents.Control.CachedResponse.Equals(Vais.Agents.Control.CachedResponse? other) -> bool
+Vais.Agents.Control.CachedResponse.StatusCode.get -> int
+Vais.Agents.Control.CachedResponse.StatusCode.init -> void
+Vais.Agents.Control.IIdempotencyStore
+Vais.Agents.Control.IIdempotencyStore.CompleteAsync(Vais.Agents.Control.IdempotencyKey key, Vais.Agents.Control.CachedResponse! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IIdempotencyStore.ReleaseAsync(Vais.Agents.Control.IdempotencyKey key, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IIdempotencyStore.TryBeginAsync(Vais.Agents.Control.IdempotencyKey key, string! fingerprint, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.IdempotencyBeginResult!>
+Vais.Agents.Control.IdempotencyBeginResult
+Vais.Agents.Control.IdempotencyBeginResult.<Clone>$() -> Vais.Agents.Control.IdempotencyBeginResult!
+Vais.Agents.Control.IdempotencyBeginResult.CachedResponse.get -> Vais.Agents.Control.CachedResponse?
+Vais.Agents.Control.IdempotencyBeginResult.CachedResponse.init -> void
+Vais.Agents.Control.IdempotencyBeginResult.Deconstruct(out Vais.Agents.Control.IdempotencyBeginStatus Status, out Vais.Agents.Control.CachedResponse? CachedResponse, out string? ExistingFingerprint) -> void
+Vais.Agents.Control.IdempotencyBeginResult.Equals(Vais.Agents.Control.IdempotencyBeginResult? other) -> bool
+Vais.Agents.Control.IdempotencyBeginResult.ExistingFingerprint.get -> string?
+Vais.Agents.Control.IdempotencyBeginResult.ExistingFingerprint.init -> void
+Vais.Agents.Control.IdempotencyBeginResult.IdempotencyBeginResult(Vais.Agents.Control.IdempotencyBeginStatus Status, Vais.Agents.Control.CachedResponse? CachedResponse = null, string? ExistingFingerprint = null) -> void
+Vais.Agents.Control.IdempotencyBeginResult.Status.get -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyBeginResult.Status.init -> void
+Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyBeginStatus.InFlight = 3 -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyBeginStatus.Mismatch = 2 -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyBeginStatus.New = 0 -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyBeginStatus.Replay = 1 -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Control.IdempotencyKey
+Vais.Agents.Control.IdempotencyKey.Deconstruct(out string? TenantId, out string! Method, out string! Path, out string! Key) -> void
+Vais.Agents.Control.IdempotencyKey.Equals(Vais.Agents.Control.IdempotencyKey other) -> bool
+Vais.Agents.Control.IdempotencyKey.IdempotencyKey() -> void
+Vais.Agents.Control.IdempotencyKey.IdempotencyKey(string? TenantId, string! Method, string! Path, string! Key) -> void
+Vais.Agents.Control.IdempotencyKey.Key.get -> string!
+Vais.Agents.Control.IdempotencyKey.Key.init -> void
+Vais.Agents.Control.IdempotencyKey.Method.get -> string!
+Vais.Agents.Control.IdempotencyKey.Method.init -> void
+Vais.Agents.Control.IdempotencyKey.Path.get -> string!
+Vais.Agents.Control.IdempotencyKey.Path.init -> void
+Vais.Agents.Control.IdempotencyKey.TenantId.get -> string?
+Vais.Agents.Control.IdempotencyKey.TenantId.init -> void
+override Vais.Agents.Control.CachedResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.CachedResponse.GetHashCode() -> int
+override Vais.Agents.Control.CachedResponse.ToString() -> string!
+override Vais.Agents.Control.IdempotencyBeginResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.IdempotencyBeginResult.GetHashCode() -> int
+override Vais.Agents.Control.IdempotencyBeginResult.ToString() -> string!
+override Vais.Agents.Control.IdempotencyKey.GetHashCode() -> int
+static Vais.Agents.Control.CachedResponse.operator !=(Vais.Agents.Control.CachedResponse? left, Vais.Agents.Control.CachedResponse? right) -> bool
+static Vais.Agents.Control.CachedResponse.operator ==(Vais.Agents.Control.CachedResponse? left, Vais.Agents.Control.CachedResponse? right) -> bool
+static Vais.Agents.Control.IdempotencyBeginResult.operator !=(Vais.Agents.Control.IdempotencyBeginResult? left, Vais.Agents.Control.IdempotencyBeginResult? right) -> bool
+static Vais.Agents.Control.IdempotencyBeginResult.operator ==(Vais.Agents.Control.IdempotencyBeginResult? left, Vais.Agents.Control.IdempotencyBeginResult? right) -> bool
+static Vais.Agents.Control.IdempotencyKey.operator !=(Vais.Agents.Control.IdempotencyKey left, Vais.Agents.Control.IdempotencyKey right) -> bool
+static Vais.Agents.Control.IdempotencyKey.operator ==(Vais.Agents.Control.IdempotencyKey left, Vais.Agents.Control.IdempotencyKey right) -> bool
+~override Vais.Agents.Control.IdempotencyKey.Equals(object obj) -> bool
+~override Vais.Agents.Control.IdempotencyKey.ToString() -> string

@@ -48,6 +48,11 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.1.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="ASP.NET Core OpenAPI (v0.11 HTTP polish pillar).">
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
   </ItemGroup>
 
   <ItemGroup Label="Public API surface guard">

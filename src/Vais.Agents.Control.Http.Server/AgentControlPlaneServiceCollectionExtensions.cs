@@ -24,4 +24,26 @@ public static class AgentControlPlaneServiceCollectionExtensions
         services.TryAddSingleton<IAgentManifestLoader, JsonAgentManifestLoader>();
         return services;
     }
+
+    /// <summary>
+    /// Register the in-process <see cref="IIdempotencyStore"/> default
+    /// (<see cref="InMemoryIdempotencyStore"/>) + configure <see cref="IdempotencyOptions"/>.
+    /// Consumers who want durable dedupe across silo restart call
+    /// <c>services.AddOrleansIdempotencyStore()</c> from <c>Vais.Agents.Hosting.Orleans</c>
+    /// <b>before</b> this extension — <c>TryAddSingleton</c> discipline means the
+    /// first registered store wins.
+    /// </summary>
+    public static IServiceCollection AddAgentControlPlaneIdempotency(
+        this IServiceCollection services,
+        Action<IdempotencyOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        var builder = services.AddOptions<IdempotencyOptions>();
+        if (configure is not null)
+        {
+            builder.Configure(configure);
+        }
+        services.TryAddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
+        return services;
+    }
 }
