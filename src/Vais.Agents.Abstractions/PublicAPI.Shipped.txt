@@ -1650,3 +1650,4 @@ virtual Vais.Agents.GraphEdgePredicate.PrintMembers(System.Text.StringBuilder! b
 virtual Vais.Agents.JournalEntry.EqualityContract.get -> System.Type!
 virtual Vais.Agents.JournalEntry.Equals(Vais.Agents.JournalEntry? other) -> bool
 virtual Vais.Agents.JournalEntry.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Vais.Agents.IStreamingAgentFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!

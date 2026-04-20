@@ -176,3 +176,5 @@ static readonly Vais.Agents.Core.NullAgentJournal.Instance -> Vais.Agents.Core.N
 static readonly Vais.Agents.Core.NullMemoryStore.Instance -> Vais.Agents.Core.NullMemoryStore!
 static readonly Vais.Agents.Core.NullUsageSink.Instance -> Vais.Agents.Core.NullUsageSink!
 virtual Vais.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais.Agents.OrchestrationStep!>! steps) -> bool
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.init -> void

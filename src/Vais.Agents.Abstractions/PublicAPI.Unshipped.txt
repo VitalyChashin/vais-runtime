@@ -1,2 +1,1 @@
 #nullable enable
-Vais.Agents.IStreamingAgentFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
