@@ -8,6 +8,8 @@ Short records of decisions that shape the public surface. Each ADR captures the 
 |---|---|---|---|
 | [0001](0001-keyed-ichatclient-di-convention.md) | Keyed `IChatClient` DI convention | Accepted | 2026-04-17 |
 | [0002](0002-otel-genai-conventions.md) | OpenTelemetry GenAI semantic conventions | Accepted | 2026-04-17 |
+| [0003](0003-streaming-filter-contract.md) | Streaming filter contract — one DIM method, three override points | Accepted | 2026-04-20 |
+| [0004](0004-sse-event-taxonomy-on-wire.md) | SSE streams carry the full `AgentEvent` taxonomy | Accepted | 2026-04-20 |
 
 ## Adding a new ADR
 

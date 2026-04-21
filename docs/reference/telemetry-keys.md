@@ -87,15 +87,74 @@ Per turn, after the provider returns (or after failure):
 
 `OpenTelemetryUsageSink` translates `UsageRecord` → the two histogram metrics above. Other sinks (DB, HTTP, Kafka) consume the full record as they see fit.
 
+## v0.11 — HTTP idempotency middleware
+
+`AgentControlPlaneIdempotencyMiddleware` (`Vais.Agents.Control.Http.Server`) emits per-request tags on the outer ASP.NET Core activity when an `Idempotency-Key` header is present:
+
+| Tag | Source | Values |
+|---|---|---|
+| `vais.control.idempotency.key` | `Idempotency-Key` request header | opaque ≤ 255 chars |
+| `vais.control.idempotency.status` | result of `IIdempotencyStore.TryBeginAsync` | `"new"`, `"replayed"`, `"in-flight"`, `"mismatch"` |
+| `vais.control.idempotency.fingerprint` | SHA-256 of the request body (truncated hex) | 16-char prefix |
+| `vais.control.idempotency.store` | which `IIdempotencyStore` served the call | `"InMemory"`, `"Orleans"` |
+
+`Idempotency-Replayed: true` on the response correlates with `vais.control.idempotency.status == "replayed"`. Consumers watching `replayed` volume vs. `new` volume get a clean signal on retry rate without parsing bodies.
+
+## v0.12 — SSE streaming-invoke
+
+`/v1/agents/{id}/invoke/stream` emits tags on the request activity + per-event tags on a child `vais.stream` activity:
+
+| Tag | Source | Values |
+|---|---|---|
+| `vais.stream.session` | `AgentInvocationRequest.SessionId` | opaque |
+| `vais.stream.event-count` | events yielded before connection closed | integer, set at end |
+| `vais.stream.heartbeat-count` | SSE comments emitted | integer, set at end |
+| `vais.stream.closed-reason` | how the stream terminated | `"completed"`, `"failed"`, `"client-cancel"`, `"server-cancel"` |
+| `vais.stream.event-kind` | event-subtype name on per-event child span | kebab-case wire name (`turn.started`, `delta`, `tool.completed`, …) |
+
+Per-event child spans are sampled — collector-side sampling decisions apply. Disable via `StreamingInvokeOptions.EmitPerEventSpans = false` when the event volume overwhelms exporter budgets.
+
+## v0.13 — Kubernetes operator
+
+KubeOps 10.3.4 emits its own metrics on the operator's meter (`KubeOps.Operator`). Cross-reference with Vais-specific controller tags:
+
+| Tag | Source | Values |
+|---|---|---|
+| `vais.operator.crd-version` | CRD version the controller is watching | `"vais.io/v1alpha1"` |
+| `vais.operator.phase` | `AgentEntity.Status.Phase` | `Pending` / `Creating` / `Active` / `Updating` / `Error` / `Terminating` |
+| `vais.operator.verb` | verb issued against the HTTP control plane | `"create"` / `"update"` / `"evict"` |
+| `vais.operator.manifest-revision` | `status.manifestRevision` at reconcile time | `sha256:` hex |
+| `vais.operator.observed-generation` | `status.observedGeneration` after reconcile | integer |
+
+The operator reuses `Vais.Agents.ActivitySource` — reconcile activities appear alongside runtime spans in the same trace source. Correlate via `vais.correlation.id` when the operator thread context carries one (typically from the incoming CR's annotation).
+
+## v0.14 — OPA policy engine
+
+`OpaPolicyEngine` (`Vais.Agents.Control.Policy.Opa`) emits a `Vais.Agents.Policy.OPA` activity per `EvaluateAsync` call:
+
+| Tag | Source | Values |
+|---|---|---|
+| `vais.policy.operation` | `PolicyOperation` enum | `Create` / `Invoke` / `Signal` / `Query` / `Cancel` / `Update` / `Evict` |
+| `vais.policy.agent.id` | `AgentManifest.Id` when non-null | opaque |
+| `vais.policy.agent.version` | `AgentManifest.Version` when non-null | opaque |
+| `vais.policy.principal.tenant` | `AgentPrincipal.TenantId` when non-null | opaque |
+| `vais.policy.cache-hit` | decision-cache hit? | `True` / `False` |
+| `vais.policy.decision` | result | `allow` / `deny` |
+| `vais.policy.deny-reason` | reason from Rego on deny | opaque |
+| `vais.policy.opa.status-code` | OPA HTTP response code on `200` / `5xx` | `200`, `5xx`; absent on transport failure |
+
+Deny is a span-status `Error` with the reason as description — standard OTel conventions. A `Denied` dashboard filters on `vais.policy.decision = "deny"` with `vais.policy.deny-reason` as the breakdown.
+
 ## Constants in code
 
-All `vais.*` names are available as `const string` in `Vais.Agents.Core.AgenticTags`:
+All `vais.*` names are available as `const string` in `Vais.Agents.Core.AgenticTags` (core agent tags) + `AgenticTags.Control.*` / `AgenticTags.Stream.*` / `AgenticTags.Operator.*` / `AgenticTags.Policy.*` (post-v0.6 families, declared alongside their emitting packages):
 
 ```csharp
 using Vais.Agents.Core;
 
 // Don't type strings — use:
 activity.SetTag(AgenticTags.UserId, ctx.UserId);
+activity.SetTag(AgenticTags.Policy.Decision, "deny");
 ```
 
 `gen_ai.*` names are the spec; they aren't re-exported as constants (OpenTelemetry's own `SemanticConventions` package carries them).
@@ -105,3 +164,5 @@ activity.SetTag(AgenticTags.UserId, ctx.UserId);
 - [Observability concept](../concepts/observability.md)
 - [ADR 0002 — OTel GenAI conventions](../adr/0002-otel-genai-conventions.md)
 - [Deploy OTel and Langfuse guide](../guides/deploy-otel-and-langfuse.md)
+- [OPA policy engine concept](../concepts/opa-policy-engine.md) — per-evaluation span shape.
+- [Kubernetes operator concept](../concepts/kubernetes-operator.md) — reconcile span shape.

@@ -4,6 +4,11 @@ Contract between `Vais.Agents.Control.Policy.Opa` and Rego policies.
 Shipped with v0.14.0-preview. Rego policies authored against this
 schema consume `input.*` fields via the standard OPA evaluation model.
 
+> **Rendered docs:** [`docs/concepts/opa-policy-engine.md`](../docs/concepts/opa-policy-engine.md)
+> (adapter internals, wire contract, FailMode semantics, caching model),
+> [`docs/guides/author-a-rego-policy-against-the-vais-input-schema.md`](../docs/guides/author-a-rego-policy-against-the-vais-input-schema.md)
+> (four guard patterns).
+
 ---
 
 ## Envelope

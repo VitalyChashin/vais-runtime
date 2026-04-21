@@ -1,6 +1,6 @@
 # Installation
 
-Vais.Agents ships as 13 NuGet packages under the `Vais.Agents.*` prefix. Install only what you use — every package is self-describing via its dependency graph.
+Vais.Agents ships as **25 packages** under the `Vais.Agents.*` prefix — 24 libraries plus the `Vais.Agents.Cli` dotnet tool. Install only what you use — every package is self-describing via its dependency graph.
 
 ## Prerequisites
 
@@ -32,6 +32,16 @@ Before the first public push, packages live in a local feed under `artifacts/pac
 
 Once packages are on nuget.org, the mapping is unnecessary — `<PackageReference Include="Vais.Agents.Core" Version="..." />` is enough.
 
+## Install the CLI
+
+`Vais.Agents.Cli` is a dotnet tool, not a library reference — install it globally so the `vais` command lands on PATH:
+
+```bash
+dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
+```
+
+See [install the CLI](install-the-cli.md) for the full bootstrap walkthrough (config-file creation, context switching, first-call verification).
+
 ## Minimum install per use case
 
 Pick the row that matches your scenario; install the listed packages.
@@ -46,10 +56,19 @@ Pick the row that matches your scenario; install the listed packages.
 | **RAG** — vector-store-backed knowledge retriever | add `Vais.Agents.Persistence.VectorData` |
 | **Observability (OTel)** — traces + metrics to any OTel collector | add `Vais.Agents.Observability.OpenTelemetry` |
 | **Observability (Langfuse)** — enrich spans with `langfuse.*` tags | add `Vais.Agents.Observability.Langfuse` (often alongside OTel) |
-| **MCP tool-source** — pull tools from an MCP server into the registry | add `Vais.Agents.Protocols.Mcp` |
-| **A2A remote-agent-as-tool** — delegate subtasks to a peer agent | add `Vais.Agents.Protocols.A2A` |
+| **MCP tool-source (outbound)** — pull tools from an MCP server into the registry | add `Vais.Agents.Protocols.Mcp` |
+| **A2A remote-agent-as-tool (outbound)** — delegate subtasks to a peer agent | add `Vais.Agents.Protocols.A2A` |
+| **Host agents as MCP tools (inbound, v0.7)** — stdio / streamable-HTTP server | add `Vais.Agents.Protocols.Mcp.Server` |
+| **Host agents as A2A endpoints (inbound, v0.8)** — ASP.NET Core server with AgentCard auto-derivation | add `Vais.Agents.Protocols.A2A.Server` (+ `Hosting.Orleans` for durable `input-required` tasks) |
+| **Declarative graph orchestration (v0.9)** — Pregel/BSP, checkpoint/resume | base + `Vais.Agents.Control.Manifests.Yaml` (+ `AddOrleansGraphCheckpointer` for durable HITL) |
+| **Graph on MAF Workflows (v0.9)** — MAF-native executor | above + `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework` |
+| **HTTP control plane (v0.6 + v0.11 + v0.12)** — idempotent verbs + OpenAPI + SSE streaming | add `Vais.Agents.Control.Http.Server` |
+| **HTTP control-plane client** — from another process | add `Vais.Agents.Control.Http.Client` |
+| **Kubernetes operator (v0.13)** — `Agent` CRD + reconciler | add `Vais.Agents.Control.KubernetesOperator` + deploy `deploy/helm/vais-agents-operator/` |
+| **OPA policy engine (v0.14)** — gate every verb via Rego | add `Vais.Agents.Control.Policy.Opa` + an OPA sidecar |
+| **CLI (v0.15)** — `vais` command for CI + interactive ops | `dotnet tool install -g Vais.Agents.Cli` |
 
-The `Abstractions` package is a transitive dependency of everything; you don't need to reference it directly unless you're authoring your own adapter.
+The `Abstractions` + `Control.Abstractions` packages are transitive dependencies of everything else; you don't need to reference them directly unless you're authoring your own adapter or custom control plane.
 
 ## Dependency pins
 
@@ -64,6 +83,10 @@ The `Directory.Packages.props` in this repo pins:
 - `ModelContextProtocol.Core` 1.2.0
 - `A2A` 1.0.0-preview2 *(targets `net8.0` + `net10.0`; consumed under `net9.0` via forward-compat)*
 - `OpenTelemetry` 1.15.2
+- `Microsoft.AspNetCore.OpenApi` 9.0.11 *(v0.11 OpenAPI emission)*
+- `System.Net.ServerSentEvents` 10.0.2 *(v0.12 SSE client + server)*
+- `KubeOps` 10.3.4 *(v0.13 operator)*
+- `Spectre.Console.Cli` 0.55.0 *(v0.15 CLI)*
 
 You can override any of these in your own app's `Directory.Packages.props` or csproj.
 
@@ -90,8 +113,16 @@ sealed class FakeProvider : ICompletionProvider, IStreamingCompletionProvider {
 }
 ```
 
+Or, if you installed the CLI, verify without writing any code:
+
+```bash
+vais version
+# 0.15.0-preview
+```
+
 ## Next
 
 - [Hello agent](hello-agent.md) — end-to-end walkthrough against a real model.
+- [Install the CLI](install-the-cli.md) — `vais` bootstrap + first-run config.
 - [Choosing a stack: SK vs MAF](choosing-a-stack.md) — which adapter for which case.
-- [Architecture](../concepts/architecture.md) — how the 13 packages fit together.
+- [Architecture](../concepts/architecture.md) — how the 25 packages fit together.

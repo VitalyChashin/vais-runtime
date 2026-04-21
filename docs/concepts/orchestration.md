@@ -109,15 +109,30 @@ Orchestrators in v0.4 do **not** emit agent events automatically. Consumers wrap
 - **Custom `ITerminationCondition`** — async, composable.
 - **Framework-native wrappers** — a `SkGroupChatOrchestrator` wrapping `AgentGroupChat`, or a `MafOrchestrator` wrapping MAF's group-chat primitives. Not shipped; the two built-ins work across any provider.
 
+## Graph orchestration (v0.9)
+
+The third orchestration style — state-threaded, multi-step, branching-and-cyclic, checkpointable — shipped in v0.9 as `IAgentGraph<TState>` / `IAgentGraph` with `InProcessGraphOrchestrator<TState>` + `MafGraphOrchestrator<TState>`. Nodes mutate a shared state bag; edges with Kubernetes-style matcher predicates decide which node runs next; BSP super-steps checkpoint between transitions so `Interrupt`-kind nodes can pause for days and resume with an operator-supplied payload.
+
+Graphs are a **sibling** of Sequential / RoundRobin / `Handoff`, not a replacement. Pick by shape:
+
+| Choose… | When… |
+|---|---|
+| `SequentialOrchestrator` | Straight-line pipeline, output of step N feeds step N+1 as the user message. |
+| `RoundRobinOrchestrator` | N agents take turns around a shared conversation, termination predicate decides when to stop. |
+| `Handoff` | One agent decides to pass control to another; the receiving agent replaces the sender. Consumer-authored control flow. |
+| `IAgentGraph` | State-threaded multi-step flow with conditional branching, cycles, or HITL interrupts. Declarative via YAML/JSON `kind: AgentGraph` manifests. |
+
+See the [graph orchestration concept](graph-orchestration.md) for the full walkthrough — node kinds, predicate vocabulary, edge effects, `InProcessGraphOrchestrator` vs `MafGraphOrchestrator` trade-offs, checkpointing with `InMemoryCheckpointer` / `OrleansCheckpointer`.
+
 ## Limitations / known gaps
 
 - **`IHandoff` interface skipped.** The `Handoff` record is the data contract; an interface would duplicate the surface without adding value.
-- **`IAgentGraphExecutor` / `IAgentGraphBuilder` deferred.** Interface design is speculative without an implementation — the eventual `GraphOrchestrator` will shape its own contract. Until then, Sequential + RoundRobin + consumer-authored orchestrators cover the surveyed cases.
-- **No LLM-driven next-speaker selection.** The built-ins cycle deterministically. A `SelectorOrchestrator` that delegates next-speaker choice to an LLM is a reasonable future add; punt until demand.
+- **No LLM-driven next-speaker selection.** The v0.4 built-ins cycle deterministically. A `SelectorOrchestrator` that delegates next-speaker choice to an LLM is a reasonable future add; punt until demand.
 - **No `StatefulAiAgent`-as-participant wrapper.** Per the "below `IAiAgent`" rule. Consumers who want per-agent history do it above the orchestrator.
 
 ## See also
 
 - [Architecture](architecture.md)
-- [Events reference](../reference/events.md) — `HandoffRequested`.
+- [Graph orchestration concept](graph-orchestration.md) — v0.9 graph-orchestration style.
+- [Events reference](../reference/events.md) — `HandoffRequested` + `AgentGraphEvent` hierarchy.
 - [Execution loop](execution-loop.md) — `ICompletionProvider` contract.

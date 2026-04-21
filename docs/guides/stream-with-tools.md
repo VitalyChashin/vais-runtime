@@ -98,12 +98,73 @@ catch (AgentInterruptedException ex)
 }
 ```
 
-## What's bypassed on streaming (still, in v0.4.1)
+## Streaming filters (v0.10)
 
-- **`IAgentFilter`** (synchronous request/response chain) — doesn't apply on `StreamAsync`. Use `IStreamingAgentFilter` for streaming-aware hooks.
-- **`ResiliencePipeline`** — not applied on streaming turns (wrapping `IAsyncEnumerable` retries has partial-output semantics issues).
+v0.4.1 shipped `StreamAsync` without filter support and without resilience wrapping. v0.10 added both via `IStreamingAgentFilter` — one interface, three override points:
 
-Known gap; consumers needing filter-mediated behaviour (e.g. Langfuse enrichment via the legacy filter path) use `AskAsync`, or subscribe to the event bus and emit their own telemetry from there.
+- `InvokeAsync(request, next, ct) : IAsyncEnumerable<CompletionUpdate>` — **around the provider**. Rewrite the request, short-circuit the call, observe the whole stream.
+- `OnStreamDeltaAsync(update, ct) : ValueTask<CompletionUpdate>` — **per delta**. Transform each chunk before it's yielded.
+- `OnStreamCompleteAsync(final, ct) : ValueTask` — **once**, end-of-stream, before output guardrails.
+
+Each method has a default pass-through implementation — filters override what they need.
+
+```csharp
+public sealed class TypingIndicatorFilter : IStreamingAgentFilter
+{
+    public async IAsyncEnumerable<CompletionUpdate> InvokeAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        await BroadcastTypingAsync(request.AgentName, active: true, ct);
+        try
+        {
+            await foreach (var delta in next(request, ct))
+                yield return delta;
+        }
+        finally
+        {
+            await BroadcastTypingAsync(request.AgentName, active: false, ct);
+        }
+    }
+}
+
+public sealed class PiiScrubFilter : IStreamingAgentFilter
+{
+    public ValueTask<CompletionUpdate> OnStreamDeltaAsync(CompletionUpdate update, CancellationToken ct)
+        => ValueTask.FromResult(update with { TextDelta = PiiPattern.Replace(update.TextDelta, "***") });
+}
+
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    ToolRegistry = registry,
+    StreamingFilters = [new TypingIndicatorFilter(), new PiiScrubFilter()],
+});
+```
+
+Chain executes in registration order — the first filter's `InvokeAsync` sits outermost; `OnStreamDeltaAsync` fires first-to-last per delta.
+
+## Streaming resilience (v0.10)
+
+`StatefulAgentOptions.StreamingResiliencePipeline` is the sibling of the existing `ResiliencePipeline`:
+
+```csharp
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    StreamingResiliencePipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromMilliseconds(250),
+            BackoffType = DelayBackoffType.Exponential,
+        })
+        .Build(),
+});
+```
+
+**Phase 1 retry / Phase 2 drain** — retries apply only **before** the first `CompletionUpdate` is yielded. Once the consumer has seen a delta, mid-stream failures rethrow without retry (replaying would double-emit content + inflate token counts). The window Polly watches covers enumerator-open + first `MoveNextAsync`; everything after is fire-and-forget from Polly's perspective.
+
+Filter-domain exceptions (subtypes of `FilterAbortedException`) bypass retry entirely — the filter is doing deliberate policy work. See [ADR 0003](../adr/0003-streaming-filter-contract.md) for the decision rationale.
 
 ## Adapter specifics
 

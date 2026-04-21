@@ -132,6 +132,55 @@ These are surveyed universals; every target runtime (Bedrock AgentCore / Tempora
 - **`IAgentLifecycleManager`** — the cloud runtime is one implementation; an Aspire-hosted local runtime is another valid one.
 - **`IAgentIdentityProvider`** — per-tenant identity resolution + outbound credential acquisition. Phase 3 ships a Keycloak-backed impl; others (Azure AD, Okta) follow.
 
+## Idempotency (v0.11)
+
+Every mutating verb on the HTTP control plane takes an `Idempotency-Key` request header — Stripe-shape semantics. Duplicate calls with the same key replay the first response rather than re-executing.
+
+- **Server-side state** lives in an `IIdempotencyStore` — `InMemoryIdempotencyStore` (ships in `Vais.Agents.Control.Http.Server`) or durable `OrleansIdempotencyStore` (in `Vais.Agents.Hosting.Orleans`).
+- **Scoping key** is the 4-tuple `(tenantId, verbRoute, canonicalPath, idempotencyKey)`. Two tenants can reuse the same key; two verbs on the same agent are independent entries.
+- **Body fingerprint** is a SHA-256 hex digest of the raw request body. Second call with the same key but different body → `422 urn:vais-agents:idempotency-mismatch`.
+- **In-flight duplicate** → `409 urn:vais-agents:idempotency-in-flight` with a `Retry-After` header.
+- **Replayed response** carries an `Idempotency-Replayed: true` header — clients can log or branch on it.
+- **TTL** defaults to 24h (Stripe-aligned). Tunable via `IdempotencyOptions.Ttl`.
+
+See [enable HTTP idempotency](../guides/enable-http-idempotency.md) for wiring + [problem-details URNs reference](../reference/problem-details-urns.md) for the full failure-shape table.
+
+## OpenAPI (v0.11)
+
+`GET /openapi/{documentName}.json` exposes an OpenAPI 3.1 document describing every mapped route + its request/response schemas + its error shapes. The `VaisProblemDetailsOperationTransformer` attaches an `x-vais-type-urns` extension to each error response — the URN array a caller may see for that status code, so codegen clients can branch on URN instead of parsing `detail` strings.
+
+Wiring: `AddAgentControlPlaneOpenApi(documentName: "v1")` + `MapAgentControlPlaneOpenApi()`. Built on `Microsoft.AspNetCore.OpenApi 9.0.11`.
+
+See [consume the OpenAPI spec](../guides/consume-the-openapi-spec.md) for codegen recipes (NSwag / Kiota / openapi-typescript).
+
+## Streaming Invoke (v0.12)
+
+Unary `POST /v1/agents/{id}/invoke` returns a single `AgentInvocationResult`. Streaming `POST /v1/agents/{id}/invoke/stream` returns a Server-Sent Events response carrying the **full `AgentEvent` hierarchy** — text deltas, tool dispatches, guardrail decisions, interrupts, handoffs — as distinct SSE frames.
+
+| Aspect | Unary | Streaming |
+|---|---|---|
+| Route | `POST /v1/agents/{id}/invoke` | `POST /v1/agents/{id}/invoke/stream` |
+| Content-type | `application/json` | `text/event-stream` |
+| Body | `AgentInvocationResult` | Sequence of `AgentEvent` SSE frames (ten event names) |
+| Idempotency middleware | Applies | Bypassed via `[StreamingEndpoint]` |
+| Cancellation | Request-bounded | `HttpContext.RequestAborted` propagates into `StreamAsync` |
+
+The route probes the resolved agent for `IStreamingAiAgent`; missing capability returns `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements it out of the box. Orleans-silo streaming passthrough is deferred — grain-hosted agents without a direct `IStreamingAiAgent` implementation return 501.
+
+Clients call either `InvokeStreamAsync` (text-only projection) or `InvokeStreamEventsAsync` (full events). See [stream invocations over HTTP](../guides/stream-invocations-over-http.md) + [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md).
+
+## Policy engines
+
+Every verb on `IAgentLifecycleManager` flows through `IAgentPolicyEngine.EvaluateAsync` before reaching the runtime. The contract ships in `Vais.Agents.Control.Abstractions`; consumer wires one of:
+
+- **`AllowAllPolicyEngine`** (Core default) — `Allow` on every call. Sane for dev + single-tenant hosts.
+- **`OpaPolicyEngine`** (v0.14, `Vais.Agents.Control.Policy.Opa`) — delegates to an external OPA server over HTTP. Rego policies live in a ConfigMap or bundle server, decoupled from the runtime binary.
+- **Custom `IAgentPolicyEngine`** — 30-line class reading a feature flag, a database table, a cached auth scope, whatever fits.
+
+OPA is the right choice when you already run OPA for other admission tasks, need policy authoring outside the .NET engineering team, or want coherent policies that span multiple verbs (tenant + role + budget + model-allowlist). Skip OPA for pure in-process boolean checks or sub-millisecond latency budgets where even loopback HTTP adds too much.
+
+See [OPA policy engine concept](opa-policy-engine.md) for the full wire contract, FailMode semantics, caching model, and the "4xx is a bug, 5xx is a policy path" classification rule.
+
 ## Observability
 
 - `AgentStatus` transitions should emit events (design pending). For now consumers emit their own from any lifecycle-manager implementation.
@@ -139,14 +188,16 @@ These are surveyed universals; every target runtime (Bedrock AgentCore / Tempora
 
 ## Limitations / known gaps
 
-- **No HTTP API / CRDs / YAML loader in v0.4.** Cloud runtime (Phase 3).
-- **No policy engine** — "which tenant can invoke which agent version" is a Phase 3 concern.
 - **No multi-region** — manifest carries no region field. Phase 3 adds regionalisation.
-- **No lifecycle-manager impl.** `IAgentLifecycleManager` ships contract-only.
-- **No identity-provider impl.** `IAgentIdentityProvider` ships contract-only.
+- **No identity-provider impl.** `IAgentIdentityProvider` ships contract-only; Keycloak-backed impl lands with the multi-tenant auth pillar.
+- **Orleans-silo streaming passthrough deferred** — v0.12 returns `501 urn:vais-agents:streaming-not-supported` for grain-only agents. The grain surface gains an `IAsyncEnumerable<AgentEvent>` method in a later pillar.
 
 ## See also
 
 - [Architecture](architecture.md)
 - [Session + memory](session.md) — `MemoryRef` resolution.
 - [Interop](interop.md) — `ProtocolBinding` targets.
+- [Enable HTTP idempotency](../guides/enable-http-idempotency.md) — v0.11 walkthrough.
+- [Consume the OpenAPI spec](../guides/consume-the-openapi-spec.md) — v0.11 walkthrough.
+- [Stream invocations over HTTP](../guides/stream-invocations-over-http.md) — v0.12 walkthrough.
+- [Problem-details URNs reference](../reference/problem-details-urns.md) — full URN table.

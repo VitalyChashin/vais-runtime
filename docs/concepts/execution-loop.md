@@ -148,6 +148,79 @@ SK streaming uses SK's built-in `FunctionCallContentBuilder` to accumulate strea
 
 See the [stream-with-tools guide](../guides/stream-with-tools.md) for the full recipe.
 
+## Streaming filters (v0.10)
+
+v0.4.1 shipped `StreamAsync` with a well-known gap: `IAgentFilter` didn't apply, and the `ResiliencePipeline` was bypassed. v0.10 closes both via `IStreamingAgentFilter` in `Vais.Agents.Abstractions` — one interface, three override points:
+
+| Method | Fires | Default |
+|---|---|---|
+| `InvokeAsync(request, next, ct) : IAsyncEnumerable<CompletionUpdate>` | **Around** the provider. Rewrite the request, short-circuit the call, observe the full stream. Standard ASP.NET middleware shape — call `next` to continue, return your own enumerable to short-circuit. | Pass-through to `next`. |
+| `OnStreamDeltaAsync(update, ct) : ValueTask<CompletionUpdate>` | **Per delta**. Transform each `CompletionUpdate` inline before it's yielded to the consumer — PII scrub, telemetry, pre-emit gating. | Return `update` unchanged. |
+| `OnStreamCompleteAsync(final, ct) : ValueTask` | **Once**, end-of-stream, before output guardrails. Post-drain validation on the accumulated response. | No-op. |
+
+Filters register via `StatefulAgentOptions.StreamingFilters` (an `IReadOnlyList<IStreamingAgentFilter>`, empty by default). Registration order determines execution order — the last filter in the list sits innermost, closest to the provider. Single filter can override any subset of the three methods.
+
+```csharp
+public sealed class TypingIndicatorFilter : IStreamingAgentFilter
+{
+    public async IAsyncEnumerable<CompletionUpdate> InvokeAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        // Pre-stream hook — emit "typing…" to a sideband.
+        await BroadcastTypingAsync(request.AgentName, ct);
+        await foreach (var delta in next(request, ct))
+            yield return delta;
+        await ClearTypingAsync(request.AgentName, ct);
+    }
+}
+
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    StreamingFilters = [new TypingIndicatorFilter(), new LangfuseStreamingFilter()],
+});
+```
+
+The filter chain orchestration lives in `StatefulAiAgent.StreamEventsCoreAsync` — it wraps the provider bottom-up and fires the three hooks in registration order.
+
+## Streaming resilience (v0.10)
+
+Sibling to the existing `StatefulAgentOptions.ResiliencePipeline`, v0.10 adds `StreamingResiliencePipeline` — a Polly pipeline that wraps the provider-plus-filter-chain on `StreamAsync`. Two behavioural rules:
+
+1. **Phase 1 retry.** Retries apply only **before** the first `CompletionUpdate` is yielded — the window covering enumerator-open + first `MoveNextAsync`. Connection refused, provider throws on request parse, transient `429` at request start → Polly retries per the configured policy.
+
+2. **Phase 2 drain.** Once a delta has been yielded to the consumer, retries **stop**. Mid-stream failure surfaces to the caller without a retry — re-executing would double-emit already-committed text and inflate token counts. The enumerator's try/finally disposes the underlying stream on whatever happens next.
+
+Filter-thrown exceptions (subtypes of `FilterAbortedException`) bypass retry entirely — the filter is doing deliberate policy work; retrying would paper over the signal.
+
+```csharp
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    StreamingResiliencePipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromMilliseconds(250),
+            BackoffType = DelayBackoffType.Exponential,
+        })
+        .Build(),
+});
+```
+
+See [ADR 0003 — streaming filter contract](../adr/0003-streaming-filter-contract.md) for the decision rationale.
+
+## Streaming Invoke over HTTP (v0.12)
+
+The HTTP control plane publishes `POST /v1/agents/{id}/invoke/stream` — a Server-Sent Events endpoint that carries the **full `AgentEvent` hierarchy** on the wire, not just text. Ten wire-event names, one per `AgentEvent` subtype. Clients get two shapes:
+
+- `InvokeStreamEventsAsync` → `IAsyncEnumerable<AgentEvent>` — full taxonomy.
+- `InvokeStreamAsync` → `IAsyncEnumerable<string>` — text-only projection, filtered client-side to `CompletionDelta.TextDelta`.
+
+`CompletionDelta : AgentEvent` in `Vais.Agents.Abstractions` is the text-carrying event. `IStreamingAiAgent` in the same assembly is the capability interface the route probes for — agents that don't implement it return `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements both `IAiAgent` and `IStreamingAiAgent` out of the box.
+
+See [ADR 0004 — SSE event taxonomy on the wire](../adr/0004-sse-event-taxonomy-on-wire.md) and the [stream-invocations-over-http guide](../guides/stream-invocations-over-http.md).
+
 ## Events
 
 One `TurnStarted` at run entry + one `TurnCompleted` or `TurnFailed` at run exit — enveloping the whole multi-turn run. Per-tool events (`ToolCallStarted`, `ToolCallCompleted`) + `GuardrailTriggered` + `InterruptRaised` fire inside the loop. See [events reference](../reference/events.md).
@@ -155,19 +228,24 @@ One `TurnStarted` at run entry + one `TurnCompleted` or `TurnFailed` at run exit
 ## Extension points
 
 - **`IToolCallDispatcher`** — inject a custom dispatcher for bespoke invocation semantics. Default `DefaultToolCallDispatcher` runs tool guardrails, invokes via `ITool.InvokeAsync`, catches exceptions into `ToolCallOutcome.Error`, emits events. Any replacement should preserve that envelope.
-- **`IStreamingAgentFilter`** — per-delta transform + post-drain hook for `StreamAsync`.
-- **`IAgentFilter`** — the ordered `CompletionRequest → CompletionResponse` chain (AskAsync only; streaming doesn't apply it in v0.4.1).
+- **`IStreamingAgentFilter`** (v0.10) — around-provider DIM + per-delta transform + post-drain hook for `StreamAsync`. Three override points on one interface. See [ADR 0003](../adr/0003-streaming-filter-contract.md).
+- **`IAgentFilter`** — the ordered `CompletionRequest → CompletionResponse` chain for `AskAsync`. Streaming has its own filter interface (v0.10) — the two don't share the chain.
+- **`IStreamingAiAgent`** (v0.12) — capability interface for agents that expose `StreamAsync(string, AgentContext, CancellationToken) : IAsyncEnumerable<AgentEvent>`. Probed by the HTTP streaming route.
 
 ## Limitations / known gaps
 
-- **Filters + resilience pipeline are bypassed on `StreamAsync`** — v0.4.1 scope. `IAgentFilter` is synchronous request→response; wrapping a stream either buffers (defeating the point) or needs a new surface. Streaming-filter surface is deferred.
 - **`ResumeAsync` is a shim in v0.4** — true durable resume needs the durable-execution pillar.
 - **Budget overruns raise exceptions mid-iteration.** No "graceful stop with partial result" yet.
+- **Phase 2 drain — no retry after first streamed delta.** Polly's `StreamingResiliencePipeline` (v0.10) retries only before the first `CompletionUpdate` is yielded. Mid-stream failures rethrow without retry.
+- **Orleans-silo streaming passthrough deferred.** v0.12 `POST /invoke/stream` returns `501 urn:vais-agents:streaming-not-supported` when the agent is Orleans-hosted without a direct `IStreamingAiAgent` implementation.
 
 ## See also
 
 - [Architecture](architecture.md)
 - [Tools](tools.md) — `ITool` + `Tool.FromFunc` + `IToolSource`.
 - [Guardrails](guardrails.md) — the three layers the dispatcher + agent invoke.
-- [Events reference](../reference/events.md) — 8-subclass `AgentEvent` closed hierarchy.
+- [Events reference](../reference/events.md) — `AgentEvent` closed hierarchy + v0.9 `AgentGraphEvent`.
 - [Budget reference](../reference/budget.md) — `RunBudget` fields.
+- [ADR 0003](../adr/0003-streaming-filter-contract.md) — streaming filter contract.
+- [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md) — SSE event taxonomy on the wire.
+- [Stream invocations over HTTP](../guides/stream-invocations-over-http.md) — v0.12 HTTP streaming walkthrough.
