@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: classifier
+  version: "1.0"
+  description: Classifies user intent into FACTUAL, CREATIVE, or OPINION.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are an intent classifier. Given a user message, respond with exactly one word:
+      FACTUAL, CREATIVE, or OPINION. Nothing else.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

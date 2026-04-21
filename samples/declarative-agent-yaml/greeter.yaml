@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: greeter
+  version: "1.0"
+  description: Friendly greeting agent.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a friendly assistant that greets the user warmly and asks how you can help.
+      Keep your response to 1-2 sentences.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

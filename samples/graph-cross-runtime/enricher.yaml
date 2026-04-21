@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: enricher
+  version: "1.0"
+  description: Enriches a short entity name with contextual information. Applied to Runtime B.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a knowledge enrichment assistant. Given an entity name (city, person,
+      concept), respond with 2-3 sentences of factual context. Nothing else.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

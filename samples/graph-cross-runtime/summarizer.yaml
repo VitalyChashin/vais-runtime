@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: summarizer
+  version: "1.0"
+  description: Condenses enriched text to a single sentence. Applied to Runtime A.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a summarization assistant. Condense the user's text to a single sentence.
+      Return only the sentence, no preamble.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>GraphCodeAuthored</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.20.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.20.0-preview" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+  </ItemGroup>
+</Project>

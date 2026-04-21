@@ -1,0 +1,16 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: translate
+  version: "1.0"
+  description: Translates user text to Spanish using the TranslateAgent plugin.
+spec:
+  # No model spec — the plugin carries its own logic and makes direct HTTP calls.
+  # Swap systemPrompt to change target language (plugin reads "targetLanguage:" prefix).
+  systemPrompt:
+    inline: "targetLanguage: Spanish"
+  handler:
+    typeName: MyApp.TranslateAgent
+  protocols:
+    - kind: Http
+  tools: []

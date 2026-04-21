@@ -1,6 +1,6 @@
 # Vais.Agents — samples
 
-21 runnable samples. Each is a standalone .NET 9 console app, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
+27 runnable samples. Each is a standalone .NET 9 console app or YAML-only configuration directory, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
 
 Run any sample with:
 
@@ -36,6 +36,12 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [McpToolSourceExample](McpToolSourceExample) | `McpToolSource` wrapping shape | Protocols.Mcp + ModelContextProtocol.Core | ~55 | — (real MCP server optional) | [expose-mcp-tools-to-an-agent](../docs/guides/expose-mcp-tools-to-an-agent.md) |
 | [A2ARemoteAgentExample](A2ARemoteAgentExample) | `A2ARemoteAgentTool` with stubbed `IA2AClient` | Protocols.A2A + A2A SDK | ~85 | — | [delegate-to-a2a-remote-agent](../docs/guides/delegate-to-a2a-remote-agent.md) |
 | [PluginAgentWeather](PluginAgentWeather) | v0.18 code-authored agent packaged as a runtime plugin (`[VaisPlugin]`, overlay Dockerfile, `vais apply`/`vais invoke`) | Abstractions, Core | ~45 | — | [package-an-agent-as-a-plugin](../docs/guides/package-an-agent-as-a-plugin.md) |
+| [runtime-docker-compose](runtime-docker-compose) | v0.20 Phase 3 — start the runtime with docker-compose (localhost + clustered + OPA/OTel/Langfuse overlays) | — (config only) | 0 | — | [install-the-runtime](../docs/getting-started/install-the-runtime.md) |
+| [declarative-agent-yaml](declarative-agent-yaml) | v0.20 Phase 3 — deploy a declarative agent via YAML manifest and `vais apply`; no C# required | — (YAML only) | 0 | `OPENAI_API_KEY` | [deploy-your-first-agent](../docs/getting-started/deploy-your-first-agent.md) |
+| [code-agent-plugin](code-agent-plugin) | v0.20 Phase 3 — code-authored IAiAgent plugin that injects IHttpClientFactory and calls OpenAI directly | Abstractions, Core | ~80 | `OPENAI_API_KEY` | [package-an-agent-as-a-plugin](../docs/guides/package-an-agent-as-a-plugin.md) |
+| [graph-code-authored](graph-code-authored) | v0.20 Phase 3 — multi-agent graph authored in C# with InProcessGraphOrchestrator + typed state + streaming events | Abstractions, Core | ~70 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [graph-yaml-authored](graph-yaml-authored) | v0.20 Phase 3 — multi-agent graph as a YAML AgentGraph manifest (`vais apply`, `vais invoke-graph`, `--stream`) | — (YAML only) | 0 | `OPENAI_API_KEY` | [from-zero-to-graph-in-20-minutes](../docs/tutorials/from-zero-to-graph-in-20-minutes.md) |
+| [graph-cross-runtime](graph-cross-runtime) | v0.20 Phase 3 — graph with `ref.runtimeUrl` that fans a node out to a second runtime container | — (YAML only) | 0 | `OPENAI_API_KEY` | [cross-runtime-graphs](../docs/concepts/cross-runtime-graphs.md) |
 
 ## Suggested learning path
 
@@ -49,6 +55,7 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 8. **ObservabilityOtelConsole** — instrument everything.
 9. **McpToolSourceExample** → **A2ARemoteAgentExample** — interop.
 10. **AgentManifestAndRegistry** — control plane shape.
+11. **runtime-docker-compose** → **declarative-agent-yaml** → **graph-yaml-authored** → **graph-cross-runtime** — Phase 3 runtime path.
 
 ## Build all
 

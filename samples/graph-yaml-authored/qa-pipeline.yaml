@@ -1,0 +1,31 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: qa-pipeline
+  version: "1.0"
+  description: Classify user intent, then generate the final answer.
+spec:
+  entry: classify
+  nodes:
+    - id: classify
+      kind: Agent
+      ref:
+        id: classifier
+        version: "1.0"
+      stateBindings:
+        input: [input]
+        output: [classification]
+    - id: respond
+      kind: Agent
+      ref:
+        id: responder
+        version: "1.0"
+      stateBindings:
+        input: [input]
+    - id: end
+      kind: End
+  edges:
+    - from: classify
+      to: respond
+    - from: respond
+      to: end

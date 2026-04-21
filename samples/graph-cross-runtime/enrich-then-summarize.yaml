@@ -1,0 +1,35 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: enrich-then-summarize
+  version: "1.0"
+  description: Enrich an entity on a remote runtime, then summarize locally.
+spec:
+  entry: enrich
+  nodes:
+    - id: enrich
+      kind: Agent
+      ref:
+        id: enricher
+        version: "1.0"
+        # runtimeUrl tells the orchestrator to forward this node to the remote runtime.
+        # Change to the address of your Runtime B instance.
+        runtimeUrl: http://localhost:8081
+      stateBindings:
+        input: [input]
+        output: [enriched]
+    - id: summarize
+      kind: Agent
+      ref:
+        id: summarizer
+        version: "1.0"
+        # No runtimeUrl — runs locally on the applying runtime.
+      stateBindings:
+        input: [enriched]
+    - id: end
+      kind: End
+  edges:
+    - from: enrich
+      to: summarize
+    - from: summarize
+      to: end

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    v0.18 Pillar C plugin-authoring sample. A translation agent that injects
+    IHttpClientFactory from the runtime host DI container and calls the OpenAI
+    chat completions API. See README.md for publish + overlay Dockerfile +
+    vais apply/invoke walk-through.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>MyApp.TranslateAgent</AssemblyName>
+    <!--
+      CopyLocalLockFileAssemblies + SelfContained=false ensure `dotnet publish`
+      emits the plugin's transitive dependencies alongside the primary DLL.
+      The loader's AssemblyDependencyResolver picks them up per plugin without
+      mixing runtime trees.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.20.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.20.0-preview" />
+  </ItemGroup>
+
+</Project>

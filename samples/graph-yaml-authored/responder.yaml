@@ -1,0 +1,18 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: responder
+  version: "1.0"
+  description: Generates the final answer for the user.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a helpful assistant. Answer the user's question in 2-3 sentences.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

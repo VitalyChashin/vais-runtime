@@ -350,6 +350,44 @@ Key invariants:
 
 See [runtime-plugins concept](runtime-plugins.md) for the plugin-authoring contract, ABI-matching rules, and security posture.
 
+## Graph control-plane tier (v0.19 Pillar D)
+
+Parallel to the agent control-plane — adds `AgentGraph` as a first-class managed object: stored in `OrleansAgentGraphRegistry`, exposed through the HTTP control plane, invocable via `POST /v1/graphs/{id}/invoke`, streamable via SSE `POST /v1/graphs/{id}/invoke/stream`, and manageable with `vais apply` / `vais get-graphs` / `vais delete-graph`.
+
+```
+┌─ HTTP control plane (existing) ────────────────────────────────────┐
+│                                                                    │
+│  MapAgentControlPlane()  now also mounts:                          │
+│    POST   /v1/graphs                   (apply)                     │
+│    GET    /v1/graphs                   (list)                      │
+│    GET    /v1/graphs/{id}              (get)                       │
+│    DELETE /v1/graphs/{id}              (delete)                    │
+│    POST   /v1/graphs/{id}/invoke       (unary)                     │
+│    POST   /v1/graphs/{id}/invoke/stream (SSE streaming)            │
+│                                                                    │
+└──────┬─────────────────────────────────────────────────────────────┘
+       │ delegates
+       ▼
+┌─ AgentGraphController + AgentGraphLifecycleManager ────────────────┐
+│                                                                    │
+│  • IAgentGraphRegistry → OrleansAgentGraphRegistry               │
+│    (same `vais.agents` grain storage, versioned manifests)         │
+│  • Unary invoke  → InProcessGraphOrchestrator<JsonState>           │
+│  • Stream invoke → InProcessGraphOrchestrator.StreamAsync          │
+│    → SSE event serializer (same vais.agents/v1 event schema)       │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+Key additions:
+
+- **`AgentGraphManifest` is now a registry citizen.** `PUT /v1/graphs` persists it in Orleans grain storage; the manifest is durable across pod rolls.
+- **Mixed-kind YAML files.** A single `vais apply -f pipeline.yaml` can contain `kind: Agent` and `kind: AgentGraph` documents, applied in dependency order (agents first).
+- **`vais graph-logs`.** Tails `AgentGraphEvent` SSE events from a running or historical graph run.
+- **Graph schema projection.** `AgentGraphSpecProjector` projects graph manifests into the Kubernetes CRD schema via `Control.KubernetesOperator`.
+
+See [graph as a first-class deployable concept](graph-as-deployable.md) and [deploy a graph to the runtime guide](../guides/deploy-a-graph-to-the-runtime.md).
+
 ## The 27 packages at a glance
 
 See the [packages reference](../reference/packages.md) for the per-package description table with install guidance.

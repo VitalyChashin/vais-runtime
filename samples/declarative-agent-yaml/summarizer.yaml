@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: summarizer
+  version: "1.0"
+  description: Condenses long text to three bullet points.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a summarization assistant. Given any text, respond with exactly three
+      bullet points that capture the key ideas. No preamble, no trailing commentary.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []
