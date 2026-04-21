@@ -1,0 +1,26 @@
+# docker-compose.localhost.yml
+#
+# Single-replica Vais.Agents runtime in localhost (memory clustering + memory
+# grain storage + memory streams) mode. Zero external dependencies — the
+# fastest path from `docker compose up` to a working /healthz + /openapi.
+# Pair with any of the overlay files in this directory to layer in OPA /
+# Langfuse / OTel without touching the base.
+
+services:
+  runtime:
+    build:
+      context: ../..
+      dockerfile: src/Vais.Agents.Runtime.Host/Dockerfile
+    image: vais-agents-runtime:0.16.0-preview
+    container_name: vais-runtime
+    environment:
+      VAIS_HOSTING_MODE: localhost
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s

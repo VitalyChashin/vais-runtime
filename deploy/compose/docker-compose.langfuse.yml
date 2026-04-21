@@ -1,0 +1,56 @@
+# docker-compose.langfuse.yml
+#
+# Overlay: add a Langfuse v2 server (+ its Postgres) and wire the runtime's
+# VAIS_LANGFUSE_PROJECT at it. The Langfuse UI is exposed on http://localhost:3001
+# so it doesn't collide with any dev-tool on the usual 3000 slot; first-run
+# sign-up creates the local project. Copy the project secret/public keys from
+# the Langfuse UI into the environment and restart the runtime to push traces.
+#
+# Meant to be layered on a base:
+#
+#     docker compose \
+#         -f docker-compose.localhost.yml \
+#         -f docker-compose.langfuse.yml \
+#         up --build
+
+services:
+  langfuse-db:
+    image: postgres:16-alpine
+    container_name: vais-langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: langfuse
+    volumes:
+      - ./data/langfuse-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  langfuse-server:
+    image: langfuse/langfuse:2
+    container_name: vais-langfuse-server
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3001
+      NEXTAUTH_SECRET: dev-not-a-secret-rotate-me
+      SALT: dev-salt-rotate-me
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+    ports:
+      - "3001:3000"
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+
+  runtime:
+    environment:
+      VAIS_LANGFUSE_PROJECT: vais-agents-dev
+      VAIS_LANGFUSE_HOST: http://langfuse-server:3000
+    depends_on:
+      langfuse-server:
+        condition: service_started

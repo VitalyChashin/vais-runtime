@@ -1,0 +1,39 @@
+Vais.Agents runtime {{ .Chart.AppVersion }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Mode:      {{ .Values.hosting.mode }}
+{{- if eq .Values.hosting.mode "clustered" }}
+Clustering: {{ .Values.clustering.backend }}
+{{- end }}
+OPA:       {{ if .Values.opa.enabled }}{{ if .Values.opa.baseUrl }}external ({{ .Values.opa.baseUrl }}){{ else }}sidecar{{ end }} — failMode={{ .Values.opa.failMode }}{{ else }}disabled (AllowAll){{ end }}
+OTel:      {{ if .Values.observability.otel.endpoint }}{{ .Values.observability.otel.endpoint }}{{ else if .Values.observability.otel.console }}console{{ else }}disabled{{ end }}
+Langfuse:  {{ if .Values.observability.langfuse.project }}{{ .Values.observability.langfuse.project }}{{ else }}disabled{{ end }}
+
+1. Wait for the pod(s) to reach Ready:
+
+     kubectl rollout status deployment/{{ include "vais-agents-runtime.fullname" . }} -n {{ .Release.Namespace }}
+
+2. Port-forward the HTTP control plane:
+
+     kubectl port-forward svc/{{ include "vais-agents-runtime.fullname" . }} 8080:{{ .Values.service.port }} -n {{ .Release.Namespace }}
+
+3. Verify the v0.11 OpenAPI spec is served:
+
+     curl http://localhost:8080/openapi/v1.json | head
+
+4. Install the vais CLI and point it at the service:
+
+     dotnet tool install -g Vais.Agents.Cli
+     vais config set base-url http://localhost:8080
+
+5. Apply a sample Agent manifest. **v0.16 limitation:** invoke returns
+   501 urn:vais-agents:agent-not-instantiable — manifest-driven agent
+   instantiation is Pillar B (v0.17). Create / Get / Delete already work
+   against the registry.
+
+     vais apply -f agent.yaml
+     vais get agents
+
+See the chart README for the full values reference + security / observability
+opt-ins:
+
+     helm show readme {{ .Chart.Name }}

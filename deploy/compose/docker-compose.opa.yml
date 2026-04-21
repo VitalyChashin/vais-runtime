@@ -1,0 +1,42 @@
+# docker-compose.opa.yml
+#
+# Overlay: add an OPA sidecar and wire the runtime's VAIS_OPA_BASEURL at it.
+# Meant to be layered on top of either base file, e.g.:
+#
+#     docker compose \
+#         -f docker-compose.localhost.yml \
+#         -f docker-compose.opa.yml \
+#         up --build
+#
+# Policies are mounted read-only from ./policies/ into /policies inside the
+# OPA container; `opa run --server --watch` picks up edits live. The runtime
+# talks to OPA over the internal compose network on port 8181.
+
+services:
+  opa:
+    image: openpolicyagent/opa:1.15.2
+    container_name: vais-opa
+    restart: unless-stopped
+    command:
+      - "run"
+      - "--server"
+      - "--addr=:8181"
+      - "--log-format=json"
+      - "--watch"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8181/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  runtime:
+    environment:
+      VAIS_OPA_BASEURL: http://opa:8181
+      VAIS_OPA_FAILMODE: Closed
+      VAIS_OPA_DATAPATH: vais/agents/allow
+    depends_on:
+      opa:
+        condition: service_healthy

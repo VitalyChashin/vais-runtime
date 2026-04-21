@@ -1,0 +1,38 @@
+# docker-compose.otel.yml
+#
+# Overlay: add a Jaeger all-in-one for OTLP ingestion + trace UI. The runtime
+# exports OTLP/gRPC to jaeger:4317 when this overlay is layered on a base.
+# The Jaeger UI is exposed on http://localhost:16686 so spans are visible as
+# soon as the runtime emits its first trace.
+#
+# Meant to be layered on a base:
+#
+#     docker compose \
+#         -f docker-compose.localhost.yml \
+#         -f docker-compose.otel.yml \
+#         up --build
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: vais-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # UI
+    # 4317 (OTLP gRPC) + 4318 (OTLP HTTP) stay on the internal compose network.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:14269/"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  runtime:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_SERVICE_NAME: vais-agents-runtime
+    depends_on:
+      jaeger:
+        condition: service_healthy

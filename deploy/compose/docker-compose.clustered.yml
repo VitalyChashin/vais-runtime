@@ -1,0 +1,53 @@
+# docker-compose.clustered.yml
+#
+# Clustered Vais.Agents runtime with a Redis 7-alpine dependency. The runtime
+# silo advertises via Redis clustering and uses Redis for grain storage +
+# streams — the same wiring a production K8s install gets through the Helm
+# chart (PR 3 of Pillar A).
+#
+# Single-replica by default so `docker compose up` just works with `8080:8080`
+# published to the host. Multi-replica smoke test:
+#
+#     docker compose -f docker-compose.clustered.yml up --scale runtime=3 --no-recreate
+#
+# When scaling >1, the host port mapping conflicts — drop the `ports:` block
+# on `runtime` (or use an `.override.yml`) and reach the gateway via
+# `docker compose exec runtime wget -qO- http://localhost:8080/...`. The
+# README in this directory spells out the full recipe, including the
+# 60s-to-membership-converge expectation.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: vais-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  runtime:
+    build:
+      context: ../..
+      dockerfile: src/Vais.Agents.Runtime.Host/Dockerfile
+    image: vais-agents-runtime:0.16.0-preview
+    environment:
+      VAIS_HOSTING_MODE: clustered
+      VAIS_CLUSTERING_BACKEND: redis
+      VAIS_REDIS_CONNECTION: redis:6379
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s

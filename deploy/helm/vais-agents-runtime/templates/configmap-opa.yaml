@@ -1,0 +1,19 @@
+{{- /*
+Auto-generated OPA policy ConfigMap. Rendered only when the chart is about to
+run a pod-local OPA sidecar AND the consumer did not supply a pre-existing
+`opa.configMapName`. Skipped entirely when `opa.baseUrl` points at external
+OPA (the ConfigMap would be orphaned) or when OPA is disabled.
+*/}}
+{{- if and (eq (include "vais-agents-runtime.opaSidecar" .) "true") (not .Values.opa.configMapName) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vais-agents-runtime.opaPolicyConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vais-agents-runtime.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opa-policy
+data:
+  policy.rego: |-
+    {{- .Values.opa.policy | nindent 4 }}
+{{- end }}

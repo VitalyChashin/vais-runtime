@@ -1,0 +1,25 @@
+apiVersion: v2
+name: vais-agents-runtime
+description: >-
+  Vais.Agents runtime — Orleans-backed agent control plane with HTTP API,
+  durability sidecars, optional OPA policy engine, and OpenTelemetry /
+  Langfuse hooks. v0.16 Pillar A: deploys the runtime itself; Pillar B+
+  ship manifest-driven agent instantiation.
+type: application
+version: 0.1.0
+appVersion: "0.16.0-preview"
+kubeVersion: ">=1.28.0-0"
+keywords:
+  - agents
+  - ai
+  - llm
+  - orleans
+  - kubernetes
+  - runtime
+home: https://example.invalid/vais-agents
+maintainers:
+  - name: VAIS contributors
+# Intentionally empty — consumers bring their own Redis (Bitnami subchart,
+# managed cloud, platform-team). Bundling a Redis subchart adds friction for
+# organisations that already have one.
+dependencies: []

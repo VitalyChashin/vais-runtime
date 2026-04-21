@@ -1,0 +1,159 @@
+# Default values for vais-agents-runtime.
+# Override with `helm install ... --set key=value` or a custom values.yaml.
+#
+# See ./README.md for the canonical values reference + three deploy patterns
+# (localhost, clustered, clustered + OPA).
+
+# Container image to deploy. The image is built locally from
+# `oss/agentic/src/Vais.Agents.Runtime.Host/Dockerfile` and pushed to a
+# consumer-controlled registry; no public image pipeline in v0.16.
+image:
+  repository: vais-agents-runtime
+  tag: 0.16.0-preview
+  pullPolicy: IfNotPresent
+
+# Pod replica count. localhost mode must be 1 (single-silo, memory-backed);
+# clustered mode scales horizontally.
+replicaCount: 1
+
+# Hosting mode. `localhost` = in-process Orleans silo (memory clustering +
+# memory grain storage + memory streams); zero external deps. `clustered` =
+# Orleans silo joins a shared cluster via `clustering.backend`.
+hosting:
+  mode: localhost  # localhost | clustered
+
+# Clustering backend. Ignored in localhost mode.
+clustering:
+  backend: redis  # redis | postgres
+  # Required when mode=clustered. Plain-string connection for simple installs;
+  # use `clustering.existingSecret` instead for production to avoid putting
+  # credentials in values.yaml.
+  connectionString: ""
+  # Optional: pull the connection string from an existing Secret instead of
+  # inlining it above. When set, the chart wires it as a secretKeyRef; the
+  # inline `connectionString` is ignored.
+  existingSecret: ""
+  existingSecretKey: "connection-string"
+
+# Optional OPA policy engine. Off-by-default → the runtime logs
+# "opa=disabled (AllowAll)" on startup and every verb is allowed. Enable this
+# to either spin up a pod-local sidecar (when baseUrl is empty) or point at
+# an external OPA service (when baseUrl is set).
+opa:
+  enabled: false
+  # External OPA URL — overrides the sidecar. Leave empty to run a sidecar
+  # container in this pod on localhost:8181.
+  baseUrl: ""
+  # Sidecar image (ignored when baseUrl is set).
+  image: openpolicyagent/opa:1.15.2
+  imagePullPolicy: IfNotPresent
+  # Closed = deny on OPA failure (default; enterprise-safe). Open = allow on
+  # failure.
+  failMode: Closed
+  # Rego data path queried by the adapter — defaults to the canonical
+  # `vais/agents/allow` in the Rego samples under `samples/opa-policies/`.
+  dataPath: vais/agents/allow
+  # Inline Rego to render into an auto-generated ConfigMap. Ignored if
+  # `configMapName` is set. Shipped as a convenience for quick demos; real
+  # gating should live in `configMapName`.
+  policy: |
+    package vais.agents
+    default allow := {"allowed": true}
+  # Pre-existing ConfigMap containing one or more `*.rego` keys. Takes
+  # precedence over `policy` when set.
+  configMapName: ""
+
+# Optional observability sinks. Both off unless configured.
+observability:
+  otel:
+    # OTLP/gRPC endpoint. Example: http://otel-collector.monitoring.svc:4317
+    endpoint: ""
+    # Set to true to additionally emit traces + metrics to the console (noisy
+    # — intended for debug sessions, not production).
+    console: false
+  langfuse:
+    # Project label attached to enrichment traces. Pillar B+ expands this to
+    # full Langfuse authentication; v0.16 only tags.
+    project: ""
+
+# Optional plugin mount-point. Pillar A bakes the `/var/lib/vais/plugins`
+# convention in the container image; Pillar C (v0.18) ships the loader. Until
+# then this is a no-op — keep it disabled unless you're tracking the
+# forthcoming Pillar C contract.
+plugins:
+  enabled: false
+  # When enabled:
+  #   - `persistentVolumeClaimName` set → mount that PVC
+  #   - `persistentVolumeClaimName` empty → emptyDir (ephemeral; not a real
+  #     plugin story, but keeps the mount shape stable for Pillar C).
+  persistentVolumeClaimName: ""
+
+# Kubernetes Service fronting the pod(s). ClusterIP + HTTP 8080 by default;
+# for LoadBalancer / NodePort set `service.type` accordingly.
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+# Probe timings — default tolerance is 60s (12 × 5s) on readiness to cover
+# the measured ~14s P99 silo-join time in clustered mode with 4× safety. Tune
+# `readinessProbe.failureThreshold` upward for larger clusters that may
+# converge slower; localhost mode needs neither headroom.
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 12
+
+# Resource requests + limits. Leave `limits.cpu` unset (no CPU throttling on
+# bursty silo traffic) unless your platform requires it.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# ServiceAccount creation.
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod-level security context. Matches the Dockerfile's non-root uid/gid.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context. readOnlyRootFilesystem relies on the
+# writable emptyDir mounted at /tmp (see deployment template).
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Extra labels + annotations merged onto all resources / pod spec.
+labels: {}
+podAnnotations: {}
+
+# Image pull secrets (when using a private registry).
+imagePullSecrets: []
+
+# Name overrides — standard Helm boilerplate.
+nameOverride: ""
+fullnameOverride: ""
+
+# Scheduling knobs.
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,13 +1,21 @@
 # Vais.Agents deployment artefacts
 
-Kubernetes manifests, Helm chart, and the operator's Dockerfile for
-running the Vais.Agents operator against a v0.6 HTTP control plane.
+Kubernetes manifests, Helm charts, docker-compose recipes, and Dockerfiles
+for running the Vais.Agents runtime + operator.
 
 ## Contents
 
+- [`compose/`](compose/README.md) — **docker-compose** recipes for the
+  v0.16 `vais-agents-runtime` container: two bases (`localhost`,
+  `clustered`) + three overlays (`opa`, `langfuse`, `otel`) that compose
+  orthogonally via `-f` layering. Dev / demo / partner evaluation.
 - [`crds/vais.io_agents.yaml`](crds/vais.io_agents.yaml) — standalone
   `CustomResourceDefinition` for `Agent` (`vais.io/v1alpha1`). Apply with
   `kubectl apply -f` for non-Helm installs.
+- [`helm/vais-agents-runtime/`](helm/vais-agents-runtime/README.md) —
+  Helm chart for the v0.16 `vais-agents-runtime` container: Deployment +
+  Service + ServiceAccount + optional OPA sidecar ConfigMap. Orleans-aware
+  probes, no Redis subchart (bring your own).
 - [`helm/vais-agents-operator/`](helm/vais-agents-operator/README.md) —
   Helm chart that installs the CRD + SA + RBAC + Deployment in one
   command. Helm-managed CRD install via a `helm.sh/hook: pre-install`.

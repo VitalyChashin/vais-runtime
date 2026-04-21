@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vais-agents-runtime.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vais-agents-runtime.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vais-agents-runtime.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vais-agents-runtime.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "vais-agents-runtime.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: runtime
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://0.0.0.0:8080"
+            - name: VAIS_HOSTING_MODE
+              value: {{ .Values.hosting.mode | quote }}
+            {{- if eq .Values.hosting.mode "clustered" }}
+            - name: VAIS_CLUSTERING_BACKEND
+              value: {{ .Values.clustering.backend | quote }}
+            {{- if .Values.clustering.existingSecret }}
+            - name: {{ include "vais-agents-runtime.clusteringEnvName" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.clustering.existingSecret | quote }}
+                  key: {{ .Values.clustering.existingSecretKey | quote }}
+            {{- else }}
+            - name: {{ include "vais-agents-runtime.clusteringEnvName" . }}
+              value: {{ required "clustering.connectionString is required when hosting.mode=clustered and clustering.existingSecret is empty" .Values.clustering.connectionString | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.opa.enabled }}
+            - name: VAIS_OPA_BASEURL
+              value: {{ include "vais-agents-runtime.opaBaseUrl" . | quote }}
+            - name: VAIS_OPA_FAILMODE
+              value: {{ .Values.opa.failMode | quote }}
+            - name: VAIS_OPA_DATAPATH
+              value: {{ .Values.opa.dataPath | quote }}
+            {{- end }}
+            {{- if .Values.observability.otel.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otel.endpoint | quote }}
+            {{- end }}
+            {{- if .Values.observability.otel.console }}
+            - name: VAIS_OTEL_CONSOLE
+              value: "true"
+            {{- end }}
+            {{- if .Values.observability.langfuse.project }}
+            - name: VAIS_LANGFUSE_PROJECT
+              value: {{ .Values.observability.langfuse.project | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.plugins.enabled }}
+            - name: plugins
+              mountPath: /var/lib/vais/plugins
+            {{- end }}
+        {{- if eq (include "vais-agents-runtime.opaSidecar" .) "true" }}
+        - name: opa
+          image: {{ .Values.opa.image | quote }}
+          imagePullPolicy: {{ .Values.opa.imagePullPolicy }}
+          args:
+            - "run"
+            - "--server"
+            - "--addr=:8181"
+            - "--log-format=json"
+            - "/policies"
+          ports:
+            - name: opa
+              containerPort: 8181
+              protocol: TCP
+          volumeMounts:
+            - name: opa-policy
+              mountPath: /policies
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: opa
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: opa
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+        {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.plugins.enabled }}
+        - name: plugins
+          {{- if .Values.plugins.persistentVolumeClaimName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.plugins.persistentVolumeClaimName }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- if eq (include "vais-agents-runtime.opaSidecar" .) "true" }}
+        - name: opa-policy
+          configMap:
+            name: {{ include "vais-agents-runtime.opaPolicyConfigMapName" . }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

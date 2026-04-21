@@ -19,3 +19,6 @@ packages/
 # OS
 Thumbs.db
 .DS_Store
+
+# docker-compose bind-mount data (Redis dump, Langfuse Postgres, etc.)
+deploy/compose/data/
