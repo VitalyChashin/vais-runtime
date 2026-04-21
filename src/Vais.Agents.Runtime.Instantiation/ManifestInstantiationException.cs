@@ -81,4 +81,10 @@ public static class ManifestInstantiationUrns
 
     /// <summary><see cref="SystemPromptSpec"/> specifies more than one shape (inline + templateRef + fileRef are mutually exclusive).</summary>
     public const string PromptSpecAmbiguous = UrnPrefix + "prompt-spec-ambiguous";
+
+    /// <summary>Plugin factory's <c>CreateAsync</c> threw during grain activation. v0.18 Pillar C.</summary>
+    public const string PluginFactoryThrow = UrnPrefix + "plugin-factory-throw";
+
+    /// <summary>Apply-time WARN — manifest has both a loaded-plugin <c>handler.TypeName</c> AND declarative <c>Model</c> fields. Plugin wins; declarative fields ignored. v0.18 Pillar C.</summary>
+    public const string HandlerAndDeclarativeFieldsBothSet = UrnPrefix + "handler-and-declarative-fields-both-set";
 }

@@ -2,7 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
+using Vais.Agents.Control;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Instantiation;
 
@@ -14,6 +16,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IStaticToolRegistry? _staticTools;
     private readonly IPromptTemplateRegistry? _promptTemplates;
     private readonly IPromptFileLoader? _promptFileLoader;
+    private readonly IPluginHandlerRegistry? _pluginRegistry;
+    private readonly IManifestApplyDiagnosticsSink? _diagnosticsSink;
     private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
@@ -24,7 +28,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IServiceProvider serviceProvider,
         IStaticToolRegistry? staticTools = null,
         IPromptTemplateRegistry? promptTemplates = null,
-        IPromptFileLoader? promptFileLoader = null)
+        IPromptFileLoader? promptFileLoader = null,
+        IPluginHandlerRegistry? pluginRegistry = null,
+        IManifestApplyDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(providerPool);
@@ -36,6 +42,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _staticTools = staticTools;
         _promptTemplates = promptTemplates;
         _promptFileLoader = promptFileLoader;
+        _pluginRegistry = pluginRegistry;
+        _diagnosticsSink = diagnosticsSink;
         _serviceProvider = serviceProvider;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
@@ -65,14 +73,61 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                 ManifestInstantiationUrns.AgentNotFound,
                 $"No manifest registered for agent id '{agentId}'.");
 
-        // v0.17 declarative-path switch: Model presence. Null Model ⇒ Pillar C (v0.18)
-        // handler-loading would need to kick in; until then, 501.
+        // v0.18 Pillar C plugin branch: if the manifest's Handler.TypeName
+        // matches a loaded plugin factory, route to the plugin and stash the
+        // resulting IAiAgent on StatefulAgentOptions. If Model is also set,
+        // record an apply-time WARN — plugin wins; declarative fields ignored.
+        if (_pluginRegistry is not null
+            && _pluginRegistry.TryGet(manifest.Handler.TypeName, out var factory)
+            && factory is not null)
+        {
+            if (manifest.Model is not null)
+            {
+                _diagnosticsSink?.Record(
+                    agentId,
+                    ManifestInstantiationUrns.HandlerAndDeclarativeFieldsBothSet,
+                    $"Agent '{agentId}' has both a loaded plugin handler '{manifest.Handler.TypeName}' " +
+                    "and declarative Model fields. Plugin wins; declarative fields are ignored.");
+            }
+
+            IAiAgent pluginAgent;
+            try
+            {
+                pluginAgent = await factory.CreateAsync(manifest, _serviceProvider, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new ManifestInstantiationException(
+                    ManifestInstantiationUrns.PluginFactoryThrow,
+                    $"Plugin factory for handler '{manifest.Handler.TypeName}' threw while activating agent '{agentId}': {ex.Message}",
+                    ex);
+            }
+
+            var pluginOptions = new StatefulAgentOptions
+            {
+                AgentName = manifest.Id,
+                Agent = pluginAgent,
+                Budget = manifest.Budget,
+            };
+
+            _cache.TryAdd(agentId, pluginOptions);
+            return pluginOptions;
+        }
+
+        // v0.17 declarative-path switch: Model presence. Null Model with no
+        // matching plugin ⇒ the manifest references a code-authored handler
+        // we can't load.
         if (manifest.Model is null)
         {
             throw new ManifestInstantiationException(
                 ManifestInstantiationUrns.HandlerNotLoaded,
-                $"Agent '{agentId}' has no ModelSpec and no declarative fields the translator can instantiate. " +
-                "Code-authored handlers via AgentHandlerRef.TypeName require the plugin loader that ships with Pillar C (v0.18).");
+                $"Agent '{agentId}' has no ModelSpec and no loaded plugin handler for " +
+                $"AgentHandlerRef.TypeName '{manifest.Handler.TypeName}'. Ship a plugin that exports " +
+                "this handler, or switch the manifest to the declarative path with a ModelSpec.");
         }
 
         // Validate + warm the provider. The pool memoises, so subsequent

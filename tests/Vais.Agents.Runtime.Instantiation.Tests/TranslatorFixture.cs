@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Vais.Agents.Control;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Instantiation.Tests;
 
@@ -22,6 +23,8 @@ internal sealed class TranslatorFixture
     private readonly Dictionary<string, string> _promptTemplates = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _promptFiles = new(StringComparer.Ordinal);
     private readonly List<IGuardrailFactory> _guardrailFactories = new();
+    private readonly List<IAgentHandlerFactory> _pluginFactories = new();
+    private IManifestApplyDiagnosticsSink? _diagnosticsSink;
     private IAgentManifestTranslator? _translator;
 
     public IAgentManifestTranslator Translator => _translator ??= Build();
@@ -65,6 +68,31 @@ internal sealed class TranslatorFixture
     public TranslatorFixture WithPromptFile(string fileRef, string content)
     {
         _promptFiles[fileRef] = content;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithPluginHandler(string handlerTypeName, Func<AgentManifest, IServiceProvider, IAiAgent> factory)
+    {
+        var wrapped = Substitute.For<IAgentHandlerFactory>();
+        wrapped.HandlerTypeName.Returns(handlerTypeName);
+        wrapped.CreateAsync(Arg.Any<AgentManifest>(), Arg.Any<IServiceProvider>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new ValueTask<IAiAgent>(factory(callInfo.Arg<AgentManifest>(), callInfo.Arg<IServiceProvider>())));
+        _pluginFactories.Add(wrapped);
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithPluginHandler(IAgentHandlerFactory factory)
+    {
+        _pluginFactories.Add(factory);
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithDiagnosticsSink(IManifestApplyDiagnosticsSink sink)
+    {
+        _diagnosticsSink = sink;
         _translator = null;
         return this;
     }
@@ -130,9 +158,45 @@ internal sealed class TranslatorFixture
             services.AddSingleton<IPromptFileLoader>(new FakePromptFileLoader(_promptFiles));
         }
 
+        if (_pluginFactories.Count > 0)
+        {
+            var registry = new FakePluginHandlerRegistry(_pluginFactories);
+            services.AddSingleton<IPluginHandlerRegistry>(registry);
+        }
+
+        if (_diagnosticsSink is not null)
+        {
+            services.AddSingleton(_diagnosticsSink);
+        }
+
         services.AddAgentManifestInstantiator();
 
         return services.BuildServiceProvider().GetRequiredService<IAgentManifestTranslator>();
+    }
+
+    private sealed class FakePluginHandlerRegistry : IPluginHandlerRegistry
+    {
+        private readonly Dictionary<string, IAgentHandlerFactory> _byName;
+
+        public FakePluginHandlerRegistry(IEnumerable<IAgentHandlerFactory> factories)
+        {
+            _byName = factories.ToDictionary(f => f.HandlerTypeName, StringComparer.Ordinal);
+        }
+
+        public bool TryGet(string handlerTypeName, out IAgentHandlerFactory? factory)
+        {
+            if (_byName.TryGetValue(handlerTypeName, out var f))
+            {
+                factory = f;
+                return true;
+            }
+            factory = null;
+            return false;
+        }
+
+        public IReadOnlyCollection<string> HandlerTypeNames => _byName.Keys;
+
+        public IReadOnlyCollection<PluginDescriptor> Plugins => Array.Empty<PluginDescriptor>();
     }
 
     private sealed class FakeAgentRegistry : IAgentRegistry

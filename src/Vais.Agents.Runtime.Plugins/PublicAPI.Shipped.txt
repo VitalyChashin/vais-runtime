@@ -1,0 +1,53 @@
+#nullable enable
+Vais.Agents.Runtime.Plugins.AssemblyPluginLoader
+Vais.Agents.Runtime.Plugins.AssemblyPluginLoader.AssemblyPluginLoader(Vais.Agents.Runtime.Plugins.PluginLoaderOptions? options = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Runtime.Plugins.AssemblyPluginLoader!>? logger = null) -> void
+Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry
+Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.HandlerTypeNames.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.Plugins.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.Runtime.Plugins.PluginDescriptor!>!
+Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.TryGet(string! handlerTypeName, out Vais.Agents.IAgentHandlerFactory? factory) -> bool
+Vais.Agents.Runtime.Plugins.PluginDescriptor
+Vais.Agents.Runtime.Plugins.PluginDescriptor.<Clone>$() -> Vais.Agents.Runtime.Plugins.PluginDescriptor!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.AssemblyPath.get -> string!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.AssemblyPath.init -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Deconstruct(out string! Name, out string! AssemblyPath, out string! TargetApiVersion, out System.Collections.Generic.IReadOnlyList<string!>! Handlers, out bool LoadedViaAttribute, out System.Runtime.Loader.AssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Equals(Vais.Agents.Runtime.Plugins.PluginDescriptor? other) -> bool
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Handlers.init -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.LoadContext.get -> System.Runtime.Loader.AssemblyLoadContext!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.LoadContext.init -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.LoadedViaAttribute.get -> bool
+Vais.Agents.Runtime.Plugins.PluginDescriptor.LoadedViaAttribute.init -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Name.get -> string!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.Name.init -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.PluginDescriptor(string! Name, string! AssemblyPath, string! TargetApiVersion, System.Collections.Generic.IReadOnlyList<string!>! Handlers, bool LoadedViaAttribute, System.Runtime.Loader.AssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Plugins.PluginDescriptor.TargetApiVersion.get -> string!
+Vais.Agents.Runtime.Plugins.PluginDescriptor.TargetApiVersion.init -> void
+Vais.Agents.Runtime.Plugins.PluginLoadException
+Vais.Agents.Runtime.Plugins.PluginLoadException.PluginLoadException(string! urn, string! message, System.Exception! innerException, string? pluginPath) -> void
+Vais.Agents.Runtime.Plugins.PluginLoadException.PluginLoadException(string! urn, string! message, string? pluginPath) -> void
+Vais.Agents.Runtime.Plugins.PluginLoadException.PluginPath.get -> string?
+Vais.Agents.Runtime.Plugins.PluginLoadException.Urn.get -> string!
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.AllowConventionDiscovery.get -> bool
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.AllowConventionDiscovery.init -> void
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.FailOnHandlerCollision.get -> bool
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.FailOnHandlerCollision.init -> void
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.PluginLoaderOptions() -> void
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.RuntimeAbiVersion.get -> string!
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.RuntimeAbiVersion.init -> void
+Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions
+Vais.Agents.Runtime.Plugins.PluginUrns
+Vais.Agents.Runtime.Plugins.VaisRuntimeAbi
+const Vais.Agents.Runtime.Plugins.PluginUrns.PluginAbiMismatch = "urn:vais-agents:plugin-abi-mismatch" -> string!
+const Vais.Agents.Runtime.Plugins.PluginUrns.PluginFactoryThrow = "urn:vais-agents:plugin-factory-throw" -> string!
+const Vais.Agents.Runtime.Plugins.PluginUrns.PluginHandlerCollision = "urn:vais-agents:plugin-handler-collision" -> string!
+const Vais.Agents.Runtime.Plugins.PluginUrns.PluginHandlerNotFound = "urn:vais-agents:plugin-handler-not-found" -> string!
+const Vais.Agents.Runtime.Plugins.PluginUrns.PluginLoadFailed = "urn:vais-agents:plugin-load-failed" -> string!
+const Vais.Agents.Runtime.Plugins.PluginUrns.UrnPrefix = "urn:vais-agents:" -> string!
+const Vais.Agents.Runtime.Plugins.VaisRuntimeAbi.CurrentVersion = "0.18" -> string!
+override Vais.Agents.Runtime.Plugins.PluginDescriptor.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.PluginDescriptor.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.PluginDescriptor.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.PluginDescriptor.operator !=(Vais.Agents.Runtime.Plugins.PluginDescriptor? left, Vais.Agents.Runtime.Plugins.PluginDescriptor? right) -> bool
+static Vais.Agents.Runtime.Plugins.PluginDescriptor.operator ==(Vais.Agents.Runtime.Plugins.PluginDescriptor? left, Vais.Agents.Runtime.Plugins.PluginDescriptor? right) -> bool
+static Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions.AddAgentPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! pluginsDirectory, Vais.Agents.Runtime.Plugins.PluginLoaderOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -665,6 +665,9 @@ Vais.Agents.IAgentGraph
 Vais.Agents.IAgentGraph<TState>
 Vais.Agents.IAgentGraph<TState>.InvokeAsync(TState initial, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<TState>
 Vais.Agents.IAgentGraph<TState>.StreamAsync(TState initial, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.IAgentHandlerFactory
+Vais.Agents.IAgentHandlerFactory.CreateAsync(Vais.Agents.AgentManifest! manifest, System.IServiceProvider! serviceProvider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.IAiAgent!>
+Vais.Agents.IAgentHandlerFactory.HandlerTypeName.get -> string!
 Vais.Agents.IAgentIdentityProvider
 Vais.Agents.IAgentIdentityProvider.AcquireOutboundAsync(string! agentId, string! credentialRef, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
 Vais.Agents.IAgentIdentityProvider.AuthenticateInboundAsync(Vais.Agents.AgentInvocationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentPrincipal!>
@@ -1173,6 +1176,10 @@ Vais.Agents.UsageRecord.TotalTokens.get -> int?
 Vais.Agents.UsageRecord.UsageRecord(string! ProviderName, string! ModelId, int? PromptTokens, int? CompletionTokens, System.TimeSpan Duration, System.DateTimeOffset StartedAt, bool Succeeded, string? AgentName = null, string? UserId = null, string? TenantId = null, string? CorrelationId = null, string? ErrorType = null) -> void
 Vais.Agents.UsageRecord.UserId.get -> string?
 Vais.Agents.UsageRecord.UserId.init -> void
+Vais.Agents.VaisPluginAttribute
+Vais.Agents.VaisPluginAttribute.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.VaisPluginAttribute.TargetApiVersion.get -> string!
+Vais.Agents.VaisPluginAttribute.VaisPluginAttribute(string! targetApiVersion, params string![]! handlers) -> void
 abstract Vais.Agents.AgentEvent.<Clone>$() -> Vais.Agents.AgentEvent!
 abstract Vais.Agents.AgentGraphEvent.<Clone>$() -> Vais.Agents.AgentGraphEvent!
 abstract Vais.Agents.GraphEdgeEffect.<Clone>$() -> Vais.Agents.GraphEdgeEffect!

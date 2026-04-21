@@ -49,7 +49,9 @@ public static class AgentManifestInstantiatorServiceCollectionExtensions
             sp,
             sp.GetService<IStaticToolRegistry>(),
             sp.GetService<IPromptTemplateRegistry>(),
-            sp.GetService<IPromptFileLoader>()));
+            sp.GetService<IPromptFileLoader>(),
+            sp.GetService<Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry>(),
+            sp.GetService<Vais.Agents.Control.IManifestApplyDiagnosticsSink>()));
 
         // Alias — AgentLifecycleManager (Control.InProcess) depends on the narrower
         // IAgentManifestInvalidator contract; point it at the translator singleton

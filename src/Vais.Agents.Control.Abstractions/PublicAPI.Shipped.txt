@@ -56,6 +56,8 @@ Vais.Agents.Control.IIdempotencyStore
 Vais.Agents.Control.IIdempotencyStore.CompleteAsync(Vais.Agents.Control.IdempotencyKey key, Vais.Agents.Control.CachedResponse! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Control.IIdempotencyStore.ReleaseAsync(Vais.Agents.Control.IdempotencyKey key, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Control.IIdempotencyStore.TryBeginAsync(Vais.Agents.Control.IdempotencyKey key, string! fingerprint, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.IdempotencyBeginResult!>
+Vais.Agents.Control.IManifestApplyDiagnosticsSink
+Vais.Agents.Control.IManifestApplyDiagnosticsSink.Record(string! agentId, string! urn, string! detail) -> void
 Vais.Agents.Control.IPrincipalMapper
 Vais.Agents.Control.IPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! claimsPrincipal) -> Vais.Agents.AgentPrincipal?
 Vais.Agents.Control.ISecretResolver

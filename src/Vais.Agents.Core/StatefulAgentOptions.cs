@@ -29,6 +29,22 @@ public sealed class StatefulAgentOptions
     public ICompletionProvider? CompletionProvider { get; init; }
 
     /// <summary>
+    /// Optional pre-constructed agent instance supplied by the manifest
+    /// instantiation pipeline (v0.18 Pillar C — plugin model). When set,
+    /// host-side grain activation uses this instance verbatim instead of
+    /// constructing <see cref="StatefulAiAgent"/> from the declarative
+    /// slots. Null ⇒ fall through to the v0.17 declarative path.
+    /// </summary>
+    /// <remarks>
+    /// Populated by the translator when <c>AgentManifest.Handler.TypeName</c>
+    /// matches a loaded plugin's <c>IAgentHandlerFactory.HandlerTypeName</c>.
+    /// Plugin factories that want the standard execution loop return a
+    /// <c>new StatefulAiAgent(provider, options)</c>; plugins that own
+    /// their loop implement <see cref="IAiAgent"/> directly.
+    /// </remarks>
+    public IAiAgent? Agent { get; init; }
+
+    /// <summary>
     /// System instruction prepended to every turn. Mutable after construction via
     /// <see cref="IAiAgent.SystemPrompt"/>.
     /// </summary>

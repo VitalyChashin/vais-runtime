@@ -100,6 +100,8 @@ Vais.Agents.Core.SequentialOrchestrator
 Vais.Agents.Core.SequentialOrchestrator.RunAsync(string! task, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.OrchestrationStep!>!
 Vais.Agents.Core.SequentialOrchestrator.SequentialOrchestrator(System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentParticipant!>! participants) -> void
 Vais.Agents.Core.StatefulAgentOptions
+Vais.Agents.Core.StatefulAgentOptions.Agent.get -> Vais.Agents.IAiAgent?
+Vais.Agents.Core.StatefulAgentOptions.Agent.init -> void
 Vais.Agents.Core.StatefulAgentOptions.AgentName.get -> string?
 Vais.Agents.Core.StatefulAgentOptions.AgentName.init -> void
 Vais.Agents.Core.StatefulAgentOptions.Budget.get -> Vais.Agents.RunBudget?

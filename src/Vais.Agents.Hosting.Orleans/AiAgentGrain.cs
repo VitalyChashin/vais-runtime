@@ -40,7 +40,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly ICompletionProvider? _defaultProvider;
     private readonly Func<string, StatefulAgentOptions> _optionsFactory;
     private readonly ILoggerFactory _loggerFactory;
-    private StatefulAiAgent? _agent;
+    private IAiAgent? _agent;
 
     /// <summary>
     /// Grain constructor. Dependencies resolved from silo DI.
@@ -71,6 +71,20 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     {
         var id = this.GetPrimaryKeyString();
         var supplied = _optionsFactory(id);
+
+        // v0.18 Pillar C plugin branch: translator already constructed a
+        // concrete IAiAgent (plugin-authored). The grain treats it verbatim —
+        // persistence still runs off IAiAgent.History, but we do not re-seed
+        // history here since the plugin factory owns its own session hydration.
+        if (supplied.Agent is not null)
+        {
+            _agent = supplied.Agent;
+            if (_state.State.SystemPrompt is { } persistedPrompt)
+            {
+                _agent.SystemPrompt = persistedPrompt;
+            }
+            return base.OnActivateAsync(cancellationToken);
+        }
 
         var provider = supplied.CompletionProvider ?? _defaultProvider
             ?? throw new InvalidOperationException(
@@ -152,6 +166,6 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         DeactivateOnIdle();
     }
 
-    private StatefulAiAgent EnsureAgent() =>
+    private IAiAgent EnsureAgent() =>
         _agent ?? throw new InvalidOperationException("Grain is not activated.");
 }
