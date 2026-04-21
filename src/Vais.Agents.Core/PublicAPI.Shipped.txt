@@ -19,6 +19,24 @@ Vais.Agents.Core.FormatStringPromptTemplate
 Vais.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
 Vais.Agents.Core.GraphStateReducers
 Vais.Agents.Core.GraphStateReducers.WellKnownKey
+Vais.Agents.Core.Guardrails.LengthCapInputGuardrail
+Vais.Agents.Core.Guardrails.LengthCapInputGuardrail.EvaluateAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.LengthCapInputGuardrail.LengthCapInputGuardrail(int maxChars) -> void
+Vais.Agents.Core.Guardrails.LlmAsJudgeOutputGuardrail
+Vais.Agents.Core.Guardrails.LlmAsJudgeOutputGuardrail.EvaluateAsync(Vais.Agents.CompletionResponse! response, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.LlmAsJudgeOutputGuardrail.LlmAsJudgeOutputGuardrail(Vais.Agents.ICompletionProvider! judge, string! judgePrompt, double minScore) -> void
+Vais.Agents.Core.Guardrails.RegexAllowlistInputGuardrail
+Vais.Agents.Core.Guardrails.RegexAllowlistInputGuardrail.EvaluateAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.RegexAllowlistInputGuardrail.RegexAllowlistInputGuardrail(System.Text.RegularExpressions.Regex! pattern) -> void
+Vais.Agents.Core.Guardrails.RegexAllowlistOutputGuardrail
+Vais.Agents.Core.Guardrails.RegexAllowlistOutputGuardrail.EvaluateAsync(Vais.Agents.CompletionResponse! response, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.RegexAllowlistOutputGuardrail.RegexAllowlistOutputGuardrail(System.Text.RegularExpressions.Regex! pattern) -> void
+Vais.Agents.Core.Guardrails.RegexDenylistInputGuardrail
+Vais.Agents.Core.Guardrails.RegexDenylistInputGuardrail.EvaluateAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.RegexDenylistInputGuardrail.RegexDenylistInputGuardrail(System.Text.RegularExpressions.Regex! pattern) -> void
+Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail
+Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail.EvaluateAsync(Vais.Agents.CompletionResponse! response, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
+Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail.RegexDenylistOutputGuardrail(System.Text.RegularExpressions.Regex! pattern) -> void
 Vais.Agents.Core.InMemoryAgentJournal
 Vais.Agents.Core.InMemoryAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.InMemoryAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
@@ -86,6 +104,8 @@ Vais.Agents.Core.StatefulAgentOptions.AgentName.get -> string?
 Vais.Agents.Core.StatefulAgentOptions.AgentName.init -> void
 Vais.Agents.Core.StatefulAgentOptions.Budget.get -> Vais.Agents.RunBudget?
 Vais.Agents.Core.StatefulAgentOptions.Budget.init -> void
+Vais.Agents.Core.StatefulAgentOptions.CompletionProvider.get -> Vais.Agents.ICompletionProvider?
+Vais.Agents.Core.StatefulAgentOptions.CompletionProvider.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ContextAccessor.get -> Vais.Agents.IAgentContextAccessor?
 Vais.Agents.Core.StatefulAgentOptions.ContextAccessor.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ContextProviders.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IContextProvider!>!
@@ -117,6 +137,8 @@ Vais.Agents.Core.StatefulAgentOptions.Session.init -> void
 Vais.Agents.Core.StatefulAgentOptions.StatefulAgentOptions() -> void
 Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IStreamingAgentFilter!>!
 Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?
+Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.init -> void
 Vais.Agents.Core.StatefulAgentOptions.SystemPrompt.get -> string?
 Vais.Agents.Core.StatefulAgentOptions.SystemPrompt.init -> void
 Vais.Agents.Core.StatefulAgentOptions.SystemPromptComposer.get -> Vais.Agents.ISystemPromptComposer?
@@ -137,6 +159,7 @@ Vais.Agents.Core.StatefulAiAgent.ResumeAsync(Vais.Agents.ResumeInput! input, Sys
 Vais.Agents.Core.StatefulAiAgent.Session.get -> Vais.Agents.IAgentSession!
 Vais.Agents.Core.StatefulAiAgent.StatefulAiAgent(Vais.Agents.ICompletionProvider! provider, Vais.Agents.Core.StatefulAgentOptions? options = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.StatefulAiAgent!>? logger = null) -> void
 Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
 Vais.Agents.Core.StatefulAiAgent.SystemPrompt.get -> string?
 Vais.Agents.Core.StatefulAiAgent.SystemPrompt.set -> void
 Vais.Agents.Core.TerminationConditions
@@ -176,6 +199,3 @@ static readonly Vais.Agents.Core.NullAgentJournal.Instance -> Vais.Agents.Core.N
 static readonly Vais.Agents.Core.NullMemoryStore.Instance -> Vais.Agents.Core.NullMemoryStore!
 static readonly Vais.Agents.Core.NullUsageSink.Instance -> Vais.Agents.Core.NullUsageSink!
 virtual Vais.Agents.Core.TerminationPredicate.Invoke(System.Collections.Generic.IReadOnlyList<Vais.Agents.OrchestrationStep!>! steps) -> bool
-Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?
-Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.init -> void
-Vais.Agents.Core.StatefulAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!

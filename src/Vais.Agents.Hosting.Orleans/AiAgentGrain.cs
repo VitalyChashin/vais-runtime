@@ -37,7 +37,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     public const string StorageName = "vais.agents";
 
     private readonly IPersistentState<AiAgentGrainState> _state;
-    private readonly ICompletionProvider _provider;
+    private readonly ICompletionProvider? _defaultProvider;
     private readonly Func<string, StatefulAgentOptions> _optionsFactory;
     private readonly ILoggerFactory _loggerFactory;
     private StatefulAiAgent? _agent;
@@ -45,16 +45,23 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     /// <summary>
     /// Grain constructor. Dependencies resolved from silo DI.
     /// </summary>
+    /// <remarks>
+    /// Since v0.17 Pillar B, <paramref name="provider"/> is optional — the
+    /// translator-supplied <see cref="StatefulAgentOptions.CompletionProvider"/>
+    /// takes precedence when set (it derives the provider from the manifest's
+    /// <c>ModelSpec</c> per agent). Hosts still registering a DI-wide
+    /// provider as the v0.16 pattern did get the old fall-back behaviour.
+    /// At activation the grain throws if neither source supplies a provider.
+    /// </remarks>
     public AiAgentGrain(
         [PersistentState("state", StorageName)] IPersistentState<AiAgentGrainState> state,
-        ICompletionProvider provider,
+        ICompletionProvider? provider = null,
         Func<string, StatefulAgentOptions>? optionsFactory = null,
         ILoggerFactory? loggerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(provider);
         _state = state;
-        _provider = provider;
+        _defaultProvider = provider;
         _optionsFactory = optionsFactory ?? (id => new StatefulAgentOptions { AgentName = id });
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
     }
@@ -65,6 +72,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         var id = this.GetPrimaryKeyString();
         var supplied = _optionsFactory(id);
 
+        var provider = supplied.CompletionProvider ?? _defaultProvider
+            ?? throw new InvalidOperationException(
+                $"Agent grain '{id}' activated but no ICompletionProvider is available. " +
+                "Either register a silo-wide ICompletionProvider in DI (v0.16 pattern) or " +
+                "configure the manifest instantiator (v0.17 Pillar B) so the translator " +
+                "supplies a per-agent provider via StatefulAgentOptions.CompletionProvider.");
+
         var seeded = new StatefulAgentOptions
         {
             AgentName = supplied.AgentName ?? id,
@@ -74,10 +88,14 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             ContextAccessor = supplied.ContextAccessor,
             ResiliencePipeline = supplied.ResiliencePipeline,
             ToolRegistry = supplied.ToolRegistry,
+            InputGuardrails = supplied.InputGuardrails,
+            OutputGuardrails = supplied.OutputGuardrails,
+            ToolGuardrails = supplied.ToolGuardrails,
+            Budget = supplied.Budget,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
         };
 
-        _agent = new StatefulAiAgent(_provider, seeded, _loggerFactory.CreateLogger<StatefulAiAgent>());
+        _agent = new StatefulAiAgent(provider, seeded, _loggerFactory.CreateLogger<StatefulAiAgent>());
         return base.OnActivateAsync(cancellationToken);
     }
 

@@ -18,6 +18,17 @@ public sealed class StatefulAgentOptions
     public string? AgentName { get; init; }
 
     /// <summary>
+    /// Optional per-agent completion provider. When set, the hosting layer
+    /// (e.g. <c>AiAgentGrain</c>) uses this instance instead of whatever
+    /// <see cref="ICompletionProvider"/> is registered as the ambient DI
+    /// singleton. Set by the v0.17 manifest translator so each agent id can
+    /// use a different model provider derived from its manifest's
+    /// <c>ModelSpec</c>. Default: null (host falls back to DI-registered
+    /// provider).
+    /// </summary>
+    public ICompletionProvider? CompletionProvider { get; init; }
+
+    /// <summary>
     /// System instruction prepended to every turn. Mutable after construction via
     /// <see cref="IAiAgent.SystemPrompt"/>.
     /// </summary>

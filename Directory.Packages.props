@@ -42,6 +42,11 @@
     <PackageVersion Include="OpenAI" Version="2.10.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Azure OpenAI SDK + Anthropic SDK - built-in model-provider factories (v0.17 Pillar B PR 2).">
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.2.0-beta.4" />
+    <PackageVersion Include="Anthropic.SDK" Version="5.5.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Logging / DI / resilience.">
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />

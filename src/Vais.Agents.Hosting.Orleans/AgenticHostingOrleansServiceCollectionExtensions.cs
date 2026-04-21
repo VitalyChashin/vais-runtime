@@ -143,4 +143,26 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
             ttl ?? OrleansIdempotencyStore.DefaultTtl));
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansAgentRegistry"/> as the cluster-backed
+    /// <see cref="IAgentRegistry"/>. Manifests survive silo restart via the
+    /// configured grain-storage provider (memory / Redis / Postgres).
+    /// </summary>
+    /// <remarks>
+    /// The v0.17 Pillar B runtime host swaps <c>InMemoryAgentRegistry</c> for
+    /// this registration so <c>vais apply -f</c> actually persists across
+    /// pod roll. Both the concrete <see cref="OrleansAgentRegistry"/> (for
+    /// callers that need <c>RegisterAsync</c> / <c>RemoveAsync</c>) and the
+    /// <see cref="IAgentRegistry"/> interface land in DI so
+    /// <c>AgentLifecycleManager.CreateAsync</c> resolves the concrete type.
+    /// </remarks>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansAgentRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansAgentRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IAgentRegistry>(sp => sp.GetRequiredService<OrleansAgentRegistry>());
+        return services;
+    }
 }

@@ -1,4 +1,17 @@
 #nullable enable
+Vais.Agents.A2ARemoteAgentRef
+Vais.Agents.A2ARemoteAgentRef.<Clone>$() -> Vais.Agents.A2ARemoteAgentRef!
+Vais.Agents.A2ARemoteAgentRef.A2ARemoteAgentRef(string! Name, System.Uri! Url, string? AuthRef = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Vais.Agents.A2ARemoteAgentRef.AuthRef.get -> string?
+Vais.Agents.A2ARemoteAgentRef.AuthRef.init -> void
+Vais.Agents.A2ARemoteAgentRef.Deconstruct(out string! Name, out System.Uri! Url, out string? AuthRef, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Vais.Agents.A2ARemoteAgentRef.Equals(Vais.Agents.A2ARemoteAgentRef? other) -> bool
+Vais.Agents.A2ARemoteAgentRef.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.A2ARemoteAgentRef.Metadata.init -> void
+Vais.Agents.A2ARemoteAgentRef.Name.get -> string!
+Vais.Agents.A2ARemoteAgentRef.Name.init -> void
+Vais.Agents.A2ARemoteAgentRef.Url.get -> System.Uri!
+Vais.Agents.A2ARemoteAgentRef.Url.init -> void
 Vais.Agents.AgentBudgetExceededException
 Vais.Agents.AgentBudgetExceededException.AgentBudgetExceededException(string! budgetField, object! limit, object! observed) -> void
 Vais.Agents.AgentBudgetExceededException.BudgetField.get -> string!
@@ -133,6 +146,8 @@ Vais.Agents.AgentInvocationResult.Text.get -> string!
 Vais.Agents.AgentInvocationResult.Text.init -> void
 Vais.Agents.AgentManifest
 Vais.Agents.AgentManifest.<Clone>$() -> Vais.Agents.AgentManifest!
+Vais.Agents.AgentManifest.A2ARemoteAgents.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.A2ARemoteAgentRef!>?
+Vais.Agents.AgentManifest.A2ARemoteAgents.init -> void
 Vais.Agents.AgentManifest.AgentManifest(string! Id, string! Version, Vais.Agents.AgentHandlerRef! Handler, System.Collections.Generic.IReadOnlyList<Vais.Agents.ProtocolBinding!>! Protocols, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolRef!>! Tools, Vais.Agents.MemoryRef? Memory = null, Vais.Agents.IdentityRef? Identity = null, Vais.Agents.AutoscalingSpec? Autoscaling = null, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
 Vais.Agents.AgentManifest.AgentMode.get -> Vais.Agents.AgentMode
 Vais.Agents.AgentManifest.AgentMode.init -> void
@@ -249,6 +264,20 @@ Vais.Agents.ChatTurn.ToolCallId.get -> string?
 Vais.Agents.ChatTurn.ToolCallId.init -> void
 Vais.Agents.ChatTurn.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
 Vais.Agents.ChatTurn.ToolCalls.init -> void
+Vais.Agents.CompletionDelta
+Vais.Agents.CompletionDelta.CompletionDelta(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls = null) -> void
+Vais.Agents.CompletionDelta.CompletionTokens.get -> int?
+Vais.Agents.CompletionDelta.CompletionTokens.init -> void
+Vais.Agents.CompletionDelta.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls) -> void
+Vais.Agents.CompletionDelta.Equals(Vais.Agents.CompletionDelta? other) -> bool
+Vais.Agents.CompletionDelta.ModelId.get -> string?
+Vais.Agents.CompletionDelta.ModelId.init -> void
+Vais.Agents.CompletionDelta.PromptTokens.get -> int?
+Vais.Agents.CompletionDelta.PromptTokens.init -> void
+Vais.Agents.CompletionDelta.TextDelta.get -> string!
+Vais.Agents.CompletionDelta.TextDelta.init -> void
+Vais.Agents.CompletionDelta.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
+Vais.Agents.CompletionDelta.ToolCalls.init -> void
 Vais.Agents.CompletionRequest
 Vais.Agents.CompletionRequest.<Clone>$() -> Vais.Agents.CompletionRequest!
 Vais.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools = null) -> void
@@ -708,8 +737,11 @@ Vais.Agents.IPromptTemplate.RenderAsync(string! template, System.Collections.Gen
 Vais.Agents.IResumableAgentGraph<TState>
 Vais.Agents.IResumableAgentGraph<TState>.ResumeAsync(Vais.Agents.GraphCheckpoint! checkpoint, TState? resumePayload, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<TState>
 Vais.Agents.IStreamingAgentFilter
+Vais.Agents.IStreamingAgentFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
 Vais.Agents.IStreamingAgentFilter.OnStreamCompleteAsync(Vais.Agents.CompletionResponse! final, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IStreamingAgentFilter.OnStreamDeltaAsync(Vais.Agents.CompletionUpdate! update, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionUpdate!>
+Vais.Agents.IStreamingAiAgent
+Vais.Agents.IStreamingAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
 Vais.Agents.IStreamingCompletionProvider
 Vais.Agents.IStreamingCompletionProvider.ProviderName.get -> string!
 Vais.Agents.IStreamingCompletionProvider.StreamAsync(Vais.Agents.CompletionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
@@ -1146,6 +1178,9 @@ abstract Vais.Agents.AgentGraphEvent.<Clone>$() -> Vais.Agents.AgentGraphEvent!
 abstract Vais.Agents.GraphEdgeEffect.<Clone>$() -> Vais.Agents.GraphEdgeEffect!
 abstract Vais.Agents.GraphEdgePredicate.<Clone>$() -> Vais.Agents.GraphEdgePredicate!
 abstract Vais.Agents.JournalEntry.<Clone>$() -> Vais.Agents.JournalEntry!
+override Vais.Agents.A2ARemoteAgentRef.Equals(object? obj) -> bool
+override Vais.Agents.A2ARemoteAgentRef.GetHashCode() -> int
+override Vais.Agents.A2ARemoteAgentRef.ToString() -> string!
 override Vais.Agents.AgentContext.Equals(object? obj) -> bool
 override Vais.Agents.AgentContext.GetHashCode() -> int
 override Vais.Agents.AgentContext.ToString() -> string!
@@ -1191,6 +1226,10 @@ override Vais.Agents.AutoscalingSpec.ToString() -> string!
 override Vais.Agents.ChatTurn.Equals(object? obj) -> bool
 override Vais.Agents.ChatTurn.GetHashCode() -> int
 override Vais.Agents.ChatTurn.ToString() -> string!
+override Vais.Agents.CompletionDelta.<Clone>$() -> Vais.Agents.CompletionDelta!
+override Vais.Agents.CompletionDelta.Equals(object? obj) -> bool
+override Vais.Agents.CompletionDelta.GetHashCode() -> int
+override Vais.Agents.CompletionDelta.ToString() -> string!
 override Vais.Agents.CompletionRequest.Equals(object? obj) -> bool
 override Vais.Agents.CompletionRequest.GetHashCode() -> int
 override Vais.Agents.CompletionRequest.ToString() -> string!
@@ -1430,6 +1469,7 @@ override Vais.Agents.TurnStarted.ToString() -> string!
 override Vais.Agents.UsageRecord.Equals(object? obj) -> bool
 override Vais.Agents.UsageRecord.GetHashCode() -> int
 override Vais.Agents.UsageRecord.ToString() -> string!
+override sealed Vais.Agents.CompletionDelta.Equals(Vais.Agents.AgentEvent? other) -> bool
 override sealed Vais.Agents.EdgeTraversed.Equals(Vais.Agents.AgentGraphEvent? other) -> bool
 override sealed Vais.Agents.GraphCompleted.Equals(Vais.Agents.AgentGraphEvent? other) -> bool
 override sealed Vais.Agents.GraphEdgeEffect.Append.Equals(Vais.Agents.GraphEdgeEffect? other) -> bool
@@ -1459,6 +1499,8 @@ override sealed Vais.Agents.ToolCallStarted.Equals(Vais.Agents.AgentEvent? other
 override sealed Vais.Agents.TurnCompleted.Equals(Vais.Agents.AgentEvent? other) -> bool
 override sealed Vais.Agents.TurnFailed.Equals(Vais.Agents.AgentEvent? other) -> bool
 override sealed Vais.Agents.TurnStarted.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.A2ARemoteAgentRef.operator !=(Vais.Agents.A2ARemoteAgentRef? left, Vais.Agents.A2ARemoteAgentRef? right) -> bool
+static Vais.Agents.A2ARemoteAgentRef.operator ==(Vais.Agents.A2ARemoteAgentRef? left, Vais.Agents.A2ARemoteAgentRef? right) -> bool
 static Vais.Agents.AgentContext.operator !=(Vais.Agents.AgentContext? left, Vais.Agents.AgentContext? right) -> bool
 static Vais.Agents.AgentContext.operator ==(Vais.Agents.AgentContext? left, Vais.Agents.AgentContext? right) -> bool
 static Vais.Agents.AgentEvent.operator !=(Vais.Agents.AgentEvent? left, Vais.Agents.AgentEvent? right) -> bool
@@ -1489,6 +1531,8 @@ static Vais.Agents.AutoscalingSpec.operator !=(Vais.Agents.AutoscalingSpec? left
 static Vais.Agents.AutoscalingSpec.operator ==(Vais.Agents.AutoscalingSpec? left, Vais.Agents.AutoscalingSpec? right) -> bool
 static Vais.Agents.ChatTurn.operator !=(Vais.Agents.ChatTurn? left, Vais.Agents.ChatTurn? right) -> bool
 static Vais.Agents.ChatTurn.operator ==(Vais.Agents.ChatTurn? left, Vais.Agents.ChatTurn? right) -> bool
+static Vais.Agents.CompletionDelta.operator !=(Vais.Agents.CompletionDelta? left, Vais.Agents.CompletionDelta? right) -> bool
+static Vais.Agents.CompletionDelta.operator ==(Vais.Agents.CompletionDelta? left, Vais.Agents.CompletionDelta? right) -> bool
 static Vais.Agents.CompletionRequest.operator !=(Vais.Agents.CompletionRequest? left, Vais.Agents.CompletionRequest? right) -> bool
 static Vais.Agents.CompletionRequest.operator ==(Vais.Agents.CompletionRequest? left, Vais.Agents.CompletionRequest? right) -> bool
 static Vais.Agents.CompletionResponse.operator !=(Vais.Agents.CompletionResponse? left, Vais.Agents.CompletionResponse? right) -> bool
@@ -1650,27 +1694,3 @@ virtual Vais.Agents.GraphEdgePredicate.PrintMembers(System.Text.StringBuilder! b
 virtual Vais.Agents.JournalEntry.EqualityContract.get -> System.Type!
 virtual Vais.Agents.JournalEntry.Equals(Vais.Agents.JournalEntry? other) -> bool
 virtual Vais.Agents.JournalEntry.PrintMembers(System.Text.StringBuilder! builder) -> bool
-Vais.Agents.IStreamingAgentFilter.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
-Vais.Agents.CompletionDelta
-Vais.Agents.CompletionDelta.CompletionDelta(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! TextDelta, string? ModelId = null, int? PromptTokens = null, int? CompletionTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls = null) -> void
-Vais.Agents.CompletionDelta.CompletionTokens.get -> int?
-Vais.Agents.CompletionDelta.CompletionTokens.init -> void
-Vais.Agents.CompletionDelta.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! TextDelta, out string? ModelId, out int? PromptTokens, out int? CompletionTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>? ToolCalls) -> void
-Vais.Agents.CompletionDelta.Equals(Vais.Agents.CompletionDelta? other) -> bool
-Vais.Agents.CompletionDelta.ModelId.get -> string?
-Vais.Agents.CompletionDelta.ModelId.init -> void
-Vais.Agents.CompletionDelta.PromptTokens.get -> int?
-Vais.Agents.CompletionDelta.PromptTokens.init -> void
-Vais.Agents.CompletionDelta.TextDelta.get -> string!
-Vais.Agents.CompletionDelta.TextDelta.init -> void
-Vais.Agents.CompletionDelta.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolCallRequest!>?
-Vais.Agents.CompletionDelta.ToolCalls.init -> void
-Vais.Agents.IStreamingAiAgent
-Vais.Agents.IStreamingAiAgent.StreamAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
-override Vais.Agents.CompletionDelta.<Clone>$() -> Vais.Agents.CompletionDelta!
-override Vais.Agents.CompletionDelta.Equals(object? obj) -> bool
-override Vais.Agents.CompletionDelta.GetHashCode() -> int
-override Vais.Agents.CompletionDelta.ToString() -> string!
-override sealed Vais.Agents.CompletionDelta.Equals(Vais.Agents.AgentEvent? other) -> bool
-static Vais.Agents.CompletionDelta.operator !=(Vais.Agents.CompletionDelta? left, Vais.Agents.CompletionDelta? right) -> bool
-static Vais.Agents.CompletionDelta.operator ==(Vais.Agents.CompletionDelta? left, Vais.Agents.CompletionDelta? right) -> bool

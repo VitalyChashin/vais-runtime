@@ -74,6 +74,27 @@ Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.AgentEventSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.AgentEvent!
 Vais.Agents.Hosting.Orleans.AgentEventSurrogateConverter.ConvertToSurrogate(in Vais.Agents.AgentEvent! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrain.AgentRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrain.TrackAsync(string! agentId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrain.UntrackAsync(string! agentId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrainState.AgentIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrainState.AgentIds.set -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryDirectoryGrainState.AgentRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain.AgentRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Hosting.Orleans.AgentRegistryGrain.RemoveAsync(string? version) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState.AgentRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState.ManifestJsonByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.AgentRegistryGrainState.ManifestJsonByVersion.set -> void
 Vais.Agents.Hosting.Orleans.AgentRunJournalGrain
 Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.AgentRunJournalGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentRunJournalGrainState!>! state) -> void
 Vais.Agents.Hosting.Orleans.AgentRunJournalGrain.AppendAsync(Vais.Agents.Hosting.Orleans.JournalEntrySurrogate entry) -> System.Threading.Tasks.Task!
@@ -95,7 +116,7 @@ Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.get -> System.Collect
 Vais.Agents.Hosting.Orleans.AgentSessionGrainState.History.set -> void
 Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions
 Vais.Agents.Hosting.Orleans.AiAgentGrain
-Vais.Agents.Hosting.Orleans.AiAgentGrain.AiAgentGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AiAgentGrainState!>! state, Vais.Agents.ICompletionProvider! provider, System.Func<string!, Vais.Agents.Core.StatefulAgentOptions!>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+Vais.Agents.Hosting.Orleans.AiAgentGrain.AiAgentGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AiAgentGrainState!>! state, Vais.Agents.ICompletionProvider? provider = null, System.Func<string!, Vais.Agents.Core.StatefulAgentOptions!>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
 Vais.Agents.Hosting.Orleans.AiAgentGrain.AskAsync(string! userMessage) -> System.Threading.Tasks.Task<string!>!
 Vais.Agents.Hosting.Orleans.AiAgentGrain.DeleteAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.AiAgentGrain.GetHistoryAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>!
@@ -151,6 +172,15 @@ Vais.Agents.Hosting.Orleans.IAgentConfigGrain
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain.DeleteAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain.GetSystemPromptAsync() -> System.Threading.Tasks.Task<string?>!
 Vais.Agents.Hosting.Orleans.IAgentConfigGrain.SetSystemPromptAsync(string? value) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.IAgentRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IAgentRegistryDirectoryGrain.TrackAsync(string! agentId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IAgentRegistryDirectoryGrain.UntrackAsync(string! agentId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IAgentRegistryGrain
+Vais.Agents.Hosting.Orleans.IAgentRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.IAgentRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IAgentRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Hosting.Orleans.IAgentRegistryGrain.RemoveAsync(string? version) -> System.Threading.Tasks.ValueTask<bool>
 Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain
 Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain.AppendAsync(Vais.Agents.Hosting.Orleans.JournalEntrySurrogate entry) -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAgentRunJournalGrain.ClearAsync() -> System.Threading.Tasks.Task!
@@ -171,6 +201,36 @@ Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain
 Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.ClearAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate?>!
 Vais.Agents.Hosting.Orleans.IGraphCheckpointGrain.SaveAsync(Vais.Agents.Hosting.Orleans.GraphCheckpointSurrogate checkpoint) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState.Completed = 1 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyEntryState.InFlight = 0 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.CachedResponseJson -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.ExistingFingerprint -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.IdempotencyGrainBeginResult() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.Status -> Vais.Agents.Control.IdempotencyBeginStatus
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.IdempotencyKeyGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.get -> Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.set -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.get -> bool
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.set -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.IdempotencyKeyGrainState() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ExpiresAt -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.Fingerprint -> string!
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.GrainKey -> string!
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.IdempotencyKeySurrogate() -> void
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ResponseJson -> string?
+Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.State -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.InterruptRaised!
 Vais.Agents.Hosting.Orleans.InterruptRaisedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.InterruptRaised! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
@@ -204,6 +264,14 @@ Vais.Agents.Hosting.Orleans.OrleansAgentJournal.AppendAsync(Vais.Agents.JournalE
 Vais.Agents.Hosting.Orleans.OrleansAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansAgentJournal.OrleansAgentJournal(Orleans.IGrainFactory! grainFactory) -> void
 Vais.Agents.Hosting.Orleans.OrleansAgentJournal.ReadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.JournalEntry!>!
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentManifest?>
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentManifest!>!
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.OrleansAgentRegistry(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.Register(Vais.Agents.AgentManifest! manifest) -> Vais.Agents.AgentManifest!
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.RegisterAsync(Vais.Agents.AgentManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentManifest!>
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.Remove(string! id, string! version) -> bool
+Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.RemoveAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetAgentConfig(string! agentId) -> Vais.Agents.Hosting.Orleans.IAgentConfigGrain!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetJournal() -> Vais.Agents.IAgentJournal!
@@ -224,6 +292,12 @@ Vais.Agents.Hosting.Orleans.OrleansCheckpointer.DeleteAsync(string! runId, Syste
 Vais.Agents.Hosting.Orleans.OrleansCheckpointer.LoadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GraphCheckpoint?>
 Vais.Agents.Hosting.Orleans.OrleansCheckpointer.OrleansCheckpointer(Orleans.IGrainFactory! grainFactory) -> void
 Vais.Agents.Hosting.Orleans.OrleansCheckpointer.SaveAsync(Vais.Agents.GraphCheckpoint! checkpoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.CompleteAsync(Vais.Agents.Control.IdempotencyKey key, Vais.Agents.Control.CachedResponse! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory, System.TimeSpan ttl) -> void
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.ReleaseAsync(Vais.Agents.Control.IdempotencyKey key, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.TryBeginAsync(Vais.Agents.Control.IdempotencyKey key, string! fingerprint, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.IdempotencyBeginResult!>
 Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey
 Vais.Agents.Hosting.Orleans.OrleansTaskStore
 Vais.Agents.Hosting.Orleans.OrleansTaskStore.DeleteTaskAsync(string! taskId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
@@ -261,51 +335,19 @@ Vais.Agents.Hosting.Orleans.TurnStartedSurrogateConverter.ConvertToSurrogate(in 
 Vais.Agents.Hosting.Orleans.TurnStartedSurrogateConverter.TurnStartedSurrogateConverter() -> void
 const Vais.Agents.Hosting.Orleans.AiAgentGrain.StorageName = "vais.agents" -> string!
 const Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.StreamNamespace = "vais.agents.events" -> string!
+const Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.DirectoryKey = "vais.agents.registry.directory" -> string!
 override Vais.Agents.Hosting.Orleans.AiAgentGrain.OnActivateAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansA2ATaskStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentEventBus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! streamProviderName = "vais.agents.events") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansGraphCheckpointer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansIdempotencyStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.TimeSpan? ttl = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.ConfigureAgentGrains(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, string!, Vais.Agents.Core.StatefulAgentOptions!>? configureAgents = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.DeserializeManifest(string! json) -> Vais.Agents.AgentManifest!
+static Vais.Agents.Hosting.Orleans.OrleansAgentRegistry.SerializeManifest(Vais.Agents.AgentManifest! manifest) -> string!
+static Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.BuildGrainKey(Vais.Agents.Control.IdempotencyKey key) -> string!
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Build(string! agentId, string! sessionId) -> string!
 static Vais.Agents.Hosting.Orleans.OrleansSessionGrainKey.Parse(string! key) -> (string! AgentId, string! SessionId)
 static readonly Vais.Agents.Hosting.Orleans.OrleansAgentEventBus.StreamKey -> System.Guid
-Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain
-Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IIdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
-Vais.Agents.Hosting.Orleans.IdempotencyEntryState
-Vais.Agents.Hosting.Orleans.IdempotencyEntryState.Completed = 1 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
-Vais.Agents.Hosting.Orleans.IdempotencyEntryState.InFlight = 0 -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
-Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult
-Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.CachedResponseJson -> string?
-Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.ExistingFingerprint -> string?
-Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.IdempotencyGrainBeginResult() -> void
-Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult.Status -> Vais.Agents.Control.IdempotencyBeginStatus
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.CompleteAsync(string! responseJson, System.TimeSpan ttl, System.DateTimeOffset completedAt) -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.IdempotencyKeyGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState!>! state) -> void
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrain.TryBeginAsync(string! fingerprint, System.TimeSpan ttl) -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.IdempotencyGrainBeginResult>!
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.get -> Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.Entry.set -> void
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.get -> bool
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.HasEntry.set -> void
-Vais.Agents.Hosting.Orleans.IdempotencyKeyGrainState.IdempotencyKeyGrainState() -> void
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ExpiresAt -> System.DateTimeOffset
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.Fingerprint -> string!
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.GrainKey -> string!
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.IdempotencyKeySurrogate() -> void
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.ResponseJson -> string?
-Vais.Agents.Hosting.Orleans.IdempotencyKeySurrogate.State -> Vais.Agents.Hosting.Orleans.IdempotencyEntryState
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.CompleteAsync(Vais.Agents.Control.IdempotencyKey key, Vais.Agents.Control.CachedResponse! response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory) -> void
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.OrleansIdempotencyStore(Orleans.IGrainFactory! grainFactory, System.TimeSpan ttl) -> void
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.ReleaseAsync(Vais.Agents.Control.IdempotencyKey key, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
-Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.TryBeginAsync(Vais.Agents.Control.IdempotencyKey key, string! fingerprint, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.IdempotencyBeginResult!>
-static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansIdempotencyStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.TimeSpan? ttl = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.BuildGrainKey(Vais.Agents.Control.IdempotencyKey key) -> string!
 static readonly Vais.Agents.Hosting.Orleans.OrleansIdempotencyStore.DefaultTtl -> System.TimeSpan

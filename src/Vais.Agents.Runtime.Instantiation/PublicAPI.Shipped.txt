@@ -1,0 +1,104 @@
+#nullable enable
+Vais.Agents.Runtime.Instantiation.AgentManifestInstantiatorServiceCollectionExtensions
+Vais.Agents.Runtime.Instantiation.FileSystemPromptFileLoader
+Vais.Agents.Runtime.Instantiation.FileSystemPromptFileLoader.FileSystemPromptFileLoader(string! rootPath) -> void
+Vais.Agents.Runtime.Instantiation.FileSystemPromptFileLoader.LoadAsync(string! fileRef, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Runtime.Instantiation.Guardrails.BuiltinGuardrailsServiceCollectionExtensions
+Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory.LengthCapInputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory.LlmAsJudgeOutputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory.RegexAllowlistInputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory.RegexAllowlistOutputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory.RegexDenylistInputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.RegexDenylistOutputGuardrailFactory() -> void
+Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator
+Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.TranslateAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Core.StatefulAgentOptions!>
+Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.TranslateForGrain(System.IServiceProvider! serviceProvider, string! agentId) -> Vais.Agents.Core.StatefulAgentOptions!
+Vais.Agents.Runtime.Instantiation.ICompletionProviderPool
+Vais.Agents.Runtime.Instantiation.ICompletionProviderPool.GetAsync(Vais.Agents.ModelSpec! spec, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
+Vais.Agents.Runtime.Instantiation.IGuardrailFactory
+Vais.Agents.Runtime.Instantiation.IGuardrailFactory.Create(System.Text.Json.JsonElement? parameters, System.IServiceProvider! serviceProvider) -> object!
+Vais.Agents.Runtime.Instantiation.IGuardrailFactory.Layer.get -> Vais.Agents.GuardrailLayer
+Vais.Agents.Runtime.Instantiation.IGuardrailFactory.Name.get -> string!
+Vais.Agents.Runtime.Instantiation.IModelProviderFactory
+Vais.Agents.Runtime.Instantiation.IModelProviderFactory.CreateAsync(Vais.Agents.ModelSpec! spec, Vais.Agents.Control.ISecretResolver! secrets, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
+Vais.Agents.Runtime.Instantiation.IModelProviderFactory.Provider.get -> string!
+Vais.Agents.Runtime.Instantiation.IPromptFileLoader
+Vais.Agents.Runtime.Instantiation.IPromptFileLoader.LoadAsync(string! fileRef, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistry
+Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistry.Get(string! name) -> string?
+Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistryBuilder
+Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistryBuilder.Add(string! name, string! template) -> Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistryBuilder!
+Vais.Agents.Runtime.Instantiation.IStaticToolRegistry
+Vais.Agents.Runtime.Instantiation.IStaticToolRegistry.Get(string! name, System.IServiceProvider! serviceProvider) -> Vais.Agents.ITool?
+Vais.Agents.Runtime.Instantiation.IStaticToolRegistryBuilder
+Vais.Agents.Runtime.Instantiation.IStaticToolRegistryBuilder.Add(string! name, System.Func<System.IServiceProvider!, Vais.Agents.ITool!>! factory) -> Vais.Agents.Runtime.Instantiation.IStaticToolRegistryBuilder!
+Vais.Agents.Runtime.Instantiation.ManifestInstantiationException
+Vais.Agents.Runtime.Instantiation.ManifestInstantiationException.ManifestInstantiationException(string! urn, string! message) -> void
+Vais.Agents.Runtime.Instantiation.ManifestInstantiationException.ManifestInstantiationException(string! urn, string! message, System.Exception! innerException) -> void
+Vais.Agents.Runtime.Instantiation.ManifestInstantiationException.Urn.get -> string!
+Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns
+Vais.Agents.Runtime.Instantiation.ModelProviders.AnthropicModelProviderFactory
+Vais.Agents.Runtime.Instantiation.ModelProviders.AnthropicModelProviderFactory.AnthropicModelProviderFactory() -> void
+Vais.Agents.Runtime.Instantiation.ModelProviders.AnthropicModelProviderFactory.CreateAsync(Vais.Agents.ModelSpec! spec, Vais.Agents.Control.ISecretResolver! secrets, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
+Vais.Agents.Runtime.Instantiation.ModelProviders.AnthropicModelProviderFactory.Provider.get -> string!
+Vais.Agents.Runtime.Instantiation.ModelProviders.AzureOpenAIModelProviderFactory
+Vais.Agents.Runtime.Instantiation.ModelProviders.AzureOpenAIModelProviderFactory.AzureOpenAIModelProviderFactory() -> void
+Vais.Agents.Runtime.Instantiation.ModelProviders.AzureOpenAIModelProviderFactory.CreateAsync(Vais.Agents.ModelSpec! spec, Vais.Agents.Control.ISecretResolver! secrets, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
+Vais.Agents.Runtime.Instantiation.ModelProviders.AzureOpenAIModelProviderFactory.Provider.get -> string!
+Vais.Agents.Runtime.Instantiation.ModelProviders.BuiltinModelProvidersServiceCollectionExtensions
+Vais.Agents.Runtime.Instantiation.ModelProviders.OpenAIModelProviderFactory
+Vais.Agents.Runtime.Instantiation.ModelProviders.OpenAIModelProviderFactory.CreateAsync(Vais.Agents.ModelSpec! spec, Vais.Agents.Control.ISecretResolver! secrets, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
+Vais.Agents.Runtime.Instantiation.ModelProviders.OpenAIModelProviderFactory.OpenAIModelProviderFactory() -> void
+Vais.Agents.Runtime.Instantiation.ModelProviders.OpenAIModelProviderFactory.Provider.get -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.LengthCapInputGuardrailFactory.FactoryName = "LengthCap" -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.LlmAsJudgeOutputGuardrailFactory.FactoryName = "LlmAsJudge" -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistInputGuardrailFactory.FactoryName = "RegexAllowlist" -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.RegexAllowlistOutputGuardrailFactory.FactoryName = "RegexAllowlist" -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistInputGuardrailFactory.FactoryName = "RegexDenylist" -> string!
+const Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.FactoryName = "RegexDenylist" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.A2AAgentNotDeclared = "urn:vais-agents:a2a-agent-not-declared" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.AgentNotFound = "urn:vais-agents:agent-not-found" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.GuardrailNotRegistered = "urn:vais-agents:guardrail-not-registered" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.GuardrailParamsInvalid = "urn:vais-agents:guardrail-params-invalid" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.HandlerNotLoaded = "urn:vais-agents:handler-not-loaded" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpServerNotDeclared = "urn:vais-agents:mcp-server-not-declared" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.ModelProviderUnsupported = "urn:vais-agents:model-provider-unsupported" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.PromptFileUnreadable = "urn:vais-agents:prompt-file-unreadable" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.PromptSpecAmbiguous = "urn:vais-agents:prompt-spec-ambiguous" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.PromptTemplateNotRegistered = "urn:vais-agents:prompt-template-not-registered" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.ToolNotRegistered = "urn:vais-agents:tool-not-registered" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.ToolSourceUnknown = "urn:vais-agents:tool-source-unknown" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.UrnPrefix = "urn:vais-agents:" -> string!
+const Vais.Agents.Runtime.Instantiation.ModelProviders.AnthropicModelProviderFactory.ProviderName = "anthropic" -> string!
+const Vais.Agents.Runtime.Instantiation.ModelProviders.AzureOpenAIModelProviderFactory.ProviderName = "azure-openai" -> string!
+const Vais.Agents.Runtime.Instantiation.ModelProviders.OpenAIModelProviderFactory.ProviderName = "openai" -> string!
+static Vais.Agents.Runtime.Instantiation.AgentManifestInstantiatorServiceCollectionExtensions.AddAgentManifestInstantiator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Runtime.Instantiation.AgentManifestInstantiatorServiceCollectionExtensions.AddFileSystemPromptFileLoader(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! rootPath) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Runtime.Instantiation.AgentManifestInstantiatorServiceCollectionExtensions.AddPromptTemplateRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Runtime.Instantiation.IPromptTemplateRegistryBuilder!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Runtime.Instantiation.AgentManifestInstantiatorServiceCollectionExtensions.AddStaticToolRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Runtime.Instantiation.IStaticToolRegistryBuilder!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Runtime.Instantiation.Guardrails.BuiltinGuardrailsServiceCollectionExtensions.AddBuiltinGuardrails(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Runtime.Instantiation.ModelProviders.BuiltinModelProvidersServiceCollectionExtensions.AddBuiltinModelProviders(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

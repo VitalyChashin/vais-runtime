@@ -58,6 +58,9 @@ public sealed record AgentManifest(
     /// <summary>Model Context Protocol server bindings. Each server contributes tools to the agent at activation time.</summary>
     public IReadOnlyList<McpServerRef>? McpServers { get; init; }
 
+    /// <summary>Agent2Agent (A2A) remote-agent bindings. Referenced by <c>ToolRef.Source = "a2a:&lt;name&gt;"</c>. v0.17 Pillar B.</summary>
+    public IReadOnlyList<A2ARemoteAgentRef>? A2ARemoteAgents { get; init; }
+
     /// <summary>Three-layer guardrail bindings (input / output / tool) — projected onto the equivalent <c>StatefulAgentOptions</c> fields at runtime.</summary>
     public GuardrailsSpec? Guardrails { get; init; }
 
