@@ -82,6 +82,22 @@ spec:
                   items:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                    properties:
+                      id:
+                        type: string
+                      kind:
+                        type: string
+                      ref:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                        properties:
+                          id:
+                            type: string
+                          version:
+                            type: string
+                          runtimeUrl:
+                            type: string
+                            description: Absolute http/https URL of the remote runtime hosting this agent. Omit for local agents.
                 edges:
                   type: array
                   description: Edges between nodes, order-significant (first-match-wins).

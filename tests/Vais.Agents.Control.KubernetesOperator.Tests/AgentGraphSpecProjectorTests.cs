@@ -91,4 +91,28 @@ public sealed class AgentGraphSpecProjectorTests
         manifest.Nodes.Should().NotBeSameAs(spec.Nodes);
         manifest.Edges.Should().NotBeSameAs(spec.Edges);
     }
+
+    [Fact]
+    public void ToManifest_Preserves_RuntimeUrl_On_NodeRef()
+    {
+        // v0.20 PR 2: runtimeUrl in GraphAgentRef must survive the spec → manifest projection
+        // so cross-runtime nodes authored via the K8s CRD work the same as JSON/YAML manifests.
+        var spec = new AgentGraphSpec
+        {
+            GraphId = "cross-rt",
+            Version = "1.0",
+            Entry = "step",
+            Nodes = new List<GraphNode>
+            {
+                new("step", "Agent", Ref: new GraphAgentRef("remote-agent", "2.0", "https://runtime-b.svc")),
+                new("end", "End"),
+            },
+            Edges = new List<GraphEdge> { new("step", "end") },
+        };
+
+        var manifest = AgentGraphSpecProjector.ToManifest(spec);
+
+        var step = manifest.Nodes.Single(n => n.Id == "step");
+        step.Ref!.RuntimeUrl.Should().Be("https://runtime-b.svc");
+    }
 }

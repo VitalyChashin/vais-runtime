@@ -238,13 +238,23 @@ public sealed class JsonAgentGraphManifestLoader
             {
                 var refId = refEl.TryGetProperty("id", out var rIdEl) ? rIdEl.GetString() : null;
                 var refVersion = refEl.TryGetProperty("version", out var rvEl) ? rvEl.GetString() : null;
+                var runtimeUrl = refEl.TryGetProperty("runtimeUrl", out var ruEl) ? ruEl.GetString() : null;
                 if (string.IsNullOrEmpty(refId))
                 {
                     errors.Add($"{itemPrefix}ref.id is required");
                 }
                 else
                 {
-                    agentRef = new GraphAgentRef(refId, refVersion);
+                    if (runtimeUrl is not null)
+                    {
+                        if (!Uri.TryCreate(runtimeUrl, UriKind.Absolute, out var parsedUri)
+                            || parsedUri.Scheme is not ("http" or "https"))
+                        {
+                            errors.Add($"{itemPrefix}ref.runtimeUrl '{runtimeUrl}' must be an absolute http or https URI");
+                            runtimeUrl = null;
+                        }
+                    }
+                    agentRef = new GraphAgentRef(refId, refVersion, runtimeUrl);
                 }
             }
 

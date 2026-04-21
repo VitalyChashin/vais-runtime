@@ -309,4 +309,164 @@ public sealed class AgentGraphManifestLoaderTests
         resources[1].Should().BeOfType<ManifestResource.AgentGraphCase>()
             .Which.Graph.Id.Should().Be("line");
     }
+
+    // ── v0.20 PR 2: runtimeUrl in ref ──────────────────────────────────────
+
+    [Fact]
+    public async Task Ref_RuntimeUrl_Parses_From_Json()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "cross-rt", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "remote-agent", "version": "2.0", "runtimeUrl": "https://runtime-b.svc" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [
+                  { "from": "step", "to": "end" }
+                ]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle();
+        var step = graphs[0].Nodes.Single(n => n.Id == "step");
+        step.Ref!.RuntimeUrl.Should().Be("https://runtime-b.svc");
+        step.Ref.Version.Should().Be("2.0");
+    }
+
+    [Fact]
+    public async Task Ref_RuntimeUrl_Parses_From_Yaml()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: cross-rt, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: remote-agent, version: "1.0", runtimeUrl: "http://runtime-b.internal" }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs.Should().ContainSingle();
+        var step = graphs[0].Nodes.Single(n => n.Id == "step");
+        step.Ref!.RuntimeUrl.Should().Be("http://runtime-b.internal");
+    }
+
+    [Fact]
+    public async Task Ref_Without_RuntimeUrl_Yields_Null()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: local-only, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: local-agent, version: "1.0" }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs[0].Nodes.Single(n => n.Id == "step").Ref!.RuntimeUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Ref_InvalidRuntimeUrl_Scheme_Throws_Validation()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-rt", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "agent-x", "runtimeUrl": "grpc://runtime-b.svc" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("runtimeUrl") && e.Contains("http or https"));
+    }
+
+    [Fact]
+    public async Task Ref_RelativeRuntimeUrl_Throws_Validation()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-rt", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "agent-x", "runtimeUrl": "/relative/path" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("runtimeUrl") && e.Contains("http or https"));
+    }
+
+    [Fact]
+    public async Task Envelope_RoundTrip_Preserves_RuntimeUrl()
+    {
+        var original = new AgentGraphManifest(
+            Id: "rt-round-trip", Version: "1.0", Entry: "step",
+            Nodes: new[]
+            {
+                new GraphNode("step", "Agent", Ref: new GraphAgentRef("remote-agent", "2.0", "https://runtime-b.svc")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("step", "end") });
+
+        var envelope = AgentGraphManifestEnvelope.Serialize(original);
+        var loader = new JsonAgentGraphManifestLoader();
+        var roundTripped = await loader.LoadFromStringAsync(envelope);
+
+        roundTripped.Should().ContainSingle();
+        roundTripped[0].Nodes.Single(n => n.Id == "step").Ref!.RuntimeUrl
+            .Should().Be("https://runtime-b.svc");
+    }
 }
