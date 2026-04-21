@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
@@ -17,6 +18,9 @@ using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.OpenTelemetry;
 using Vais.Agents.Persistence.Postgres;
 using Vais.Agents.Persistence.Redis;
+using Vais.Agents.Runtime.Instantiation;
+using Vais.Agents.Runtime.Instantiation.Guardrails;
+using Vais.Agents.Runtime.Instantiation.ModelProviders;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -106,13 +110,26 @@ internal static class CompositionRoot
         //    which the co-hosted silo exposes into the same DI container.
         services.AddOrleansAgentRuntime();
         services.AddOrleansAgentEventBus();
-        services.ConfigureAgentGrains();
 
-        // 3. In-process control-plane scaffolding. v0.16 scope: no manifest-driven agent
-        //    instantiation yet (that ships with Pillar B / v0.17), so invoke returns 501
-        //    until then. Registry + audit + lifecycle manager are still registered so the
-        //    full control-plane verb surface is reachable.
-        services.AddSingleton<IAgentRegistry, InMemoryAgentRegistry>();
+        // 3. v0.17 Pillar B — swap InMemory registry for Orleans-backed (survives pod roll),
+        //    register the manifest translator + built-in model providers + built-in
+        //    guardrails, and point ConfigureAgentGrains at the translator so grain
+        //    activation yields options produced from the stored manifest.
+        //
+        //    Ordering discipline (locked by Composition_Translator_Registered_Before_ConfigureAgentGrains):
+        //    all three Add*Instantiator / Add*Providers / Add*Guardrails calls must
+        //    precede ConfigureAgentGrains. The lambda closes over sp.GetRequiredService
+        //    so the translator must be registered before the Func<string, options>
+        //    gets resolved at grain activation.
+        services.AddOrleansAgentRegistry();
+        services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
+        services.AddAgentManifestInstantiator();
+        services.AddBuiltinModelProviders();
+        services.AddBuiltinGuardrails();
+
+        services.ConfigureAgentGrains((sp, id) =>
+            sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id));
+
         services.AddSingleton<IAuditLog, LoggerAuditLog>();
         services.AddSingleton<IAgentLifecycleManager>(sp => new AgentLifecycleManager(
             sp.GetRequiredService<IAgentRegistry>(),

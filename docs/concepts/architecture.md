@@ -234,9 +234,57 @@ The host's `CompositionRoot` is the single source of truth for "how to wire the 
 - [install-the-runtime-locally guide](../guides/install-the-runtime-locally.md) — docker-compose recipes.
 - [deploy-the-runtime-to-kubernetes guide](../guides/deploy-the-runtime-to-kubernetes.md) — Helm chart walkthrough.
 
-v0.16 (Pillar A) ships the container + compose + Helm. Manifest-driven agent instantiation (the 501-on-invoke story) ships with Pillar B / v0.17.
+v0.16 (Pillar A) ships the container + compose + Helm. v0.17 (Pillar B, below) resolves the 501-on-invoke story.
 
-## The 25 packages at a glance
+## Manifest instantiation tier (v0.17 Pillar B)
+
+Sits between `Runtime.Host` and the library stack — turns a stored `AgentManifest` into a running `StatefulAiAgent` without consumer-written C#. Partners write YAML; `vais apply` persists it; `vais invoke` produces a real model response.
+
+```
+┌─ Runtime.Host composition root ─────────────────────────────────┐
+│                                                                 │
+│  ConfigureAgentGrains((sp, id) =>                               │
+│      sp.GetRequiredService<IAgentManifestTranslator>()          │
+│        .TranslateForGrain(sp, id))                              │
+│                                                                 │
+└──────┬──────────────────────────────────────────────────────────┘
+       │ activation
+       ▼
+┌─ Vais.Agents.Runtime.Instantiation ─────────────────────────────┐
+│                                                                 │
+│  IAgentManifestTranslator        (load + translate manifest)    │
+│   • ModelSpec    → IModelProviderFactory → ICompletionProvider  │
+│   • SystemPromptSpec  (inline / templateRef / fileRef)          │
+│   • Tools         → IStaticToolRegistry / mcp: / a2a:           │
+│   • GuardrailsSpec → IGuardrailFactory per (Name, Layer)        │
+│   • Budget        → RunBudget                                   │
+│   • Stashes CompletionProvider in StatefulAgentOptions          │
+│                                                                 │
+│  3 built-in IModelProviderFactory impls (openai / anthropic /   │
+│    azure-openai via MEAI IChatClient)                           │
+│  6 built-in IGuardrailFactory impls (LengthCap + 4 regex +      │
+│    LlmAsJudge) dispatching to 5 guardrail classes in Core       │
+│                                                                 │
+└──────┬──────────────────────────────────────────────────────────┘
+       │ produces
+       ▼
+   StatefulAgentOptions { CompletionProvider, SystemPrompt, …
+                          ToolRegistry, Guardrails, Budget }
+       │
+       ▼
+   AiAgentGrain constructs StatefulAiAgent + runs AskAsync
+```
+
+Key invariants:
+
+- **`Model != null` is the declarative-path switch.** Manifests with `Model` set take the translator path; those without trigger `501 urn:vais-agents:handler-not-loaded` until Pillar C (plugin loader) ships.
+- **Per-agent model providers** — the grain's completion provider comes from the translated options' `CompletionProvider` slot, not a silo-wide DI singleton. Different agents on the same silo can use different providers.
+- **Update eviction** — `AgentLifecycleManager.UpdateAsync` calls `IAgentManifestInvalidator.InvalidateAsync` (the translator) so next invoke re-activates with the new manifest. In-flight runs keep their original options.
+- **OrleansAgentRegistry** replaces `InMemoryAgentRegistry` in the runtime host so `vais apply` persists across pod roll.
+
+See [declarative-agents concept](declarative-agents.md) for the full pipeline; [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) for the end-to-end walkthrough.
+
+## The 26 packages at a glance
 
 See the [packages reference](../reference/packages.md) for the per-package description table with install guidance.
 

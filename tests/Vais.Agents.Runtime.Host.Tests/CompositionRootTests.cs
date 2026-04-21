@@ -13,6 +13,7 @@ using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Runtime.Host;
+using Vais.Agents.Runtime.Instantiation;
 
 namespace Vais.Agents.Runtime.Host.Tests;
 
@@ -139,5 +140,57 @@ public class CompositionRootTests
         var engine = sp.GetService<IAgentPolicyEngine>();
         engine.Should().BeNull(
             because: "AgentLifecycleManager applies NullAgentPolicyEngine.Instance when the DI lookup returns null; explicit registration would be a footgun.");
+    }
+
+    [Fact]
+    public void Composition_Translator_Registered_For_ConfigureAgentGrains()
+    {
+        // v0.17 Pillar B: the translator must be registered alongside
+        // ConfigureAgentGrains so the lambda-captured IServiceProvider can
+        // resolve IAgentManifestTranslator at grain activation. If the
+        // registration order ever drifts, grain activation throws at the
+        // point of first invoke — this guard fails at build time instead.
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<IAgentManifestTranslator>()
+            .Should().NotBeNull(because: "AddAgentManifestInstantiator must register the translator as a singleton.");
+
+        sp.GetService<Func<string, StatefulAgentOptions>>()
+            .Should().NotBeNull(because: "ConfigureAgentGrains must install a Func<string, StatefulAgentOptions> so AiAgentGrain's activation path has something to call.");
+    }
+
+    [Fact]
+    public void Composition_Swaps_InMemoryRegistry_For_OrleansAgentRegistry()
+    {
+        // v0.17 Pillar B: v0.16 used InMemoryAgentRegistry which evaporates on
+        // pod roll; the manifest-driven runtime demands durability. The Orleans
+        // registry uses grain-per-id with a directory grain for enumeration.
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        var registry = sp.GetRequiredService<IAgentRegistry>();
+
+        registry.Should().BeOfType<OrleansAgentRegistry>(
+            because: "AddOrleansAgentRegistry must replace v0.16's InMemoryAgentRegistry so vais apply persists across silo restart.");
+    }
+
+    [Fact]
+    public void Composition_Registers_Builtin_Providers_And_Guardrails()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+
+        var providers = sp.GetServices<IModelProviderFactory>().Select(f => f.Provider).ToArray();
+        providers.Should().Contain(new[] { "openai", "anthropic", "azure-openai" });
+
+        var guardrails = sp.GetServices<IGuardrailFactory>().ToArray();
+        guardrails.Should().HaveCount(6,
+            because: "AddBuiltinGuardrails registers LengthCap + RegexAllowlist × {Input, Output} + RegexDenylist × {Input, Output} + LlmAsJudge.");
     }
 }

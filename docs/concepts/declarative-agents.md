@@ -1,0 +1,163 @@
+# Declarative agents
+
+**v0.17 Pillar B.** The runtime turns a stored `AgentManifest` into a running `StatefulAiAgent` without the consumer writing C# for the "pure-LLM-plus-tools-plus-guardrails" shape. Apply a YAML manifest with `vais apply -f`, and `vais invoke` returns a real response — the 501-on-invoke story from v0.16 goes away for declarative agents.
+
+## The pipeline
+
+Ten steps from `vais apply` to a live agent that answered its first prompt:
+
+| # | Step | Where |
+|---|---|---|
+| 1 | HTTP POST `/v1/agents` with manifest JSON | `Control.Http.Server` |
+| 2 | `AgentLifecycleManager.CreateAsync` → policy + audit + registry.Register | `Control.InProcess` |
+| 3 | `OrleansAgentRegistry.Register` → per-id grain persists JSON payload | `Hosting.Orleans` |
+| 4 | `vais invoke` → HTTP POST `/v1/agents/{id}/invoke` | `Control.Http.Server` |
+| 5 | `AgentLifecycleManager.InvokeAsync` → `IAgentRuntime.GetOrCreate(id)` | `Control.InProcess` |
+| 6 | `OrleansAgentRuntime` returns grain reference; grain activates | `Hosting.Orleans` |
+| 7 | `AiAgentGrain.OnActivateAsync` calls `Func<string, StatefulAgentOptions>` factory | `Hosting.Orleans` |
+| 8 | Factory = `(sp, id) => translator.TranslateForGrain(sp, id)` | `Runtime.Host` |
+| 9 | `AgentManifestTranslator` loads manifest, resolves model + prompt + tools + guardrails + budget | `Runtime.Instantiation` |
+| 10 | Grain constructs `StatefulAiAgent(options.CompletionProvider, options)` + `AskAsync` runs | `Core` |
+
+The glue is step 8 — the host's composition root wires `ConfigureAgentGrains` to call the translator, which means every manifest stored via step 3 becomes a usable agent at step 10 automatically.
+
+## Manifest shape
+
+A minimum declarative manifest has `Model` set (that's the switch — `Model != null` opts into the declarative path):
+
+```yaml
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: weather
+  version: "1.0"
+spec:
+  handler:
+    typeName: declarative          # placeholder string; Pillar C plugins override
+  model:
+    provider: openai               # or: anthropic, azure-openai, or a custom registered factory
+    id: gpt-4o
+    apiKeyRef: secret://env/OPENAI_API_KEY
+  systemPrompt:
+    inline: "You help with weather questions."
+  tools: []
+  budget:
+    maxTurns: 5
+    maxDuration: PT30S
+```
+
+Every `AgentManifest` field the translator consumes is documented in [manifest-schema reference](../reference/manifest-schema.md); the most load-bearing shapes:
+
+### `ModelSpec`
+
+- **`provider`** — case-insensitive match against a registered `IModelProviderFactory`. Ships with `openai`, `anthropic`, `azure-openai`. Register custom factories for Bedrock / Gemini / Ollama / etc. — see [ship-a-custom-model-provider](../guides/ship-a-custom-model-provider.md).
+- **`id`** — model id (e.g. `gpt-4o`) or Azure deployment name.
+- **`apiKeyRef`** — `secret://` URI resolved by the registered `ISecretResolver` composite (env + file by default). K8s projected Secrets work via `secret://file/var/run/secrets/vais/openai-key`.
+- **`baseUrlRef`** — only used by Azure-OpenAI (endpoint URL). Optional for OpenAI/Anthropic.
+
+Unknown `provider` ⇒ `400 urn:vais-agents:model-provider-unsupported` at apply-validation time.
+
+### `SystemPromptSpec`
+
+Three shapes; set exactly one. Setting more than one ⇒ `urn:vais-agents:prompt-spec-ambiguous`.
+
+1. **`inline: "..."`** — literal string. Optional `variables` dict substitutes `{{key}}` → value.
+2. **`templateRef: "triage-intro"`** — resolves through `IPromptTemplateRegistry` (register templates at host startup via `services.AddPromptTemplateRegistry(b => b.Add(...))`).
+3. **`fileRef: "triage.prompt"`** — resolves through `IPromptFileLoader`. Default `FileSystemPromptFileLoader` reads from a configured root directory (e.g. `/var/lib/vais/prompts/`) with path-traversal guard.
+
+All three pass through the same `{{variable}}` substitution if `variables` is present.
+
+### `Tools[].Source` prefixes
+
+Three prefixes supported in v0.17:
+
+- **`static:<name>`** — resolves through `IStaticToolRegistry`. Register at host startup via `services.AddStaticToolRegistry(b => b.Add("weather", sp => new WeatherTool(sp.GetRequiredService<IHttpClientFactory>())))`.
+- **`mcp:<server>`** — references a `McpServerRef` declared in `McpServers`. v0.17 validates declaration only; lazy `McpToolSource` materialization lands post-v0.17.
+- **`a2a:<agent>`** — references an `A2ARemoteAgentRef` declared in the new `A2ARemoteAgents` manifest section. Validates declaration only in v0.17.
+
+Unknown prefix ⇒ `urn:vais-agents:tool-source-unknown`. Undeclared `mcp:` / `a2a:` name ⇒ `urn:vais-agents:{mcp-server,a2a-agent}-not-declared`.
+
+### `GuardrailsSpec`
+
+Three ordered arrays: `input`, `output`, `tool`. Each entry is a `GuardrailRef(Name, Params)`. The translator dispatches `(Name, Layer)` through `IGuardrailFactory` lookups — six factories ship in v0.17:
+
+| Name | Layer | Params |
+|---|---|---|
+| `LengthCap` | Input | `maxChars: int` |
+| `RegexAllowlist` | Input / Output | `pattern: string` |
+| `RegexDenylist` | Input / Output | `pattern: string` |
+| `LlmAsJudge` | Output | `judgeModel: ModelSpec`, `judgePrompt: string`, `minScore: double` |
+
+Unknown guardrail name ⇒ `urn:vais-agents:guardrail-not-registered`. Malformed params ⇒ `urn:vais-agents:guardrail-params-invalid`. Custom factories register via `services.AddSingleton<IGuardrailFactory, MyFactory>()` — see [ship-a-guardrail](../guides/ship-a-guardrail.md).
+
+**Evaluation order.** Declaration order in the manifest. Input guardrails run before the completion provider; output guardrails run after the response returns; tool guardrails (not fully wired in v0.17) run around each tool invocation.
+
+**LLM-as-judge.** Nested `ModelSpec` builds a second `ICompletionProvider` via the same factory chain — and the `ICompletionProviderPool` memoises, so multiple judges against the same model share one SDK client. Watch for loops: using the agent's own model as its judge wastes tokens.
+
+### `Budget`
+
+`RunBudget` threaded straight through to `StatefulAgentOptions.Budget`. Enforced by the execution loop — the agent throws `AgentBudgetExceededException` when any cap is exceeded.
+
+## Update semantics
+
+`vais apply -f manifest.yaml` on an existing id:
+
+1. Registry re-persists the new manifest.
+2. `IAgentRuntime.Remove(id)` drops the cached grain reference.
+3. `IAgentManifestInvalidator.InvalidateAsync(id)` clears the translator's options cache.
+4. Next `vais invoke` triggers grain reactivation → translator re-runs → new options.
+
+**In-flight runs are not touched** — the `StatefulAiAgent` started before the update keeps running with its original options. Partners who need immediate-drop-in semantics should `vais cancel` the run first.
+
+## `handler.typeName` coexistence with Pillar C
+
+`AgentHandlerRef.TypeName` is required in the record. v0.17 pivots on `Model` presence:
+
+| `Handler.TypeName` | `Model` present | Behaviour |
+|---|---|---|
+| any | yes | Declarative path — translator builds options from manifest fields. |
+| any | no | `501 urn:vais-agents:handler-not-loaded` at invoke. Pillar C (v0.18) ships the plugin loader that consumes non-sentinel `TypeName` values. |
+
+Convention: set `handler.typeName: declarative` for pure-YAML agents. Pillar C will interpret specific type-name values (e.g. `MyApp.WeatherAgent`) as plugin class loads.
+
+## Registering custom factories
+
+The three built-ins register via the runtime host's composition root:
+
+```csharp
+services.AddAgentManifestInstantiator();   // translator + provider pool
+services.AddBuiltinModelProviders();       // openai + anthropic + azure-openai
+services.AddBuiltinGuardrails();           // LengthCap + 4 regex factories + LlmAsJudge
+services.ConfigureAgentGrains((sp, id) =>
+    sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id));
+```
+
+Consumers add their own factories alongside. The translator dispatches by name (model `Provider` string, guardrail `Name + Layer` pair); duplicate-name registration trips a constructor guard.
+
+## Failure URNs
+
+| URN | Cause |
+|---|---|
+| `agent-not-found` | Registry has no manifest for the id. |
+| `handler-not-loaded` | Manifest has no `Model` and Pillar C plugins not shipped yet. |
+| `model-provider-unsupported` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`. |
+| `tool-source-unknown` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. |
+| `tool-not-registered` | `static:<name>` has no matching `IStaticToolRegistry` entry. |
+| `mcp-server-not-declared` | `mcp:<name>` references an undeclared `McpServers[].Name`. |
+| `a2a-agent-not-declared` | `a2a:<name>` references an undeclared `A2ARemoteAgents[].Name`. |
+| `guardrail-not-registered` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. |
+| `guardrail-params-invalid` | Factory rejected the supplied params (missing key, wrong type, bad value). |
+| `prompt-template-not-registered` | `SystemPromptSpec.TemplateRef` doesn't resolve. |
+| `prompt-file-unreadable` | `SystemPromptSpec.FileRef` missing / permissioned / outside root. |
+| `prompt-spec-ambiguous` | More than one of Inline / TemplateRef / FileRef set. |
+
+All surface as HTTP Problem Details when `vais apply` / `vais invoke` hits them.
+
+## Related
+
+- [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) — end-to-end walkthrough.
+- [ship-a-guardrail guide](../guides/ship-a-guardrail.md) — custom `IGuardrailFactory`.
+- [ship-a-custom-model-provider guide](../guides/ship-a-custom-model-provider.md) — custom `IModelProviderFactory`.
+- [manifest-schema reference](../reference/manifest-schema.md) — canonical field-by-field catalog.
+- [control-plane concept](control-plane.md) — `IAgentLifecycleManager` verbs.
+- [execution-loop concept](execution-loop.md) — what `StatefulAiAgent` actually does with the translated options.

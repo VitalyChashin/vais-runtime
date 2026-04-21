@@ -17,7 +17,8 @@ Stack-neutral agent library for .NET. This tree is the full walkthrough — conc
 
 One page per pillar. Each explains what it is, the core types, how to wire it, extension points, and known limitations.
 
-- [Architecture](concepts/architecture.md) — the 25 packages, layered diagram, dependency rules.
+- [Architecture](concepts/architecture.md) — the 26 packages, layered diagram, dependency rules.
+- [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation (v0.17 Pillar B); Model / SystemPromptSpec / Tools / Guardrails translation.
 - [Session + memory](concepts/session.md) — `IAgentSession`, working vs session history, `IMemoryStore` scopes.
 - [Context](concepts/context.md) — `IContextProvider` chain, `IContextWindowPacker`, merge rules.
 - [Prompt](concepts/prompt.md) — `ISystemPromptComposer`, contributors, `IPromptTemplate`.
@@ -62,11 +63,12 @@ Task-focused, sample-backed recipes.
 - [Tail live runs with `vais logs`](guides/tail-live-runs-with-vais-logs.md) — SSE attach + client-side filters (v0.15).
 - [Install the runtime locally](guides/install-the-runtime-locally.md) — docker-compose recipes: localhost + clustered + OPA/Langfuse/OTel overlays (v0.16).
 - [Deploy the runtime to Kubernetes](guides/deploy-the-runtime-to-kubernetes.md) — Helm install from kind to production with external Redis (v0.16).
+- [Author an agent in YAML](guides/author-an-agent-in-yaml.md) — pure-YAML declarative agent, no consumer C# (v0.17).
 - [Deploy OTel and Langfuse](guides/deploy-otel-and-langfuse.md)
 
 ## Reference
 
-- [Packages](reference/packages.md) — 25-package table with install guidance.
+- [Packages](reference/packages.md) — 26-package table with install guidance.
 - [Events](reference/events.md) — `AgentEvent` + `AgentGraphEvent` closed hierarchies.
 - [Budget](reference/budget.md) — `RunBudget` fields and enforcement points.
 - [Graph predicate operators](reference/graph-predicate-operators.md) — ten-operator matcher vocabulary + combinators (v0.9).

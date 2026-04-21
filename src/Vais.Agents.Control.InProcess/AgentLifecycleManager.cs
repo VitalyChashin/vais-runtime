@@ -40,20 +40,22 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
     private readonly IAgentPolicyEngine _policy;
     private readonly IAuditLog _audit;
     private readonly IAgentContextAccessor _contextAccessor;
+    private readonly IAgentManifestInvalidator? _invalidator;
     private readonly ILogger<AgentLifecycleManager> _logger;
     private readonly ConcurrentDictionary<(string Id, string Version), AgentState> _state = new();
 
     /// <summary>Shared error code consumers can match on to translate to HTTP 404 etc.</summary>
     public const string UnknownAgentErrorType = "AgentHandleNotFound";
 
-    /// <summary>Construct a manager. Registry + runtime are required; policy + audit + accessor fall back to null defaults.</summary>
+    /// <summary>Construct a manager. Registry + runtime are required; policy + audit + accessor + invalidator fall back to null defaults.</summary>
     public AgentLifecycleManager(
         IAgentRegistry registry,
         IAgentRuntime runtime,
         IAgentPolicyEngine? policy = null,
         IAuditLog? audit = null,
         IAgentContextAccessor? contextAccessor = null,
-        ILogger<AgentLifecycleManager>? logger = null)
+        ILogger<AgentLifecycleManager>? logger = null,
+        IAgentManifestInvalidator? invalidator = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(runtime);
@@ -62,6 +64,7 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         _policy = policy ?? NullAgentPolicyEngine.Instance;
         _audit = audit ?? NullAuditLog.Instance;
         _contextAccessor = contextAccessor ?? new AsyncLocalAgentContextAccessorFallback();
+        _invalidator = invalidator;
         _logger = logger ?? NullLogger<AgentLifecycleManager>.Instance;
     }
 
@@ -227,6 +230,16 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         {
             RegisterManifest(newManifest);
             _state[(newManifest.Id, newManifest.Version)] = new AgentState();
+
+            // v0.17 Pillar B eviction: drop the runtime's cached IAiAgent + invalidate
+            // the translator cache so the NEXT invoke re-activates the grain with the
+            // updated manifest. In-flight runs keep the manifest they started with.
+            _runtime.Remove(newManifest.Id);
+            if (_invalidator is not null)
+            {
+                await _invalidator.InvalidateAsync(newManifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+
             return new AgentHandle(newManifest.Id, newManifest.Version, InstanceId: null);
         }
         catch (Exception ex)
@@ -257,6 +270,13 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
             }
             RemoveManifest(handle.AgentId, handle.Version);
             _runtime.Remove(handle.AgentId);
+
+            // v0.17 Pillar B: clear the translator's options cache for this id
+            // so no stale StatefulAgentOptions lingers if the id is reused.
+            if (_invalidator is not null)
+            {
+                await _invalidator.InvalidateAsync(handle.AgentId, cancellationToken).ConfigureAwait(false);
+            }
         }
         finally
         {

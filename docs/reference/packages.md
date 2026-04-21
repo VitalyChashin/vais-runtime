@@ -1,6 +1,6 @@
 # Reference: packages
 
-All **25 packages** under the `Vais.Agents.*` prefix — 24 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.16.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
+All **26 packages** under the `Vais.Agents.*` prefix — 25 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.17.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
 
 Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that builds the `vais-agents-runtime` container image (v0.16 Pillar A). Not a NuGet; ships as the Dockerfile + docker-compose recipes + Helm chart under [`deploy/`](../../deploy/). See the [Runtime container](#runtime-container-v016) row at the bottom of this page.
 
@@ -29,7 +29,7 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 | Package | Purpose | Key entry points | Install when… |
 |---|---|---|---|
 | `Vais.Agents.Hosting.InMemory` | `InMemoryAgentRuntime` + `InMemoryAgentEventBus` + `InMemoryAgentRegistry`. One process, no cluster. | `AddAgenticInMemoryHosting`, `InMemoryAgentEventBus` | Dev, CLI tools, tests. |
-| `Vais.Agents.Hosting.Orleans` | `OrleansAgentRuntime` + `AiAgentGrain` + `AgentSessionGrain` + `AgentConfigGrain` + `OrleansAgentEventBus` + durability sidecars (`OrleansTaskStore` for v0.8 A2A, `OrleansCheckpointer` for v0.9 graph, `OrleansIdempotencyStore` for v0.11 HTTP). | `AddOrleansAgentRuntime`, `AddOrleansAgentEventBus`, `ConfigureAgentGrains`, `AddOrleansA2ATaskStore`, `AddOrleansGraphCheckpointer`, `AddOrleansIdempotencyStore` | Multi-process or clustered deployments needing durable state. |
+| `Vais.Agents.Hosting.Orleans` | `OrleansAgentRuntime` + `AiAgentGrain` + `AgentSessionGrain` + `AgentConfigGrain` + `OrleansAgentEventBus` + durability sidecars (`OrleansTaskStore` for v0.8 A2A, `OrleansCheckpointer` for v0.9 graph, `OrleansIdempotencyStore` for v0.11 HTTP, `OrleansAgentRegistry` for v0.17 manifest persistence). | `AddOrleansAgentRuntime`, `AddOrleansAgentEventBus`, `ConfigureAgentGrains`, `AddOrleansA2ATaskStore`, `AddOrleansGraphCheckpointer`, `AddOrleansIdempotencyStore`, `AddOrleansAgentRegistry` | Multi-process or clustered deployments needing durable state. |
 
 ## Persistence
 
@@ -98,6 +98,12 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 | Artefact | Purpose | Entry points | Ship when… |
 |---|---|---|---|
 | `vais-agents-runtime` container image | Opinionated, Orleans-only deployable binding of the library stack. Composition root wires durability sidecars in the correct order, HTTP control plane, `/healthz` + `/readyz` probes, optional OPA sidecar, optional OTel / Langfuse. | Built from `src/Vais.Agents.Runtime.Host/Dockerfile`; not a NuGet. Environment-variable driven (see [runtime-configuration reference](./runtime-configuration.md)). docker-compose recipes: [`deploy/compose/`](../../deploy/compose/README.md). Helm chart: [`deploy/helm/vais-agents-runtime/`](../../deploy/helm/vais-agents-runtime/README.md). | Partner evaluation, Kubernetes deployment, anyone who wants the runtime as a product. Custom hosts / embedded agents / unusual runtimes keep composing the library directly. |
+
+## Manifest-driven instantiation (v0.17)
+
+| Package | Purpose | Key entry points | Install when… |
+|---|---|---|---|
+| `Vais.Agents.Runtime.Instantiation` *(v0.17)* | Translates a stored `AgentManifest` into `StatefulAgentOptions` ready to seed a `StatefulAiAgent`. Ships three built-in model-provider factories (OpenAI / Anthropic / Azure-OpenAI via MEAI `IChatClient`) + the `IGuardrailFactory` chain + `IStaticToolRegistry` + `IPromptTemplateRegistry` + `IPromptFileLoader` seams. Opinionated glue; sits above `Core` + `Control.Abstractions` and below `Runtime.Host`. | `IAgentManifestTranslator`, `IModelProviderFactory`, `IGuardrailFactory`, `IStaticToolRegistry`, `IPromptTemplateRegistry`, `IPromptFileLoader`, `ICompletionProviderPool`, `ManifestInstantiationException`, `AddAgentManifestInstantiator`, `AddBuiltinModelProviders`, `AddBuiltinGuardrails`, `AddStaticToolRegistry`, `AddPromptTemplateRegistry`, `AddFileSystemPromptFileLoader`, `OpenAIModelProviderFactory`, `AnthropicModelProviderFactory`, `AzureOpenAIModelProviderFactory` | Hosting a runtime that accepts YAML-authored agents without consumer-written C#. The v0.16 container image wires this automatically; custom hosts opt in via the DI extensions. Four `Vais.Agents.Core.Guardrails.*` built-ins (LengthCap / RegexAllowlist × 2 / RegexDenylist × 2 / LlmAsJudge) live in `Core`; the factories here dispatch to them. |
 
 ## CLI (v0.15)
 
