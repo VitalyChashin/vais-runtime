@@ -18,6 +18,15 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Policy.Opa\Vais.Agents.Control.Policy.Opa.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="v0.18 plugin fixture — built as a sibling assembly for PluginLoadingIntegrationTests, NOT linked into the test assembly.">
+    <ProjectReference Include="..\Vais.Agents.Runtime.Host.PluginFixture\Vais.Agents.Runtime.Host.PluginFixture.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
   <ItemGroup>

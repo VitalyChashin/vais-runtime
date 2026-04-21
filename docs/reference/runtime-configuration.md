@@ -69,13 +69,24 @@ Baked. Not configurable via env.
 
 Helm's default `readinessProbe.failureThreshold: 12 × periodSeconds: 5 = 60 s` gives 4× margin over the measured P99. Tune up for larger clusters via `--set readinessProbe.failureThreshold=N`.
 
-## Plugin mount
+## Plugin loader
 
-Pillar A bakes the convention; Pillar C (v0.18) ships the loader.
+v0.18 Pillar C. Loader scans the configured directory at first `IPluginHandlerRegistry` resolve; each subfolder is a plugin. See [runtime-plugins concept](../concepts/runtime-plugins.md) for the authoring contract + [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) for the end-to-end walkthrough.
 
-| Path | Source | Notes |
-|---|---|---|
-| `/var/lib/vais/plugins` | VOLUME + Helm `plugins.{enabled,persistentVolumeClaimName}` | Empty in v0.16. Mount a PVC to start landing assemblies that a future Pillar C loader will pick up. |
+| Env var | Default | Values | Notes |
+|---|---|---|---|
+| `VAIS_PLUGINS_DIRECTORY` | `/var/lib/vais/plugins` | Absolute path, or empty string to disable | Unset ⇒ default. Explicit empty string (`VAIS_PLUGINS_DIRECTORY=""`) ⇒ loader disabled (no `IPluginHandlerRegistry` registered; translator skips the plugin branch). Missing / empty / unreadable directory ⇒ loader runs as no-op with a startup log entry. |
+
+`appsettings.json` key: `Plugins:Directory`. The env var overrides per standard ASP.NET Core configuration layering.
+
+**Startup log lines worth grepping for:**
+
+- `Plugins directory '<path>' does not exist — plugin loading skipped.`
+- `Plugins directory '<path>' is empty — no plugins to load.`
+- `Loaded plugin '<name>' (targetApiVersion=<abi>, handlers=[...])`
+- `Plugin loading complete — N plugin(s) loaded, M handler(s) registered.`
+
+**Volume mount:** `/var/lib/vais/plugins` is exposed as a Docker `VOLUME`. The Helm chart's `plugins.{enabled,persistentVolumeClaimName}` values mount a PVC at this path.
 
 ## Logging
 
@@ -104,7 +115,8 @@ These are baked in by the runtime host's composition root (see [`CompositionRoot
 - **Durability sidecars are always on.** `OrleansTaskStore` / `OrleansCheckpointer` / `OrleansIdempotencyStore` all register unconditionally, and they register *before* the generic HTTP control-plane wiring so the `TryAddSingleton` discipline picks the Orleans impls over the in-memory defaults. Unit tests guard the order.
 - **`AddAgentControlPlaneOpenApi()` is always wired.** The v0.11 OpenAPI document is served at `/openapi/v1.json`.
 - **`AddAgentControlPlaneIdempotency()` is always wired.** The idempotency middleware runs before the routes map; Orleans-backed store survives silo restart.
-- **`AgentLifecycleManager` uses `InMemoryAgentRegistry`.** A registry that survives pod roll ships with Pillar B (manifest-driven instantiation) — in v0.16 the registry is in-memory because the 501-on-invoke limitation means a durable registry would outlive the rest of the feature.
+- **`AgentLifecycleManager` uses `OrleansAgentRegistry`** since v0.17 Pillar B — manifests survive pod roll via per-id grain persistence. (v0.16 shipped `InMemoryAgentRegistry` because the 501-on-invoke limitation made durable registry outlive the feature.)
+- **Plugin loader registered before the manifest translator** since v0.18 Pillar C — the translator's ctor queries `IPluginHandlerRegistry` lazily at build time. The composition root enforces this ordering; `Composition_Plugin_Registry_Registered_Before_Translator` locks it.
 
 ## Related
 

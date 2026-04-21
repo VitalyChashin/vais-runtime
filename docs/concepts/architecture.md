@@ -1,6 +1,6 @@
 # Architecture
 
-Vais.Agents ships **25 packages** — 24 libraries plus the `Vais.Agents.Cli` dotnet tool. Each has one job. Consumers pick the subset that matches their scenario; dependencies between packages are strict — lower layers never reference higher ones.
+Vais.Agents ships **27 packages** — 26 libraries plus the `Vais.Agents.Cli` dotnet tool. Each has one job. Consumers pick the subset that matches their scenario; dependencies between packages are strict — lower layers never reference higher ones.
 
 ## Package layering
 
@@ -61,6 +61,10 @@ flowchart TD
         CLI[Vais.Agents.Cli]
     end
 
+    subgraph Runtime plugins
+        RPL[Vais.Agents.Runtime.Plugins]
+    end
+
     C --> A
     SK --> A
     MAF --> A
@@ -68,6 +72,9 @@ flowchart TD
     MEM --> C
     ORL --> A
     ORL --> C
+    RPL --> A
+    RPL --> C
+    RPL --> CA
     RED --> ORL
     PG --> ORL
     VD --> A
@@ -201,7 +208,7 @@ Later pillars added their own activity sources + tag families — `Vais.Agents.P
 
 ## Runtime tier (v0.16 Pillar A)
 
-The 25 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
+The 26 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
 
 ```
 ┌─ Runtime tier (deployable) ───────────────────────────────────┐
@@ -220,9 +227,10 @@ The 25 packages above are a **library**. They also ship as a **deployable runtim
         │ consumes
         ▼
    ┌────────────────────────────────────────────────────────┐
-   │          Library tier (25 NuGet packages)              │
+   │          Library tier (26 NuGet packages)              │
    │  Core, Hosting.Orleans, Control.*, Persistence.*,      │
-   │  Observability.*, Protocols.*, Orchestration.*, CLI    │
+   │  Observability.*, Protocols.*, Orchestration.*,        │
+   │  Runtime.Plugins, CLI                                  │
    └────────────────────────────────────────────────────────┘
 ```
 
@@ -284,7 +292,63 @@ Key invariants:
 
 See [declarative-agents concept](declarative-agents.md) for the full pipeline; [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) for the end-to-end walkthrough.
 
-## The 26 packages at a glance
+## Plugin tier (v0.18 Pillar C)
+
+Parallel to the manifest instantiation tier — adds a plugin-loader branch that runs **before** the declarative `Model` check. Partners ship DLLs whose exported `IAiAgent` types route to manifests by `AgentHandlerRef.TypeName`. Authoring details live in [runtime-plugins concept](runtime-plugins.md) + [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md).
+
+```
+┌─ Runtime.Host composition root ─────────────────────────────────┐
+│                                                                 │
+│  AddAgentPlugins(options.PluginsDirectory)   // before          │
+│  AddAgentManifestInstantiator()              // translator      │
+│                                                                 │
+└──────┬──────────────────────────────────────────────────────────┘
+       │ scans /var/lib/vais/plugins at first resolve
+       ▼
+┌─ Vais.Agents.Runtime.Plugins ───────────────────────────────────┐
+│                                                                 │
+│  AssemblyPluginLoader          (one PluginAssemblyLoadContext   │
+│                                 per subfolder; shared-types     │
+│                                 carve-out keeps the DI boundary │
+│                                 identity-clean)                 │
+│  VaisPluginAttribute  → IAgentHandlerFactory per HandlerTypeName│
+│  IAiAgent convention → DefaultHandlerFactory<T> auto-wrap       │
+│  IPluginHandlerRegistry (singleton)                             │
+│                                                                 │
+└──────┬──────────────────────────────────────────────────────────┘
+       │ translator queries TryGet(Handler.TypeName) BEFORE checking Model
+       ▼
+┌─ Vais.Agents.Runtime.Instantiation (plugin branch) ─────────────┐
+│                                                                 │
+│  matched? → factory.CreateAsync(manifest, sp, ct) →             │
+│             StatefulAgentOptions { Agent = IAiAgent }           │
+│                                                                 │
+│  matched + Model also set?                                      │
+│    → IManifestApplyDiagnosticsSink records                      │
+│      handler-and-declarative-fields-both-set                    │
+│    → plugin wins; declarative fields ignored                    │
+│                                                                 │
+│  unmatched + Model null?                                        │
+│    → urn:vais-agents:handler-not-loaded (as before)             │
+│                                                                 │
+└──────┬──────────────────────────────────────────────────────────┘
+       │
+       ▼
+   AiAgentGrain.OnActivateAsync prefers options.Agent verbatim
+   (persisted SystemPrompt re-applied via IAiAgent.SystemPrompt)
+```
+
+Key invariants:
+
+- **Plugin wins over declarative.** A manifest with both a loaded-plugin `Handler.TypeName` AND a `Model` gets the plugin path + a WARN. Hosts that care about the WARN wire an `IManifestApplyDiagnosticsSink`; hosts that don't, get silent overrides.
+- **One `AssemblyLoadContext` per plugin subfolder.** Plugin-private deps resolve per-plugin via `AssemblyDependencyResolver`; shared types (Abstractions, Core, DI / logging / options / config abstractions, MEAI, Polly.Core) cross into the runtime's default context so type identities line up at the DI seam.
+- **Non-collectible.** No hot reload in v0.18 — plugins load at silo startup and stay until the pod cycles.
+- **Same DI surface as the host.** Plugin factories receive the host's full `IServiceProvider`; `ActivatorUtilities.CreateInstance` wires constructor-injected services. Trust boundary = runtime container — not a sandbox.
+- **Six new URNs.** Four loader-side (`plugin-load-failed`, `plugin-abi-mismatch`, `plugin-handler-collision`, `plugin-handler-not-found`) + two translator-side (`plugin-factory-throw`, `handler-and-declarative-fields-both-set`). Only the translator URNs surface on the HTTP wire; loader URNs are startup-log-only.
+
+See [runtime-plugins concept](runtime-plugins.md) for the plugin-authoring contract, ABI-matching rules, and security posture.
+
+## The 27 packages at a glance
 
 See the [packages reference](../reference/packages.md) for the per-package description table with install guidance.
 

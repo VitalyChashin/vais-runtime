@@ -33,7 +33,7 @@ metadata:
   version: "1.0"
 spec:
   handler:
-    typeName: declarative          # placeholder string; Pillar C plugins override
+    typeName: declarative          # sentinel — no plugin registers this name; translator falls through to the declarative path
   model:
     provider: openai               # or: anthropic, azure-openai, or a custom registered factory
     id: gpt-4o
@@ -111,14 +111,16 @@ Unknown guardrail name ⇒ `urn:vais-agents:guardrail-not-registered`. Malformed
 
 ## `handler.typeName` coexistence with Pillar C
 
-`AgentHandlerRef.TypeName` is required in the record. v0.17 pivots on `Model` presence:
+`AgentHandlerRef.TypeName` is required in the record. The translator consults the v0.18 plugin registry **before** it checks `Model` presence:
 
-| `Handler.TypeName` | `Model` present | Behaviour |
+| `Handler.TypeName` matches a loaded plugin? | `Model` present | Behaviour |
 |---|---|---|
-| any | yes | Declarative path — translator builds options from manifest fields. |
-| any | no | `501 urn:vais-agents:handler-not-loaded` at invoke. Pillar C (v0.18) ships the plugin loader that consumes non-sentinel `TypeName` values. |
+| yes | no | **Plugin path.** Factory-produced `IAiAgent` lands on `StatefulAgentOptions.Agent`; grain uses it verbatim. |
+| yes | yes | **Plugin wins + WARN.** Same as above, but the apply response carries `urn:vais-agents:handler-and-declarative-fields-both-set`. Declarative `Model` / `SystemPromptSpec` / `Tools` / `GuardrailsSpec` are silently ignored. |
+| no | yes | **Declarative path.** Translator builds options from manifest fields (v0.17 Pillar B behaviour). |
+| no | no | `501 urn:vais-agents:handler-not-loaded` at invoke. Either publish a plugin that exports this handler, or switch the manifest to the declarative path with a `Model`. |
 
-Convention: set `handler.typeName: declarative` for pure-YAML agents. Pillar C will interpret specific type-name values (e.g. `MyApp.WeatherAgent`) as plugin class loads.
+Convention: set `handler.typeName: declarative` for pure-YAML agents — no plugin ever registers that sentinel. Plugin authors pick namespaced values like `MyApp.WeatherAgent` to avoid collision. See [runtime-plugins concept](runtime-plugins.md) for plugin authoring + loader semantics.
 
 ## Registering custom factories
 
@@ -139,7 +141,9 @@ Consumers add their own factories alongside. The translator dispatches by name (
 | URN | Cause |
 |---|---|
 | `agent-not-found` | Registry has no manifest for the id. |
-| `handler-not-loaded` | Manifest has no `Model` and Pillar C plugins not shipped yet. |
+| `handler-not-loaded` | Manifest has no `Model` and no loaded plugin exports the requested `Handler.TypeName`. Ship a plugin or add a `Model` block. |
+| `plugin-factory-throw` | A v0.18 plugin factory threw inside `CreateAsync` during grain activation. Inner exception surfaces via Problem Details. |
+| `handler-and-declarative-fields-both-set` | Apply-time WARN (not error) — manifest has both a plugin-matching `Handler.TypeName` AND declarative `Model` fields. Plugin wins; declarative fields are silently ignored. |
 | `model-provider-unsupported` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`. |
 | `tool-source-unknown` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. |
 | `tool-not-registered` | `static:<name>` has no matching `IStaticToolRegistry` entry. |
@@ -156,6 +160,8 @@ All surface as HTTP Problem Details when `vais apply` / `vais invoke` hits them.
 ## Related
 
 - [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) — end-to-end walkthrough.
+- [runtime-plugins concept](runtime-plugins.md) — the v0.18 Pillar C escape hatch for manifests that need C# behaviour.
+- [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) — end-to-end walkthrough for the plugin path.
 - [ship-a-guardrail guide](../guides/ship-a-guardrail.md) — custom `IGuardrailFactory`.
 - [ship-a-custom-model-provider guide](../guides/ship-a-custom-model-provider.md) — custom `IModelProviderFactory`.
 - [manifest-schema reference](../reference/manifest-schema.md) — canonical field-by-field catalog.

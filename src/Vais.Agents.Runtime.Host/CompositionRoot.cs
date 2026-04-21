@@ -21,6 +21,7 @@ using Vais.Agents.Persistence.Redis;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Instantiation.Guardrails;
 using Vais.Agents.Runtime.Instantiation.ModelProviders;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -123,6 +124,18 @@ internal static class CompositionRoot
         //    gets resolved at grain activation.
         services.AddOrleansAgentRegistry();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
+
+        // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
+        // because the translator constructor calls sp.GetService<IPluginHandlerRegistry>()
+        // lazily at build time; an absent registry → translator falls through to the v0.17
+        // declarative path. Empty / whitespace PluginsDirectory → skip wiring entirely
+        // (disabled mode). Non-existent directory is handled by the loader itself as a no-op
+        // with an empty registry.
+        if (!string.IsNullOrWhiteSpace(options.PluginsDirectory))
+        {
+            services.AddAgentPlugins(options.PluginsDirectory);
+        }
+
         services.AddAgentManifestInstantiator();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();

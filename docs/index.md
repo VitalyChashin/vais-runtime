@@ -17,8 +17,9 @@ Stack-neutral agent library for .NET. This tree is the full walkthrough — conc
 
 One page per pillar. Each explains what it is, the core types, how to wire it, extension points, and known limitations.
 
-- [Architecture](concepts/architecture.md) — the 26 packages, layered diagram, dependency rules.
+- [Architecture](concepts/architecture.md) — the 27 packages, layered diagram, dependency rules.
 - [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation (v0.17 Pillar B); Model / SystemPromptSpec / Tools / Guardrails translation.
+- [Runtime plugins](concepts/runtime-plugins.md) — code-authored `IAiAgent` DLLs loaded at silo startup; plugin-branch in the translator (v0.18 Pillar C).
 - [Session + memory](concepts/session.md) — `IAgentSession`, working vs session history, `IMemoryStore` scopes.
 - [Context](concepts/context.md) — `IContextProvider` chain, `IContextWindowPacker`, merge rules.
 - [Prompt](concepts/prompt.md) — `ISystemPromptComposer`, contributors, `IPromptTemplate`.
@@ -64,11 +65,12 @@ Task-focused, sample-backed recipes.
 - [Install the runtime locally](guides/install-the-runtime-locally.md) — docker-compose recipes: localhost + clustered + OPA/Langfuse/OTel overlays (v0.16).
 - [Deploy the runtime to Kubernetes](guides/deploy-the-runtime-to-kubernetes.md) — Helm install from kind to production with external Redis (v0.16).
 - [Author an agent in YAML](guides/author-an-agent-in-yaml.md) — pure-YAML declarative agent, no consumer C# (v0.17).
+- [Package an agent as a plugin](guides/package-an-agent-as-a-plugin.md) — code-authored `IAiAgent` DLL + overlay image + `vais apply`/`invoke` (v0.18).
 - [Deploy OTel and Langfuse](guides/deploy-otel-and-langfuse.md)
 
 ## Reference
 
-- [Packages](reference/packages.md) — 26-package table with install guidance.
+- [Packages](reference/packages.md) — 27-package table with install guidance.
 - [Events](reference/events.md) — `AgentEvent` + `AgentGraphEvent` closed hierarchies.
 - [Budget](reference/budget.md) — `RunBudget` fields and enforcement points.
 - [Graph predicate operators](reference/graph-predicate-operators.md) — ten-operator matcher vocabulary + combinators (v0.9).
@@ -104,3 +106,4 @@ Task-focused, sample-backed recipes.
 | Gate every agent verb through a Rego policy | Same + `Vais.Agents.Control.Policy.Opa` + an OPA sidecar / standalone server |
 | Operate the control plane from a shell | `dotnet tool install -g Vais.Agents.Cli` — bundles the `vais` command on PATH |
 | Ship the runtime as a container image | `docker build -f src/Vais.Agents.Runtime.Host/Dockerfile .` — v0.16 Pillar A; Helm chart in `deploy/helm/vais-agents-runtime/` for Kubernetes, docker-compose recipes in `deploy/compose/` for local dev |
+| Package a code-authored agent as a loadable plugin | `Vais.Agents.Abstractions` + `Vais.Agents.Core` + `[assembly: VaisPlugin]` in a separate `classlib` publish + overlay Dockerfile over `vais-agents-runtime:0.18.0-preview` (v0.18 Pillar C) |

@@ -35,6 +35,7 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [VectorDataRag](VectorDataRag) | VectorData-backed retriever end-to-end | Persistence.VectorData + SK InMemory + MEAI | ~120 | — | [wire-rag-via-vectordata](../docs/guides/wire-rag-via-vectordata.md) |
 | [McpToolSourceExample](McpToolSourceExample) | `McpToolSource` wrapping shape | Protocols.Mcp + ModelContextProtocol.Core | ~55 | — (real MCP server optional) | [expose-mcp-tools-to-an-agent](../docs/guides/expose-mcp-tools-to-an-agent.md) |
 | [A2ARemoteAgentExample](A2ARemoteAgentExample) | `A2ARemoteAgentTool` with stubbed `IA2AClient` | Protocols.A2A + A2A SDK | ~85 | — | [delegate-to-a2a-remote-agent](../docs/guides/delegate-to-a2a-remote-agent.md) |
+| [PluginAgentWeather](PluginAgentWeather) | v0.18 code-authored agent packaged as a runtime plugin (`[VaisPlugin]`, overlay Dockerfile, `vais apply`/`vais invoke`) | Abstractions, Core | ~45 | — | [package-an-agent-as-a-plugin](../docs/guides/package-an-agent-as-a-plugin.md) |
 
 ## Suggested learning path
 

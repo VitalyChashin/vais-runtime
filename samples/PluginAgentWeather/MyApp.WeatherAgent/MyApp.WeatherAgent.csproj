@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    v0.18 Pillar C plugin-authoring sample. Consumed by the Vais Agents runtime at
+    /var/lib/vais/plugins via AssemblyPluginLoader. See README.md for publish + overlay
+    Dockerfile + vais apply/invoke walk-through.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>MyApp.WeatherAgent</AssemblyName>
+    <!--
+      CopyLocalLockFileAssemblies + SelfContained=false ensure `dotnet publish` emits
+      the plugin's transitive dependencies alongside the primary DLL. The loader's
+      AssemblyDependencyResolver picks them up per plugin without mixing runtimes.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.18.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.18.0-preview" />
+  </ItemGroup>
+
+</Project>

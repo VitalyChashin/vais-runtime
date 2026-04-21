@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1.7
+
+# Layer the published plugin assemblies onto the Vais Agents runtime image.
+# Usage:
+#   dotnet publish MyApp.WeatherAgent -c Release -o ./publish
+#   docker build -f Dockerfile.overlay -t my-weather-runtime:0.18.0-preview .
+#
+# The runtime container scans /var/lib/vais/plugins at startup and activates every
+# declared handler. Each plugin ships in its own subfolder so transitive deps stay
+# isolated per plugin (per AssemblyLoadContext, resolved via AssemblyDependencyResolver).
+
+FROM ghcr.io/vais-agents/runtime:0.18.0-preview
+COPY ./publish /var/lib/vais/plugins/weather-agent

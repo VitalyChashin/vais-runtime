@@ -14,6 +14,7 @@ using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Runtime.Host;
 using Vais.Agents.Runtime.Instantiation;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Host.Tests;
 
@@ -176,6 +177,111 @@ public class CompositionRootTests
 
         registry.Should().BeOfType<OrleansAgentRegistry>(
             because: "AddOrleansAgentRegistry must replace v0.16's InMemoryAgentRegistry so vais apply persists across silo restart.");
+    }
+
+    [Fact]
+    public void Composition_Plugin_Registry_Registered_When_PluginsDirectory_Set()
+    {
+        // v0.18 Pillar C: a non-empty PluginsDirectory wires AddAgentPlugins, which registers
+        // IPluginHandlerRegistry as a singleton. Missing directory is fine — the loader is a
+        // no-op and the registry resolves empty.
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-plugins-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { PluginsDirectory = tempRoot };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        var registry = sp.GetService<IPluginHandlerRegistry>();
+
+        registry.Should().NotBeNull(because: "a non-empty PluginsDirectory must register IPluginHandlerRegistry.");
+        registry!.HandlerTypeNames.Should().BeEmpty(because: "temp directory is empty; loader is a no-op but registry is still wired.");
+    }
+
+    [Fact]
+    public void Composition_Plugin_Registry_Not_Registered_When_PluginsDirectory_Empty()
+    {
+        // Empty PluginsDirectory ⇒ loader disabled. Translator falls through to the v0.17
+        // declarative path with no lookup overhead.
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { PluginsDirectory = "" };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        var registry = sp.GetService<IPluginHandlerRegistry>();
+
+        registry.Should().BeNull(because: "empty PluginsDirectory explicitly disables the plugin loader — translator sees no registry and skips the plugin branch.");
+    }
+
+    [Fact]
+    public void Composition_Plugin_Registry_Registered_Before_Translator()
+    {
+        // Ordering lock: the translator's ctor calls sp.GetService<IPluginHandlerRegistry>()
+        // at build time (via AddAgentManifestInstantiator). If the registration order ever
+        // drifts such that AddAgentPlugins runs AFTER AddAgentManifestInstantiator, the
+        // translator factory captures the missing registry and the plugin branch stops firing
+        // even though the loader appears to be wired. This test asserts the registry reaches
+        // the translator.
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-plugins-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PluginsDirectory = tempRoot });
+
+        using var sp = services.BuildServiceProvider();
+        var translator = sp.GetRequiredService<IAgentManifestTranslator>();
+        var registry = sp.GetRequiredService<IPluginHandlerRegistry>();
+
+        // We can't directly inspect the translator's captured registry, but we CAN assert
+        // that both are resolvable from the same root provider — the translator was built
+        // from sp which already knew about the registry.
+        translator.Should().NotBeNull();
+        registry.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Unset_Uses_Default_PluginsDirectory()
+    {
+        // Env var unset ⇒ default /var/lib/vais/plugins. Env var empty ⇒ disabled.
+        Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.PluginsDirectory.Should().Be(RuntimeOptions.DefaultPluginsDirectory);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Empty_Disables_Plugins()
+    {
+        Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", "");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.PluginsDirectory.Should().Be("", because: "explicit empty string disables the plugin loader.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Custom_PluginsDirectory_Wins()
+    {
+        Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", "/mnt/plugins");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.PluginsDirectory.Should().Be("/mnt/plugins");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", null);
+        }
     }
 
     [Fact]

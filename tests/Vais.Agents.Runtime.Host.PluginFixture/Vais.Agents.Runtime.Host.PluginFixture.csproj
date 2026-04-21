@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test fixture — NOT a production sample. Compiled as a standalone plugin
+    assembly that the v0.18 PluginLoadingIntegrationTests in
+    Vais.Agents.Runtime.Host.Tests copy into a temp plugins directory at test
+    time. Production samples live under samples/PluginAgentWeather/ and consume
+    published NuGet packages instead of ProjectReferences.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Runtime.Host.PluginFixture</RootNamespace>
+    <AssemblyName>Vais.Agents.Runtime.Host.PluginFixture</AssemblyName>
+    <OutputType>Library</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+  </ItemGroup>
+
+</Project>

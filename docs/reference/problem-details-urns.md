@@ -4,7 +4,7 @@ Every error response from the HTTP control plane carries an RFC 7807 `ProblemDet
 
 Generated OpenAPI clients branch on URN via the `x-vais-type-urns` extension — see [consume the OpenAPI spec](../guides/consume-the-openapi-spec.md).
 
-## Current URNs (v0.15)
+## Current URNs
 
 | URN | Pairs with | Meaning | Ships in | Typical caller response |
 |---|---|---|---|---|
@@ -18,6 +18,37 @@ Generated OpenAPI clients branch on URN via the `x-vais-type-urns` extension —
 | `urn:vais-agents:budget-exceeded` | `429` | `RunBudget` tripped mid-run (`MaxTurns`, `MaxPromptTokens`, `MaxCompletionTokens`, `MaxToolCalls`, or `MaxDuration`). | v0.11 | Inspect `detail` for the field name; adjust budget or accept the result. |
 | `urn:vais-agents:streaming-not-supported` | `501` | Resolved agent does not implement `IStreamingAiAgent`. | v0.12 | Use `POST /v1/agents/{id}/invoke` (unary); or swap in a streaming-capable agent. |
 | `urn:vais-agents:backend-unavailable` | `503` | Upstream dependency (Orleans silo, DB, vector store) unreachable. | v0.6 | Retry with exponential backoff; escalate on persistent failure. |
+
+### Manifest instantiation (v0.17 Pillar B)
+
+Emitted by `AgentManifestTranslator` during grain activation — surfacing as HTTP responses on the first invoke that follows `vais apply`.
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:handler-not-loaded` | `501` | Manifest has no `Model` and no loaded plugin exports the requested `Handler.TypeName`. | v0.17 | Ship a plugin that exports the handler, or add a `Model` block to the manifest. |
+| `urn:vais-agents:model-provider-unsupported` | `400` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`. | v0.17 | Register a matching factory (see ship-a-custom-model-provider guide), or use one of `openai` / `anthropic` / `azure-openai`. |
+| `urn:vais-agents:prompt-spec-ambiguous` | `400` | `SystemPromptSpec` has more than one of `inline` / `templateRef` / `fileRef` set. | v0.17 | Pick exactly one shape. |
+| `urn:vais-agents:prompt-template-not-registered` | `400` | `templateRef` doesn't resolve in the `IPromptTemplateRegistry`. | v0.17 | Register the template at host startup or fix the ref name. |
+| `urn:vais-agents:prompt-file-unreadable` | `400` | `fileRef` missing / permissioned / outside the configured root. | v0.17 | Mount the file + adjust the root path. |
+| `urn:vais-agents:tool-not-registered` | `400` | `static:<name>` has no matching `IStaticToolRegistry` entry. | v0.17 | Register the tool at host startup or fix the ref name. |
+| `urn:vais-agents:tool-source-unknown` | `400` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. | v0.17 | Use a supported prefix. |
+| `urn:vais-agents:mcp-server-not-declared` | `400` | `mcp:<name>` references an undeclared `McpServers[].Name`. | v0.17 | Add the server declaration to the manifest. |
+| `urn:vais-agents:a2a-agent-not-declared` | `400` | `a2a:<name>` references an undeclared `A2ARemoteAgents[].Name`. | v0.17 | Add the remote-agent declaration to the manifest. |
+| `urn:vais-agents:guardrail-not-registered` | `400` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. | v0.17 | Register a factory or pick a built-in (`LengthCap` / `RegexAllowlist` / `RegexDenylist` / `LlmAsJudge`). |
+| `urn:vais-agents:guardrail-params-invalid` | `400` | Factory rejected the supplied `params` (missing key, wrong type, bad value). | v0.17 | Fix the params per the factory's documented schema. |
+
+### Plugin model (v0.18 Pillar C)
+
+Two runtime URNs reach the HTTP wire; four loader URNs are startup-log-only (WARN level, loader continues). See [runtime-plugins concept](../concepts/runtime-plugins.md#urn-catalogue) for the full loader catalogue.
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:plugin-factory-throw` | `500` | `IAgentHandlerFactory.CreateAsync` threw during grain activation. Inner exception message surfaces via `detail`. Factory throws do NOT cache a partial result — a retry re-invokes the factory. `OperationCanceledException` propagates unwrapped. | v0.18 | Inspect `detail`; fix the factory. Transient failures clear on the next invoke. |
+| `urn:vais-agents:handler-and-declarative-fields-both-set` | — | Apply-time WARN on the `vais apply` response body. Manifest has both a loaded-plugin `Handler.TypeName` AND declarative `Model` fields. Plugin wins; declarative fields are silently ignored. | v0.18 | Remove `Model` / `SystemPromptSpec` / `Tools` / `GuardrailsSpec` from the manifest, or retype `handler.typeName` to the `declarative` sentinel. |
+| `urn:vais-agents:plugin-load-failed` | — | **Startup log only.** A plugin folder's primary DLL failed `Assembly.LoadFromAssemblyPath`. Loader continues with the next plugin. | v0.18 | Inspect logs; republish the plugin with its transitive deps. |
+| `urn:vais-agents:plugin-abi-mismatch` | — | **Startup log only.** Plugin `targetApiVersion` doesn't match the runtime ABI. Plugin skipped. | v0.18 | Rebuild the plugin against the runtime's Abstractions version. |
+| `urn:vais-agents:plugin-handler-collision` | — | **Startup log or throw.** Two plugins declared the same `HandlerTypeName`. Throws on `PluginLoaderOptions.FailOnHandlerCollision=true` (default); otherwise first-registered wins. | v0.18 | Rename one plugin's handler or dedicate a namespace. |
+| `urn:vais-agents:plugin-handler-not-found` | — | **Startup log only.** A `[VaisPlugin(..., "Foo")]` declared `"Foo"` but the loaded assembly has no matching type. Handler skipped. | v0.18 | Fix the attribute or type name mismatch. |
 
 URN structure: `urn:vais-agents:<slug>` where `<slug>` is lowercase kebab-case. No version suffix — the URN is the contract; renaming an existing URN is a **breaking change** and requires a major-version bump.
 

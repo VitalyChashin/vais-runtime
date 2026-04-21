@@ -15,6 +15,13 @@ internal sealed record RuntimeOptions
     public const string DefaultMode = "localhost";
     public const string DefaultClusteringBackend = "redis";
 
+    /// <summary>
+    /// Default directory scanned for v0.18 plugin assemblies. Matches the path baked into the
+    /// runtime container image (v0.16 Pillar A decision #9 / FHS). Hosts that want to disable
+    /// the plugin loader set <c>VAIS_PLUGINS_DIRECTORY</c> to an empty string.
+    /// </summary>
+    public const string DefaultPluginsDirectory = "/var/lib/vais/plugins";
+
     /// <summary><c>localhost</c> (memory streams + storage) or <c>clustered</c>.</summary>
     public string Mode { get; init; } = DefaultMode;
 
@@ -33,6 +40,14 @@ internal sealed record RuntimeOptions
     public OpaFailMode OpaFailMode { get; init; } = OpaFailMode.Closed;
     public string? OpaDataPath { get; init; }
 
+    /// <summary>
+    /// v0.18 Pillar C plugin loader input. Null OR empty OR non-existent directory ⇒ loader
+    /// skipped (no-op, empty registry, startup log records <c>plugins=disabled</c>). Defaults
+    /// to <see cref="DefaultPluginsDirectory"/> so the container image's bind-mount path works
+    /// out of the box; hosts without plugins set <c>VAIS_PLUGINS_DIRECTORY=""</c> to disable.
+    /// </summary>
+    public string? PluginsDirectory { get; init; } = DefaultPluginsDirectory;
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -48,12 +63,25 @@ internal sealed record RuntimeOptions
             OpaBaseUrl = Env("VAIS_OPA_BASEURL"),
             OpaFailMode = ParseFailMode(Env("VAIS_OPA_FAILMODE")),
             OpaDataPath = Env("VAIS_OPA_DATAPATH"),
+            PluginsDirectory = PluginsEnv("VAIS_PLUGINS_DIRECTORY"),
         };
 
         static string? Env(string name)
         {
             var value = Environment.GetEnvironmentVariable(name);
             return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
+        // VAIS_PLUGINS_DIRECTORY distinguishes unset (use default) from empty (disabled).
+        // `""` explicitly disables the loader; an unset var falls back to DefaultPluginsDirectory.
+        static string? PluginsEnv(string name)
+        {
+            var value = Environment.GetEnvironmentVariable(name);
+            if (value is null)
+            {
+                return DefaultPluginsDirectory;
+            }
+            return value;
         }
 
         static OpaFailMode ParseFailMode(string? raw) =>

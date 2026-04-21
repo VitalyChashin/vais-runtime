@@ -30,6 +30,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.OpenTelemetry\Vais.Agents.Observability.OpenTelemetry.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
   </ItemGroup>
 
   <ItemGroup>
