@@ -1800,3 +1800,10 @@ virtual Vais.Agents.GraphEdgePredicate.PrintMembers(System.Text.StringBuilder! b
 virtual Vais.Agents.JournalEntry.EqualityContract.get -> System.Type!
 virtual Vais.Agents.JournalEntry.Equals(Vais.Agents.JournalEntry? other) -> bool
 virtual Vais.Agents.JournalEntry.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Vais.Agents.IAgentRemoteInvoker
+Vais.Agents.IAgentRemoteInvoker.InvokeAsync(string! runtimeUrl, Vais.Agents.AgentHandle! handle, Vais.Agents.AgentInvocationRequest! request, string? bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentInvocationResult!>
+Vais.Agents.RemoteAgentInvocationException
+Vais.Agents.RemoteAgentInvocationException.IsRetryable.get -> bool
+Vais.Agents.RemoteAgentInvocationException.RemoteAgentInvocationException(string! runtimeUrl, System.Net.HttpStatusCode status, string? detail = null, System.Exception? inner = null) -> void
+Vais.Agents.RemoteAgentInvocationException.RuntimeUrl.get -> string!
+Vais.Agents.RemoteAgentInvocationException.Status.get -> System.Net.HttpStatusCode

@@ -21,6 +21,7 @@ spec:
       ref:
         id: classifier
         version: "1.0"
+        # runtimeUrl: "https://other-runtime.svc"  # optional — see Cross-runtime graphs
     - id: end
       kind: End
   edges:
@@ -28,7 +29,11 @@ spec:
       to: end
 ```
 
-The `metadata` block carries identity (`id`, `version`) and optional `labels` / `annotations`. The `spec` block carries the graph topology. The same YAML is accepted by `vais apply`, the REST API (`POST /v1/graphs`), and the `AgentGraph` Kubernetes CRD (after stripping the vais-specific envelope and reformatting into K8s spec fields).
+The `metadata` block carries identity (`id`, `version`) and optional `labels` / `annotations`. The `spec` block carries the graph topology.
+
+### `ref.runtimeUrl` (v0.20)
+
+Each `kind: Agent` node's `ref` object accepts an optional `runtimeUrl` field — an absolute `http` or `https` URI pointing at a **different** vais-agents runtime. When set, the orchestrator routes that node's invocation to the remote runtime instead of resolving the agent locally. See [Cross-runtime graphs](cross-runtime-graphs.md) for the full contract, bearer-token forwarding, and retry semantics. The same YAML is accepted by `vais apply`, the REST API (`POST /v1/graphs`), and the `AgentGraph` Kubernetes CRD (after stripping the vais-specific envelope and reformatting into K8s spec fields).
 
 ## Management surface
 
@@ -89,13 +94,16 @@ spec:
 | Resumable graphs on Orleans | v0.12 | Orleans-backed durable state, interrupt / resume protocol |
 | Kubernetes operator (agent) | v0.13 | `Agent` CRD, `AgentEntityController` |
 | **Graph as deployable** | **v0.19** | **`AgentGraph` control-plane API, `AgentGraph` CRD, `vais graph-*` CLI commands** |
+| **Cross-runtime graph refs** | **v0.20** | **`ref.runtimeUrl` field on `kind: Agent` nodes; `IAgentRemoteInvoker`; bearer forwarding** |
 
 The v0.19 layer sits above the runtime: it gives you a stable address (`id + version`) for any graph, separates the manifest from the host process, and makes graphs compatible with GitOps workflows.
 
 ## See also
 
 - [Graph orchestration concept](graph-orchestration.md) — node kinds, edge predicates, state bindings.
+- [Cross-runtime graphs concept](cross-runtime-graphs.md) — `ref.runtimeUrl`, bearer forwarding, retry semantics.
 - [Resumable graphs on Orleans guide](../guides/run-resumable-graphs-on-orleans.md) — durable state, interrupt / resume.
 - [Deploy a graph to the runtime](../guides/deploy-a-graph-to-the-runtime.md) — step-by-step walkthrough.
+- [Compose a graph across runtimes](../guides/compose-a-graph-across-runtimes.md) — cross-runtime deployment walkthrough.
 - [Kubernetes operator concept](kubernetes-operator.md) — `AgentGraph` CRD reference.
 - [CLI subcommands reference](../reference/cli-subcommands.md) — full flag tables for `invoke-graph`, `graph-logs`, `get-graphs`, `delete-graph`.

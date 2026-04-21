@@ -51,9 +51,11 @@ Create or update agent or graph manifests. A single file may contain multiple do
 | Field | Value |
 |---|---|
 | Arguments | — |
-| `-f, --file <path>` | **Required.** Manifest path (YAML / JSON) or `-` for stdin. |
+| `-f, --file <path>` | **Required.** Manifest path (YAML / JSON) or `-` for stdin. May be specified multiple times. |
 | `--idempotency-key <value>` | Stamp each call with this key. Default: generated UUID. |
 | Exit codes | `0`, `1`, `2`, `3`, `4` |
+
+**Cross-runtime note (v0.20).** To deploy agents to a remote runtime (e.g. to satisfy a `ref.runtimeUrl` in a cross-runtime graph), use `--context` or `--server` to point `apply` at the target runtime. The manifest itself does not embed which runtime it should be registered on; that is determined by the `--server` flag at apply time. See [Compose a graph across runtimes](../guides/compose-a-graph-across-runtimes.md) for a worked example.
 
 ### `vais delete <id>`
 

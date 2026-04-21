@@ -187,6 +187,8 @@ Three styles live together:
 
 Graph ships two orchestrators: `InProcessGraphOrchestrator` in Core (zero-MAF-dep) and `MafGraphOrchestrator` in `Orchestration.Graph.MicrosoftAgentFramework` (translates to an MAF `Workflow`). See [graph orchestration](graph-orchestration.md).
 
+**Cross-runtime refs (v0.20).** A `kind: Agent` node in a graph manifest can carry `ref.runtimeUrl` — an absolute http/https URI pointing at a different runtime instance. The orchestrator routes that node's invocation to `HttpAgentRemoteInvoker` (in `Control.Http.Client`) rather than the local lifecycle manager. Bearer tokens are forwarded from the inbound HTTP context. See [cross-runtime graphs](cross-runtime-graphs.md).
+
 ## Control plane
 
 Seven packages, one seam. `Control.Abstractions` is the contract; `Control.InProcess` is the reference runtime that wraps policy + idempotency + audit around the seven `IAgentLifecycleManager` verbs. `Control.Manifests.{Json,Yaml}` are the wire-format loaders. `Control.Http.{Server,Client}` are the HTTP surface — the server ships `MapAgentControlPlane`, `AddAgentControlPlaneIdempotency` (v0.11), `AddAgentControlPlaneOpenApi` (v0.11), and the v0.12 streaming-invoke route. `Control.KubernetesOperator` wraps `Control.Http.Client` with a KubeOps reconciler over a `vais.io/v1alpha1` CRD (v0.13). `Control.Policy.Opa` adapts an external OPA server to `IAgentPolicyEngine` (v0.14).
