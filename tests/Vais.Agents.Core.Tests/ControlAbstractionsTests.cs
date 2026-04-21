@@ -77,9 +77,10 @@ public sealed class ControlAbstractionsTests
     }
 
     [Fact]
-    public void PolicyOperation_Has_Seven_Values()
+    public void PolicyOperation_Has_Expected_Values()
     {
-        Enum.GetValues<PolicyOperation>().Length.Should().Be(7);
+        // 7 agent verbs (Create..Evict) + 7 graph verbs (GraphCreate..GraphEvict) added in v0.19.
+        Enum.GetValues<PolicyOperation>().Length.Should().Be(14);
     }
 }
 

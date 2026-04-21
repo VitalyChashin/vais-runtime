@@ -1,6 +1,6 @@
 # Reference: CLI subcommands
 
-Full per-command flag + argument + exit-code table for the `vais` CLI (v0.15). Nine top-level verbs + a `config` branch with four sub-verbs = thirteen commands.
+Full per-command flag + argument + exit-code table for the `vais` CLI (v0.19). Thirteen top-level verbs + a `config` branch with four sub-verbs = seventeen commands.
 
 Every command (except `version`, `init`, and the `config` branch) supports:
 
@@ -46,13 +46,13 @@ List agents or fetch a single manifest.
 
 ### `vais apply -f <file>`
 
-Create or update an agent manifest. Falls back from `POST` to `PUT` on `409 Conflict`.
+Create or update agent or graph manifests. A single file may contain multiple documents separated by `---`; `kind: Agent` and `kind: AgentGraph` documents are both accepted and dispatched to the appropriate endpoint. Falls back from `POST` to `PUT` on `409 Conflict` per document.
 
 | Field | Value |
 |---|---|
 | Arguments | — |
 | `-f, --file <path>` | **Required.** Manifest path (YAML / JSON) or `-` for stdin. |
-| `--idempotency-key <value>` | Stamp the call with this key. Default: generated UUID. |
+| `--idempotency-key <value>` | Stamp each call with this key. Default: generated UUID. |
 | Exit codes | `0`, `1`, `2`, `3`, `4` |
 
 ### `vais delete <id>`
@@ -120,6 +120,64 @@ Send a signal to an in-flight run (HITL approval delivery, external triggers).
 | `--version <value>` | Target a specific version. |
 | `--idempotency-key <value>` | Stamp the call. Default: generated UUID. |
 | Exit codes | `0`, `1`, `2`, `3`, `4` |
+
+### `vais get-graphs [name]`
+
+List graphs or fetch a single graph manifest (v0.19).
+
+| Field | Value |
+|---|---|
+| Arguments | `[name]` — optional graph id. Omit to list; provide to fetch one. |
+| `--version <value>` | Target a specific version (single-item mode only). |
+| `--label-prefix <prefix>` | Filter list results by label prefix. |
+| `--limit <n>` | Max entries in list mode. Default: unlimited. |
+| `-o, --output <format>` | `table` / `yaml` / `json`. Default: `table` for list, `yaml` for single item. |
+| Exit codes | `0`, `1`, `2`, `3`, `4` |
+
+### `vais delete-graph <id>`
+
+Evict a graph and cancel all in-flight runs (v0.19). Prompts on TTY; pass `--force` in non-interactive contexts.
+
+| Field | Value |
+|---|---|
+| Arguments | `<id>` — graph id to delete. |
+| `--version <value>` | Target a specific version. |
+| `--force` | Skip the interactive confirmation prompt. |
+| `--idempotency-key <value>` | Stamp the call. Default: generated UUID. |
+| Exit codes | `0`, `1`, `2`, `3`, `4` |
+
+### `vais invoke-graph <id>`
+
+Start a graph run (v0.19). Unary by default; `--stream` switches to SSE. Pass `--resume-from <interrupt-id>` + `--run-id <run-id>` to resume an interrupted run.
+
+| Field | Value |
+|---|---|
+| Arguments | `<id>` — graph id to invoke. |
+| `--initial-state <json>` | JSON object merged into the graph's initial state bag. Supports `@file` prefix. |
+| `--version <value>` | Target a specific version. |
+| `--run-id <id>` | Explicit run id. Required when `--resume-from` is set. |
+| `--resume-from <interrupt-id>` | Resume from this interrupt id rather than starting fresh. Requires `--run-id`. |
+| `--resume-payload <json>` | JSON payload forwarded to the resume handler. |
+| `--stream` | Use the SSE endpoint to stream graph events as they fire. |
+| `--idempotency-key <value>` | Stamp the call. Default: generated UUID. |
+| `-o, --output <format>` | `text` / `json`. Default: `text`. Ignored in `--stream` mode. |
+| Exit codes | `0`, `1`, `2`, `3`, `4`, `130` (on Ctrl-C during `--stream`) |
+
+### `vais graph-logs <id>`
+
+Stream graph run events via SSE (v0.19). Renders each event with ANSI colors. Pass `--interrupt-id` + `--run-id` to resume and observe an interrupted run.
+
+| Field | Value |
+|---|---|
+| Arguments | `<id>` — graph id to tail. |
+| `--initial-state <json>` | JSON object for the run's initial state bag. |
+| `--version <value>` | Target a specific version. |
+| `--run-id <id>` | Explicit run id. Required when `--interrupt-id` is set. |
+| `--interrupt-id <id>` | Resume and observe from this interrupt id. Requires `--run-id`. |
+| `--only <kinds>` | Comma-separated graph event kind filter (case-insensitive, kebab-case wire names). Default: all. |
+| Exit codes | `0`, `1`, `2`, `3`, `4`, `130` (on Ctrl-C) |
+
+Graph event kinds: `graph.started`, `node.started`, `node.completed`, `edge.traversed`, `state.updated`, `graph.interrupted`, `graph.resumed`, `graph.completed`, `graph.failed`.
 
 ## `config` subcommands
 

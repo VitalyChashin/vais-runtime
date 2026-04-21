@@ -123,6 +123,7 @@ internal static class CompositionRoot
         //    so the translator must be registered before the Func<string, options>
         //    gets resolved at grain activation.
         services.AddOrleansAgentRegistry();
+        services.AddOrleansAgentGraphRegistry();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
@@ -151,6 +152,15 @@ internal static class CompositionRoot
             audit: sp.GetService<IAuditLog>(),
             contextAccessor: sp.GetService<IAgentContextAccessor>(),
             logger: sp.GetService<ILogger<AgentLifecycleManager>>() ?? NullLogger<AgentLifecycleManager>.Instance));
+        services.AddSingleton<IAgentGraphLifecycleManager>(sp => new AgentGraphLifecycleManager(
+            sp.GetRequiredService<IAgentGraphRegistry>(),
+            sp.GetRequiredService<IAgentRegistry>(),
+            sp.GetRequiredService<IAgentLifecycleManager>(),
+            sp.GetRequiredService<IGraphCheckpointer>(),
+            policy: sp.GetService<IAgentPolicyEngine>(),
+            audit: sp.GetService<IAuditLog>(),
+            contextAccessor: sp.GetService<IAgentContextAccessor>(),
+            logger: sp.GetService<ILogger<AgentGraphLifecycleManager>>() ?? NullLogger<AgentGraphLifecycleManager>.Instance));
 
         // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
         services.AddAgentControlPlane();

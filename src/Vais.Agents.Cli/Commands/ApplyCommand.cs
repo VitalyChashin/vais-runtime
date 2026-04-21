@@ -4,17 +4,19 @@
 using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.Manifests;
 
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
-/// Reads an agent manifest from a file (YAML or JSON) and creates or
-/// updates the agent via the HTTP control plane. Mirrors
-/// <c>kubectl apply -f</c> — server-side-apply via create-or-update
-/// dispatch: first <c>CreateAsync</c>; on 409 conflict falls back to
-/// <c>UpdateAsync</c>.
+/// Reads agent / graph manifests from a file (YAML or JSON) and creates or
+/// updates them via the HTTP control plane. Mirrors <c>kubectl apply -f</c> —
+/// server-side-apply via create-or-update dispatch. Handles mixed-kind files
+/// (agents + graphs in one <c>---</c>-separated YAML) via
+/// <see cref="JsonAgentGraphManifestLoader.LoadAllResourcesFromStringAsync"/> /
+/// <see cref="YamlAgentGraphManifestLoader.LoadAllResourcesFromStringAsync"/>.
 /// </summary>
 internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
 {
@@ -57,14 +59,14 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             filenameHint = settings.File;
         }
 
-        IReadOnlyList<AgentManifest> manifests;
+        IReadOnlyList<ManifestResource> resources;
         try
         {
-            manifests = IsJson(filenameHint)
-                ? await new JsonAgentManifestLoader().LoadFromStringAsync(content, cancellationToken)
-                : await new YamlAgentManifestLoader().LoadFromStringAsync(content, cancellationToken);
+            resources = IsJson(filenameHint)
+                ? await new JsonAgentGraphManifestLoader().LoadAllResourcesFromStringAsync(content, cancellationToken)
+                : await new YamlAgentGraphManifestLoader().LoadAllResourcesFromStringAsync(content, cancellationToken);
         }
-        catch (Vais.Agents.Control.AgentManifestValidationException ex)
+        catch (AgentManifestValidationException ex)
         {
             AnsiConsole.MarkupLine($"[red]error[/] manifest validation failed:");
             foreach (var err in ex.Errors)
@@ -74,7 +76,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             return ProblemDetailsParser.ExitUsageError;
         }
 
-        if (manifests.Count == 0)
+        if (resources.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]warning[/] no manifests parsed from input");
             return ProblemDetailsParser.ExitUsageError;
@@ -84,30 +86,22 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         var client = ClientFactory.Create(config, settings.Context, settings.Token);
 
         var anyError = false;
-        foreach (var manifest in manifests)
+        foreach (var resource in resources)
         {
             var idempotencyKey = settings.IdempotencyKey ?? Guid.NewGuid().ToString("N");
             try
             {
-                var handle = await client.CreateAsync(manifest, idempotencyKey, cancellationToken);
-                AnsiConsole.MarkupLine($"{handle.AgentId} [green]created[/] (version {handle.Version})");
-            }
-            catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
-            {
-                // Conflict on create → fall back to update.
-                try
+                switch (resource)
                 {
-                    var updated = await client.UpdateAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, cancellationToken);
-                    AnsiConsole.MarkupLine($"{updated.AgentId} [blue]updated[/] (version {updated.Version})");
-                }
-                catch (AgentControlPlaneException updateEx)
-                {
-                    anyError = true;
-                    var code = ProblemDetailsParser.HandleAndExitCode(updateEx, AnsiConsole.Console);
-                    if (code != ProblemDetailsParser.ExitApiError)
-                    {
-                        return code;
-                    }
+                    case ManifestResource.AgentCase agentCase:
+                        await ApplyAgentAsync(client, agentCase.Manifest, idempotencyKey, cancellationToken);
+                        break;
+                    case ManifestResource.AgentGraphCase graphCase:
+                        await ApplyGraphAsync(client, graphCase.Graph, idempotencyKey, cancellationToken);
+                        break;
+                    default:
+                        AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
+                        break;
                 }
             }
             catch (AgentControlPlaneException ex)
@@ -121,6 +115,34 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             }
         }
         return anyError ? ProblemDetailsParser.ExitApiError : ProblemDetailsParser.ExitSuccess;
+    }
+
+    private static async Task ApplyAgentAsync(IAgentControlPlaneClient client, AgentManifest manifest, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateAsync(manifest, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.AgentId} [green]created[/] (version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.AgentId} [blue]updated[/] (version {updated.Version})");
+        }
+    }
+
+    private static async Task ApplyGraphAsync(IAgentControlPlaneClient client, AgentGraphManifest graph, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateGraphAsync(graph, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.GraphId} [green]created[/] (graph, version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateGraphAsync(graph.Id, graph, graph.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.GraphId} [blue]updated[/] (graph, version {updated.Version})");
+        }
     }
 
     private static bool IsJson(string pathOrHint)

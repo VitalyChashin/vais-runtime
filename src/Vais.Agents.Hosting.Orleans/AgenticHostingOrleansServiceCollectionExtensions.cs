@@ -165,4 +165,19 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IAgentRegistry>(sp => sp.GetRequiredService<OrleansAgentRegistry>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansAgentGraphRegistry"/> as the durable
+    /// <see cref="IAgentGraphRegistry"/>. Graph manifest registrations survive
+    /// silo restart via the configured grain-storage provider.
+    /// Both the concrete type (for mutation callers) and the interface land in DI.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansAgentGraphRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansAgentGraphRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IAgentGraphRegistry>(sp => sp.GetRequiredService<OrleansAgentGraphRegistry>());
+        return services;
+    }
 }

@@ -33,6 +33,10 @@ public sealed class YamlAgentGraphManifestLoader
     public ValueTask<IReadOnlyList<ManifestResource>> LoadAllResourcesFromStringAsync(string content, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return ValueTask.FromResult<IReadOnlyList<ManifestResource>>(Array.Empty<ManifestResource>());
+        }
         var json = YamlAgentManifestLoader.YamlToJson(content);
         return _inner.LoadAllResourcesFromStringAsync(json, cancellationToken);
     }

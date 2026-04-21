@@ -57,6 +57,15 @@ Vais.Agents.AgentGraphEvent.RunId.get -> string!
 Vais.Agents.AgentGraphEvent.RunId.init -> void
 Vais.Agents.AgentGraphEvent.SuperStep.get -> int
 Vais.Agents.AgentGraphEvent.SuperStep.init -> void
+Vais.Agents.AgentGraphHandle
+Vais.Agents.AgentGraphHandle.<Clone>$() -> Vais.Agents.AgentGraphHandle!
+Vais.Agents.AgentGraphHandle.AgentGraphHandle(string! GraphId, string! Version) -> void
+Vais.Agents.AgentGraphHandle.Deconstruct(out string! GraphId, out string! Version) -> void
+Vais.Agents.AgentGraphHandle.Equals(Vais.Agents.AgentGraphHandle? other) -> bool
+Vais.Agents.AgentGraphHandle.GraphId.get -> string!
+Vais.Agents.AgentGraphHandle.GraphId.init -> void
+Vais.Agents.AgentGraphHandle.Version.get -> string!
+Vais.Agents.AgentGraphHandle.Version.init -> void
 Vais.Agents.AgentGraphManifest
 Vais.Agents.AgentGraphManifest.<Clone>$() -> Vais.Agents.AgentGraphManifest!
 Vais.Agents.AgentGraphManifest.AgentGraphManifest(string! Id, string! Version, string! Entry, System.Collections.Generic.IReadOnlyList<Vais.Agents.GraphNode!>! Nodes, System.Collections.Generic.IReadOnlyList<Vais.Agents.GraphEdge!>! Edges, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Annotations = null) -> void
@@ -82,6 +91,23 @@ Vais.Agents.AgentGraphManifest.StateSchema.get -> System.Text.Json.JsonElement?
 Vais.Agents.AgentGraphManifest.StateSchema.init -> void
 Vais.Agents.AgentGraphManifest.Version.get -> string!
 Vais.Agents.AgentGraphManifest.Version.init -> void
+Vais.Agents.AgentGraphStatus
+Vais.Agents.AgentGraphStatus.<Clone>$() -> Vais.Agents.AgentGraphStatus!
+Vais.Agents.AgentGraphStatus.ActiveRunCount.get -> int
+Vais.Agents.AgentGraphStatus.ActiveRunCount.init -> void
+Vais.Agents.AgentGraphStatus.AgentGraphStatus(string! GraphId, string! Version, int ActiveRunCount, int CompletedRunCount, int PendingInterruptCount, System.DateTimeOffset? LastInvokedAt) -> void
+Vais.Agents.AgentGraphStatus.CompletedRunCount.get -> int
+Vais.Agents.AgentGraphStatus.CompletedRunCount.init -> void
+Vais.Agents.AgentGraphStatus.Deconstruct(out string! GraphId, out string! Version, out int ActiveRunCount, out int CompletedRunCount, out int PendingInterruptCount, out System.DateTimeOffset? LastInvokedAt) -> void
+Vais.Agents.AgentGraphStatus.Equals(Vais.Agents.AgentGraphStatus? other) -> bool
+Vais.Agents.AgentGraphStatus.GraphId.get -> string!
+Vais.Agents.AgentGraphStatus.GraphId.init -> void
+Vais.Agents.AgentGraphStatus.LastInvokedAt.get -> System.DateTimeOffset?
+Vais.Agents.AgentGraphStatus.LastInvokedAt.init -> void
+Vais.Agents.AgentGraphStatus.PendingInterruptCount.get -> int
+Vais.Agents.AgentGraphStatus.PendingInterruptCount.init -> void
+Vais.Agents.AgentGraphStatus.Version.get -> string!
+Vais.Agents.AgentGraphStatus.Version.init -> void
 Vais.Agents.AgentGuardrailDeniedException
 Vais.Agents.AgentGuardrailDeniedException.AgentGuardrailDeniedException(Vais.Agents.GuardrailLayer layer, string? reason) -> void
 Vais.Agents.AgentGuardrailDeniedException.Layer.get -> Vais.Agents.GuardrailLayer
@@ -516,6 +542,36 @@ Vais.Agents.GraphInterrupted.NodeId.get -> string!
 Vais.Agents.GraphInterrupted.NodeId.init -> void
 Vais.Agents.GraphInterrupted.Reason.get -> string?
 Vais.Agents.GraphInterrupted.Reason.init -> void
+Vais.Agents.GraphInvocationRequest
+Vais.Agents.GraphInvocationRequest.<Clone>$() -> Vais.Agents.GraphInvocationRequest!
+Vais.Agents.GraphInvocationRequest.Deconstruct(out System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>! InitialState, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata, out string? RunId, out int? MaxSteps) -> void
+Vais.Agents.GraphInvocationRequest.Equals(Vais.Agents.GraphInvocationRequest? other) -> bool
+Vais.Agents.GraphInvocationRequest.GraphInvocationRequest(System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>! InitialState, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null, string? RunId = null, int? MaxSteps = null) -> void
+Vais.Agents.GraphInvocationRequest.InitialState.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>!
+Vais.Agents.GraphInvocationRequest.InitialState.init -> void
+Vais.Agents.GraphInvocationRequest.MaxSteps.get -> int?
+Vais.Agents.GraphInvocationRequest.MaxSteps.init -> void
+Vais.Agents.GraphInvocationRequest.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.GraphInvocationRequest.Metadata.init -> void
+Vais.Agents.GraphInvocationRequest.RunId.get -> string?
+Vais.Agents.GraphInvocationRequest.RunId.init -> void
+Vais.Agents.GraphInvocationResult
+Vais.Agents.GraphInvocationResult.<Clone>$() -> Vais.Agents.GraphInvocationResult!
+Vais.Agents.GraphInvocationResult.Deconstruct(out string! RunId, out System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>! FinalState, out bool IsComplete, out string? PendingInterruptId, out string? PendingInterruptNodeId, out string? PendingInterruptReason) -> void
+Vais.Agents.GraphInvocationResult.Equals(Vais.Agents.GraphInvocationResult? other) -> bool
+Vais.Agents.GraphInvocationResult.FinalState.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>!
+Vais.Agents.GraphInvocationResult.FinalState.init -> void
+Vais.Agents.GraphInvocationResult.GraphInvocationResult(string! RunId, System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>! FinalState, bool IsComplete, string? PendingInterruptId = null, string? PendingInterruptNodeId = null, string? PendingInterruptReason = null) -> void
+Vais.Agents.GraphInvocationResult.IsComplete.get -> bool
+Vais.Agents.GraphInvocationResult.IsComplete.init -> void
+Vais.Agents.GraphInvocationResult.PendingInterruptId.get -> string?
+Vais.Agents.GraphInvocationResult.PendingInterruptId.init -> void
+Vais.Agents.GraphInvocationResult.PendingInterruptNodeId.get -> string?
+Vais.Agents.GraphInvocationResult.PendingInterruptNodeId.init -> void
+Vais.Agents.GraphInvocationResult.PendingInterruptReason.get -> string?
+Vais.Agents.GraphInvocationResult.PendingInterruptReason.init -> void
+Vais.Agents.GraphInvocationResult.RunId.get -> string!
+Vais.Agents.GraphInvocationResult.RunId.init -> void
 Vais.Agents.GraphNode
 Vais.Agents.GraphNode.<Clone>$() -> Vais.Agents.GraphNode!
 Vais.Agents.GraphNode.Deconstruct(out string! Id, out string! Kind, out Vais.Agents.GraphAgentRef? Ref, out Vais.Agents.GraphHandlerRef? HandlerRef, out Vais.Agents.GraphStateBindings? StateBindings, out string? InterruptReason) -> void
@@ -548,6 +604,19 @@ Vais.Agents.GraphRecursionException
 Vais.Agents.GraphRecursionException.GraphId.get -> string!
 Vais.Agents.GraphRecursionException.GraphRecursionException(string! graphId, int maxSteps) -> void
 Vais.Agents.GraphRecursionException.MaxSteps.get -> int
+Vais.Agents.GraphResumeRequest
+Vais.Agents.GraphResumeRequest.<Clone>$() -> Vais.Agents.GraphResumeRequest!
+Vais.Agents.GraphResumeRequest.Deconstruct(out string! RunId, out string! InterruptId, out System.Text.Json.JsonElement? ResumePayload, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Vais.Agents.GraphResumeRequest.Equals(Vais.Agents.GraphResumeRequest? other) -> bool
+Vais.Agents.GraphResumeRequest.GraphResumeRequest(string! RunId, string! InterruptId, System.Text.Json.JsonElement? ResumePayload = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+Vais.Agents.GraphResumeRequest.InterruptId.get -> string!
+Vais.Agents.GraphResumeRequest.InterruptId.init -> void
+Vais.Agents.GraphResumeRequest.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.GraphResumeRequest.Metadata.init -> void
+Vais.Agents.GraphResumeRequest.ResumePayload.get -> System.Text.Json.JsonElement?
+Vais.Agents.GraphResumeRequest.ResumePayload.init -> void
+Vais.Agents.GraphResumeRequest.RunId.get -> string!
+Vais.Agents.GraphResumeRequest.RunId.init -> void
 Vais.Agents.GraphResumed
 Vais.Agents.GraphResumed.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! ResumedFromNodeId, out string! InterruptId) -> void
 Vais.Agents.GraphResumed.Equals(Vais.Agents.GraphResumed? other) -> bool
@@ -665,6 +734,9 @@ Vais.Agents.IAgentGraph
 Vais.Agents.IAgentGraph<TState>
 Vais.Agents.IAgentGraph<TState>.InvokeAsync(TState initial, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<TState>
 Vais.Agents.IAgentGraph<TState>.StreamAsync(TState initial, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.IAgentGraphRegistry
+Vais.Agents.IAgentGraphRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentGraphManifest?>
+Vais.Agents.IAgentGraphRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphManifest!>!
 Vais.Agents.IAgentHandlerFactory
 Vais.Agents.IAgentHandlerFactory.CreateAsync(Vais.Agents.AgentManifest! manifest, System.IServiceProvider! serviceProvider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.IAiAgent!>
 Vais.Agents.IAgentHandlerFactory.HandlerTypeName.get -> string!
@@ -1197,9 +1269,15 @@ override Vais.Agents.AgentEvent.ToString() -> string!
 override Vais.Agents.AgentGraphEvent.Equals(object? obj) -> bool
 override Vais.Agents.AgentGraphEvent.GetHashCode() -> int
 override Vais.Agents.AgentGraphEvent.ToString() -> string!
+override Vais.Agents.AgentGraphHandle.Equals(object? obj) -> bool
+override Vais.Agents.AgentGraphHandle.GetHashCode() -> int
+override Vais.Agents.AgentGraphHandle.ToString() -> string!
 override Vais.Agents.AgentGraphManifest.Equals(object? obj) -> bool
 override Vais.Agents.AgentGraphManifest.GetHashCode() -> int
 override Vais.Agents.AgentGraphManifest.ToString() -> string!
+override Vais.Agents.AgentGraphStatus.Equals(object? obj) -> bool
+override Vais.Agents.AgentGraphStatus.GetHashCode() -> int
+override Vais.Agents.AgentGraphStatus.ToString() -> string!
 override Vais.Agents.AgentHandle.Equals(object? obj) -> bool
 override Vais.Agents.AgentHandle.GetHashCode() -> int
 override Vais.Agents.AgentHandle.ToString() -> string!
@@ -1329,9 +1407,18 @@ override Vais.Agents.GraphInterrupted.<Clone>$() -> Vais.Agents.GraphInterrupted
 override Vais.Agents.GraphInterrupted.Equals(object? obj) -> bool
 override Vais.Agents.GraphInterrupted.GetHashCode() -> int
 override Vais.Agents.GraphInterrupted.ToString() -> string!
+override Vais.Agents.GraphInvocationRequest.Equals(object? obj) -> bool
+override Vais.Agents.GraphInvocationRequest.GetHashCode() -> int
+override Vais.Agents.GraphInvocationRequest.ToString() -> string!
+override Vais.Agents.GraphInvocationResult.Equals(object? obj) -> bool
+override Vais.Agents.GraphInvocationResult.GetHashCode() -> int
+override Vais.Agents.GraphInvocationResult.ToString() -> string!
 override Vais.Agents.GraphNode.Equals(object? obj) -> bool
 override Vais.Agents.GraphNode.GetHashCode() -> int
 override Vais.Agents.GraphNode.ToString() -> string!
+override Vais.Agents.GraphResumeRequest.Equals(object? obj) -> bool
+override Vais.Agents.GraphResumeRequest.GetHashCode() -> int
+override Vais.Agents.GraphResumeRequest.ToString() -> string!
 override Vais.Agents.GraphResumed.<Clone>$() -> Vais.Agents.GraphResumed!
 override Vais.Agents.GraphResumed.Equals(object? obj) -> bool
 override Vais.Agents.GraphResumed.GetHashCode() -> int
@@ -1514,8 +1601,12 @@ static Vais.Agents.AgentEvent.operator !=(Vais.Agents.AgentEvent? left, Vais.Age
 static Vais.Agents.AgentEvent.operator ==(Vais.Agents.AgentEvent? left, Vais.Agents.AgentEvent? right) -> bool
 static Vais.Agents.AgentGraphEvent.operator !=(Vais.Agents.AgentGraphEvent? left, Vais.Agents.AgentGraphEvent? right) -> bool
 static Vais.Agents.AgentGraphEvent.operator ==(Vais.Agents.AgentGraphEvent? left, Vais.Agents.AgentGraphEvent? right) -> bool
+static Vais.Agents.AgentGraphHandle.operator !=(Vais.Agents.AgentGraphHandle? left, Vais.Agents.AgentGraphHandle? right) -> bool
+static Vais.Agents.AgentGraphHandle.operator ==(Vais.Agents.AgentGraphHandle? left, Vais.Agents.AgentGraphHandle? right) -> bool
 static Vais.Agents.AgentGraphManifest.operator !=(Vais.Agents.AgentGraphManifest? left, Vais.Agents.AgentGraphManifest? right) -> bool
 static Vais.Agents.AgentGraphManifest.operator ==(Vais.Agents.AgentGraphManifest? left, Vais.Agents.AgentGraphManifest? right) -> bool
+static Vais.Agents.AgentGraphStatus.operator !=(Vais.Agents.AgentGraphStatus? left, Vais.Agents.AgentGraphStatus? right) -> bool
+static Vais.Agents.AgentGraphStatus.operator ==(Vais.Agents.AgentGraphStatus? left, Vais.Agents.AgentGraphStatus? right) -> bool
 static Vais.Agents.AgentHandle.operator !=(Vais.Agents.AgentHandle? left, Vais.Agents.AgentHandle? right) -> bool
 static Vais.Agents.AgentHandle.operator ==(Vais.Agents.AgentHandle? left, Vais.Agents.AgentHandle? right) -> bool
 static Vais.Agents.AgentHandlerRef.operator !=(Vais.Agents.AgentHandlerRef? left, Vais.Agents.AgentHandlerRef? right) -> bool
@@ -1593,8 +1684,14 @@ static Vais.Agents.GraphHandlerRef.operator !=(Vais.Agents.GraphHandlerRef? left
 static Vais.Agents.GraphHandlerRef.operator ==(Vais.Agents.GraphHandlerRef? left, Vais.Agents.GraphHandlerRef? right) -> bool
 static Vais.Agents.GraphInterrupted.operator !=(Vais.Agents.GraphInterrupted? left, Vais.Agents.GraphInterrupted? right) -> bool
 static Vais.Agents.GraphInterrupted.operator ==(Vais.Agents.GraphInterrupted? left, Vais.Agents.GraphInterrupted? right) -> bool
+static Vais.Agents.GraphInvocationRequest.operator !=(Vais.Agents.GraphInvocationRequest? left, Vais.Agents.GraphInvocationRequest? right) -> bool
+static Vais.Agents.GraphInvocationRequest.operator ==(Vais.Agents.GraphInvocationRequest? left, Vais.Agents.GraphInvocationRequest? right) -> bool
+static Vais.Agents.GraphInvocationResult.operator !=(Vais.Agents.GraphInvocationResult? left, Vais.Agents.GraphInvocationResult? right) -> bool
+static Vais.Agents.GraphInvocationResult.operator ==(Vais.Agents.GraphInvocationResult? left, Vais.Agents.GraphInvocationResult? right) -> bool
 static Vais.Agents.GraphNode.operator !=(Vais.Agents.GraphNode? left, Vais.Agents.GraphNode? right) -> bool
 static Vais.Agents.GraphNode.operator ==(Vais.Agents.GraphNode? left, Vais.Agents.GraphNode? right) -> bool
+static Vais.Agents.GraphResumeRequest.operator !=(Vais.Agents.GraphResumeRequest? left, Vais.Agents.GraphResumeRequest? right) -> bool
+static Vais.Agents.GraphResumeRequest.operator ==(Vais.Agents.GraphResumeRequest? left, Vais.Agents.GraphResumeRequest? right) -> bool
 static Vais.Agents.GraphResumed.operator !=(Vais.Agents.GraphResumed? left, Vais.Agents.GraphResumed? right) -> bool
 static Vais.Agents.GraphResumed.operator ==(Vais.Agents.GraphResumed? left, Vais.Agents.GraphResumed? right) -> bool
 static Vais.Agents.GraphStarted.operator !=(Vais.Agents.GraphStarted? left, Vais.Agents.GraphStarted? right) -> bool

@@ -42,6 +42,36 @@ Vais.Agents.Control.CachedResponse.Deconstruct(out int StatusCode, out string! C
 Vais.Agents.Control.CachedResponse.Equals(Vais.Agents.Control.CachedResponse? other) -> bool
 Vais.Agents.Control.CachedResponse.StatusCode.get -> int
 Vais.Agents.Control.CachedResponse.StatusCode.init -> void
+Vais.Agents.Control.GraphAlreadyCompleteException
+Vais.Agents.Control.GraphAlreadyCompleteException.GraphAlreadyCompleteException(string! runId) -> void
+Vais.Agents.Control.GraphAlreadyCompleteException.RunId.get -> string!
+Vais.Agents.Control.GraphHandleNotFoundException
+Vais.Agents.Control.GraphHandleNotFoundException.GraphHandleNotFoundException(string! graphId, string! version) -> void
+Vais.Agents.Control.GraphHandleNotFoundException.GraphId.get -> string!
+Vais.Agents.Control.GraphHandleNotFoundException.Version.get -> string!
+Vais.Agents.Control.GraphInterruptMismatchException
+Vais.Agents.Control.GraphInterruptMismatchException.CheckpointInterruptId.get -> string!
+Vais.Agents.Control.GraphInterruptMismatchException.GraphInterruptMismatchException(string! runId, string! suppliedInterruptId, string! checkpointInterruptId) -> void
+Vais.Agents.Control.GraphInterruptMismatchException.RunId.get -> string!
+Vais.Agents.Control.GraphInterruptMismatchException.SuppliedInterruptId.get -> string!
+Vais.Agents.Control.GraphRunConflictException
+Vais.Agents.Control.GraphRunConflictException.GraphId.get -> string!
+Vais.Agents.Control.GraphRunConflictException.GraphRunConflictException(string! graphId, string! runId) -> void
+Vais.Agents.Control.GraphRunConflictException.RunId.get -> string!
+Vais.Agents.Control.GraphRunNotFoundException
+Vais.Agents.Control.GraphRunNotFoundException.GraphId.get -> string!
+Vais.Agents.Control.GraphRunNotFoundException.GraphRunNotFoundException(string! graphId, string! runId) -> void
+Vais.Agents.Control.GraphRunNotFoundException.RunId.get -> string!
+Vais.Agents.Control.IAgentGraphLifecycleManager
+Vais.Agents.Control.IAgentGraphLifecycleManager.CancelAsync(Vais.Agents.AgentGraphHandle! handle, string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IAgentGraphLifecycleManager.CreateAsync(Vais.Agents.AgentGraphManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentGraphHandle!>
+Vais.Agents.Control.IAgentGraphLifecycleManager.EvictAsync(Vais.Agents.AgentGraphHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IAgentGraphLifecycleManager.InvokeAsync(Vais.Agents.AgentGraphHandle! handle, Vais.Agents.GraphInvocationRequest! request, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GraphInvocationResult!>
+Vais.Agents.Control.IAgentGraphLifecycleManager.InvokeStreamAsync(Vais.Agents.AgentGraphHandle! handle, Vais.Agents.GraphInvocationRequest! request, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.Control.IAgentGraphLifecycleManager.QueryAsync(Vais.Agents.AgentGraphHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentGraphStatus!>
+Vais.Agents.Control.IAgentGraphLifecycleManager.ResumeAsync(Vais.Agents.AgentGraphHandle! handle, Vais.Agents.GraphResumeRequest! request, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GraphInvocationResult!>
+Vais.Agents.Control.IAgentGraphLifecycleManager.ResumeStreamAsync(Vais.Agents.AgentGraphHandle! handle, Vais.Agents.GraphResumeRequest! request, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.Control.IAgentGraphLifecycleManager.UpdateAsync(Vais.Agents.AgentGraphHandle! handle, Vais.Agents.AgentGraphManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentGraphHandle!>
 Vais.Agents.Control.IAgentManifestInvalidator
 Vais.Agents.Control.IAgentManifestInvalidator.InvalidateAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Vais.Agents.Control.IAgentManifestLoader
@@ -118,6 +148,13 @@ Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Cancel = 4 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Create = 0 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Evict = 6 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphCancel = 11 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphCreate = 7 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphEvict = 13 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphInvoke = 8 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphQuery = 10 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphResume = 9 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.GraphUpdate = 12 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Invoke = 1 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Query = 3 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.Signal = 2 -> Vais.Agents.Control.PolicyOperation

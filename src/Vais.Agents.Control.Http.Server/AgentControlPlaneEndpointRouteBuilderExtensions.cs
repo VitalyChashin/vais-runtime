@@ -163,6 +163,127 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithSummary("Readiness probe.")
             .WithTags("Health");
 
+        MapGraphControlPlane(builder, prefix);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Mount only the graph control-plane endpoints (v0.19). Useful for hosts that
+    /// want graph routes without the full agent route surface, or for isolated testing.
+    /// </summary>
+    public static IEndpointRouteBuilder MapGraphControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var graphs = builder.MapGroup(prefix).WithTags("Graphs");
+
+        // POST /graphs — Create
+        graphs.MapPost("/graphs", GraphCreateAsync)
+            .WithName("Graphs.Create")
+            .WithSummary("Register a graph manifest, making it available for invocation.")
+            .Accepts<AgentGraphManifest>("application/json", "application/yaml")
+            .Produces<AgentGraphHandle>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /graphs — List
+        graphs.MapGet("/graphs", GraphListAsync)
+            .WithName("Graphs.List")
+            .WithSummary("List registered graph manifests with optional label-prefix filter.")
+            .Produces<AgentGraphListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /graphs/{id} — Query
+        graphs.MapGet("/graphs/{id}", GraphQueryAsync)
+            .WithName("Graphs.Query")
+            .WithSummary("Fetch a graph manifest + current lifecycle status.")
+            .Produces<AgentGraphQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // PATCH /graphs/{id} — Update
+        graphs.MapPatch("/graphs/{id}", GraphUpdateAsync)
+            .WithName("Graphs.Update")
+            .WithSummary("Publish a new manifest version for an existing graph.")
+            .Accepts<AgentGraphManifest>("application/json", "application/yaml")
+            .Produces<AgentGraphHandle>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // DELETE /graphs/{id} — Evict
+        graphs.MapDelete("/graphs/{id}", GraphEvictAsync)
+            .WithName("Graphs.Evict")
+            .WithSummary("Remove a graph manifest and cancel all in-flight runs.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /graphs/{id}/invoke — Invoke (sync)
+        graphs.MapPost("/graphs/{id}/invoke", GraphInvokeAsync)
+            .WithName("Graphs.Invoke")
+            .WithSummary("Start a new graph run and block until it completes or interrupts.")
+            .Accepts<GraphInvocationRequest>("application/json")
+            .Produces<GraphInvocationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /graphs/{id}/invoke/stream — Invoke (SSE)
+        graphs.MapPost("/graphs/{id}/invoke/stream", GraphInvokeStreamAsync)
+            .WithMetadata(new StreamingEndpointAttribute())
+            .WithName("Graphs.InvokeStream")
+            .WithSummary("Start a graph run and stream events as Server-Sent Events.")
+            .Accepts<GraphInvocationRequest>("application/json")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /graphs/{id}/runs/{runId}/resume — Resume (sync)
+        graphs.MapPost("/graphs/{id}/runs/{runId}/resume", GraphResumeAsync)
+            .WithName("Graphs.Resume")
+            .WithSummary("Resume a previously-interrupted graph run.")
+            .Accepts<GraphResumeRequest>("application/json")
+            .Produces<GraphInvocationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /graphs/{id}/runs/{runId}/resume/stream — Resume (SSE)
+        graphs.MapPost("/graphs/{id}/runs/{runId}/resume/stream", GraphResumeStreamAsync)
+            .WithMetadata(new StreamingEndpointAttribute())
+            .WithName("Graphs.ResumeStream")
+            .WithSummary("Resume a graph run and stream events as Server-Sent Events.")
+            .Accepts<GraphResumeRequest>("application/json")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // DELETE /graphs/{id}/runs/{runId} — Cancel run
+        graphs.MapDelete("/graphs/{id}/runs/{runId}", GraphCancelRunAsync)
+            .WithName("Graphs.CancelRun")
+            .WithSummary("Cancel an in-flight or interrupted graph run.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -559,5 +680,415 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     private static async Task WriteProblemAsync(HttpContext http, IResult result)
     {
         await result.ExecuteAsync(http).ConfigureAwait(false);
+    }
+
+    // ── Graph handlers (v0.19) ─────────────────────────────────────────────
+
+    private static async Task<IResult> GraphCreateAsync(
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var graphLoader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+        {
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+        }
+
+        AgentGraphManifest manifest;
+        try
+        {
+            var graphs = await graphLoader.LoadFromStringAsync(body, ct).ConfigureAwait(false);
+            if (graphs.Count != 1)
+            {
+                return Results.BadRequest(new { error = $"POST /graphs accepts exactly one AgentGraph manifest; got {graphs.Count}." });
+            }
+            manifest = graphs[0];
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.GraphCreate);
+        }
+
+        try
+        {
+            var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}", handle);
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.GraphCreate);
+        }
+    }
+
+    private static async Task<IResult> GraphListAsync(
+        HttpContext http,
+        string? labels,
+        int? limit,
+        CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<AgentGraphManifest>();
+            await foreach (var m in registry.ListAsync(labels, ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new AgentGraphListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.GraphQuery);
+        }
+    }
+
+    private static async Task<IResult> GraphQueryAsync(
+        HttpContext http,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            var handle = new AgentGraphHandle(id, manifest.Version);
+            var status = await manager.QueryAsync(handle, ct).ConfigureAwait(false);
+            return Results.Ok(new AgentGraphQueryResponse(manifest, handle, status));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphQuery);
+        }
+    }
+
+    private static async Task<IResult> GraphUpdateAsync(
+        HttpContext http,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        var graphLoader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+        {
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+        }
+
+        AgentGraphManifest newManifest;
+        try
+        {
+            var graphs = await graphLoader.LoadFromStringAsync(body, ct).ConfigureAwait(false);
+            if (graphs.Count != 1)
+            {
+                return Results.BadRequest(new { error = $"PATCH /graphs/{{id}} accepts exactly one AgentGraph manifest; got {graphs.Count}." });
+            }
+            newManifest = graphs[0];
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphUpdate);
+        }
+
+        try
+        {
+            var existingVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (existingVersion is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            var currentHandle = new AgentGraphHandle(id, existingVersion);
+            var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
+            return Results.Ok(newHandle);
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphUpdate);
+        }
+    }
+
+    private static async Task<IResult> GraphEvictAsync(
+        HttpContext http,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            await manager.EvictAsync(new AgentGraphHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    private static async Task<IResult> GraphInvokeAsync(
+        HttpContext http,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        GraphInvocationRequest? request;
+        try
+        {
+            request = await http.Request.ReadFromJsonAsync<GraphInvocationRequest>(ct).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphInvoke);
+        }
+        if (request is null)
+        {
+            return Results.BadRequest(new { error = "request body is required" });
+        }
+
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            var handle = new AgentGraphHandle(id, resolvedVersion);
+            var result = await manager.InvokeAsync(handle, request, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphInvoke);
+        }
+    }
+
+    private static async Task GraphInvokeStreamAsync(
+        HttpContext http,
+        string id,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        GraphInvocationRequest? request;
+        try
+        {
+            request = await http.Request.ReadFromJsonAsync<GraphInvocationRequest>(ct).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            await WriteProblemAsync(http, ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphInvoke)).ConfigureAwait(false);
+            return;
+        }
+        if (request is null)
+        {
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await http.Response.WriteAsJsonAsync(new { error = "request body is required" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+        if (resolvedVersion is null)
+        {
+            http.Response.StatusCode = StatusCodes.Status404NotFound;
+            await http.Response.WriteAsJsonAsync(new { error = $"graph '{id}' not found" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var handle = new AgentGraphHandle(id, resolvedVersion);
+        await StreamGraphEventsAsync(http, manager.InvokeStreamAsync(handle, request, ct), ct).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> GraphResumeAsync(
+        HttpContext http,
+        string id,
+        string runId,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        GraphResumeRequest? request;
+        try
+        {
+            request = await http.Request.ReadFromJsonAsync<GraphResumeRequest>(ct).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphResume);
+        }
+        if (request is null)
+        {
+            return Results.BadRequest(new { error = "resume request body is required" });
+        }
+
+        // Enforce that the path runId matches the body — path is canonical; body is optional convenience.
+        var effectiveRequest = string.IsNullOrEmpty(request.RunId)
+            ? request with { RunId = runId }
+            : request;
+
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            var handle = new AgentGraphHandle(id, resolvedVersion);
+            var result = await manager.ResumeAsync(handle, effectiveRequest, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphResume);
+        }
+    }
+
+    private static async Task GraphResumeStreamAsync(
+        HttpContext http,
+        string id,
+        string runId,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        GraphResumeRequest? request;
+        try
+        {
+            request = await http.Request.ReadFromJsonAsync<GraphResumeRequest>(ct).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            await WriteProblemAsync(http, ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphResume)).ConfigureAwait(false);
+            return;
+        }
+        if (request is null)
+        {
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await http.Response.WriteAsJsonAsync(new { error = "resume request body is required" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var effectiveRequest = string.IsNullOrEmpty(request.RunId) ? request with { RunId = runId } : request;
+
+        var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+        if (resolvedVersion is null)
+        {
+            http.Response.StatusCode = StatusCodes.Status404NotFound;
+            await http.Response.WriteAsJsonAsync(new { error = $"graph '{id}' not found" }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var handle = new AgentGraphHandle(id, resolvedVersion);
+        await StreamGraphEventsAsync(http, manager.ResumeStreamAsync(handle, effectiveRequest, ct), ct).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> GraphCancelRunAsync(
+        HttpContext http,
+        string id,
+        string runId,
+        string? version,
+        CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IAgentGraphLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IAgentGraphRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+            {
+                return Results.NotFound(new { error = $"graph '{id}' not found" });
+            }
+            await manager.CancelAsync(new AgentGraphHandle(id, resolvedVersion), runId, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    private static async Task StreamGraphEventsAsync(
+        HttpContext http,
+        IAsyncEnumerable<AgentGraphEvent> events,
+        CancellationToken ct)
+    {
+        var heartbeat = http.RequestServices.GetService<IOptions<StreamingInvokeOptions>>()?.Value.HeartbeatInterval
+                        ?? TimeSpan.FromSeconds(15);
+        var channel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var writerCt = linkedCts.Token;
+
+        http.Response.StatusCode = StatusCodes.Status200OK;
+        http.Response.ContentType = "text/event-stream";
+        http.Response.Headers["Cache-Control"] = "no-cache";
+        http.Response.Headers["X-Accel-Buffering"] = "no";
+        await http.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        Timer? heartbeatTimer = null;
+        if (heartbeat > TimeSpan.Zero)
+        {
+            heartbeatTimer = new Timer(
+                _ => channel.Writer.TryWrite($": heartbeat {DateTimeOffset.UtcNow:O}\n\n"),
+                state: null, dueTime: heartbeat, period: heartbeat);
+        }
+
+        var producerTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in events.ConfigureAwait(false))
+                {
+                    var (eventName, dataJson) = AgentGraphEventSerializer.Serialize(evt);
+                    await channel.Writer.WriteAsync($"event: {eventName}\ndata: {dataJson}\n\n", writerCt).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                var failed = new GraphFailed(DateTimeOffset.UtcNow, AgentContext.Empty, RunId: "?", SuperStep: 0,
+                    ErrorType: ex.GetType().Name, ErrorMessage: ex.Message, Duration: TimeSpan.Zero);
+                var (name, json) = AgentGraphEventSerializer.Serialize(failed);
+                try { await channel.Writer.WriteAsync($"event: {name}\ndata: {json}\n\n", writerCt).ConfigureAwait(false); } catch { }
+            }
+            finally { channel.Writer.TryComplete(); }
+        }, writerCt);
+
+        try
+        {
+            await foreach (var frame in channel.Reader.ReadAllAsync(writerCt).ConfigureAwait(false))
+            {
+                var bytes = Encoding.UTF8.GetBytes(frame);
+                await http.Response.Body.WriteAsync(bytes, writerCt).ConfigureAwait(false);
+                await http.Response.Body.FlushAsync(writerCt).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            linkedCts.Cancel();
+            heartbeatTimer?.Dispose();
+            try { await producerTask.ConfigureAwait(false); } catch { }
+        }
     }
 }

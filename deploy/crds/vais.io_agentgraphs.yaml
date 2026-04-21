@@ -1,0 +1,116 @@
+# CustomResourceDefinition for the Vais.Agents graph operator (v0.19.0-preview).
+#
+# Ships a minimal hand-rolled schema: top-level `spec` carries
+# `x-kubernetes-preserve-unknown-fields: true` so the full AgentGraphManifest
+# field set round-trips without per-field OpenAPI validation. The same constraint
+# that applies to the Agent CRD (TimeSpan properties in the reachable type graph)
+# applies here; schema tightening is deferred to a later pillar.
+#
+# Status subresource is explicitly enabled so the operator can patch
+# .status independently of .spec.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agentgraphs.vais.io
+  annotations:
+    controller-gen.kubebuilder.io/version: "hand-rolled/v0.19.0-preview"
+spec:
+  group: vais.io
+  scope: Namespaced
+  names:
+    kind: AgentGraph
+    listKind: AgentGraphList
+    plural: agentgraphs
+    singular: agentgraph
+    shortNames:
+      - vgraph
+      - vgraphs
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: GraphId
+          type: string
+          jsonPath: .spec.graphId
+        - name: Version
+          type: string
+          jsonPath: .spec.version
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+              required:
+                - graphId
+                - version
+                - entry
+                - nodes
+                - edges
+              properties:
+                graphId:
+                  type: string
+                  description: Stable graph identifier; unique within the owning tenant.
+                version:
+                  type: string
+                  description: Immutable version tag. Bumping this triggers UpdateGraphAsync.
+                entry:
+                  type: string
+                  description: Id of the entry node. Must exist in nodes.
+                nodes:
+                  type: array
+                  description: All nodes in the graph. Ids unique within the manifest.
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                edges:
+                  type: array
+                  description: Edges between nodes, order-significant (first-match-wins).
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                description:
+                  type: string
+                  description: Human-readable description for registries / UIs.
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Registry-level key/value metadata. Distinct from metadata.labels.
+                annotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Free-form annotations not indexed by the registry.
+                stateSchema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Optional JSON Schema describing the shape of graph state.
+                maxSteps:
+                  type: integer
+                  description: Hard ceiling on super-step count per invocation. Null = 1000.
+                preserveOnDelete:
+                  type: boolean
+                  description: When true, CR deletion does not call EvictGraphAsync on the runtime.
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true

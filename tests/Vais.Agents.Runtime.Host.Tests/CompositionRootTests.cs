@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Orleans;
 using Vais.Agents.Control;
+using Vais.Agents.Control.InProcess;
 using Xunit;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
@@ -282,6 +283,37 @@ public class CompositionRootTests
         {
             Environment.SetEnvironmentVariable("VAIS_PLUGINS_DIRECTORY", null);
         }
+    }
+
+    [Fact]
+    public void Composition_GraphRegistry_Registered_As_OrleansBacked()
+    {
+        // v0.19 Pillar D PR 2: OrleansAgentGraphRegistry must be the implementation so
+        // graph manifests survive pod roll (same reasoning as OrleansAgentRegistry in v0.17).
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        var registry = sp.GetRequiredService<IAgentGraphRegistry>();
+
+        registry.Should().BeOfType<OrleansAgentGraphRegistry>(
+            because: "AddOrleansAgentGraphRegistry must register the durable Orleans-backed registry so vais apply -f graph.yaml persists across silo restart.");
+    }
+
+    [Fact]
+    public void Composition_GraphLifecycleManager_Registered_After_GraphRegistry()
+    {
+        // v0.19 Pillar D PR 2: IAgentGraphLifecycleManager must resolve and its constructor
+        // requires IAgentGraphRegistry, IAgentRegistry, IAgentLifecycleManager, and
+        // IGraphCheckpointer — all of which must be registered by the time this resolves.
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        var manager = sp.GetRequiredService<IAgentGraphLifecycleManager>();
+
+        manager.Should().BeOfType<AgentGraphLifecycleManager>(
+            because: "the graph lifecycle manager must be registered after its dependencies (registry, agent registry, agent lifecycle, checkpointer) are all in DI.");
     }
 
     [Fact]

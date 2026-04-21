@@ -18,6 +18,64 @@ Vais.Agents.Control.Kubernetes.AgentCondition.Type.get -> string!
 Vais.Agents.Control.Kubernetes.AgentCondition.Type.init -> void
 Vais.Agents.Control.Kubernetes.AgentEntity
 Vais.Agents.Control.Kubernetes.AgentEntity.AgentEntity() -> void
+Vais.Agents.Control.Kubernetes.AgentGraphEntity
+Vais.Agents.Control.Kubernetes.AgentGraphEntity.AgentGraphEntity() -> void
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.<Clone>$() -> Vais.Agents.Control.Kubernetes.AgentGraphHandleRef!
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.AgentGraphHandleRef(string! GraphId, string! Version) -> void
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.Deconstruct(out string! GraphId, out string! Version) -> void
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.Equals(Vais.Agents.Control.Kubernetes.AgentGraphHandleRef? other) -> bool
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.GraphId.get -> string!
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.GraphId.init -> void
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.Version.get -> string!
+Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.Version.init -> void
+Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Active = 2 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Creating = 1 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Error = 4 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Pending = 0 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Terminating = 5 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphPhase.Updating = 3 -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphSpec
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.AgentGraphSpec() -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Annotations.get -> System.Collections.Generic.IDictionary<string!, string!>?
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Annotations.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Description.get -> string?
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Description.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Edges.get -> System.Collections.Generic.IList<Vais.Agents.GraphEdge!>!
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Edges.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Entry.get -> string!
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Entry.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.GraphId.get -> string!
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.GraphId.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Labels.get -> System.Collections.Generic.IDictionary<string!, string!>?
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Labels.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.MaxSteps.get -> int?
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.MaxSteps.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Nodes.get -> System.Collections.Generic.IList<Vais.Agents.GraphNode!>!
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Nodes.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.PreserveOnDelete.get -> bool
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.PreserveOnDelete.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.StateSchema.get -> System.Text.Json.JsonElement?
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.StateSchema.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Version.get -> string!
+Vais.Agents.Control.Kubernetes.AgentGraphSpec.Version.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.AgentGraphStatus() -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.Conditions.get -> System.Collections.Generic.IList<Vais.Agents.Control.Kubernetes.AgentCondition!>?
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.Conditions.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.GraphHandle.get -> Vais.Agents.Control.Kubernetes.AgentGraphHandleRef?
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.GraphHandle.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.LastError.get -> string?
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.LastError.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.LastReconciledAt.get -> System.DateTimeOffset?
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.LastReconciledAt.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.ManifestRevision.get -> string?
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.ManifestRevision.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.ObservedGeneration.get -> long
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.ObservedGeneration.set -> void
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.Phase.get -> Vais.Agents.Control.Kubernetes.AgentGraphPhase
+Vais.Agents.Control.Kubernetes.AgentGraphStatus.Phase.set -> void
 Vais.Agents.Control.Kubernetes.AgentHandleRef
 Vais.Agents.Control.Kubernetes.AgentHandleRef.<Clone>$() -> Vais.Agents.Control.Kubernetes.AgentHandleRef!
 Vais.Agents.Control.Kubernetes.AgentHandleRef.AgentHandleRef(string! AgentId, string! Version, string? InstanceId = null) -> void
@@ -144,9 +202,18 @@ const Vais.Agents.Control.Kubernetes.AgentEntity.EntityGroup = "vais.io" -> stri
 const Vais.Agents.Control.Kubernetes.AgentEntity.EntityKind = "Agent" -> string!
 const Vais.Agents.Control.Kubernetes.AgentEntity.EntityPluralName = "agents" -> string!
 const Vais.Agents.Control.Kubernetes.AgentEntity.TenantIdAnnotation = "vais.io/tenant-id" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.EntityApiVersion = "v1alpha1" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.EntityGroup = "vais.io" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.EntityKind = "AgentGraph" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.EntityPluralName = "agentgraphs" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.EvictFinalizer = "vais.io/agentgraph-evict" -> string!
+const Vais.Agents.Control.Kubernetes.AgentGraphEntity.TenantIdAnnotation = "vais.io/tenant-id" -> string!
 override Vais.Agents.Control.Kubernetes.AgentCondition.Equals(object? obj) -> bool
 override Vais.Agents.Control.Kubernetes.AgentCondition.GetHashCode() -> int
 override Vais.Agents.Control.Kubernetes.AgentCondition.ToString() -> string!
+override Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.Equals(object? obj) -> bool
+override Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.GetHashCode() -> int
+override Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.ToString() -> string!
 override Vais.Agents.Control.Kubernetes.AgentHandleRef.Equals(object? obj) -> bool
 override Vais.Agents.Control.Kubernetes.AgentHandleRef.GetHashCode() -> int
 override Vais.Agents.Control.Kubernetes.AgentHandleRef.ToString() -> string!
@@ -155,6 +222,8 @@ override Vais.Agents.Control.Kubernetes.SecretKeyReference.GetHashCode() -> int
 override Vais.Agents.Control.Kubernetes.SecretKeyReference.ToString() -> string!
 static Vais.Agents.Control.Kubernetes.AgentCondition.operator !=(Vais.Agents.Control.Kubernetes.AgentCondition? left, Vais.Agents.Control.Kubernetes.AgentCondition? right) -> bool
 static Vais.Agents.Control.Kubernetes.AgentCondition.operator ==(Vais.Agents.Control.Kubernetes.AgentCondition? left, Vais.Agents.Control.Kubernetes.AgentCondition? right) -> bool
+static Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.operator !=(Vais.Agents.Control.Kubernetes.AgentGraphHandleRef? left, Vais.Agents.Control.Kubernetes.AgentGraphHandleRef? right) -> bool
+static Vais.Agents.Control.Kubernetes.AgentGraphHandleRef.operator ==(Vais.Agents.Control.Kubernetes.AgentGraphHandleRef? left, Vais.Agents.Control.Kubernetes.AgentGraphHandleRef? right) -> bool
 static Vais.Agents.Control.Kubernetes.AgentHandleRef.operator !=(Vais.Agents.Control.Kubernetes.AgentHandleRef? left, Vais.Agents.Control.Kubernetes.AgentHandleRef? right) -> bool
 static Vais.Agents.Control.Kubernetes.AgentHandleRef.operator ==(Vais.Agents.Control.Kubernetes.AgentHandleRef? left, Vais.Agents.Control.Kubernetes.AgentHandleRef? right) -> bool
 static Vais.Agents.Control.Kubernetes.AgentKubernetesOperatorServiceCollectionExtensions.AddAgentKubernetesOperator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Control.Kubernetes.KubernetesOperatorOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

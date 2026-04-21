@@ -18,3 +18,17 @@ public sealed record AgentQueryResponse(
 public sealed record AgentListResponse(
     IReadOnlyList<AgentManifest> Items,
     string? NextCursor = null);
+
+/// <summary>
+/// Client-side wire type for <c>GET /v1/graphs/{id}</c>. Mirrors the server's
+/// <c>AgentGraphQueryResponse</c> without depending on the server package.
+/// </summary>
+public sealed record AgentGraphQueryResponse(
+    AgentGraphManifest Manifest,
+    AgentGraphHandle Handle,
+    AgentGraphStatus Status);
+
+/// <summary>Client-side wire type for <c>GET /v1/graphs</c>.</summary>
+public sealed record AgentGraphListResponse(
+    IReadOnlyList<AgentGraphManifest> Items,
+    string? NextCursor = null);

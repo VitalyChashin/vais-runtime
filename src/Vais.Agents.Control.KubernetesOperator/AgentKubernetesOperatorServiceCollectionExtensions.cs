@@ -49,11 +49,14 @@ public static class AgentKubernetesOperatorServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddTransient<IKubernetesSecretResolver, KubernetesSecretResolver>();
         services.TryAddTransient<IAgentEntityKubernetesClient, AgentEntityKubernetesClient>();
+        services.TryAddTransient<IAgentGraphEntityKubernetesClient, AgentGraphEntityKubernetesClient>();
         services.TryAddTransient<ServiceAccountTokenHandler>();
 
         services.AddKubernetesOperator()
             .AddController<AgentEntityController, AgentEntity>()
-            .AddFinalizer<AgentEntityFinalizer, AgentEntity>(AgentEntity.DeactivateFinalizer);
+            .AddFinalizer<AgentEntityFinalizer, AgentEntity>(AgentEntity.DeactivateFinalizer)
+            .AddController<AgentGraphEntityController, AgentGraphEntity>()
+            .AddFinalizer<AgentGraphEntityFinalizer, AgentGraphEntity>(AgentGraphEntity.EvictFinalizer);
 
         services
             .AddHttpClient<IAgentControlPlaneClient, AgentControlPlaneClient>((sp, client) =>

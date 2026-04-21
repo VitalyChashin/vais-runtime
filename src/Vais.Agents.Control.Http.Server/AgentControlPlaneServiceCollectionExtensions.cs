@@ -22,6 +22,7 @@ public static class AgentControlPlaneServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<IAgentManifestLoader, JsonAgentManifestLoader>();
+        services.TryAddSingleton<JsonAgentGraphManifestLoader>();
         return services;
     }
 

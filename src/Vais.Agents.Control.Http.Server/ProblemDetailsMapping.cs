@@ -44,6 +44,29 @@ public static class ProblemDetailsMapping
     /// <summary>Requested streaming endpoint, but the target agent's runtime (e.g. Orleans proxy) doesn't implement <c>IStreamingAiAgent</c> (v0.12).</summary>
     public const string StreamingNotSupportedType = TypePrefix + "streaming-not-supported";
 
+    // ── Graph URNs (v0.19) ──────────────────────────────────────────────────
+
+    /// <summary>Graph handle not found — no such (id, version) in the registry.</summary>
+    public const string GraphHandleNotFoundType = TypePrefix + "graph-handle-not-found";
+
+    /// <summary>No run with the given run-id exists for the specified graph.</summary>
+    public const string GraphRunNotFoundType = TypePrefix + "graph-run-not-found";
+
+    /// <summary>A run with the same run-id is already in flight.</summary>
+    public const string GraphRunConflictType = TypePrefix + "graph-run-conflict";
+
+    /// <summary>Resume interrupt-id does not match the paused checkpoint.</summary>
+    public const string GraphInterruptMismatchType = TypePrefix + "graph-interrupt-mismatch";
+
+    /// <summary>Run has already reached a terminal node; cannot be resumed or cancelled.</summary>
+    public const string GraphAlreadyCompleteType = TypePrefix + "graph-already-complete";
+
+    /// <summary>Graph exceeded its maxSteps ceiling.</summary>
+    public const string GraphRecursionLimitType = TypePrefix + "graph-recursion-limit";
+
+    /// <summary>Graph manifest failed structural validation.</summary>
+    public const string GraphValidationFailedType = TypePrefix + "graph-validation-failed";
+
     /// <summary>
     /// Translate a control-plane exception into an <see cref="IResult"/> carrying
     /// Problem Details with an appropriate status code + type URN.
@@ -160,8 +183,16 @@ public static class ProblemDetailsMapping
         AgentBudgetExceededException => (StatusCodes.Status429TooManyRequests, BudgetExceededType, "Budget exceeded"),
         AgentInterruptedException => (StatusCodes.Status409Conflict, InterruptPendingType, "Interrupt pending"),
         ArgumentException => (StatusCodes.Status400BadRequest, TypePrefix + "bad-request", "Bad request"),
+        System.Text.Json.JsonException => (StatusCodes.Status400BadRequest, TypePrefix + "bad-request", "Invalid JSON in request body"),
         InvalidOperationException when ex.Message.Contains("Unknown agent", StringComparison.OrdinalIgnoreCase)
             => (StatusCodes.Status404NotFound, AgentNotFoundType, "Agent not found"),
+        // ── Graph exceptions (v0.19) ──────────────────────────────────────
+        GraphHandleNotFoundException => (StatusCodes.Status404NotFound, GraphHandleNotFoundType, "Graph not found"),
+        GraphRunNotFoundException => (StatusCodes.Status404NotFound, GraphRunNotFoundType, "Graph run not found"),
+        GraphRunConflictException => (StatusCodes.Status409Conflict, GraphRunConflictType, "Graph run conflict"),
+        GraphInterruptMismatchException => (StatusCodes.Status409Conflict, GraphInterruptMismatchType, "Graph interrupt mismatch"),
+        GraphAlreadyCompleteException => (StatusCodes.Status409Conflict, GraphAlreadyCompleteType, "Graph run already complete"),
+        GraphRecursionException => (StatusCodes.Status422UnprocessableEntity, GraphRecursionLimitType, "Graph recursion limit exceeded"),
         _ => (StatusCodes.Status503ServiceUnavailable, BackendUnavailableType, "Backend unavailable"),
     };
 }

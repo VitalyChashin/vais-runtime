@@ -59,6 +59,46 @@ spec:
 
 Full spec + status fields in the [Agent CRD reference](../reference/agent-crd.md).
 
+## The `AgentGraph` CRD (v0.19)
+
+Added in v0.19 alongside the graph control-plane API. Identical operator machinery to `Agent` — spec-hash diff detection, six-phase enum, three conditions (`Ready` / `Synced` / `ManifestValid`), idempotency key from `{uid, generation, verb}`.
+
+| Field | Value |
+|---|---|
+| API group | `vais.io` |
+| API version | `v1alpha1` |
+| Kind | `AgentGraph` |
+| Plural / singular | `agentgraphs` / `agentgraph` |
+| Short names | `vgraph`, `vgraphs` |
+| Namespaced? | Yes |
+
+Minimal manifest:
+
+```yaml
+apiVersion: vais.io/v1alpha1
+kind: AgentGraph
+metadata:
+  name: my-pipeline
+  namespace: default
+spec:
+  graphId: my-pipeline
+  version: "1.0"
+  entry: start
+  nodes:
+    - id: start
+      kind: Agent
+      ref:
+        id: classifier
+        version: "1.0"
+    - id: done
+      kind: End
+  edges:
+    - from: start
+      to: done
+```
+
+The CRD manifest is at `deploy/crds/vais.io_agentgraphs.yaml`. Printer columns: `GRAPH-ID`, `VERSION`, `PHASE`, `READY`, `AGE`.
+
 ## Reconcile loop
 
 `AgentEntityController : IEntityController<AgentEntity>` drives the loop. On every CR create / update / status-subresource poke, KubeOps invokes `ReconcileAsync` with the live CR. The controller:
@@ -211,6 +251,7 @@ The chart ships CRD manifest at `deploy/crds/vais.io_agents.yaml` — mount via 
 - [Deploy the Kubernetes operator](../guides/deploy-the-kubernetes-operator.md) — Docker Desktop quick-start, end-to-end.
 - [Wire a sidecar OPA against the operator](../guides/wire-a-sidecar-opa-against-the-operator.md) — combined v0.13 + v0.14 policy deployment.
 - [Agent CRD reference](../reference/agent-crd.md) — full schema, status fields, printer columns.
+- [Graph as a first-class deployable](graph-as-deployable.md) — v0.19 graph manifest format + full management surface.
 - [Control plane concept](control-plane.md) — the v0.6 HTTP surface the operator wraps.
 - [Problem-details URNs](../reference/problem-details-urns.md) — error shapes the operator surfaces into `status.lastError`.
 - `deploy/README.md` + `deploy/helm/vais-agents-operator/README.md` — in-repo deployment notes.

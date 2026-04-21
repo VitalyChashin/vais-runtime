@@ -73,6 +73,71 @@ internal static class EnvelopeSerializer
         target[key] = JsonSerializer.SerializeToNode(value, JsonOptions);
     }
 
+    public static string Serialize(AgentGraphManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+
+        var metadata = new JsonObject
+        {
+            ["id"] = manifest.Id,
+            ["version"] = manifest.Version,
+        };
+        if (manifest.Description is not null) metadata["description"] = manifest.Description;
+        if (manifest.Labels is { Count: > 0 } labels) metadata["labels"] = ToJsonObject(labels);
+        if (manifest.Annotations is { Count: > 0 } annotations) metadata["annotations"] = ToJsonObject(annotations);
+
+        var spec = new JsonObject
+        {
+            ["entry"] = manifest.Entry,
+            ["nodes"] = SerializeGraphNodes(manifest.Nodes),
+            ["edges"] = SerializeGraphEdges(manifest.Edges),
+        };
+        if (manifest.StateSchema is System.Text.Json.JsonElement schema)
+            spec["state"] = new JsonObject { ["schema"] = JsonNode.Parse(schema.GetRawText()) };
+        if (manifest.MaxSteps is int maxSteps) spec["maxSteps"] = maxSteps;
+
+        var envelope = new JsonObject
+        {
+            ["apiVersion"] = "vais.agents/v1",
+            ["kind"] = "AgentGraph",
+            ["metadata"] = metadata,
+            ["spec"] = spec,
+        };
+        return envelope.ToJsonString(JsonOptions);
+    }
+
+    private static JsonArray SerializeGraphNodes(IReadOnlyList<Vais.Agents.GraphNode> nodes)
+    {
+        var arr = new JsonArray();
+        foreach (var node in nodes)
+        {
+            var obj = new JsonObject { ["id"] = node.Id, ["kind"] = node.Kind };
+            if (node.Ref is { } r) { var ro = new JsonObject { ["id"] = r.Id }; if (r.Version is not null) ro["version"] = r.Version; obj["ref"] = ro; }
+            if (node.HandlerRef is { } h) obj["handlerRef"] = new JsonObject { ["typeName"] = h.TypeName };
+            if (node.StateBindings is { } b)
+            {
+                var bObj = new JsonObject();
+                if (b.Input is { Count: > 0 }) bObj["input"] = new JsonArray(b.Input.Select(s => (JsonNode?)s).ToArray());
+                if (b.Output is { Count: > 0 }) bObj["output"] = new JsonArray(b.Output.Select(s => (JsonNode?)s).ToArray());
+                if (bObj.Count > 0) obj["stateBindings"] = bObj;
+            }
+            if (node.InterruptReason is not null) obj["interruptReason"] = node.InterruptReason;
+            arr.Add(obj);
+        }
+        return arr;
+    }
+
+    private static JsonArray SerializeGraphEdges(IReadOnlyList<Vais.Agents.GraphEdge> edges)
+    {
+        var arr = new JsonArray();
+        foreach (var edge in edges)
+        {
+            var obj = new JsonObject { ["from"] = edge.From, ["to"] = edge.To };
+            arr.Add(obj);
+        }
+        return arr;
+    }
+
     private static JsonObject ToJsonObject(IReadOnlyDictionary<string, string> map)
     {
         var obj = new JsonObject();

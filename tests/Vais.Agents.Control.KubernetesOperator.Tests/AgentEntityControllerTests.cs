@@ -267,6 +267,16 @@ public sealed class AgentEntityControllerTests
             => Task.FromResult(new AgentInvocationResult("unused"));
 
         public Task SignalAsync(string agentId, AgentSignal signal, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        // Graph stubs — not exercised by operator tests; DIM requires explicit impl for non-default overloads.
+        public Task<AgentGraphHandle> CreateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(new AgentGraphHandle(manifest.Id, manifest.Version));
+        public Task<AgentGraphListResponse> ListGraphsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default) => Task.FromResult(new AgentGraphListResponse([]));
+        public Task<AgentGraphQueryResponse?> QueryGraphAsync(string graphId, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult<AgentGraphQueryResponse?>(null);
+        public Task<AgentGraphHandle> UpdateGraphAsync(string graphId, AgentGraphManifest newManifest, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new AgentGraphHandle(graphId, newManifest.Version));
+        public Task EvictGraphAsync(string graphId, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<GraphInvocationResult> InvokeGraphAsync(string graphId, GraphInvocationRequest request, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new GraphInvocationResult(request.RunId ?? "run-1", new Dictionary<string, System.Text.Json.JsonElement>(), IsComplete: true));
+        public Task<GraphInvocationResult> ResumeGraphAsync(string graphId, string runId, GraphResumeRequest request, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new GraphInvocationResult(runId, new Dictionary<string, System.Text.Json.JsonElement>(), IsComplete: true));
+        public Task CancelGraphRunAsync(string graphId, string runId, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     internal sealed class FakeKubernetesClient : IAgentEntityKubernetesClient

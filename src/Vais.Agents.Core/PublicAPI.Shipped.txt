@@ -37,6 +37,12 @@ Vais.Agents.Core.Guardrails.RegexDenylistInputGuardrail.RegexDenylistInputGuardr
 Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail
 Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail.EvaluateAsync(Vais.Agents.CompletionResponse! response, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GuardrailOutcome!>
 Vais.Agents.Core.Guardrails.RegexDenylistOutputGuardrail.RegexDenylistOutputGuardrail(System.Text.RegularExpressions.Regex! pattern) -> void
+Vais.Agents.Core.InMemoryAgentGraphRegistry
+Vais.Agents.Core.InMemoryAgentGraphRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentGraphManifest?>
+Vais.Agents.Core.InMemoryAgentGraphRegistry.InMemoryAgentGraphRegistry() -> void
+Vais.Agents.Core.InMemoryAgentGraphRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphManifest!>!
+Vais.Agents.Core.InMemoryAgentGraphRegistry.Register(Vais.Agents.AgentGraphManifest! manifest) -> Vais.Agents.AgentGraphManifest!
+Vais.Agents.Core.InMemoryAgentGraphRegistry.Remove(string! id, string! version) -> bool
 Vais.Agents.Core.InMemoryAgentJournal
 Vais.Agents.Core.InMemoryAgentJournal.AppendAsync(Vais.Agents.JournalEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Core.InMemoryAgentJournal.ClearAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
