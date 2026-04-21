@@ -35,6 +35,8 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
     private readonly AgentContext _context;
+    private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly string? _bearerToken;
 
     public GraphNodeExecutor(
         GraphNode node,
@@ -44,7 +46,9 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver,
-        AgentContext context)
+        AgentContext context,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        string? bearerToken = null)
         : base(id: node.Id)
     {
         _node = node;
@@ -55,6 +59,8 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
         _context = context;
+        _remoteInvoker = remoteInvoker;
+        _bearerToken = bearerToken;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -175,19 +181,40 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         {
             throw new InvalidOperationException($"Agent-kind node '{_node.Id}' has no Ref.");
         }
-        var resolvedManifest = await _registry.GetAsync(_node.Ref.Id, _node.Ref.Version, cancellationToken).ConfigureAwait(false);
-        if (resolvedManifest is null)
-        {
-            throw new InvalidOperationException(
-                $"Node '{_node.Id}' references agent '{_node.Ref.Id}' version '{_node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
-        }
 
         var text = BuildAgentInputText(state);
-        var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
-        var result = await _lifecycle.InvokeAsync(
-            handle,
-            new AgentInvocationRequest(text, _context.UserId),
-            cancellationToken).ConfigureAwait(false);
+        AgentInvocationResult result;
+
+        if (_node.Ref.RuntimeUrl is { } runtimeUrl)
+        {
+            // Cross-runtime path: forward to a remote runtime via IAgentRemoteInvoker.
+            if (_remoteInvoker is null)
+                throw new InvalidOperationException(
+                    $"Node '{_node.Id}' has RuntimeUrl '{runtimeUrl}' but no IAgentRemoteInvoker was supplied to the executor.");
+
+            var remoteHandle = new AgentHandle(_node.Ref.Id, _node.Ref.Version ?? string.Empty);
+            result = await _remoteInvoker.InvokeAsync(
+                runtimeUrl,
+                remoteHandle,
+                new AgentInvocationRequest(text, _context.UserId),
+                _bearerToken,
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var resolvedManifest = await _registry.GetAsync(_node.Ref.Id, _node.Ref.Version, cancellationToken).ConfigureAwait(false);
+            if (resolvedManifest is null)
+            {
+                throw new InvalidOperationException(
+                    $"Node '{_node.Id}' references agent '{_node.Ref.Id}' version '{_node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
+            }
+
+            var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
+            result = await _lifecycle.InvokeAsync(
+                handle,
+                new AgentInvocationRequest(text, _context.UserId),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var updates = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
         {

@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Vais.Agents.Control.InProcess\Vais.Agents.Control.InProcess.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Manifests.Yaml\Vais.Agents.Control.Manifests.Yaml.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Policy.Opa\Vais.Agents.Control.Policy.Opa.csproj" />
     <ProjectReference Include="..\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />

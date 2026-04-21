@@ -1,1 +1,3 @@
 #nullable enable
+Vais.Agents.Control.Http.HttpAgentRemoteInvokerServiceCollectionExtensions
+static Vais.Agents.Control.Http.HttpAgentRemoteInvokerServiceCollectionExtensions.AddAgentRemoteInvoker(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

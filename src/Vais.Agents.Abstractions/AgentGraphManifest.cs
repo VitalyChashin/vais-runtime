@@ -84,7 +84,8 @@ public sealed record GraphNode(
 /// <summary>Reference to an agent in <see cref="IAgentRegistry"/> for <c>Agent</c>-kind nodes.</summary>
 /// <param name="Id">Agent id.</param>
 /// <param name="Version">Agent version. Null resolves to latest.</param>
-public sealed record GraphAgentRef(string Id, string? Version = null);
+/// <param name="RuntimeUrl">Absolute http/https URL of the remote runtime hosting this agent. Null = local (resolved via <see cref="IAgentRegistry"/>).</param>
+public sealed record GraphAgentRef(string Id, string? Version = null, string? RuntimeUrl = null);
 
 /// <summary>
 /// Reference to a DI-resolved code handler. Matches <see cref="AgentHandlerRef"/>'s

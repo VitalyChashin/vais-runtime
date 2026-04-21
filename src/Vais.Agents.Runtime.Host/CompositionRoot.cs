@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Orleans.Hosting;
+using Vais.Agents;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
@@ -152,15 +153,30 @@ internal static class CompositionRoot
             audit: sp.GetService<IAuditLog>(),
             contextAccessor: sp.GetService<IAgentContextAccessor>(),
             logger: sp.GetService<ILogger<AgentLifecycleManager>>() ?? NullLogger<AgentLifecycleManager>.Instance));
-        services.AddSingleton<IAgentGraphLifecycleManager>(sp => new AgentGraphLifecycleManager(
-            sp.GetRequiredService<IAgentGraphRegistry>(),
-            sp.GetRequiredService<IAgentRegistry>(),
-            sp.GetRequiredService<IAgentLifecycleManager>(),
-            sp.GetRequiredService<IGraphCheckpointer>(),
-            policy: sp.GetService<IAgentPolicyEngine>(),
-            audit: sp.GetService<IAuditLog>(),
-            contextAccessor: sp.GetService<IAgentContextAccessor>(),
-            logger: sp.GetService<ILogger<AgentGraphLifecycleManager>>() ?? NullLogger<AgentGraphLifecycleManager>.Instance));
+        // v0.20 Pillar E — cross-runtime graph refs: remote invoker + bearer-token provider.
+        // AddHttpContextAccessor is idempotent; AddAgentRemoteInvoker uses TryAddSingleton.
+        services.AddHttpContextAccessor();
+        services.AddAgentRemoteInvoker();
+        services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
+        {
+            var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+            return new AgentGraphLifecycleManager(
+                sp.GetRequiredService<IAgentGraphRegistry>(),
+                sp.GetRequiredService<IAgentRegistry>(),
+                sp.GetRequiredService<IAgentLifecycleManager>(),
+                sp.GetRequiredService<IGraphCheckpointer>(),
+                policy: sp.GetService<IAgentPolicyEngine>(),
+                audit: sp.GetService<IAuditLog>(),
+                contextAccessor: sp.GetService<IAgentContextAccessor>(),
+                logger: sp.GetService<ILogger<AgentGraphLifecycleManager>>() ?? NullLogger<AgentGraphLifecycleManager>.Instance,
+                remoteInvoker: sp.GetService<IAgentRemoteInvoker>(),
+                bearerTokenProvider: () =>
+                {
+                    var header = accessor?.HttpContext?.Request.Headers.Authorization.ToString();
+                    return header?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
+                        ? header[7..] : null;
+                });
+        });
 
         // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
         services.AddAgentControlPlane();

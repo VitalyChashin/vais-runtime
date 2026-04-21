@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Orleans;
+using Vais.Agents;
 using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Xunit;
@@ -330,5 +331,20 @@ public class CompositionRootTests
         var guardrails = sp.GetServices<IGuardrailFactory>().ToArray();
         guardrails.Should().HaveCount(6,
             because: "AddBuiltinGuardrails registers LengthCap + RegexAllowlist × {Input, Output} + RegexDenylist × {Input, Output} + LlmAsJudge.");
+    }
+
+    [Fact]
+    public void Composition_RemoteInvoker_Registered()
+    {
+        // v0.20 Pillar E: IAgentRemoteInvoker must be registered so the graph lifecycle manager
+        // can route cross-runtime nodes. AddAgentRemoteInvoker uses TryAddSingleton, so calling
+        // it from ConfigureServices is always safe.
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        var invoker = sp.GetService<IAgentRemoteInvoker>();
+
+        invoker.Should().NotBeNull(because: "AddAgentRemoteInvoker must register IAgentRemoteInvoker for cross-runtime graph refs to work.");
     }
 }

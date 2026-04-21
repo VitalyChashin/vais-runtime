@@ -22,6 +22,8 @@ public static class MafGraphBuilder
     /// <param name="effectResolver">Resolver for <see cref="GraphEdgeEffect.HandlerRef"/> nodes.</param>
     /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s.</param>
     /// <param name="context">Ambient agent context stamped on each node invocation. Uses a default empty context when null.</param>
+    /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
+    /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     public static Workflow Build(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -29,7 +31,9 @@ public static class MafGraphBuilder
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
-        AgentContext? context = null)
+        AgentContext? context = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        string? bearerToken = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -42,7 +46,8 @@ public static class MafGraphBuilder
         {
             executors[node.Id] = new GraphNodeExecutor(
                 node, manifest, registry, lifecycle,
-                predicateResolver, effectResolver, codeNodeResolver, context);
+                predicateResolver, effectResolver, codeNodeResolver, context,
+                remoteInvoker, bearerToken);
         }
 
         if (!executors.TryGetValue(manifest.Entry, out var startExecutor))

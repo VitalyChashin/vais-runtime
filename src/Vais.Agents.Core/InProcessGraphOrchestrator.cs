@@ -38,6 +38,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
     private readonly Func<string>? _runIdFactory;
+    private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly string? _bearerToken;
 
     /// <summary>Construct the orchestrator.</summary>
     /// <param name="manifest">Graph to run. Validated eagerly on first invocation.</param>
@@ -48,6 +50,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <param name="effectResolver">Resolver for <see cref="GraphEdgeEffect.HandlerRef"/> nodes. Null means handler-ref effects throw.</param>
     /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s. Null means code-kind nodes throw.</param>
     /// <param name="runIdFactory">Factory for the run id stamped on events + checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
+    /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
+    /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation. Typically extracted from the inbound HTTP request by the caller.</param>
     public InProcessGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -56,7 +60,9 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
-        Func<string>? runIdFactory = null)
+        Func<string>? runIdFactory = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        string? bearerToken = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -70,6 +76,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
         _runIdFactory = runIdFactory;
+        _remoteInvoker = remoteInvoker;
+        _bearerToken = bearerToken;
     }
 
     /// <inheritdoc />
@@ -376,24 +384,44 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 throw new InvalidOperationException($"Agent-kind node '{node.Id}' has no Ref.");
             }
 
-            // Resolve to a concrete version via the registry — "latest" / null lookups must
-            // land on the actual version the lifecycle manager keyed on at CreateAsync time.
-            var resolvedManifest = await _registry.GetAsync(node.Ref.Id, node.Ref.Version, cancellationToken).ConfigureAwait(false);
-            if (resolvedManifest is null)
-            {
-                throw new InvalidOperationException(
-                    $"Node '{node.Id}' references agent '{node.Ref.Id}' version '{node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
-            }
-
-            // Build invocation request from state bindings.
+            // Build invocation request from state bindings (shared by local + remote paths).
             var text = BuildAgentInputText(state, node.StateBindings);
             var metadata = BuildMetadata(state, node.StateBindings);
 
-            var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
-            var result = await _lifecycle.InvokeAsync(
-                handle,
-                new AgentInvocationRequest(text, context.UserId, metadata),
-                cancellationToken).ConfigureAwait(false);
+            AgentInvocationResult result;
+
+            if (node.Ref.RuntimeUrl is { } runtimeUrl)
+            {
+                // Cross-runtime path: forward to a remote runtime via IAgentRemoteInvoker.
+                if (_remoteInvoker is null)
+                    throw new InvalidOperationException(
+                        $"Node '{node.Id}' has RuntimeUrl '{runtimeUrl}' but no IAgentRemoteInvoker was supplied to the orchestrator.");
+
+                var remoteHandle = new AgentHandle(node.Ref.Id, node.Ref.Version ?? string.Empty);
+                result = await _remoteInvoker.InvokeAsync(
+                    runtimeUrl,
+                    remoteHandle,
+                    new AgentInvocationRequest(text, context.UserId, metadata),
+                    _bearerToken,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // Resolve to a concrete version via the registry — "latest" / null lookups must
+                // land on the actual version the lifecycle manager keyed on at CreateAsync time.
+                var resolvedManifest = await _registry.GetAsync(node.Ref.Id, node.Ref.Version, cancellationToken).ConfigureAwait(false);
+                if (resolvedManifest is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Node '{node.Id}' references agent '{node.Ref.Id}' version '{node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
+                }
+
+                var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
+                result = await _lifecycle.InvokeAsync(
+                    handle,
+                    new AgentInvocationRequest(text, context.UserId, metadata),
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             // Project the agent's reply into state: raw text under "lastAssistantText",
             // plus parsed structured output if the reply is JSON (StateBindings.Output
@@ -577,8 +605,10 @@ public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDic
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
-        Func<string>? runIdFactory = null)
-        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory)
+        Func<string>? runIdFactory = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        string? bearerToken = null)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, remoteInvoker, bearerToken)
     {
     }
 }

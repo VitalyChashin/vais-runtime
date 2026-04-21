@@ -39,6 +39,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     private readonly IAuditLog _audit;
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ILogger<AgentGraphLifecycleManager> _logger;
+    private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly Func<string?>? _bearerTokenProvider;
 
     // Per-graph state: manifest-keyed counters + run-id-keyed CTS map.
     private readonly ConcurrentDictionary<(string Id, string Version), GraphEntry> _graphs = new();
@@ -50,6 +52,16 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     public const string UnknownGraphErrorType = "GraphHandleNotFound";
 
     /// <summary>Construct a manager. Graph-registry, agent-registry, agent-lifecycle, and checkpointer are required.</summary>
+    /// <param name="graphRegistry">Registry holding graph manifests.</param>
+    /// <param name="agentRegistry">Registry for resolving local agent manifests.</param>
+    /// <param name="agentLifecycle">Lifecycle manager for invoking local agents.</param>
+    /// <param name="checkpointer">Checkpoint store for resumable graph runs.</param>
+    /// <param name="policy">Policy engine. Null uses allow-all.</param>
+    /// <param name="audit">Audit log. Null is a no-op.</param>
+    /// <param name="contextAccessor">Agent context accessor. Null uses async-local fallback.</param>
+    /// <param name="logger">Logger. Null uses null-logger.</param>
+    /// <param name="remoteInvoker">Invoker for cross-runtime graph nodes. Required when any graph manifest contains nodes with a <see cref="GraphAgentRef.RuntimeUrl"/>.</param>
+    /// <param name="bearerTokenProvider">Factory invoked per graph run to obtain the current bearer token for remote runtime calls. Typically reads from <c>IHttpContextAccessor</c>.</param>
     public AgentGraphLifecycleManager(
         IAgentGraphRegistry graphRegistry,
         IAgentRegistry agentRegistry,
@@ -58,7 +70,9 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         IAgentPolicyEngine? policy = null,
         IAuditLog? audit = null,
         IAgentContextAccessor? contextAccessor = null,
-        ILogger<AgentGraphLifecycleManager>? logger = null)
+        ILogger<AgentGraphLifecycleManager>? logger = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        Func<string?>? bearerTokenProvider = null)
     {
         ArgumentNullException.ThrowIfNull(graphRegistry);
         ArgumentNullException.ThrowIfNull(agentRegistry);
@@ -72,6 +86,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         _audit = audit ?? NullAuditLog.Instance;
         _contextAccessor = contextAccessor ?? new AsyncLocalAgentContextAccessorFallback();
         _logger = logger ?? NullLogger<AgentGraphLifecycleManager>.Instance;
+        _remoteInvoker = remoteInvoker;
+        _bearerTokenProvider = bearerTokenProvider;
     }
 
     /// <inheritdoc />
@@ -455,7 +471,9 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             _agentRegistry,
             _agentLifecycle,
             _checkpointer,
-            runIdFactory: () => runId);
+            runIdFactory: () => runId,
+            remoteInvoker: _remoteInvoker,
+            bearerToken: _bearerTokenProvider?.Invoke());
     }
 
     private static async ValueTask<GraphInvocationResult> DrainInvokeAsync(
