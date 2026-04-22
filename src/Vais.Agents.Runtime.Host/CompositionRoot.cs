@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -94,7 +95,7 @@ internal static class CompositionRoot
     /// already set up Orleans via <c>builder.Host.UseOrleans(...)</c>; this method only
     /// registers services that the ASP.NET Core host owns.
     /// </summary>
-    public static void ConfigureServices(IServiceCollection services, RuntimeOptions options)
+    public static void ConfigureServices(IServiceCollection services, RuntimeOptions options, IConfiguration? configuration = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
@@ -154,9 +155,25 @@ internal static class CompositionRoot
             contextAccessor: sp.GetService<IAgentContextAccessor>(),
             logger: sp.GetService<ILogger<AgentLifecycleManager>>() ?? NullLogger<AgentLifecycleManager>.Instance));
         // v0.20 Pillar E — cross-runtime graph refs: remote invoker + bearer-token provider.
+        // v0.21 — per-runtime identity propagation (Forward / ServiceAccount / TokenExchange).
         // AddHttpContextAccessor is idempotent; AddAgentRemoteInvoker uses TryAddSingleton.
         services.AddHttpContextAccessor();
-        services.AddAgentRemoteInvoker();
+        var remoteRuntimesSection = configuration?.GetSection("Vais:RemoteRuntimes");
+        if (remoteRuntimesSection?.Exists() == true)
+        {
+            services.AddAgentRemoteInvoker(map =>
+            {
+                foreach (var child in remoteRuntimesSection.GetChildren())
+                {
+                    var runtimeOpts = child.Get<RemoteRuntimeOptions>() ?? new RemoteRuntimeOptions();
+                    map.Runtimes[child.Key] = runtimeOpts;
+                }
+            });
+        }
+        else
+        {
+            services.AddAgentRemoteInvoker();
+        }
         services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
         {
             var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();

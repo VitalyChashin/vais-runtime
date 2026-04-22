@@ -1,1 +1,54 @@
 #nullable enable
+Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider
+Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider.ForwardingRemoteIdentityProvider() -> void
+Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+Vais.Agents.Control.Http.IRemoteIdentityProvider
+Vais.Agents.Control.Http.IRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+Vais.Agents.Control.Http.RemoteIdentityMode
+Vais.Agents.Control.Http.RemoteIdentityMode.Forward = 0 -> Vais.Agents.Control.Http.RemoteIdentityMode
+Vais.Agents.Control.Http.RemoteIdentityMode.ServiceAccount = 1 -> Vais.Agents.Control.Http.RemoteIdentityMode
+Vais.Agents.Control.Http.RemoteIdentityMode.TokenExchange = 2 -> Vais.Agents.Control.Http.RemoteIdentityMode
+Vais.Agents.Control.Http.RemoteRuntimeOptions
+Vais.Agents.Control.Http.RemoteRuntimeOptions.RemoteRuntimeOptions() -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.IdentityMode.get -> Vais.Agents.Control.Http.RemoteIdentityMode
+Vais.Agents.Control.Http.RemoteRuntimeOptions.IdentityMode.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.TokenExchangeEndpoint.get -> System.Uri?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.TokenExchangeEndpoint.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ClientId.get -> string?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ClientId.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ClientSecretRef.get -> string?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ClientSecretRef.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.Audience.get -> string?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.Audience.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ServiceAccountTokenPath.get -> string!
+Vais.Agents.Control.Http.RemoteRuntimeOptions.ServiceAccountTokenPath.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.RequestTimeout.get -> System.TimeSpan?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.RequestTimeout.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.RetryDelays.get -> System.TimeSpan[]?
+Vais.Agents.Control.Http.RemoteRuntimeOptions.RetryDelays.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.TokenCacheTtl.get -> System.TimeSpan
+Vais.Agents.Control.Http.RemoteRuntimeOptions.TokenCacheTtl.set -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptions.Validate() -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptionsMap
+Vais.Agents.Control.Http.RemoteRuntimeOptionsMap.RemoteRuntimeOptionsMap() -> void
+Vais.Agents.Control.Http.RemoteRuntimeOptionsMap.Runtimes.get -> System.Collections.Generic.Dictionary<string!, Vais.Agents.Control.Http.RemoteRuntimeOptions!>!
+Vais.Agents.Control.Http.RemoteRuntimeOptionsMap.Runtimes.set -> void
+Vais.Agents.Control.Http.ServiceAccountRemoteIdentityProvider
+Vais.Agents.Control.Http.ServiceAccountRemoteIdentityProvider.ServiceAccountRemoteIdentityProvider(string! tokenPath, System.TimeProvider! timeProvider, System.TimeSpan cacheTtl, Vais.Agents.Control.Http.ITokenFileReader? fileReader = null) -> void
+Vais.Agents.Control.Http.ServiceAccountRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+Vais.Agents.Control.Http.ServiceAccountRemoteIdentityProvider.Dispose() -> void
+Vais.Agents.Control.Http.ITokenFileReader
+Vais.Agents.Control.Http.ITokenFileReader.ReadAllTextAsync(string! path, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Control.Http.ITokenFileReader.GetMtime(string! path) -> System.DateTime
+Vais.Agents.Control.Http.FileSystemTokenReader
+Vais.Agents.Control.Http.FileSystemTokenReader.FileSystemTokenReader() -> void
+Vais.Agents.Control.Http.FileSystemTokenReader.ReadAllTextAsync(string! path, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Control.Http.FileSystemTokenReader.GetMtime(string! path) -> System.DateTime
+Vais.Agents.Control.Http.OidcTokenExchangeRemoteIdentityProvider
+Vais.Agents.Control.Http.OidcTokenExchangeRemoteIdentityProvider.OidcTokenExchangeRemoteIdentityProvider(System.Net.Http.HttpClient! httpClient, Vais.Agents.Control.ISecretResolver! secretResolver, Vais.Agents.Control.Http.RemoteRuntimeOptions! options, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Control.Http.OidcTokenExchangeRemoteIdentityProvider!>? logger = null) -> void
+Vais.Agents.Control.Http.OidcTokenExchangeRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+Vais.Agents.Control.Http.OidcTokenExchangeRemoteIdentityProvider.Dispose() -> void
+Vais.Agents.Control.Http.CompositeRemoteIdentityProvider
+Vais.Agents.Control.Http.CompositeRemoteIdentityProvider.CompositeRemoteIdentityProvider(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Http.IRemoteIdentityProvider!>! providers, Vais.Agents.Control.Http.IRemoteIdentityProvider! fallback) -> void
+Vais.Agents.Control.Http.CompositeRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+static Vais.Agents.Control.Http.HttpAgentRemoteInvokerServiceCollectionExtensions.AddAgentRemoteInvoker(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Control.Http.RemoteRuntimeOptionsMap!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

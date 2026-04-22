@@ -11,7 +11,7 @@ var options = RuntimeOptions.FromEnvironment();
 options.EnsureValid();
 
 builder.Host.UseOrleans(silo => CompositionRoot.ConfigureSilo(silo, options));
-CompositionRoot.ConfigureServices(builder.Services, options);
+CompositionRoot.ConfigureServices(builder.Services, options, builder.Configuration);
 
 var app = builder.Build();
 

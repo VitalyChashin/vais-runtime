@@ -20,23 +20,36 @@ namespace Vais.Agents.Control.Http;
 /// </para>
 /// <para>
 /// Transient failures (503, 504, 429) are retried up to two times with 500 ms and
-/// 1 000 ms delays. The bearer token from the inbound caller is forwarded verbatim;
-/// configurable identity propagation is deferred to v0.21.
+/// 1 000 ms delays. When an <see cref="IRemoteIdentityProvider"/> is supplied, the
+/// inbound bearer token is transformed before forwarding; otherwise the token is
+/// passed through verbatim (v0.20 behaviour).
 /// </para>
 /// </remarks>
 internal sealed class HttpAgentRemoteInvoker : IAgentRemoteInvoker, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(1000)];
+    private static readonly TimeSpan[] DefaultRetryDelays = [TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(1000)];
 
     private readonly IHttpClientFactory? _factory;
     private readonly HttpClient? _singletonClient;
+    private readonly IRemoteIdentityProvider? _identityProvider;
+    private readonly Func<string, RemoteRuntimeOptions?>? _optionsLookup;
     private readonly ConcurrentDictionary<string, HttpClient> _clients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     public HttpAgentRemoteInvoker(IHttpClientFactory? factory = null)
+        : this(factory, identityProvider: null, optionsLookup: null)
+    {
+    }
+
+    public HttpAgentRemoteInvoker(
+        IHttpClientFactory? factory,
+        IRemoteIdentityProvider? identityProvider,
+        Func<string, RemoteRuntimeOptions?>? optionsLookup = null)
     {
         _factory = factory;
+        _identityProvider = identityProvider;
+        _optionsLookup = optionsLookup;
     }
 
     // Test seam: injects a pre-configured client bypassing the keyed pool.
@@ -62,13 +75,25 @@ internal sealed class HttpAgentRemoteInvoker : IAgentRemoteInvoker, IDisposable
             ? $"/v1/agents/{Uri.EscapeDataString(handle.AgentId)}/invoke?version={Uri.EscapeDataString(handle.Version)}"
             : $"/v1/agents/{Uri.EscapeDataString(handle.AgentId)}/invoke";
 
+        // Resolve outbound token via identity provider when configured.
+        string? outboundToken = bearerToken;
+        if (_identityProvider is not null)
+        {
+            var credential = await _identityProvider
+                .AcquireOutboundTokenAsync(normalised, bearerToken, cancellationToken)
+                .ConfigureAwait(false);
+            outboundToken = credential.Value;
+        }
+
+        var retryDelays = _optionsLookup?.Invoke(normalised)?.RetryDelays ?? DefaultRetryDelays;
+
         HttpResponseMessage? response = null;
-        for (var attempt = 0; attempt <= RetryDelays.Length; attempt++)
+        for (var attempt = 0; attempt <= retryDelays.Length; attempt++)
         {
             if (attempt > 0)
-                await Task.Delay(RetryDelays[attempt - 1], cancellationToken).ConfigureAwait(false);
+                await Task.Delay(retryDelays[attempt - 1], cancellationToken).ConfigureAwait(false);
 
-            var httpRequest = BuildRequest(path, request, bearerToken);
+            var httpRequest = BuildRequest(path, request, outboundToken);
             var client = GetOrCreateClient(normalised);
 
             response?.Dispose();
@@ -80,7 +105,7 @@ internal sealed class HttpAgentRemoteInvoker : IAgentRemoteInvoker, IDisposable
             var status = response.StatusCode;
 
             // Non-retryable: throw immediately.
-            if (!IsRetryable(status) || attempt == RetryDelays.Length)
+            if (!IsRetryable(status) || attempt == retryDelays.Length)
             {
                 var detail = await TryReadDetailAsync(response, cancellationToken).ConfigureAwait(false);
                 response.Dispose();
