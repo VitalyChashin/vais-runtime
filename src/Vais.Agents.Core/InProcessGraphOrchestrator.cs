@@ -39,6 +39,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
     private readonly Func<string>? _runIdFactory;
     private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
 
     /// <summary>Construct the orchestrator.</summary>
@@ -51,6 +52,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s. Null means code-kind nodes throw.</param>
     /// <param name="runIdFactory">Factory for the run id stamped on events + checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
+    /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation. Typically extracted from the inbound HTTP request by the caller.</param>
     public InProcessGraphOrchestrator(
         AgentGraphManifest manifest,
@@ -62,6 +64,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
         Func<string>? runIdFactory = null,
         IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -77,6 +80,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         _codeNodeResolver = codeNodeResolver;
         _runIdFactory = runIdFactory;
         _remoteInvoker = remoteInvoker;
+        _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
     }
 
@@ -405,6 +409,21 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     _bearerToken,
                     cancellationToken).ConfigureAwait(false);
             }
+            else if (node.Ref.A2AUrl is { } a2aUrl)
+            {
+                // A2A protocol path: invoke remote agent via Agent-to-Agent protocol.
+                if (_a2aInvoker is null)
+                    throw new InvalidOperationException(
+                        $"Node '{node.Id}' has A2AUrl '{a2aUrl}' but no IA2AGraphNodeInvoker was supplied to the orchestrator.");
+
+                var responseText = await _a2aInvoker.InvokeAsync(
+                    a2aUrl,
+                    text,
+                    _bearerToken,
+                    cancellationToken).ConfigureAwait(false);
+
+                result = new AgentInvocationResult(responseText);
+            }
             else
             {
                 // Resolve to a concrete version via the registry — "latest" / null lookups must
@@ -607,8 +626,9 @@ public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDic
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
         Func<string>? runIdFactory = null,
         IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null)
-        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, remoteInvoker, bearerToken)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken)
     {
     }
 }

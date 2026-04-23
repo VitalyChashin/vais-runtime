@@ -54,10 +54,6 @@ update the Appendix dates if the Phase 3 non-goals change state.
 
 ### 2. Cross-runtime extensions
 
-- **`A2AUrl` on `GraphAgentRef` (`a2a:` scheme).** v0.20 supports `runtimeUrl` against the
-  native Vais HTTP control plane only. Source:
-  [v0.20 findings §Deferred to v0.21](../../plans/actor-agents-oss-v0.20-cross-runtime-refs-findings.md)
-  (2026-04-21). Next step: v0.21 — add alongside A2A structured-output work.
 - **SSE streaming for cross-runtime invokes (`IAgentRemoteInvoker.StreamAsync`).** v0.20
   ships unary remote invokes only. Source: same (2026-04-21). Next step: v0.21 follow-up
   PR — stream via the v0.12 SSE client helpers.

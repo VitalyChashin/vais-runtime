@@ -1,1 +1,7 @@
 #nullable enable
+Vais.Agents.GraphAgentRef.A2AUrl.get -> string?
+Vais.Agents.GraphAgentRef.A2AUrl.init -> void
+Vais.Agents.GraphAgentRef.Deconstruct(out string! Id, out string? Version, out string? RuntimeUrl, out string? A2AUrl) -> void
+Vais.Agents.GraphAgentRef.GraphAgentRef(string! Id, string? Version = null, string? RuntimeUrl = null, string? A2AUrl = null) -> void
+Vais.Agents.IA2AGraphNodeInvoker
+Vais.Agents.IA2AGraphNodeInvoker.InvokeAsync(string! a2aUrl, string! message, string? bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>

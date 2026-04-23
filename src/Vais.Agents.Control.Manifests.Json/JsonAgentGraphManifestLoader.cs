@@ -254,7 +254,25 @@ public sealed class JsonAgentGraphManifestLoader
                             runtimeUrl = null;
                         }
                     }
-                    agentRef = new GraphAgentRef(refId, refVersion, runtimeUrl);
+
+                    var a2aUrl = refEl.TryGetProperty("a2aUrl", out var a2aEl) ? a2aEl.GetString() : null;
+                    if (a2aUrl is not null)
+                    {
+                        if (!Uri.TryCreate(a2aUrl, UriKind.Absolute, out var parsedA2a)
+                            || parsedA2a.Scheme is not ("http" or "https"))
+                        {
+                            errors.Add($"{itemPrefix}ref.a2aUrl '{a2aUrl}' must be an absolute http or https URI");
+                            a2aUrl = null;
+                        }
+                    }
+
+                    if (runtimeUrl is not null && a2aUrl is not null)
+                    {
+                        errors.Add($"{itemPrefix}ref.runtimeUrl and ref.a2aUrl are mutually exclusive — specify exactly one remote endpoint");
+                        a2aUrl = null;
+                    }
+
+                    agentRef = new GraphAgentRef(refId, refVersion, runtimeUrl, a2aUrl);
                 }
             }
 

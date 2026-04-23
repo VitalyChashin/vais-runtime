@@ -85,7 +85,8 @@ public sealed record GraphNode(
 /// <param name="Id">Agent id.</param>
 /// <param name="Version">Agent version. Null resolves to latest.</param>
 /// <param name="RuntimeUrl">Absolute http/https URL of the remote runtime hosting this agent. Null = local (resolved via <see cref="IAgentRegistry"/>).</param>
-public sealed record GraphAgentRef(string Id, string? Version = null, string? RuntimeUrl = null);
+/// <param name="A2AUrl">Absolute http/https URL of a remote A2A-compatible agent endpoint. When set, the graph node invokes via the A2A protocol. Mutually exclusive with <paramref name="RuntimeUrl"/>.</param>
+public sealed record GraphAgentRef(string Id, string? Version = null, string? RuntimeUrl = null, string? A2AUrl = null);
 
 /// <summary>
 /// Reference to a DI-resolved code handler. Matches <see cref="AgentHandlerRef"/>'s

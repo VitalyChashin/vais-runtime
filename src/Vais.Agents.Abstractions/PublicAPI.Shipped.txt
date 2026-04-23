@@ -391,9 +391,7 @@ Vais.Agents.EdgeTraversed.To.get -> string!
 Vais.Agents.EdgeTraversed.To.init -> void
 Vais.Agents.GraphAgentRef
 Vais.Agents.GraphAgentRef.<Clone>$() -> Vais.Agents.GraphAgentRef!
-Vais.Agents.GraphAgentRef.Deconstruct(out string! Id, out string? Version, out string? RuntimeUrl) -> void
 Vais.Agents.GraphAgentRef.Equals(Vais.Agents.GraphAgentRef? other) -> bool
-Vais.Agents.GraphAgentRef.GraphAgentRef(string! Id, string? Version = null, string? RuntimeUrl = null) -> void
 Vais.Agents.GraphAgentRef.Id.get -> string!
 Vais.Agents.GraphAgentRef.Id.init -> void
 Vais.Agents.GraphAgentRef.RuntimeUrl.get -> string?

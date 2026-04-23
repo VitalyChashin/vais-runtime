@@ -40,6 +40,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     private readonly IAgentContextAccessor _contextAccessor;
     private readonly ILogger<AgentGraphLifecycleManager> _logger;
     private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly Func<string?>? _bearerTokenProvider;
 
     // Per-graph state: manifest-keyed counters + run-id-keyed CTS map.
@@ -61,6 +62,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     /// <param name="contextAccessor">Agent context accessor. Null uses async-local fallback.</param>
     /// <param name="logger">Logger. Null uses null-logger.</param>
     /// <param name="remoteInvoker">Invoker for cross-runtime graph nodes. Required when any graph manifest contains nodes with a <see cref="GraphAgentRef.RuntimeUrl"/>.</param>
+    /// <param name="a2aInvoker">Invoker for A2A protocol graph nodes. Required when any graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/>.</param>
     /// <param name="bearerTokenProvider">Factory invoked per graph run to obtain the current bearer token for remote runtime calls. Typically reads from <c>IHttpContextAccessor</c>.</param>
     public AgentGraphLifecycleManager(
         IAgentGraphRegistry graphRegistry,
@@ -72,6 +74,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         IAgentContextAccessor? contextAccessor = null,
         ILogger<AgentGraphLifecycleManager>? logger = null,
         IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
         Func<string?>? bearerTokenProvider = null)
     {
         ArgumentNullException.ThrowIfNull(graphRegistry);
@@ -87,6 +90,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         _contextAccessor = contextAccessor ?? new AsyncLocalAgentContextAccessorFallback();
         _logger = logger ?? NullLogger<AgentGraphLifecycleManager>.Instance;
         _remoteInvoker = remoteInvoker;
+        _a2aInvoker = a2aInvoker;
         _bearerTokenProvider = bearerTokenProvider;
     }
 
@@ -473,6 +477,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             _checkpointer,
             runIdFactory: () => runId,
             remoteInvoker: _remoteInvoker,
+            a2aInvoker: _a2aInvoker,
             bearerToken: _bearerTokenProvider?.Invoke());
     }
 

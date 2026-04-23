@@ -1,1 +1,6 @@
 #nullable enable
+Vais.Agents.Protocols.A2A.A2AGraphNodeInvoker
+Vais.Agents.Protocols.A2A.A2AGraphNodeInvoker.A2AGraphNodeInvoker() -> void
+Vais.Agents.Protocols.A2A.A2AGraphNodeInvoker.InvokeAsync(string! a2aUrl, string! message, string? bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Protocols.A2A.A2AGraphNodeInvokerServiceCollectionExtensions
+static Vais.Agents.Protocols.A2A.A2AGraphNodeInvokerServiceCollectionExtensions.AddA2AGraphNodeInvoker(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

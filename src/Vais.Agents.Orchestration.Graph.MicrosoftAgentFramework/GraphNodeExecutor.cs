@@ -36,6 +36,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
     private readonly AgentContext _context;
     private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
 
     public GraphNodeExecutor(
@@ -48,6 +49,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver,
         AgentContext context,
         IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null)
         : base(id: node.Id)
     {
@@ -60,6 +62,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         _codeNodeResolver = codeNodeResolver;
         _context = context;
         _remoteInvoker = remoteInvoker;
+        _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
     }
 
@@ -199,6 +202,20 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
                 new AgentInvocationRequest(text, _context.UserId),
                 _bearerToken,
                 cancellationToken).ConfigureAwait(false);
+        }
+        else if (_node.Ref.A2AUrl is { } a2aUrl)
+        {
+            if (_a2aInvoker is null)
+                throw new InvalidOperationException(
+                    $"Node '{_node.Id}' has A2AUrl '{a2aUrl}' but no IA2AGraphNodeInvoker was supplied to the executor.");
+
+            var responseText = await _a2aInvoker.InvokeAsync(
+                a2aUrl,
+                text,
+                _bearerToken,
+                cancellationToken).ConfigureAwait(false);
+
+            result = new AgentInvocationResult(responseText);
         }
         else
         {

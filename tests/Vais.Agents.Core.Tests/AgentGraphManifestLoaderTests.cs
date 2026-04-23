@@ -469,4 +469,141 @@ public sealed class AgentGraphManifestLoaderTests
         roundTripped[0].Nodes.Single(n => n.Id == "step").Ref!.RuntimeUrl
             .Should().Be("https://runtime-b.svc");
     }
+
+    // ── v0.21: a2aUrl in ref ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task Ref_A2AUrl_Parses_From_Yaml()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: a2a-graph, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: external-agent, version: "1.0", a2aUrl: "https://enricher.vendor-a.com" }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs.Should().ContainSingle();
+        var step = graphs[0].Nodes.Single(n => n.Id == "step");
+        step.Ref!.A2AUrl.Should().Be("https://enricher.vendor-a.com");
+        step.Ref.RuntimeUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Ref_A2AUrl_Parses_From_Json()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "a2a-json", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "ext-agent", "a2aUrl": "https://a2a.example.com/agent" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle();
+        var step = graphs[0].Nodes.Single(n => n.Id == "step");
+        step.Ref!.A2AUrl.Should().Be("https://a2a.example.com/agent");
+    }
+
+    [Fact]
+    public async Task Ref_A2AUrl_InvalidScheme_Throws_Validation()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-a2a", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "agent-x", "a2aUrl": "ftp://bad.example.com" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("a2aUrl") && e.Contains("http or https"));
+    }
+
+    [Fact]
+    public async Task Ref_A2AUrl_And_RuntimeUrl_BothSet_Throws_Validation()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "conflict", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "agent-x", "runtimeUrl": "https://rt.svc", "a2aUrl": "https://a2a.svc" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("mutually exclusive"));
+    }
+
+    [Fact]
+    public async Task Ref_Without_A2AUrl_Yields_Null()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: local-only, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: local-agent, version: "1.0" }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs[0].Nodes.Single(n => n.Id == "step").Ref!.A2AUrl.Should().BeNull();
+    }
 }

@@ -16,6 +16,7 @@ using Vais.Agents.Control.InProcess;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
+using Vais.Agents.Protocols.A2A;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.OpenTelemetry;
 using Vais.Agents.Persistence.Postgres;
@@ -174,6 +175,7 @@ internal static class CompositionRoot
         {
             services.AddAgentRemoteInvoker();
         }
+        services.AddA2AGraphNodeInvoker();
         services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
         {
             var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
@@ -187,6 +189,7 @@ internal static class CompositionRoot
                 contextAccessor: sp.GetService<IAgentContextAccessor>(),
                 logger: sp.GetService<ILogger<AgentGraphLifecycleManager>>() ?? NullLogger<AgentGraphLifecycleManager>.Instance,
                 remoteInvoker: sp.GetService<IAgentRemoteInvoker>(),
+                a2aInvoker: sp.GetService<IA2AGraphNodeInvoker>(),
                 bearerTokenProvider: () =>
                 {
                     var header = accessor?.HttpContext?.Request.Headers.Authorization.ToString();

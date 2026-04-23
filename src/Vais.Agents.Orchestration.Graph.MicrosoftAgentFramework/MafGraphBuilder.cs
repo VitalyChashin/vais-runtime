@@ -23,6 +23,7 @@ public static class MafGraphBuilder
     /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s.</param>
     /// <param name="context">Ambient agent context stamped on each node invocation. Uses a default empty context when null.</param>
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
+    /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     public static Workflow Build(
         AgentGraphManifest manifest,
@@ -33,6 +34,7 @@ public static class MafGraphBuilder
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
         AgentContext? context = null,
         IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -47,7 +49,7 @@ public static class MafGraphBuilder
             executors[node.Id] = new GraphNodeExecutor(
                 node, manifest, registry, lifecycle,
                 predicateResolver, effectResolver, codeNodeResolver, context,
-                remoteInvoker, bearerToken);
+                remoteInvoker, a2aInvoker, bearerToken);
         }
 
         if (!executors.TryGetValue(manifest.Entry, out var startExecutor))
