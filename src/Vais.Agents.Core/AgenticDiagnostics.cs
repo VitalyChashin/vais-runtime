@@ -31,6 +31,13 @@ public static class AgenticDiagnostics
     public const string MeterName = "Vais.Agents";
 
     /// <summary>
+    /// Activity name for per-attempt spans in the streaming pipeline.
+    /// Each retry attempt within Phase 1 (enumerator-open + first MoveNextAsync)
+    /// emits a child span under the parent "chat" span.
+    /// </summary>
+    public const string StreamAttemptActivityName = "stream_attempt";
+
+    /// <summary>
     /// The shared <see cref="System.Diagnostics.ActivitySource"/> instance used by the core
     /// runtime and available for filters or adapters that need to create child spans.
     /// </summary>
@@ -82,6 +89,12 @@ public static class AgenticTags
 
     /// <summary>Correlation identifier threading a single logical operation across multiple turns / services.</summary>
     public const string CorrelationId = "vais.correlation.id";
+
+    /// <summary>Zero-based attempt index for streaming retry attempts (0, 1, 2, ...).</summary>
+    public const string StreamAttemptIndex = "vais.stream.attempt.index";
+
+    /// <summary>Phase identifier for streaming attempts (always "retry_boundary" for v0.21).</summary>
+    public const string StreamAttemptPhase = "vais.stream.attempt.phase";
 }
 
 /// <summary>

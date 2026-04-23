@@ -507,13 +507,15 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             int? turnPromptTokens = null;
             int? turnCompletionTokens = null;
 
-            // Phase 1 — retry boundary. `_streamingPipeline` retries the streaming-
-            // filter chain's enumerator-open + first `MoveNextAsync` only. Once we
-            // observe the first delta, yielded content is committed; mid-stream
+            // Phase 1 — retry boundary with per-attempt telemetry. `_streamingPipeline`
+            // retries the streaming-filter chain's enumerator-open + first `MoveNextAsync`
+            // only. Once we observe the first delta, yielded content is committed; mid-stream
             // failures in Phase 2 surface on `failure` without replay. Filter-domain
             // exceptions are excluded from the retry predicate (see
             // `IsFilterDomainException`) so a filter-thrown denial/interrupt/budget
-            // trip reaches the caller on first firing.
+            // trip reaches the caller on first firing. Each retry attempt emits a
+            // "stream_attempt" child span with attempt index and status tracking.
+            int attemptIndex = 0;
             IAsyncEnumerator<CompletionUpdate>? enumerator = null;
             CompletionUpdate? firstUpdate = null;
             var streamLive = false;
@@ -522,34 +524,52 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             {
                 await _streamingPipeline.ExecuteAsync(async attemptCt =>
                 {
-                    // Reset state from any prior attempt before re-entering the provider.
-                    if (enumerator is not null)
-                    {
-                        await enumerator.DisposeAsync().ConfigureAwait(false);
-                        enumerator = null;
-                    }
-                    firstUpdate = null;
-                    streamLive = false;
+                    var currentAttempt = System.Threading.Interlocked.Increment(ref attemptIndex) - 1;
+                    using var attemptActivity = StartAttemptActivity(currentAttempt, context, activity?.Context ?? default);
 
-                    var stream = InvokeThroughStreamingFilters(streamingProvider, request, attemptCt);
-                    var e = stream.GetAsyncEnumerator(attemptCt);
                     try
                     {
-                        if (await e.MoveNextAsync().ConfigureAwait(false))
+                        // Reset state from any prior attempt before re-entering the provider.
+                        if (enumerator is not null)
                         {
-                            enumerator = e;
-                            firstUpdate = e.Current;
-                            streamLive = true;
-                            e = null!; // ownership transferred to outer-scope enumerator
+                            await enumerator.DisposeAsync().ConfigureAwait(false);
+                            enumerator = null;
+                        }
+                        firstUpdate = null;
+                        streamLive = false;
+
+                        var stream = InvokeThroughStreamingFilters(streamingProvider, request, attemptCt);
+                        var e = stream.GetAsyncEnumerator(attemptCt);
+                        try
+                        {
+                            if (await e.MoveNextAsync().ConfigureAwait(false))
+                            {
+                                enumerator = e;
+                                firstUpdate = e.Current;
+                                streamLive = true;
+                                e = null!; // ownership transferred to outer-scope enumerator
+                                attemptActivity?.SetStatus(ActivityStatusCode.Ok);
+                            }
+                            else
+                            {
+                                // Empty stream is a successful attempt (no data, but no error).
+                                attemptActivity?.SetStatus(ActivityStatusCode.Ok);
+                            }
+                        }
+                        finally
+                        {
+                            // Empty-stream attempt — dispose the enumerator we never promoted.
+                            if (e is not null)
+                            {
+                                await e.DisposeAsync().ConfigureAwait(false);
+                            }
                         }
                     }
-                    finally
+                    catch (Exception ex) when (!IsFilterDomainException(ex))
                     {
-                        // Empty-stream attempt — dispose the enumerator we never promoted.
-                        if (e is not null)
-                        {
-                            await e.DisposeAsync().ConfigureAwait(false);
-                        }
+                        attemptActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                        attemptActivity?.SetTag(AgenticTags.ErrorType, ex.GetType().Name);
+                        throw;
                     }
                 }, cancellationToken).ConfigureAwait(false);
             }
@@ -980,6 +1000,32 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         if (!string.IsNullOrEmpty(context.CorrelationId))
         {
             activity.SetTag(AgenticTags.CorrelationId, context.CorrelationId);
+        }
+
+        return activity;
+    }
+
+    private Activity? StartAttemptActivity(int attemptIndex, AgentContext context, ActivityContext parentContext)
+    {
+        var activity = AgenticDiagnostics.ActivitySource.StartActivity(
+            AgenticDiagnostics.StreamAttemptActivityName,
+            ActivityKind.Client,
+            parentContext);
+
+        if (activity is null)
+        {
+            return null;
+        }
+
+        activity.SetTag(AgenticTags.GenAiSystem, _provider.ProviderName);
+        activity.SetTag(AgenticTags.GenAiOperationName, "stream_attempt");
+        activity.SetTag(AgenticTags.StreamAttemptIndex, attemptIndex);
+        activity.SetTag(AgenticTags.StreamAttemptPhase, "retry_boundary");
+
+        var agentName = _agentName ?? context.AgentName;
+        if (!string.IsNullOrEmpty(agentName))
+        {
+            activity.SetTag(AgenticTags.AgentName, agentName);
         }
 
         return activity;

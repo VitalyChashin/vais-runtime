@@ -192,10 +192,12 @@ Source: [milestone v0.17 wrap-up](../../plans/actor-agents-oss-milestone-log.md)
 
 ### 8. Observability
 
-- **Per-attempt retry telemetry on the streaming pipeline.** v0.10 keeps the `chat` span
-  per-call; consumers who want per-attempt visibility wire their own inner `ActivitySource`.
-  Source: [milestone v0.10 §Deferred](../../plans/actor-agents-oss-milestone-log.md)
-  (2026-04-20). Next step: wait for a concrete observability partner ask.
+- ~~**Per-attempt retry telemetry on the streaming pipeline.**~~ v0.21 adds
+  per-attempt `stream_attempt` spans as children of the `chat` span. Each retry
+  attempt in Phase 1 (enumerator-open + first MoveNextAsync) gets its own span
+  with attempt index, status (Ok/Error), and error type tags. Source:
+  [milestone v0.10 §Deferred](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-20). **SHIPPED v0.21**.
 - **Streaming journal replay.** v0.5's `IAgentJournal` stays tool-call-granular; per-delta
   replay is deferred. Source: same (2026-04-20). Next step: tied to the durable-execution
   workstream.
