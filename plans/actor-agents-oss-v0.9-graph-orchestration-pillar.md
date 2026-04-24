@@ -1,0 +1,220 @@
+# v0.9.0-preview — Graph orchestration pillar
+
+Tactical plan for the graph-orchestration pillar. Closes the §9.7 deferral ("`IAgentGraphExecutor` / `IAgentGraphBuilder` interfaces were deliberately deferred from §9.7 so the eventual `GraphOrchestrator` gets to shape them" — [`extraction-research`](./actor-agents-oss-extraction-research.md) §7 backlog). Grounded in the spike findings: [`actor-agents-oss-v0.9-graph-orchestration-findings.md`](./actor-agents-oss-v0.9-graph-orchestration-findings.md). Parallel shape to [`actor-agents-oss-v0.8-a2a-inbound-pillar.md`](./actor-agents-oss-v0.8-a2a-inbound-pillar.md). Created 2026-04-19.
+
+---
+
+## Scope
+
+**MVP boundary locked 2026-04-19** via the research spike. Eight decisions:
+
+1. **Hybrid state model.** `IAgentGraph<TState>` generic interface in Abstractions for code-first consumers (matches MAF Workflows' `Executor<T>` idiom); `IAgentGraph` non-generic specialisation over `IDictionary<string, JsonElement>` for declarative-first consumers (YAML-authored graphs with JSON-schema state). Both share a single runtime. No forked code paths.
+2. **Ship MAF adapter package.** `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework` wraps `Microsoft.Agents.AI.Workflows 1.1.0` (GA as of 2026-04-10). MAF Workflows is native-cycles + native-HITL + native-checkpointing, all mapping cleanly onto our contracts. No need to reinvent LangGraph in .NET for MAF consumers.
+3. **Ship in-house fallback orchestrator.** `InProcessGraphOrchestrator` in `Vais.Agents.Core` — Pregel/BSP execution over our neutral contracts, ~500 LOC target, zero new external deps. Serves SK-only consumers (SK has no Workflows equivalent) + all tests (no MAF dep needed) + is the reference implementation that validates the `IAgentGraph<TState>` contract.
+4. **Cycles + interrupt/resume ship day one.** LangGraph's checkpointer contract is 4 methods; our `OrleansAgentJournal` machinery from v0.5 + `OrleansTaskStore` pattern from v0.8 already give us the durable-state shape. Deferring cycles would leave the most interesting archetypes (retrieval loops, self-reflection, HITL approvals) out of v0.9. Same determinism-discipline contract LangGraph imposes on users — we document it, don't enforce at runtime.
+5. **Two checkpointers.** `InMemoryCheckpointer` ships in `Vais.Agents.Core`; `OrleansCheckpointer` extends `Vais.Agents.Hosting.Orleans`. Same split as v0.8's `InMemoryTaskStore` / `OrleansTaskStore`. A future `RedisCheckpointer` can land post-v0.9 under the `Vais.Agents.Persistence.Redis` package if needed.
+6. **Declarative YAML ships — ours, not MAF's.** New `kind: AgentGraph` manifest in `vais.agents/v1` API group, loaded via the existing `JsonAgentManifestLoader` / `YamlAgentManifestLoader` infrastructure extended to dispatch by `kind`. **Does NOT depend on** `Microsoft.Agents.AI.Workflows.Declarative` — that package is still `1.1.0-rc1`/preview and has two incompatible YAML dialects. Two-way interop with MAF's dialect can land when it GAs.
+7. **Edge predicates = Kubernetes-style matchers.** `{property, operator, value}` tuples with `allOf` / `anyOf` / `not` combinators. ~10 operators: `Eq`, `NotEq`, `Gt`, `Gte`, `Lt`, `Lte`, `Contains`, `NotContains`, `Exists`, `NotExists`. No expression DSL. `handlerRef: { typeName: "MyApp.Edges.ComplexCondition" }` escape hatch for the 20% that needs C#.
+8. **Edge side-effects = tiny vocabulary.** `onTraverse` block supports `set`, `increment`, `append` verbs on typed JSON paths. `handlerRef` escape hatch for richer mutations. Enough to express Archetype B's retry-counter without a DSL.
+
+### Semantic projection chosen
+
+**Graph = typed DAG-with-cycles + optional HITL.** Nodes are agent-backed or code-backed executors. Edges carry a condition + optional side-effect. State is either typed (`TState`) or schema-declared bag (`IDictionary<string, JsonElement>`). Checkpoints happen per super-step boundary — same Pregel/BSP model LangGraph and MAF Workflows both landed on independently.
+
+### Explicitly deferred to post-v0.9
+
+- **Two-way YAML interop with MAF's `.Declarative` dialect** — wait for MAF's declarative to GA (currently `1.1.0-rc1`).
+- **SK-native graph adapter package** — SK has no Workflows equivalent; revisit if/when SK ships one. SK agents remain first-class nodes inside both the in-house orchestrator and the MAF adapter (via `SkCompletionProvider` → `ChatClientAgent`).
+- **Custom user-defined reducers declarable in YAML.** v0.9 ships last-write-wins + one well-known `appendMessages` reducer; custom reducers are consumer-code only via `handlerRef`.
+- **Graph visualisation / editor integration.** VAIS2's flow editor is a separate concern; the YAML manifest is the authoring surface for v0.9.
+- **Streaming LLM-driven "next node" selection** (AutoGen `SelectorGroupChat` shape). Model as `kind: LlmRouter` node in a future pillar.
+- **Fork/branch/time-travel replay** (LangGraph's `get_state_history()` + `parent_config` chains). Structurally supported by our append-only journal but not exposed via the `IAgentGraph` contract in v0.9; revisit when asked.
+- **Graph-level interrupts interop with A2A `Task(input-required)`.** v0.9 graph interrupts use graph state; v0.8 A2A interrupts use A2A task state. Bridge can land later as a thin `A2AGraphAdapter`.
+
+---
+
+## Design questions — resolved
+
+| # | Question | Decision | Reasoning |
+|---|---|---|---|
+| 1 | MAF-wrap vs. build-our-own | Ship both: MAF adapter + in-house fallback | MAF Workflows is GA and maps cleanly; in-house is cheap (~500 LOC) and covers SK-only stacks + tests |
+| 2 | State model | Hybrid typed-or-bag | Code-first gets compile-safety (TState); declarative-first gets YAML-ability (bag with JSON Schema). Single runtime |
+| 3 | Cycles | Ship day one | LangGraph's checkpointer is 4 methods; our Orleans journal fits the shape; deferring leaves retrieval loops + HITL out |
+| 4 | Checkpoint persistence | `InMemoryCheckpointer` + `OrleansCheckpointer` | Same two-tier split as v0.8's task store; Redis variant deferrable |
+| 5 | Declarative YAML | Ship our own, not MAF's | MAF's `.Declarative` is still `rc1` + has two dialects; our `kind: AgentGraph` reuses the v0.6 loader infra |
+| 6 | Edge predicates | K8s-style matchers + boolean combinators + handlerRef | No DSL; familiar idiom; covers Archetype B without code |
+| 7 | Edge side-effects | Tiny vocabulary (`set`/`increment`/`append`) + handlerRef | Covers retry-counter pattern; richer mutations drop down to code |
+| 8 | Node kinds | `Agent`, `Code` (handlerRef), `Interrupt` (HITL), `End` | Minimum useful set; other kinds (e.g. `Parallel`, `LlmRouter`) deferred |
+| 9 | Reducers | `lastWriteWins` default + `appendMessages` well-known key | Covers 90% of cases; custom reducers via code-ref only |
+| 10 | `IAgentOrchestrator` relationship | `IAgentGraph<TState>` is a sibling, not a subtype | Graph has a different run-shape (state-threaded, multi-step, checkpointable) than the v0.4 orchestrator contract — forcing inheritance would force compromises on both sides |
+
+---
+
+## New packages
+
+**`Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework`** (new) — thin adapter around `Microsoft.Agents.AI.Workflows 1.1.0`. Wraps `WorkflowBuilder` + `Executor<T>` behind `IAgentGraph<TState>`. FrameworkReference-free (no ASP.NET). Depends on `Microsoft.Agents.AI.Workflows` (add to CPM).
+
+Package-count trajectory: 21 (v0.8) → **22** (v0.9). All other v0.9 work lives as extensions inside existing packages.
+
+Extended packages (zero breaking changes on existing surface):
+- **`Vais.Agents.Abstractions`** — new contracts: `IAgentGraph<TState>`, `IAgentGraph`, `AgentGraphManifest`, `GraphNode`, `GraphEdge`, `GraphEdgePredicate`, `GraphEdgeEffect`, `GraphState`, `AgentGraphEvent` taxonomy, `IGraphCheckpointer`, `GraphCheckpoint`.
+- **`Vais.Agents.Core`** — `InProcessGraphOrchestrator`, `InMemoryCheckpointer`, `DefaultReducers` (last-write-wins, appendMessages), `GraphPredicateEvaluator`, `GraphStateBindingApplier`.
+- **`Vais.Agents.Control.Manifests.Json`** + **`Vais.Agents.Control.Manifests.Yaml`** — `kind: AgentGraph` dispatch + `AgentGraphManifestValidator` + envelope-JSON round-trip.
+- **`Vais.Agents.Hosting.Orleans`** — `OrleansCheckpointer`, `IGraphCheckpointGrain`, `GraphCheckpointSurrogate` (same JSON-blob pattern as v0.8's `A2ATaskSurrogate`).
+
+---
+
+## Delivery
+
+### PR 1 — neutral contracts + `InProcessGraphOrchestrator` + in-memory checkpointer
+
+**Packages**: `Vais.Agents.Abstractions` (extend) + `Vais.Agents.Core` (extend).
+
+Tasks:
+
+- [x] `IAgentGraph<TState>` + `IAgentGraph` (specialised over `IDictionary<string, JsonElement>`) in Abstractions. Methods: `ValueTask<TState> InvokeAsync(TState initial, AgentContext context, CancellationToken)` + `IAsyncEnumerable<AgentGraphEvent> StreamAsync(TState initial, AgentContext context, CancellationToken)`.
+- [x] `AgentGraphManifest` record (apiVersion/kind/metadata/spec), `GraphNode { Id, Kind ∈ {"Agent","Code","Interrupt","End"}, Ref?, HandlerRef?, StateBindings?, InterruptReason? }`, `GraphEdge { From, To, When?, OnTraverse? }`, `GraphEdgePredicate` (discriminated union: `PropertyMatcher`, `AllOf`, `AnyOf`, `Not`, `Always`, `HandlerRef`), `GraphEdgeEffect` (`Set`, `Increment`, `Append`, `HandlerRef`). Also ships `GraphAgentRef`, `GraphHandlerRef`, `GraphStateBindings`, `GraphPredicateOperator` enum (10 ops), `IGraphEdgePredicate` + `IGraphEdgeEffect` + `IGraphCodeNode` handler contracts.
+- [x] `AgentGraphEvent` taxonomy (closed hierarchy, same shape as v0.4 `AgentEvent`): `GraphStarted`, `NodeStarted`, `NodeCompleted`, `EdgeTraversed`, `StateUpdated`, `GraphInterrupted`, `GraphResumed`, `GraphCompleted`, `GraphFailed`. All records carry `AgentContext` + `RunId` + `SuperStep` + timestamp.
+- [x] `IGraphCheckpointer` interface: `SaveAsync(GraphCheckpoint, CancellationToken)`, `LoadAsync(runId, CancellationToken) -> GraphCheckpoint?`, `DeleteAsync(runId, CancellationToken)`. `GraphCheckpoint` record = `{ RunId, GraphId, GraphVersion, State, NextNodeId?, SuperStepIndex, PendingInterruptId?, IsComplete, CreatedAt }`. `GraphRecursionException` for max-step overruns.
+- [x] `InProcessGraphOrchestrator<TState>` + non-generic `InProcessGraphOrchestrator : IAgentGraph` in Core. Pregel/BSP loop: from the entry node, evaluate outgoing edges by predicate in manifest order (first-match-wins), apply traversal effects, invoke next node, checkpoint per super-step, repeat until `End` or `Interrupt`. Respects `maxSteps` (graph manifest) + a hard-stop ceiling (default 1000, same as LangGraph's `recursion_limit`). Emits full event taxonomy on `StreamAsync`. **Took `IAgentRegistry` as a ctor arg** — needed so `GraphAgentRef.Version = null` (latest) resolves to the concrete version the lifecycle manager keyed on. Not in the original plan shape; recorded here.
+- [x] `InMemoryCheckpointer : IGraphCheckpointer` in Core — concurrent-dictionary-backed, no persistence across process restart. Suitable for tests + dev.
+- [x] `GraphPredicateEvaluator` (internal) — evaluates the 10 operators + combinators against a `GraphState` bag. `handlerRef` resolves via a caller-supplied `Func<GraphHandlerRef, IGraphEdgePredicate>`; null means handler-ref predicates throw. Supports dotted property paths (`lastMessage.Text` etc.) reading from the `messages` state key.
+- [x] `GraphEffectApplier` (internal) + `GraphStateReducers` (public) — `LastWriteWins` default + `AppendMessages` well-known key (`"messages"`); edge `OnTraverse` applies `Set` / `Increment` / `Append` side-effects (plus `HandlerRef` escape hatch).
+- [x] State bindings — `StateBindings.Input` threads named state keys into the `AgentInvocationRequest.Metadata`; `StateBindings.Output` extracts JSON object fields from the agent's structured reply (when the reply text parses as a JSON object) into state, filtered to declared output keys. `messages` + `lastAssistantText` always allowed through.
+- [x] `AgentHandle` + `IAgentLifecycleManager` wiring — the orchestrator resolves agents via `IAgentRegistry.GetAsync(id, version)` then invokes through the lifecycle manager. Fallback text `"(continue)"` when state has no messages + no query (so agents with non-empty-text validation don't trip on empty graph steps).
+- [x] `PublicAPI.Unshipped.txt` populated for both Abstractions (490 entries) and Core (18 entries).
+- [x] Tests — 12 new in `Vais.Agents.Core.Tests/InProcessGraphOrchestratorTests.cs`:
+   - (1) Archetype A (pure handoff) runs end-to-end with `InProcessGraphOrchestrator` + fake registry + 3 agents; asserts correct routing on keyword match.
+   - (2) Archetype B (retrieval loop) runs with a scripted `FakeCompletionProvider` that returns structured JSON quality scores; loops exactly 3 times then exits to end (asserts `retryCount` side-effect).
+   - (3) `maxSteps` guard trips on an infinite-loop graph → `GraphFailed` event + `GraphRecursionException`.
+   - (4) `InMemoryCheckpointer` round-trip (save/load/delete).
+   - (5) Interrupt node emits `GraphInterrupted` event + checkpoint written.
+   - (6) Resume from checkpoint continues past interrupt point with supplied value.
+   - (7) Predicate evaluator — each of 10 operators.
+   - (8) Predicate combinators — `allOf`/`anyOf`/`not`.
+   - (9) `AppendMessages` reducer threads `ChatTurn` through a two-node graph without losing history.
+   - (10) `StateBindings.Output` extracts from a structured agent response (uses `OutputSchema`).
+   - (11) `StateBindings.Input` injects graph state into `AgentInvocationRequest.Metadata` / prompt variables.
+   - (12) Edge `onTraverse.increment` mutates state as advertised.
+
+### PR 2 — `kind: AgentGraph` manifest loader
+
+**Packages**: `Vais.Agents.Control.Manifests.Json` (extend) + `Vais.Agents.Control.Manifests.Yaml` (extend).
+
+Tasks:
+
+- [x] New `JsonAgentGraphManifestLoader` (Manifests.Json) + `YamlAgentGraphManifestLoader` (Manifests.Yaml). Both expose `LoadFromStringAsync` returning `IReadOnlyList<AgentGraphManifest>` + `LoadAllResourcesFromStringAsync` returning a polymorphic `IReadOnlyList<ManifestResource>`. The existing `IAgentManifestLoader` contract is untouched — no source-compat break for v0.6-era consumers. `ManifestResource` discriminated union (`AgentCase` + `AgentGraphCase`) lives in `Vais.Agents.Control.Abstractions`. YAML loader delegates to the JSON loader after a `YamlToJson` normalisation pass (same pattern as the existing agent loader).
+- [x] `AgentGraphManifestValidator` in Manifests.Json — public static class. Rules: entry node exists, node ids unique, every edge endpoint resolves, no outgoing edges from `End`-kind nodes, Agent-kind nodes require `ref`, Code-kind nodes require `handlerRef`, Interrupt/End kinds require neither, cycles permitted only when `maxSteps` is set. DFS-based cycle detection (white/grey/black colouring). `handlerRef` TypeName resolution + `stateBindings` ↔ `OutputSchema` cross-check deferred to PR 4 (runtime resolution step) — validator stays structural.
+- [x] `AgentGraphManifestEnvelope` (Manifests.Json, public static class) serialises `AgentGraphManifest` back to the v0.6-style envelope JSON (`apiVersion` + `kind: AgentGraph` + `metadata` + `spec`). Symmetric with the loader — `Envelope.Serialize` → `JsonAgentGraphManifestLoader.LoadFromStringAsync` round-trips cleanly.
+- [x] Tests — 7 new in `Vais.Agents.Core.Tests/AgentGraphManifestLoaderTests.cs`: (1) Archetype A YAML parses cleanly, (2) Archetype B YAML parses with allOf combinator + increment effect + state schema, (3) envelope JSON round-trips (property matcher with numeric value, increment with custom `by`, interrupt reason, maxSteps, state bindings), (4) missing entry → throws, (5) edge to nonexistent node → throws, (6) cycle without maxSteps → throws, (7) polymorphic YAML stream with `---` separator returns both an `AgentCase` and `AgentGraphCase`.
+- [ ] HTTP control plane `GET /graphs/{id}` / `PUT /graphs/{id}` — scope-cut, deferred to PR 4. Not required to ship the pillar's declarative-authoring story.
+
+### PR 3 — MAF adapter package
+
+**Packages**: `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework` (new).
+
+Tasks:
+
+- [x] `MafGraphOrchestrator<TState> : IAgentGraph<TState>` + non-generic `MafGraphOrchestrator : IAgentGraph` specialisation. Builds a MAF `Workflow` via `MafGraphBuilder.Build` + runs it through `InProcessExecution.RunStreamingAsync`; translates MAF's `WorkflowEvent` taxonomy into our `AgentGraphEvent` taxonomy + surfaces the final state when `WorkflowOutputEvent` fires on an End node.
+- [x] `MafGraphBuilder` (public static) — projects `AgentGraphManifest` onto MAF's `WorkflowBuilder`. Each graph node becomes one internal `GraphNodeExecutor : Executor<GraphMessage>`. Edges declared structurally via `AddEdge(from, to)` — routing + predicate evaluation happens INSIDE the executor (consequence of MAF's conditional-edge surface being synchronous while our `GraphEdgePredicate.HandlerRef` is async). End + Interrupt nodes registered as workflow outputs via `WithOutputFrom` so their `YieldOutputAsync` calls are materialised.
+- [x] `GraphNodeExecutor` (internal) — uses the same shared helpers (`GraphPredicateEvaluator`, `GraphEffectApplier`, `GraphStateReducers`) as the in-process orchestrator, ensuring semantic parity. `[SendsMessage(typeof(GraphMessage))]` + `[YieldsOutput(typeof(GraphMessage))]` attributes are **load-bearing** — without them MAF blocks `IWorkflowContext.SendMessageAsync` with `InvalidOperationException: Executor 'X' cannot send messages of type 'GraphMessage'`.
+- [x] `GraphMessage` (public record) — carries state + super-step + run id + max-step ceiling between executors. Interrupt + edge-traversal + state-update events are internal MAF `WorkflowEvent` subclasses (`EdgeTraversedEvent`, `StateUpdatedEvent`, `GraphInterruptedEvent`) that the orchestrator translates back to the public `AgentGraphEvent` taxonomy.
+- [x] `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.csproj` — `<PackageReference Include="Microsoft.Agents.AI.Workflows" />`; zero FrameworkReference. Added `Microsoft.Agents.AI.Workflows 1.1.0` to CPM.
+- [x] `PublicAPI.Shipped.txt` empty + `PublicAPI.Unshipped.txt` populated.
+- [x] Tests — 9 new in `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests`:
+   - (1) Archetype A pure-handoff parity: edge sequence matches the in-process orchestrator's + completion event fires.
+   - (2) Archetype B retrieval-loop parity: 3 grade→retrieve cycles + 1 grade→end, completion event fires.
+   - (3) Cycle runs expected number of times (5-iteration bounded loop with increment effect).
+   - (4) Interrupt node emits `GraphInterrupted` event + halts without emitting `GraphCompleted`.
+   - (5) `OutputSchema` binding extracts structured JSON response per `stateBindings.output`.
+   - (6) `handlerRef` edge predicate resolves from DI resolver and fires.
+   - (7) `handlerRef` code-kind node runs via `IGraphCodeNode` resolver.
+   - (8) `maxSteps` ceiling throws `GraphRecursionException`.
+   - (9) `MafGraphBuilder.Build` preserves node ids + workflow name.
+
+**Skipped from the original plan:**
+- `AddMafGraphOrchestrator` DI extension — deferred to PR 5 along with smoketest wiring; v0.9 consumers use the constructor directly (parallel to the in-process orchestrator's shape in PR 1).
+- `AgentToExecutorShim` bridging our `ChatTurn` to MAF's `ChatMessage` — unnecessary at the executor boundary because the executor owns its own types (`GraphMessage`). The shim would only matter if we wrapped MAF's built-in `AIAgent`-as-executor, which we don't — agent nodes go through `IAgentLifecycleManager` instead (same path as the in-process orchestrator, for parity).
+- `RequestPort`-backed HITL — v0.9 interrupts use the simpler yield+halt-then-re-invoke pattern; `RequestPort` wiring tracks alongside durable resume in PR 4 (or v0.10 when MAF's `CheckpointManager` integration lands).
+
+### PR 4 — `OrleansCheckpointer` + durable resume
+
+**Packages**: `Vais.Agents.Hosting.Orleans` (extend).
+
+Tasks:
+
+- [x] `IGraphCheckpointGrain` (Orleans) keyed by `runId` string. Surrogate-wraps `GraphCheckpoint` via JSON (same pattern as v0.8's `A2ATaskSurrogate.TaskJson` — couples schema drift to consumer-owned `GraphCheckpoint` record evolution, not hand-synced Orleans edits).
+- [x] `GraphCheckpointSurrogate` + `GraphCheckpointGrainState`. Persisted via `IPersistentState<GraphCheckpointGrainState>` under `AiAgentGrain.StorageName` (reuses existing storage name; no new provider registration needed). Denormalised fields on the surrogate (`RunId`, `GraphId`, `GraphVersion`, `IsComplete`, `SavedAt`) expose future indexing hooks without blob deserialisation.
+- [x] `OrleansCheckpointer : IGraphCheckpointer` routes `Save`/`Load`/`Delete` through `IGraphCheckpointGrain`. JSON round-trip via `System.Text.Json`'s default serializer — `GraphCheckpoint` shape is simple enough not to need AOT-friendly options.
+- [x] `AddOrleansGraphCheckpointer(IServiceCollection)` extension — `TryAddSingleton<IGraphCheckpointer>` so consumers override the default `InMemoryCheckpointer` by calling this before registering an orchestrator.
+- [x] **New: `IResumableAgentGraph<TState>` in Abstractions + `ResumeAsync` / `ResumeStreamAsync` on `InProcessGraphOrchestrator<TState>`**. The resume path walks straight to the interrupt node's outgoing edges (the interrupt node body does NOT re-fire), with the caller's resume payload merged into state under the well-known `"resume.payload"` key. Capability interface shape rather than added to `IAgentGraph<TState>` itself because the MAF adapter defers its resume integration to v0.10 (MAF's `CheckpointManager` uses its own checkpoint format; bridging to our `GraphCheckpoint` shape is non-trivial).
+- [x] `PublicAPI.Unshipped.txt` updated for Abstractions (`IResumableAgentGraph<TState>`), Core (`ResumeAsync` + `ResumeStreamAsync` + Resumable interface implementation), and Hosting.Orleans (grain + surrogate + state + checkpointer + DI ext).
+- [x] Tests — 5 new in `Vais.Agents.Hosting.Orleans.Tests/OrleansCheckpointerTests.cs`:
+   - (1) Save/load round-trip preserves interrupt-state, `NextNodeId`, `PendingInterruptId`, `State` dict.
+   - (2) Unknown `runId` returns null (matches v0.8's `OrleansTaskStore.GetTaskAsync` convention).
+   - (3) Checkpoint survives `IManagementGrain.ForceActivationCollection` — grain re-activates, reads state from memory grain store, returns intact checkpoint.
+   - (4) Full interrupt→resume roundtrip via two separate `InProcessGraphOrchestrator` instances sharing the same `OrleansCheckpointer`. Orchestrator 1 runs until interrupt; caller loads checkpoint from Orleans; orchestrator 2 calls `ResumeStreamAsync(loaded, resumePayload: null, ...)` and the graph completes. Asserts `GraphResumed` + `GraphCompleted` events fire + final checkpoint has `IsComplete = true`.
+   - (5) Retention: completed checkpoints stay in the store until explicit `DeleteAsync`.
+
+**Scope-cut from PR 2 to PR 4, now resolved / deferred:**
+- `handlerRef` TypeName resolution: **resolved** — the orchestrator constructors already accept `Func<GraphHandlerRef, IGraph*>` resolvers (PR 1 shape); validators stay structural + test coverage in PR 3's `HandlerRef_Node_Runs_Code_Backed_Executor` + `HandlerRef_Edge_Predicate_Resolves_From_DI` proves the dispatch works.
+- `stateBindings` ↔ `OutputSchema` cross-check: **deferred to v0.10** — requires the validator to be registry-aware (fetch the referenced agent's manifest to cross-check output keys). Layer-of-indirection not worth adding in v0.9 since the runtime path already surfaces extraction mismatches as state-missing errors.
+- HTTP control-plane graph CRUD (`GET /graphs/{id}` / `PUT /graphs/{id}`): **deferred to v0.10** — smoketest + API freeze for v0.9.0-preview in PR 5 don't need it, and the same v0.6 control-plane package handles extension additively when v0.10 lands.
+
+### PR 5 — v0.9.0-preview cut
+
+**Packages**: all 22.
+
+Tasks:
+
+- [x] API freeze: `Unshipped` → `Shipped` across six extended packages (Abstractions +492 entries, Core +20, Control.Abstractions +37, Manifests.Json +9, Manifests.Yaml +5, Hosting.Orleans +29) + the new `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework` package (29 entries). Other 15 packages shipped unchanged since `v0.8.0-preview`.
+- [x] Pack: `dotnet pack -c Release -p:VersionPrefix=0.9.0 -p:VersionSuffix=preview -o artifacts/packages` → 22 `.nupkg` + 22 `.snupkg`, all present in `oss/agentic/artifacts/packages/`.
+- [x] Smoketest: refreshed to 0.9.0-preview, added graph-orchestration probe segment. Registers one agent, builds a two-node graph via `AgentGraphManifest` + `InProcessGraphOrchestrator`, runs it end-to-end (6 events + completed=True), round-trips the manifest through `AgentGraphManifestEnvelope` + `JsonAgentGraphManifestLoader`, probes `MafGraphOrchestrator` / `MafGraphBuilder` / `GraphMessage` types + `OrleansCheckpointer` / `IGraphCheckpointGrain` / `GraphCheckpointSurrogate` types. Final line: `"All twenty-two Vais.Agents.* 0.9.0-preview packages consumed cleanly from a plain .NET 9 console app."`
+- [x] Tag: annotated `v0.9.0-preview` on OSS repo `main` (commit `af2906e`). Not pushed.
+- [x] Milestone log entry in [`actor-agents-oss-milestone-log.md`](./actor-agents-oss-milestone-log.md).
+- [x] Research doc §7 update — "Graph orchestration implementation" backlog line struck, pointed at this pillar + findings.
+
+---
+
+## Exit criteria
+
+- [x] All 5 PRs on OSS repo `main` (not pushed) — shipped as two commits (`2dac828` feat for PRs 1-4, `af2906e` chore for PR 5 freeze).
+- [x] 1 new package (`Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework`) + extensions to 6 existing packages pack cleanly at `0.9.0-preview` — 22 `.nupkg` + 22 `.snupkg` in `artifacts/packages/`.
+- [x] Full non-container test suite green: 490 / 490 tests (Core 306, Orleans 61, MCP.Server 23, A2A.Server 23, Control.Http 17, A2A 12, Observability 11, ParityTests 10, MAF Graph adapter 9, VectorData 16, Mcp 2). Baseline 457 at v0.8; +33 from pillar (12 in-process + 7 manifest loader + 9 MAF adapter + 5 Orleans checkpointer).
+- [x] Smoketest probes graph surface — `AgentGraphManifest` envelope round-trip + `InProcessGraphOrchestrator` run with 6 events + completion + MAF adapter types + `OrleansCheckpointer` types — end-to-end from a fresh .NET 9 console project with only NuGet references.
+- [x] `v0.9.0-preview` tag created on `af2906e`.
+- [ ] **Acceptance demo (manual)**: a real MAF Workflow ported to our `AgentGraphManifest` YAML runs through both orchestrators and produces identical output traces on the same deterministic input. **Not yet run** — test-suite's `MafGraphOrchestratorTests.Archetype_A_Pure_Handoff_Parity_With_InProcess` + `Archetype_B_Retrieval_Loop_Parity_With_InProcess` are the closest automated equivalent (both pass). Run manually against the smoketest host when a MAF Workflow sample is available.
+
+---
+
+## Decisions locked (from the spike + research walkthrough 2026-04-19)
+
+- **Hybrid state model.** `IAgentGraph<TState>` + `IAgentGraph` bag specialisation.
+- **MAF adapter + in-house fallback both ship.** Adapter for MAF-stack feature depth; fallback for SK-only stacks and zero-dep tests.
+- **Cycles + interrupt/resume day one.** Journal-based checkpointing with same determinism-discipline contract as LangGraph.
+- **Declarative YAML ships as ours, not MAF's.** `kind: AgentGraph` in `vais.agents/v1`; MAF's `.Declarative` is still `rc1` + has two incompatible dialects.
+- **Edge predicates = K8s-style matchers** + `allOf`/`anyOf`/`not` + ~10 operators + `handlerRef` escape hatch. No DSL.
+- **Edge side-effects = `set`/`increment`/`append`** + `handlerRef` escape hatch.
+- **Reducers = last-write-wins + `appendMessages`.** Custom reducers via `handlerRef` only in v0.9.
+- **Node kinds = `Agent`, `Code`, `Interrupt`, `End`.** Other kinds deferred.
+- **`IAgentGraph<TState>` is a sibling of `IAgentOrchestrator`, not a subtype.** Graph run-shape (state-threaded + multi-step + checkpointable) differs too much from the v0.4 orchestrator contract (speaker-list + turn-loop) to force inheritance.
+
+### Open questions (low-stakes, resolve during impl)
+
+1. **Node-ID uniqueness scoping.** Within a single graph, `GraphNode.Id` must be unique. But can two graphs in the same registry share an id? Lean: yes — ids are graph-scoped, same as agent session ids are agent-scoped. Document in the manifest validator.
+2. **`AppendMessages` key naming.** Is the well-known key `"messages"`, `"history"`, or `"chatTurns"`? Lean: `"messages"` — matches LangGraph and MAF conventions; docs page can call out the mapping.
+3. **MAF adapter's `TurnToken` timing.** When does the adapter emit `TurnToken` — at graph-start only, or per-agent-node? Need to check a full MAF sample during PR 3. Lean: graph-start only; per-node token would change the BSP semantics.
+4. **`handlerRef` resolution strategy.** Assembly-qualified vs. keyed-DI vs. type-name-with-fallback-assembly? Lean: DI first (`IServiceProvider.GetKeyedService<IGraphEdgePredicate>(typeName)`), fall back to reflection by fully-qualified name. Matches v0.6's `AgentHandlerRef` resolution.
+5. **State-schema validation at load or at first invocation?** The manifest carries a JSON Schema for state; enforce at manifest-load or lazily when first mutation happens? Lean: load (fail early, consistent with manifest validation pattern).
+6. **Graph-level budgets.** Should we allow `spec.budget` on `AgentGraphManifest` (maxSteps already exists; also maxDuration, maxTokens)? Lean: ship `maxSteps` only in v0.9; other budgets can layer later.
+
+---
+
+## Progress log
+
+- 2026-04-19 — plan created after the graph-orchestration spike closed. 8 decisions locked from the spike's verdict; 5 PRs scoped; 6 open questions flagged for impl. **Pending**: start on PR 1 (neutral contracts + `InProcessGraphOrchestrator` + `InMemoryCheckpointer`).
+- 2026-04-19 — PR 1 landed on `033-logging-improvement-read`. Abstractions extended with 5 new source files (`IAgentGraph.cs`, `AgentGraphManifest.cs`, `GraphEdgePredicate.cs`, `GraphEdgeEffect.cs`, `AgentGraphEvent.cs`, `IGraphCheckpointer.cs`) — 10 public records + 4 interfaces + 2 enums + 1 exception. Core extended with 5 files (`InMemoryCheckpointer.cs`, `GraphPredicateEvaluator.cs`, `GraphEffectApplier.cs`, `GraphStateReducers.cs`, `InProcessGraphOrchestrator.cs`). 12 tests in `Vais.Agents.Core.Tests/InProcessGraphOrchestratorTests.cs` exercising both Archetype A (pure handoff) + Archetype B (retrieval loop with conditional) end-to-end, the 10 predicate operators, combinators, reducer, state bindings, edge side-effects, checkpointer round-trip, interrupt + pause semantics, and maxSteps guard. Full non-container suite green: 469 tests (was 457 at v0.8, +12). **Shape adjustments during impl**: (1) `InProcessGraphOrchestrator` ctor took an extra `IAgentRegistry` arg beyond the plan — needed so `GraphAgentRef.Version = null` can resolve to the concrete version the lifecycle manager keyed on at `CreateAsync` time; (2) `BuildAgentInputText` falls back through `messages` → `query` → `"(continue)"` placeholder so agents with non-empty-text validation don't trip on empty-state graph steps; (3) open-question #2 resolved: `"messages"` is the locked well-known key name (matches LangGraph + MAF conventions). **Pending**: PR 2 (`kind: AgentGraph` manifest loader).
+- 2026-04-20 — PR 2 landed on `033-logging-improvement-read`. `Vais.Agents.Control.Abstractions` extended with `ManifestResource` discriminated union (`AgentCase` / `AgentGraphCase`). `Vais.Agents.Control.Manifests.Json` extended with 3 new public types — `JsonAgentGraphManifestLoader`, `AgentGraphManifestValidator`, `AgentGraphManifestEnvelope`. `Vais.Agents.Control.Manifests.Yaml` extended with `YamlAgentGraphManifestLoader` (delegates to Json after normalisation). 7 new tests in `Vais.Agents.Core.Tests/AgentGraphManifestLoaderTests.cs`, all green. Full non-container suite: 476 tests (was 469 at PR 1, +7). **Shape adjustments during impl**: (1) rather than extend `IAgentManifestLoader` (would force every v0.6 impl to recompile), added **separate** `JsonAgentGraphManifestLoader` + `YamlAgentGraphManifestLoader` classes — existing Agent-kind consumers stay on the v0.6 interface unchanged; polymorphic consumers call the new `LoadAllResourcesFromStringAsync` method; (2) `handlerRef` TypeName resolution + `stateBindings` ↔ `OutputSchema` cross-check deferred to PR 4 — they're runtime-resolution concerns, not structural, and the PR 4 checkpointer commit is the natural place to land them; (3) HTTP control-plane graph CRUD (from the original PR 2 task list) **scope-cut to PR 4** — not required for the declarative-authoring story this PR ships; (4) open-question #1 resolved: `GraphNode.Id` uniqueness is graph-scoped — the validator enforces uniqueness within a single manifest; cross-graph id collisions are an orthogonal registry concern. **Pending**: PR 3 (MAF Workflows adapter).
+- 2026-04-20 — PR 3 landed on `033-logging-improvement-read`. New package `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework` (adapter for MAF Workflows 1.1.0 GA). 4 public types (`MafGraphOrchestrator<TState>` + non-generic specialisation, `MafGraphBuilder`, `GraphMessage`) + 1 internal executor (`GraphNodeExecutor`). 9 new tests in `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests` — archetype A+B parity, cycle counting, interrupt-halts, OutputSchema binding, handlerRef predicate, handlerRef node, maxSteps guard, builder shape preservation. Full non-container suite: 485 tests (was 476 at PR 2, +9). **MAF-specific gotchas resolved during impl, worth naming for future pillars**: (1) MAF's `Executor<T>` subclasses **must declare** `[SendsMessage(typeof(T))]` when they use `IWorkflowContext.SendMessageAsync` — without the attribute MAF throws `InvalidOperationException: Executor 'X' cannot send messages of type 'T'`. Same for `[YieldsOutput(typeof(T))]`. (2) `WithOutputFrom(executors)` on the builder is **required** for `YieldOutputAsync` to materialise as `WorkflowOutputEvent` — skipping this silently loses the final state; registered End + Interrupt nodes only. (3) `RequestHaltAsync` on End nodes suppresses the `ExecutorCompletedEvent` — kept it off for End (let the yield close naturally) and on for Interrupt (halts the pending edge route to the post-interrupt node). (4) Routing stays **inside** the executor (scans outgoing edges, evaluates our async predicate, sends to chosen target via `SendMessageAsync(msg, targetId)`) rather than via MAF's `AddEdge<T>(condition)` surface — because our `GraphEdgePredicate.HandlerRef` dispatcher is async and MAF's conditional edges are `Func<T, bool>` (sync). Semantic parity with the in-process orchestrator is preserved. (5) `AddMafGraphOrchestrator` DI extension **scope-cut** to PR 5 alongside smoketest; `AgentToExecutorShim` + `RequestPort`-HITL **scope-cut** to v0.10 (simpler yield+halt pattern ships in v0.9). **Pending**: PR 4 (`OrleansCheckpointer` + durable resume).
+- 2026-04-20 — PR 4 landed on `033-logging-improvement-read`. `Vais.Agents.Hosting.Orleans` extended with 4 new public types (`IGraphCheckpointGrain`, `GraphCheckpointGrain`, `GraphCheckpointGrainState`, `GraphCheckpointSurrogate`, `OrleansCheckpointer`) + `AddOrleansGraphCheckpointer` DI extension. `Vais.Agents.Abstractions` extended with `IResumableAgentGraph<TState>` capability interface. `Vais.Agents.Core` extended with `ResumeAsync` + `ResumeStreamAsync` on `InProcessGraphOrchestrator<TState>` — the orchestrator now implements both `IAgentGraph<TState>` and `IResumableAgentGraph<TState>`. 5 new tests in `Vais.Agents.Hosting.Orleans.Tests/OrleansCheckpointerTests.cs`, all green. Full non-container suite: 490 tests (was 485 at PR 3, +5). **Shape decisions during impl**: (1) resume as a **capability interface** (`IResumableAgentGraph<TState>`) rather than a method on `IAgentGraph<TState>` — the MAF adapter defers its `CheckpointManager` integration to v0.10 and shouldn't have to stub a non-supported method now. (2) Resume semantics = **skip the interrupt node's body on first iteration** + jump to outgoing-edge evaluation. Caller's resume payload lands in state under the well-known `"resume.payload"` key; any prior `"resume.interruptId"` state key carries through to the `GraphResumed` event. (3) Refactored the private `RunAsync` to take `startingNodeId` + `resumedRunId` optional parameters — same method drives fresh runs and resumed runs, with a `skipNodeBody` local flag gating the first-iteration behaviour. Scope-cuts from PR 2 now resolved / deferred (see task list above). **Pending**: PR 5 (v0.9.0-preview cut — API freeze, pack 22 packages, smoketest extension, tag).
+- 2026-04-20 — PR 5 landed on OSS `main`. Two commits: `2dac828 feat(graph): graph orchestration pillar (v0.9 PRs 1-4)` (45 files, +5635 −1) + `af2906e chore: API freeze for v0.9.0-preview` (14 files, Unshipped→Shipped promotion across 7 packages — Abstractions +492 entries, Control.Abstractions +37, Core +20, Control.Manifests.Json +9, Control.Manifests.Yaml +5, Hosting.Orleans +29, new Orchestration.Graph.MicrosoftAgentFramework +29). Annotated `v0.9.0-preview` tag created on `af2906e` (not pushed). 22 `.nupkg` + 22 `.snupkg` packed at `0.9.0-preview` into `artifacts/packages/`. Smoketest refreshed to `0.9.0-preview`, runs clean. Graph probe line: `entry=start nodes=2 run-events=6 completed=True envelope-roundtrip-id=smoke-graph envelope-roundtrip-entry=start maf-types-probed=3 orleans-checkpointer-types=3`. Final line: `"All twenty-two Vais.Agents.* 0.9.0-preview packages consumed cleanly from a plain .NET 9 console app."` Milestone log entry appended (`actor-agents-oss-milestone-log.md`). Research doc §7 "Graph orchestration implementation" backlog line struck through and pointed at this pillar + findings doc. **Pillar closed.** Only follow-up remaining: the manual acceptance demo (a real MAF Workflow sample ported to `AgentGraphManifest` YAML running through both orchestrators with identical traces) — parity tests in `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.Tests` are the closest automated equivalent and they're green.

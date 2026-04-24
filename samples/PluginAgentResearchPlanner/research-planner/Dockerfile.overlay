@@ -1,0 +1,2 @@
+FROM ghcr.io/vais-agents/runtime:0.23.0-preview
+COPY research-planner /var/lib/vais/plugins/research-planner

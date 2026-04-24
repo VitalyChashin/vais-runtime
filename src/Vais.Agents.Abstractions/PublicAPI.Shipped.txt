@@ -1805,3 +1805,6 @@ Vais.Agents.RemoteAgentInvocationException.IsRetryable.get -> bool
 Vais.Agents.RemoteAgentInvocationException.RemoteAgentInvocationException(string! runtimeUrl, System.Net.HttpStatusCode status, string? detail = null, System.Exception? inner = null) -> void
 Vais.Agents.RemoteAgentInvocationException.RuntimeUrl.get -> string!
 Vais.Agents.RemoteAgentInvocationException.Status.get -> System.Net.HttpStatusCode
+
+Vais.Agents.INamedToolSourceProvider
+Vais.Agents.INamedToolSourceProvider.GetByName(string! name) -> Vais.Agents.IToolSource?

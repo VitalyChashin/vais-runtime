@@ -53,4 +53,34 @@ public class PluginServiceCollectionExtensionsTests
 
         act.Should().Throw<ArgumentNullException>();
     }
+
+    [Fact]
+    public void AddAgentPlugins_DrainAndSwap_Registers_IPluginReloader()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAgentPlugins(
+            Path.Combine(Path.GetTempPath(), $"vais-no-exist-{Guid.NewGuid():N}"),
+            new PluginLoaderOptions { ReloadPolicy = ReloadPolicy.DrainAndSwap });
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<IPluginReloader>().Should().NotBeNull(
+            because: "DrainAndSwap configures the hot-reload pipeline");
+    }
+
+    [Fact]
+    public void AddAgentPlugins_Disabled_Does_Not_Register_IPluginReloader()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAgentPlugins(
+            Path.Combine(Path.GetTempPath(), $"vais-no-exist-{Guid.NewGuid():N}"));
+        // ReloadPolicy defaults to Disabled
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<IPluginReloader>().Should().BeNull(
+            because: "Disabled policy (the default) does not register the reload pipeline");
+    }
 }

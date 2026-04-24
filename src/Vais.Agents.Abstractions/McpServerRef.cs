@@ -14,7 +14,12 @@ namespace Vais.Agents;
 /// Stable name for this MCP binding — used for logging, audit, and the optional
 /// <see cref="Tools"/> allowlist reference from <see cref="ToolRef.Source"/>.
 /// </param>
-/// <param name="Transport">One of <c>"stdio"</c>, <c>"streamableHttp"</c>, <c>"sse"</c>.</param>
+/// <param name="Transport">
+/// One of <c>"stdio"</c>, <c>"streamableHttp"</c>, <c>"sse"</c>, or <c>"plugin"</c>.
+/// Use <c>"plugin"</c> for servers whose subprocess is managed by the runtime (e.g. Python plugins
+/// loaded via <c>INamedToolSourceProvider</c>); <c>command</c> and <c>url</c> are not required or used
+/// for this transport.
+/// </param>
 /// <param name="Command">Executable path for <c>stdio</c> transport. Required when <see cref="Transport"/> = <c>"stdio"</c>.</param>
 /// <param name="Args">Command-line arguments for <c>stdio</c>.</param>
 /// <param name="Url">Server URL for <c>streamableHttp</c> / <c>sse</c>. Required for those transports.</param>

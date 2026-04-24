@@ -33,6 +33,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
   </ItemGroup>
 
   <ItemGroup>

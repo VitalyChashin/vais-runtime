@@ -51,13 +51,24 @@ public static class AgentManifestInstantiatorServiceCollectionExtensions
             sp.GetService<IPromptTemplateRegistry>(),
             sp.GetService<IPromptFileLoader>(),
             sp.GetService<Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry>(),
-            sp.GetService<Vais.Agents.Control.IManifestApplyDiagnosticsSink>()));
+            sp.GetService<Vais.Agents.Control.IManifestApplyDiagnosticsSink>(),
+            sp.GetServices<INamedToolSourceProvider>()));
 
         // Alias — AgentLifecycleManager (Control.InProcess) depends on the narrower
         // IAgentManifestInvalidator contract; point it at the translator singleton
         // so eviction on UpdateAsync / EvictAsync flows through the same cache.
         services.TryAddSingleton<Vais.Agents.Control.IAgentManifestInvalidator>(sp =>
             sp.GetRequiredService<IAgentManifestTranslator>());
+
+        // v0.22 Pillar F — after a plugin hot-reload, invalidate translator cache entries
+        // for every agent whose handler type name belongs to the swapped plugin. Registered
+        // as IPluginReloadHook so DefaultPluginReloader.DispatchHooksAsync picks it up.
+        // AddSingleton (not TryAdd) — multiple hooks of the same type are allowed.
+        services.AddSingleton<Vais.Agents.Runtime.Plugins.IPluginReloadHook>(sp =>
+            new TranslatorInvalidationHook(
+                sp.GetRequiredService<IAgentRegistry>(),
+                sp.GetRequiredService<IAgentManifestTranslator>(),
+                sp.GetService<Microsoft.Extensions.Logging.ILogger<TranslatorInvalidationHook>>()));
 
         return services;
     }

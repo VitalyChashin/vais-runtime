@@ -24,6 +24,7 @@ internal sealed class TranslatorFixture
     private readonly Dictionary<string, string> _promptFiles = new(StringComparer.Ordinal);
     private readonly List<IGuardrailFactory> _guardrailFactories = new();
     private readonly List<IAgentHandlerFactory> _pluginFactories = new();
+    private readonly List<INamedToolSourceProvider> _toolSourceProviders = new();
     private IManifestApplyDiagnosticsSink? _diagnosticsSink;
     private IAgentManifestTranslator? _translator;
 
@@ -86,6 +87,13 @@ internal sealed class TranslatorFixture
     public TranslatorFixture WithPluginHandler(IAgentHandlerFactory factory)
     {
         _pluginFactories.Add(factory);
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithToolSourceProvider(INamedToolSourceProvider provider)
+    {
+        _toolSourceProviders.Add(provider);
         _translator = null;
         return this;
     }
@@ -167,6 +175,11 @@ internal sealed class TranslatorFixture
         if (_diagnosticsSink is not null)
         {
             services.AddSingleton(_diagnosticsSink);
+        }
+
+        foreach (var provider in _toolSourceProviders)
+        {
+            services.AddSingleton<INamedToolSourceProvider>(provider);
         }
 
         services.AddAgentManifestInstantiator();

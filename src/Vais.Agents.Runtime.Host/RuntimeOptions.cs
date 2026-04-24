@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Vais.Agents.Control.Policy.Opa;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -48,6 +49,23 @@ internal sealed record RuntimeOptions
     /// </summary>
     public string? PluginsDirectory { get; init; } = DefaultPluginsDirectory;
 
+    /// <summary>
+    /// v0.22 Pillar F hot-reload policy. <see cref="ReloadPolicy.DrainAndSwap"/> registers
+    /// <see cref="IPluginReloader"/> and starts the background filesystem watcher that
+    /// swaps the handler registry on DLL changes without restarting the host. Defaults to
+    /// <see cref="ReloadPolicy.Disabled"/> (v0.18-compatible, no watcher overhead). Set
+    /// <c>VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap</c> in the container environment to enable.
+    /// </summary>
+    public ReloadPolicy PluginsHotReload { get; init; } = ReloadPolicy.Disabled;
+
+    /// <summary>
+    /// v0.23 Python-plugins pillar. Directory scanned for Python plugin subfolders (each containing
+    /// <c>plugin.yaml</c> + <c>pyproject.toml</c>). Null or empty ⇒ Python plugin loader disabled.
+    /// Set <c>VAIS_PYTHON_PLUGINS_DIRECTORY</c> in the container environment to enable.
+    /// Defaults to <see langword="null"/> (disabled) because Python is an opt-in runtime dependency.
+    /// </summary>
+    public string? PythonPluginsDirectory { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -64,6 +82,8 @@ internal sealed record RuntimeOptions
             OpaFailMode = ParseFailMode(Env("VAIS_OPA_FAILMODE")),
             OpaDataPath = Env("VAIS_OPA_DATAPATH"),
             PluginsDirectory = PluginsEnv("VAIS_PLUGINS_DIRECTORY"),
+            PluginsHotReload = ParseReloadPolicy(Env("VAIS_PLUGINS_RELOAD_POLICY")),
+            PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
         };
 
         static string? Env(string name)
@@ -88,6 +108,11 @@ internal sealed record RuntimeOptions
             !string.IsNullOrWhiteSpace(raw) && Enum.TryParse<OpaFailMode>(raw, ignoreCase: true, out var parsed)
                 ? parsed
                 : OpaFailMode.Closed;
+
+        static ReloadPolicy ParseReloadPolicy(string? raw) =>
+            !string.IsNullOrWhiteSpace(raw) && Enum.TryParse<ReloadPolicy>(raw, ignoreCase: true, out var parsed)
+                ? parsed
+                : ReloadPolicy.Disabled;
     }
 
     /// <summary>

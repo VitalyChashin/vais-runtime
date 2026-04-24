@@ -29,7 +29,14 @@ COPY src/Vais.Agents.Persistence.Redis/Vais.Agents.Persistence.Redis.csproj     
 COPY src/Vais.Agents.Persistence.Postgres/Vais.Agents.Persistence.Postgres.csproj                       src/Vais.Agents.Persistence.Postgres/
 COPY src/Vais.Agents.Observability.OpenTelemetry/Vais.Agents.Observability.OpenTelemetry.csproj         src/Vais.Agents.Observability.OpenTelemetry/
 COPY src/Vais.Agents.Observability.Langfuse/Vais.Agents.Observability.Langfuse.csproj                   src/Vais.Agents.Observability.Langfuse/
-COPY src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj                                       src/Vais.Agents.Runtime.Host/
+COPY src/Vais.Agents.Protocols.Mcp/Vais.Agents.Protocols.Mcp.csproj                                   src/Vais.Agents.Protocols.Mcp/
+COPY src/Vais.Agents.Protocols.A2A/Vais.Agents.Protocols.A2A.csproj                                   src/Vais.Agents.Protocols.A2A/
+COPY src/Vais.Agents.Control.Http.Client/Vais.Agents.Control.Http.Client.csproj                       src/Vais.Agents.Control.Http.Client/
+COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/Vais.Agents.Ai.MicrosoftAgentFramework.csproj         src/Vais.Agents.Ai.MicrosoftAgentFramework/
+COPY src/Vais.Agents.Runtime.Instantiation/Vais.Agents.Runtime.Instantiation.csproj                   src/Vais.Agents.Runtime.Instantiation/
+COPY src/Vais.Agents.Runtime.Plugins/Vais.Agents.Runtime.Plugins.csproj                               src/Vais.Agents.Runtime.Plugins/
+COPY src/Vais.Agents.Runtime.Plugins.Python/Vais.Agents.Runtime.Plugins.Python.csproj                 src/Vais.Agents.Runtime.Plugins.Python/
+COPY src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj                                     src/Vais.Agents.Runtime.Host/
 
 RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
 
@@ -47,6 +54,13 @@ COPY src/Vais.Agents.Persistence.Redis/                  src/Vais.Agents.Persist
 COPY src/Vais.Agents.Persistence.Postgres/               src/Vais.Agents.Persistence.Postgres/
 COPY src/Vais.Agents.Observability.OpenTelemetry/        src/Vais.Agents.Observability.OpenTelemetry/
 COPY src/Vais.Agents.Observability.Langfuse/             src/Vais.Agents.Observability.Langfuse/
+COPY src/Vais.Agents.Protocols.Mcp/                      src/Vais.Agents.Protocols.Mcp/
+COPY src/Vais.Agents.Protocols.A2A/                      src/Vais.Agents.Protocols.A2A/
+COPY src/Vais.Agents.Control.Http.Client/                src/Vais.Agents.Control.Http.Client/
+COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/         src/Vais.Agents.Ai.MicrosoftAgentFramework/
+COPY src/Vais.Agents.Runtime.Instantiation/              src/Vais.Agents.Runtime.Instantiation/
+COPY src/Vais.Agents.Runtime.Plugins/                    src/Vais.Agents.Runtime.Plugins/
+COPY src/Vais.Agents.Runtime.Plugins.Python/             src/Vais.Agents.Runtime.Plugins.Python/
 COPY src/Vais.Agents.Runtime.Host/                       src/Vais.Agents.Runtime.Host/
 
 RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj \

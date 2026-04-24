@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test fixture — NOT a production sample. Compiled as a standalone plugin
+    assembly for PluginHotReloadIntegrationTests. Shares the same AssemblyName
+    and handler type name as V1 so that DefaultPluginReloader.SwapAsync can
+    atomically replace V1 with V2 without the host restarting.
+    Returns "Rainy!" to distinguish it from V1.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Runtime.Host.PluginFixtureHotReload</RootNamespace>
+    <AssemblyName>Vais.Agents.Runtime.Host.PluginFixtureHotReload</AssemblyName>
+    <OutputType>Library</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+  </ItemGroup>
+
+</Project>

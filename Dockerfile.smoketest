@@ -1,0 +1,30 @@
+# Smoke-test image: runtime + Python 3.12 (Alpine) + research-planner plugin.
+# Build from the project root after building vais-agents-runtime:local:
+#   docker build -f Dockerfile.smoketest -t vais-smoketest:local .
+#
+# This image is for local verification only — not shipped.
+
+FROM vais-agents-runtime:local
+
+USER root
+
+# Alpine 3.21 ships Python 3.12; acceptable since plugin.yaml version is informational only.
+RUN apk add --no-cache python3 py3-pip
+
+# Install uv for fast venv creation
+RUN pip install --break-system-packages --quiet uv
+
+# Copy plugin source into the runtime's plugin directory
+COPY samples/PluginAgentResearchPlanner/research-planner /var/lib/vais/plugins/research-planner
+
+# Build the venv in-place using Alpine Python
+WORKDIR /var/lib/vais/plugins/research-planner
+RUN uv venv .venv --python python3 && \
+    uv pip install --python .venv/bin/python mcp pydantic && \
+    chown -R vais:vais /var/lib/vais
+
+USER vais:vais
+WORKDIR /app
+
+# Enable the Python plugin loader pointing at the plugins directory
+ENV VAIS_PYTHON_PLUGINS_DIRECTORY=/var/lib/vais/plugins

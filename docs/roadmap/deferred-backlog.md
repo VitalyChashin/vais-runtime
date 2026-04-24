@@ -67,16 +67,19 @@ update the Appendix dates if the Phase 3 non-goals change state.
 
 ### 3. Plugins & hosting
 
-- **Dynamic plugin hot-reload.** v0.18 uses non-collectible `AssemblyLoadContext`; plugin
-  changes require a runtime restart (new image tag / rolling deploy). Source:
-  [milestone v0.18 wrap-up §Deferred to v0.18.1](../../plans/actor-agents-oss-milestone-log.md)
-  (2026-04-21) + [Phase 3 §Non-goals](../../plans/actor-agents-oss-phase-3-runtime-productisation.md).
-  Next step: wait for a partner use case; hot-reload adds meaningful complexity (collectible
-  contexts + per-reload state migration).
-- **Non-.NET plugins** (Python, Node, WASM / gRPC / stdio sidecars). v0.18 ABI is .NET-only.
-  Source: milestone log v0.18 (2026-04-21) + Phase 3 §Non-goals. Next step: A2A cross-runtime
-  refs (v0.20 / v0.21) cover the polyglot case via remote invocation; a separate
-  plugin-sidecar path is a later design.
+- ~~**Dynamic plugin hot-reload.**~~ v0.22 ships `ReloadPolicy.DrainAndSwap`: collectible
+  `AssemblyLoadContext` per reload, `DefaultPluginReloader` with atomic registry swap,
+  `FileSystemWatcher`-backed background watcher, `IPluginReloadHook` observer contract, and
+  `TranslatorInvalidationHook` to clear the manifest-translator cache for affected agents.
+  Source: [milestone v0.18 wrap-up §Deferred to v0.18.1](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-21) + [v0.22 pillar plan](../../plans/actor-agents-oss-v0.22-plugin-hot-reload-pillar.md).
+  **SHIPPED v0.22**.
+- ~~**Non-.NET plugins** (Python, Node, WASM / gRPC / stdio sidecars). v0.18 ABI is .NET-only.~~
+  **PARTIALLY SHIPPED v0.23 (Python only — Node/Go/Rust remain deferred).** Python plugins ship
+  as FastMCP stdio subprocesses managed by `IPythonPluginHost`; tools are contributed to the
+  agent registry via `INamedToolSourceProvider`. Source: milestone log v0.18 (2026-04-21) +
+  [v0.23 pillar plan](../../plans/actor-agents-oss-v0.23-python-plugins-pillar.md).
+  Remaining: Node.js, Go, Rust, WASM sidecars — still deferred.
 - **`vais plugins list` / `/v1/plugins` endpoint.** Plugin discovery is via startup logs
   only. Source: milestone log v0.18 (2026-04-21). Next step: small v0.18.x polish pillar
   once tagged.
@@ -344,8 +347,8 @@ Straight from `actor-agents-oss-phase-3-runtime-productisation.md` §Non-goals
 
 - **Multi-region / leader-election.** Single-region, single-leader runtime only.
 - **Identity-provider implementations.** See §1 Identity & security above.
-- **Dynamic plugin hot-reload.** See §3 Plugins & hosting above.
-- **Non-.NET plugins.** See §3 Plugins & hosting above.
+- ~~**Dynamic plugin hot-reload.**~~ See §3 Plugins & hosting above. **SHIPPED v0.22**.
+- ~~**Non-.NET plugins.**~~ See §3 Plugins & hosting above. **PARTIALLY SHIPPED v0.23 (Python only).**
 - **Visual-designer / UI.** Dashboard out of scope. CLI + `kubectl` + Grafana are the
   surface.
 - **Samples migration.** The housekeeping-samples plan stays deferred; Pillar F's

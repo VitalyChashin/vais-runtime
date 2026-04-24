@@ -33,6 +33,8 @@ Emitted by `AgentManifestTranslator` during grain activation — surfacing as HT
 | `urn:vais-agents:tool-not-registered` | `400` | `static:<name>` has no matching `IStaticToolRegistry` entry. | v0.17 | Register the tool at host startup or fix the ref name. |
 | `urn:vais-agents:tool-source-unknown` | `400` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. | v0.17 | Use a supported prefix. |
 | `urn:vais-agents:mcp-server-not-declared` | `400` | `mcp:<name>` references an undeclared `McpServers[].Name`. | v0.17 | Add the server declaration to the manifest. |
+| `urn:vais-agents:mcp-server-unavailable` | `503` | `transport: plugin` server has no live `IToolSource` under that name — plugin not loaded or still starting. | v0.23 | Confirm the plugin is listed as Ready (`vais plugins list`); retry after startup. |
+| `urn:vais-agents:mcp-tool-not-found` | `400` | A tool declared with `source: mcp:<name>` was not found in the server's `tools/list` response. | v0.23 | Verify the tool name matches `[tool.vais.plugin].tools` and the server's `@mcp.tool()` decorator. |
 | `urn:vais-agents:a2a-agent-not-declared` | `400` | `a2a:<name>` references an undeclared `A2ARemoteAgents[].Name`. | v0.17 | Add the remote-agent declaration to the manifest. |
 | `urn:vais-agents:guardrail-not-registered` | `400` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. | v0.17 | Register a factory or pick a built-in (`LengthCap` / `RegexAllowlist` / `RegexDenylist` / `LlmAsJudge`). |
 | `urn:vais-agents:guardrail-params-invalid` | `400` | Factory rejected the supplied `params` (missing key, wrong type, bad value). | v0.17 | Fix the params per the factory's documented schema. |
@@ -49,6 +51,19 @@ Two runtime URNs reach the HTTP wire; four loader URNs are startup-log-only (WAR
 | `urn:vais-agents:plugin-abi-mismatch` | — | **Startup log only.** Plugin `targetApiVersion` doesn't match the runtime ABI. Plugin skipped. | v0.18 | Rebuild the plugin against the runtime's Abstractions version. |
 | `urn:vais-agents:plugin-handler-collision` | — | **Startup log or throw.** Two plugins declared the same `HandlerTypeName`. Throws on `PluginLoaderOptions.FailOnHandlerCollision=true` (default); otherwise first-registered wins. | v0.18 | Rename one plugin's handler or dedicate a namespace. |
 | `urn:vais-agents:plugin-handler-not-found` | — | **Startup log only.** A `[VaisPlugin(..., "Foo")]` declared `"Foo"` but the loaded assembly has no matching type. Handler skipped. | v0.18 | Fix the attribute or type name mismatch. |
+
+### Python plugin (v0.23 Pillar E)
+
+Emitted by `IPythonPluginHost` at silo startup — startup-log-only unless `transport: plugin` surfaces an unavailable server through the translator (which produces an HTTP error).
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:python-plugin-load-failed` | — | **Startup log only.** Descriptor parse error or missing file. Loader continues with the next plugin. | v0.23 | Inspect the startup log; fix `plugin.yaml` or `pyproject.toml`. |
+| `urn:vais-agents:python-plugin-abi-mismatch` | — | **Startup log only.** `[tool.vais.plugin].targetApiVersion` doesn't match the runtime ABI (`0.23`). Plugin skipped. | v0.23 | Update `targetApiVersion = "0.23"` in `pyproject.toml`. |
+| `urn:vais-agents:python-plugin-handshake-timeout` | — | **Startup log only.** MCP `initialize` handshake did not complete within the budget. Subprocess killed; plugin skipped. | v0.23 | Run the server manually to diagnose; increase `handshakeTimeoutSeconds` if slow-starting. |
+| `urn:vais-agents:python-plugin-exited` | — | **Startup log / restart loop.** Subprocess exited unexpectedly. With `restartPolicy: exponentialBackoff`, the supervisor retries. | v0.23 | Check subprocess stderr in the runtime container logs. |
+| `urn:vais-agents:python-plugin-unavailable` | `503` (via translator) | All restart attempts exhausted. Tool calls for this plugin fail until the subprocess recovers. Also surfaced as HTTP `503` when the translator resolves a `transport: plugin` server. | v0.23 | Restart the runtime or fix the plugin; the supervisor will retry after the next silo restart. |
+| `urn:vais-agents:python-plugin-ambiguous-folder` | — | **Startup log only.** Multiple `plugin.yaml` files detected in a single plugin subfolder. Plugin skipped. | v0.23 | Keep exactly one `plugin.yaml` per plugin directory. |
 
 URN structure: `urn:vais-agents:<slug>` where `<slug>` is lowercase kebab-case. No version suffix — the URN is the contract; renaming an existing URN is a **breaking change** and requires a major-version bump.
 

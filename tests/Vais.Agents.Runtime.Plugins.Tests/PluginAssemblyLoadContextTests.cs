@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Xunit;
 
@@ -57,5 +58,33 @@ public class PluginAssemblyLoadContextTests
     {
         Action act = () => new PluginAssemblyLoadContext("");
         act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Collectible_Alc_Is_Garbage_Collected_After_Unload()
+    {
+        // Non-generic WeakReference avoids any typed reference the JIT might
+        // keep alive in a register across GC boundaries.
+        var wr = CreateContextAndUnload();
+
+        for (var i = 0; i < 10; i++)
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            GC.WaitForPendingFinalizers();
+        }
+
+        wr.IsAlive.Should().BeFalse(
+            "a collectible PluginAssemblyLoadContext must be GC-eligible once Unload() is called and all references are released");
+    }
+
+    // NoInlining prevents the JIT from keeping `ctx` alive in a register
+    // in the calling method's stack frame, which would defeat the weak-reference check.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CreateContextAndUnload()
+    {
+        var ctx = new PluginAssemblyLoadContext(typeof(PluginAssemblyLoadContext).Assembly.Location);
+        var wr = new WeakReference(ctx);
+        ctx.Unload();
+        return wr;
     }
 }

@@ -64,6 +64,12 @@ public static class ManifestInstantiationUrns
     /// <summary><c>mcp:&lt;name&gt;</c> references a server name not declared in <c>AgentManifest.McpServers</c>.</summary>
     public const string McpServerNotDeclared = UrnPrefix + "mcp-server-not-declared";
 
+    /// <summary><c>mcp:&lt;name&gt;</c> resolves to a declared server but that server is currently unavailable (e.g. the Python plugin subprocess is not Ready).</summary>
+    public const string McpServerUnavailable = UrnPrefix + "mcp-server-unavailable";
+
+    /// <summary>An <c>mcp:&lt;server&gt;</c> tool ref names a tool not present in the server's discovered tool list, or not permitted by <c>McpServerRef.Tools</c> allowlist.</summary>
+    public const string McpToolNotFound = UrnPrefix + "mcp-tool-not-found";
+
     /// <summary><c>a2a:&lt;name&gt;</c> references an agent name not declared in <c>AgentManifest.A2ARemoteAgents</c>.</summary>
     public const string A2AAgentNotDeclared = UrnPrefix + "a2a-agent-not-declared";
 

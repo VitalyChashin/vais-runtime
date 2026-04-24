@@ -64,3 +64,16 @@ public static class PluginUrns
     /// <summary><c>IAgentHandlerFactory.CreateAsync</c> threw during activation.</summary>
     public const string PluginFactoryThrow = UrnPrefix + "plugin-factory-throw";
 }
+
+/// <summary>
+/// URNs emitted during hot-reload operations (v0.22+). Complement
+/// <see cref="PluginUrns"/> which covers startup-time failures.
+/// </summary>
+public static class PluginReloadUrns
+{
+    /// <summary>Plugin DLL could not be loaded during a hot-reload attempt; old descriptor is kept.</summary>
+    public const string PluginReloadFailed = PluginUrns.UrnPrefix + "plugin-reload-failed";
+
+    /// <summary>Reloaded plugin DLL declares an ABI version that does not match the runtime; old descriptor is kept.</summary>
+    public const string PluginReloadAbiMismatch = PluginUrns.UrnPrefix + "plugin-reload-abi-mismatch";
+}

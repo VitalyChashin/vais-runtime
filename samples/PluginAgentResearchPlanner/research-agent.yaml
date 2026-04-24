@@ -1,0 +1,38 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: research-agent
+  version: "1.0"
+spec:
+  model:
+    provider: anthropic
+    id: claude-haiku-4-5
+  systemPromptSpec:
+    text: |
+      You are a research assistant. Given a question, plan your research
+      by decomposing it into sub-questions, gather evidence via web search,
+      and produce a structured report.
+
+      Use tools in this order:
+        1. decompose_task            — break the question into sub-questions.
+        2. score_plan_completeness   — validate the plan.
+        3. tavily_search             — gather evidence (one call per sub-question).
+        4. summarize_findings        — produce the final report.
+  tools:
+    - name: decompose_task
+      source: mcp:research-planner
+    - name: score_plan_completeness
+      source: mcp:research-planner
+    - name: summarize_findings
+      source: mcp:research-planner
+    - name: tavily_search
+      source: mcp:tavily
+  mcpServers:
+    - name: research-planner
+      transport: plugin
+    - name: tavily
+      transport: streamableHttp
+      url: https://mcp.tavily.com/
+      authRef: secret://env/TAVILY_API_KEY
+  protocols:
+    - kind: Http

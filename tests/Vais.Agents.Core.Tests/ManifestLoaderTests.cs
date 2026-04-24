@@ -180,6 +180,27 @@ public sealed class JsonAgentManifestLoaderTests
     }
 
     [Fact]
+    public async Task McpServer_Plugin_Transport_Requires_No_Command_Or_Url()
+    {
+        // "plugin" transport → server is managed by INamedToolSourceProvider at runtime;
+        // neither command nor url is required or validated.
+        var json = """
+        { "apiVersion":"vais.agents/v1","kind":"Agent",
+          "metadata":{"id":"py-agent","version":"1.0"},
+          "spec":{ "mcpServers":[{"name":"my-python-plugin","transport":"plugin","tools":["tool_a"]}] } }
+        """;
+
+        var manifests = await Loader.LoadFromStringAsync(json);
+
+        var server = manifests[0].McpServers!.Single();
+        server.Name.Should().Be("my-python-plugin");
+        server.Transport.Should().Be("plugin");
+        server.Command.Should().BeNull();
+        server.Url.Should().BeNull();
+        server.Tools.Should().ContainSingle().Which.Should().Be("tool_a");
+    }
+
+    [Fact]
     public async Task Budget_Negative_Values_Rejected()
     {
         var json = """

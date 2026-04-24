@@ -19,6 +19,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IPluginHandlerRegistry? _pluginRegistry;
     private readonly IManifestApplyDiagnosticsSink? _diagnosticsSink;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IReadOnlyList<INamedToolSourceProvider> _toolSourceProviders;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
     public AgentManifestTranslator(
@@ -30,7 +31,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IPromptTemplateRegistry? promptTemplates = null,
         IPromptFileLoader? promptFileLoader = null,
         IPluginHandlerRegistry? pluginRegistry = null,
-        IManifestApplyDiagnosticsSink? diagnosticsSink = null)
+        IManifestApplyDiagnosticsSink? diagnosticsSink = null,
+        IEnumerable<INamedToolSourceProvider>? toolSourceProviders = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(providerPool);
@@ -45,6 +47,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _pluginRegistry = pluginRegistry;
         _diagnosticsSink = diagnosticsSink;
         _serviceProvider = serviceProvider;
+        _toolSourceProviders = toolSourceProviders?.ToList() ?? [];
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
         foreach (var factory in guardrailFactories)
@@ -251,6 +254,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         }
 
         var resolved = new List<ITool>();
+        // Per-call caches so each server's IToolSource and discovered tool list is fetched once.
+        var mcpSourceCache = new Dictionary<string, IToolSource?>(StringComparer.Ordinal);
+        var mcpToolsCache = new Dictionary<string, List<ITool>>(StringComparer.Ordinal);
 
         foreach (var toolRef in manifest.Tools)
         {
@@ -276,9 +282,14 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             else if (source.StartsWith("mcp:", StringComparison.Ordinal))
             {
                 var serverName = source["mcp:".Length..];
-                var declared = manifest.McpServers?.Any(m => string.Equals(m.Name, serverName, StringComparison.Ordinal)) ?? false;
 
-                if (!declared)
+                // Server must be explicitly declared — acts as a security boundary.
+                // For Python plugin-backed servers the transport/command fields are ignored
+                // (the plugin subprocess is already running); only Name is used for lookup.
+                var serverRef = manifest.McpServers?.FirstOrDefault(
+                    m => string.Equals(m.Name, serverName, StringComparison.Ordinal));
+
+                if (serverRef is null)
                 {
                     throw new ManifestInstantiationException(
                         ManifestInstantiationUrns.McpServerNotDeclared,
@@ -286,13 +297,60 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                         "which is not declared in manifest.McpServers.");
                 }
 
-                // PR 1 scope: validate declaration only; lazy MCP source construction
-                // ships in PR 3 alongside the A2A remote-agents manifest extension and
-                // the runtime-host composition-root rewire. A manifest-valid MCP ref
-                // at PR 1 returns without contributing a tool.
-                //
-                // TODO(pillar-b/pr-3): instantiate McpToolSource per declared server,
-                // pool per translator, merge discovered tools here.
+                // Honor the per-server tool allowlist.
+                if (serverRef.Tools is { Count: > 0 } &&
+                    !serverRef.Tools.Contains(toolRef.Name, StringComparer.Ordinal))
+                {
+                    throw new ManifestInstantiationException(
+                        ManifestInstantiationUrns.McpToolNotFound,
+                        $"Tool '{toolRef.Name}' is not permitted by the allowlist for MCP server '{serverName}'. " +
+                        $"Allowed tools: [{string.Join(", ", serverRef.Tools)}].");
+                }
+
+                // Look up or cache the IToolSource for this server.
+                if (!mcpSourceCache.TryGetValue(serverName, out var toolSource))
+                {
+                    foreach (var provider in _toolSourceProviders)
+                    {
+                        toolSource = provider.GetByName(serverName);
+                        if (toolSource is not null)
+                            break;
+                    }
+                    mcpSourceCache[serverName] = toolSource; // null = unavailable
+                }
+
+                if (toolSource is null)
+                {
+                    throw new ManifestInstantiationException(
+                        ManifestInstantiationUrns.McpServerUnavailable,
+                        $"MCP server '{serverName}' is declared but unavailable. " +
+                        $"No INamedToolSourceProvider has a ready source for '{serverName}'.");
+                }
+
+                // Discover and cache the tool list for this server.
+                if (!mcpToolsCache.TryGetValue(serverName, out var discoveredTools))
+                {
+                    discoveredTools = [];
+                    await foreach (var t in toolSource.DiscoverAsync(cancellationToken).ConfigureAwait(false))
+                        discoveredTools.Add(t);
+                    mcpToolsCache[serverName] = discoveredTools;
+                }
+
+                // NOTE: StatefulAgentOptions is cached per agentId. If the Python plugin
+                // supervisor restarts (new McpClient), cached McpBackedTool instances hold a
+                // stale client and invocations will fail. A future hook analogous to
+                // TranslatorInvalidationHook (v0.22 C# plugin reloads) must listen to
+                // supervisor restart events and evict the relevant cache entry.
+                // TODO(pillar-b/pr-N): PythonPluginRestartInvalidationHook.
+
+                var mcpTool = discoveredTools.FirstOrDefault(
+                    t => string.Equals(t.Name, toolRef.Name, StringComparison.Ordinal))
+                    ?? throw new ManifestInstantiationException(
+                        ManifestInstantiationUrns.McpToolNotFound,
+                        $"MCP server '{serverName}' does not expose tool '{toolRef.Name}'. " +
+                        $"Available: [{string.Join(", ", discoveredTools.Select(t => t.Name))}].");
+
+                resolved.Add(mcpTool);
             }
             else if (source.StartsWith("a2a:", StringComparison.Ordinal))
             {

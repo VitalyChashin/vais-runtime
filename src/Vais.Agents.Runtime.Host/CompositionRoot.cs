@@ -25,6 +25,7 @@ using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Instantiation.Guardrails;
 using Vais.Agents.Runtime.Instantiation.ModelProviders;
 using Vais.Agents.Runtime.Plugins;
+using Vais.Agents.Runtime.Plugins.Python;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -66,6 +67,7 @@ internal static class CompositionRoot
         {
             silo.UseLocalhostClustering();
             silo.AddMemoryGrainStorage("Default");
+            silo.AddMemoryGrainStorage("PubSubStore"); // required by AddMemoryStreams pub-sub
             silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
             return;
         }
@@ -87,6 +89,7 @@ internal static class CompositionRoot
             // (Streaming.AdoNet is not shipped), so we fall back to in-silo
             // memory streams. OrleansAgentEventBus still works but does not
             // fan out across silos. Documented in install-the-runtime-locally.md.
+            silo.AddMemoryGrainStorage("PubSubStore"); // required by AddMemoryStreams pub-sub
             silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
         }
     }
@@ -137,7 +140,19 @@ internal static class CompositionRoot
         // with an empty registry.
         if (!string.IsNullOrWhiteSpace(options.PluginsDirectory))
         {
-            services.AddAgentPlugins(options.PluginsDirectory);
+            services.AddAgentPlugins(
+                options.PluginsDirectory,
+                new PluginLoaderOptions { ReloadPolicy = options.PluginsHotReload });
+        }
+
+        // v0.23 Python-plugins pillar — opt-in via VAIS_PYTHON_PLUGINS_DIRECTORY. Must register
+        // before AddAgentManifestInstantiator so INamedToolSourceProvider reaches the translator.
+        if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory))
+        {
+            services.AddPythonPlugins(new PythonPluginLoaderOptions
+            {
+                PluginsDirectory = options.PythonPluginsDirectory,
+            });
         }
 
         services.AddAgentManifestInstantiator();

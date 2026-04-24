@@ -88,6 +88,25 @@ v0.18 Pillar C. Loader scans the configured directory at first `IPluginHandlerRe
 
 **Volume mount:** `/var/lib/vais/plugins` is exposed as a Docker `VOLUME`. The Helm chart's `plugins.{enabled,persistentVolumeClaimName}` values mount a PVC at this path.
 
+## Python plugin loader
+
+v0.23 Pillar E. Opt-in — disabled by default because Python is an optional runtime dependency. See [polyglot-plugins concept](../concepts/polyglot-plugins.md) + [package-a-python-plugin guide](../guides/package-a-python-plugin.md).
+
+| Env var | Default | Values | Notes |
+|---|---|---|---|
+| `VAIS_PYTHON_PLUGINS_DIRECTORY` | (unset) | Absolute path, or unset to disable | When set, registers `IPythonPluginHost` as a hosted service that scans the directory for Python plugin subfolders. Each subfolder must have a `plugin.yaml` with `spec.runtime: python` and a `pyproject.toml` with `[tool.vais.plugin]`. Unset or empty ⇒ Python plugin loader disabled. Missing / unreadable directory ⇒ loader runs as a no-op with a startup log entry. |
+
+**Startup log lines worth grepping for:**
+
+- `Python plugins directory '<path>' does not exist — python plugin loading skipped.`
+- `Python plugin '<name>' loaded (pid=<N>, tools=[...], abi=0.23)`
+- `Python plugin '<name>' failed ABI check — expected 0.23, got <X>. Skipped.`
+- `Python plugin '<name>' handshake timed out after <N>s. Subprocess killed.`
+
+**Volume mount:** The Python plugins directory should be mounted at the same path you pass to `VAIS_PYTHON_PLUGINS_DIRECTORY`. In the overlay Dockerfile pattern, plugin directories (including their `.venv/`) are baked into the image at the target path — no volume mount required.
+
+`appsettings.json` key: `PythonPlugins:Directory`.
+
 ## Logging
 
 The baked `appsettings.json` sets these log-levels:

@@ -71,6 +71,81 @@ public class PluginHandlerRegistryTests
         registry.Plugins.Should().ContainSingle().Which.Should().Be(descriptor);
     }
 
+    [Fact]
+    public async Task SwapAsync_Replaces_Factories_And_Returns_Old_Descriptor()
+    {
+        var registry = new PluginHandlerRegistry();
+        var oldFactory = new FakeFactory("MyApp.Foo");
+        var oldDescriptor = new PluginDescriptor(
+            Name: "foo-plugin",
+            AssemblyPath: "/plugins/foo/foo.dll",
+            TargetApiVersion: "0.22",
+            Handlers: new[] { "MyApp.Foo" },
+            LoadedViaAttribute: true,
+            LoadContext: System.Runtime.Loader.AssemblyLoadContext.Default);
+
+        registry.Register(oldFactory, "foo-plugin");
+        registry.RecordPlugin(oldDescriptor);
+
+        var newFactory = new FakeFactory("MyApp.Foo");
+        var newDescriptor = new PluginDescriptor(
+            Name: "foo-plugin",
+            AssemblyPath: "/plugins/foo/foo.dll",
+            TargetApiVersion: "0.22",
+            Handlers: new[] { "MyApp.Foo" },
+            LoadedViaAttribute: true,
+            LoadContext: System.Runtime.Loader.AssemblyLoadContext.Default);
+
+        var returned = await registry.SwapAsync(
+            "foo-plugin",
+            newDescriptor,
+            new Dictionary<string, IAgentHandlerFactory> { ["MyApp.Foo"] = newFactory });
+
+        returned.Should().BeSameAs(oldDescriptor);
+        registry.TryGet("MyApp.Foo", out var resolved).Should().BeTrue();
+        resolved.Should().BeSameAs(newFactory, "registry should now point to the new factory");
+        registry.Plugins.Should().ContainSingle().Which.Should().Be(newDescriptor);
+    }
+
+    [Fact]
+    public async Task SwapAsync_FirstLoad_Returns_Null_OldDescriptor()
+    {
+        var registry = new PluginHandlerRegistry();
+        var newFactory = new FakeFactory("MyApp.Bar");
+        var newDescriptor = new PluginDescriptor(
+            Name: "bar-plugin",
+            AssemblyPath: "/plugins/bar/bar.dll",
+            TargetApiVersion: "0.22",
+            Handlers: new[] { "MyApp.Bar" },
+            LoadedViaAttribute: true,
+            LoadContext: System.Runtime.Loader.AssemblyLoadContext.Default);
+
+        var returned = await registry.SwapAsync(
+            "bar-plugin",
+            newDescriptor,
+            new Dictionary<string, IAgentHandlerFactory> { ["MyApp.Bar"] = newFactory });
+
+        returned.Should().BeNull("no prior descriptor existed for bar-plugin");
+        registry.TryGet("MyApp.Bar", out var resolved).Should().BeTrue();
+        resolved.Should().BeSameAs(newFactory);
+    }
+
+    [Fact]
+    public void GetAllFactories_Returns_All_Registered_Factories()
+    {
+        var registry = new PluginHandlerRegistry();
+        var fooFactory = new FakeFactory("MyApp.Foo");
+        var barFactory = new FakeFactory("MyApp.Bar");
+        registry.Register(fooFactory, "foo-plugin");
+        registry.Register(barFactory, "bar-plugin");
+
+        var all = registry.GetAllFactories();
+
+        all.Should().HaveCount(2);
+        all["MyApp.Foo"].Should().BeSameAs(fooFactory);
+        all["MyApp.Bar"].Should().BeSameAs(barFactory);
+    }
+
     private sealed class FakeFactory(string handlerTypeName) : IAgentHandlerFactory
     {
         public string HandlerTypeName { get; } = handlerTypeName;

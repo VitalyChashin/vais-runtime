@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Runtime.Plugins.Python</RootNamespace>
+    <AssemblyName>Vais.Agents.Runtime.Plugins.Python</AssemblyName>
+    <Description>Python plugin loader for Vais.Agents. Scans a directory of per-plugin subfolders, reads plugin.yaml + pyproject.toml descriptors, validates ABI, and produces PythonPluginDescriptor instances consumed by the subprocess supervisor (PR 2) and IToolSource bridge (PR 3). v0.23 Python-plugins pillar.</Description>
+    <PackageTags>agents;ai;llm;plugins;python;runtime;vais</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Protocols.Mcp\Vais.Agents.Protocols.Mcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Plugins.Python.Tests" />
+  </ItemGroup>
+
+</Project>

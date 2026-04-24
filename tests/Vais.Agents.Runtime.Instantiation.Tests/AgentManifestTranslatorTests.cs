@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -256,10 +257,10 @@ public class AgentManifestTranslatorTests
     }
 
     [Fact]
-    public async Task TranslateAsync_Tool_Mcp_Declared_Does_Not_Throw()
+    public async Task TranslateAsync_Tool_Mcp_NoProvider_Throws_McpServerUnavailable()
     {
-        // PR 1 scope: mcp:* validates declaration only; lazy instantiation lands in PR 3.
-        // The tool registry on the returned options is null because no tools get materialised.
+        // PR 3: when no INamedToolSourceProvider is registered the translator throws
+        // McpServerUnavailable rather than silently skipping the tool (PR 1 stub behaviour).
         var manifest = BuildManifest(
             tools: new[] { new ToolRef("weather", "mcp:weather-server") },
             mcpServers: new[] { new McpServerRef("weather-server", Transport: "http", Url: "http://example") },
@@ -267,9 +268,58 @@ public class AgentManifestTranslatorTests
 
         var fixture = new TranslatorFixture().WithManifest(manifest).WithProvider("openai");
 
+        var act = async () => await fixture.Translator.TranslateAsync(AgentId);
+
+        var ex = await act.Should().ThrowAsync<ManifestInstantiationException>();
+        ex.Which.Urn.Should().Be(ManifestInstantiationUrns.McpServerUnavailable);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_Tool_Mcp_WithProvider_MaterialisesTool()
+    {
+        // PR 3: a registered INamedToolSourceProvider resolves the server → tool is added to registry.
+        var weatherTool = new NoopTool("weather_forecast");
+        var toolSource = new FakeToolSource(weatherTool);
+        var provider = new FakeNamedToolSourceProvider(("weather-server", toolSource));
+
+        var manifest = BuildManifest(
+            tools: new[] { new ToolRef("weather_forecast", "mcp:weather-server") },
+            mcpServers: new[] { new McpServerRef("weather-server", Transport: "http", Url: "http://example") },
+            systemPrompt: new SystemPromptSpec(Inline: "hi"));
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithProvider("openai")
+            .WithToolSourceProvider(provider);
+
         var options = await fixture.Translator.TranslateAsync(AgentId);
 
-        options.ToolRegistry.Should().BeNull(because: "PR 1 validates but does not materialise mcp:* tools");
+        options.ToolRegistry!.Tools.Should().ContainSingle().Which.Name.Should().Be("weather_forecast");
+    }
+
+    [Fact]
+    public async Task TranslateAsync_Tool_Mcp_AllowlistViolation_Throws()
+    {
+        // McpServerRef.Tools restricts which tools the agent may access from the server.
+        var weatherTool = new NoopTool("weather_forecast");
+        var toolSource = new FakeToolSource(weatherTool);
+        var provider = new FakeNamedToolSourceProvider(("weather-server", toolSource));
+
+        var manifest = BuildManifest(
+            // allowlist only "safe_tool"; the tool ref asks for "weather_forecast"
+            tools: new[] { new ToolRef("weather_forecast", "mcp:weather-server") },
+            mcpServers: new[] { new McpServerRef("weather-server", Transport: "http", Url: "http://example", Tools: ["safe_tool"]) },
+            systemPrompt: new SystemPromptSpec(Inline: "hi"));
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithProvider("openai")
+            .WithToolSourceProvider(provider);
+
+        var act = async () => await fixture.Translator.TranslateAsync(AgentId);
+
+        var ex = await act.Should().ThrowAsync<ManifestInstantiationException>();
+        ex.Which.Urn.Should().Be(ManifestInstantiationUrns.McpToolNotFound);
     }
 
     [Fact]
@@ -408,5 +458,30 @@ public class AgentManifestTranslatorTests
     {
         public ValueTask<GuardrailOutcome> EvaluateAsync(CompletionResponse response, AgentContext context, CancellationToken cancellationToken = default)
             => new(GuardrailOutcome.Pass);
+    }
+
+    private sealed class FakeToolSource(params ITool[] tools) : IToolSource
+    {
+        public async IAsyncEnumerable<ITool> DiscoverAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            foreach (var tool in tools)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return tool;
+            }
+            await Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeNamedToolSourceProvider : INamedToolSourceProvider
+    {
+        private readonly Dictionary<string, IToolSource> _sources;
+
+        public FakeNamedToolSourceProvider(params (string Name, IToolSource Source)[] entries)
+        {
+            _sources = entries.ToDictionary(e => e.Name, e => e.Source, StringComparer.Ordinal);
+        }
+
+        public IToolSource? GetByName(string name) => _sources.GetValueOrDefault(name);
     }
 }

@@ -58,6 +58,35 @@ vais invoke weather -m "hello"
 
 No `ModelSpec` is needed because the plugin carries its own logic. If you set one anyway, the translator emits a `urn:vais-agents:handler-and-declarative-fields-both-set` warning on the apply response; the plugin wins and declarative fields are ignored.
 
+## Hot-reload without restarting the host (v0.22)
+
+Set `VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap` and the runtime starts a background filesystem watcher on the plugins directory. When you copy a new build of `MyApp.WeatherAgent.dll` into the plugin folder the runtime:
+
+1. Loads the new DLL into a fresh collectible `AssemblyLoadContext`.
+2. Runs any registered `IPluginReloadHook` implementations (drain in-flight requests, etc.).
+3. Atomically swaps the handler registry entry — all subsequent `TranslateAsync` calls resolve against the new code.
+4. Calls `Unload()` on the old context so it can be collected by the GC.
+
+No pod restart, no manifest re-apply.
+
+### Try it
+
+```bash
+# Start with DrainAndSwap enabled
+docker run --rm -p 8080:8080 \
+  -e VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap \
+  -v "$(pwd)/publish:/var/lib/vais/plugins/weather-agent" \
+  ghcr.io/vais-agents/runtime:0.22.0-preview
+
+# While the container is running, publish a new build and copy it in
+dotnet publish -c Release -o ./publish-v2
+cp publish-v2/MyApp.WeatherAgent.dll publish/MyApp.WeatherAgent.dll
+
+# The runtime log shows: [PluginReloader] swap complete: MyApp.WeatherAgent v1→v2
+```
+
+The policy defaults to `Disabled` (identical to v0.18 behaviour) so existing deployments are unaffected unless you opt in.
+
 ## Disabling the plugin loader
 
 `VAIS_PLUGINS_DIRECTORY=""` turns the loader off. The translator then treats every manifest as a v0.17 declarative agent.

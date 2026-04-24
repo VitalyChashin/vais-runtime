@@ -1,0 +1,79 @@
+#nullable enable
+Vais.Agents.Runtime.Plugins.Python.PythonPluginAbi
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginAbi.CurrentVersion = "0.23" -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.<Clone>$() -> Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.DeclaredTools.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.DeclaredTools.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Deconstruct(out string! Name, out string! PluginDirectory, out string! InterpreterPath, out string! EntrypointPath, out string! TargetApiVersion, out int HandshakeTimeoutSeconds, out Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, out System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.EntrypointPath.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.EntrypointPath.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Equals(Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? other) -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandshakeTimeoutSeconds.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandshakeTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.InterpreterPath.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.InterpreterPath.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Name.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Name.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PluginDirectory.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PluginDirectory.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PythonPluginDescriptor(string! Name, string! PluginDirectory, string! InterpreterPath, string! EntrypointPath, string! TargetApiVersion, int HandshakeTimeoutSeconds, Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.RestartPolicy.get -> Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.RestartPolicy.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.SecretRefs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.SecretRefs.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.TargetApiVersion.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.TargetApiVersion.init -> void
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.operator !=(Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? left, Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? right) -> bool
+static Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.operator ==(Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? left, Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? right) -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.DefaultHandshakeTimeoutSeconds.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.DefaultHandshakeTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.FallbackUvSync.get -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.FallbackUvSync.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.PluginsDirectory.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.PluginsDirectory.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.PythonPluginLoaderOptions() -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.RuntimeAbiVersion.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.RuntimeAbiVersion.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AbiMismatch = "urn:vais-agents:python-plugin-abi-mismatch" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AmbiguousFolder = "urn:vais-agents:python-plugin-ambiguous-folder" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.Exited = "urn:vais-agents:python-plugin-exited" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.HandshakeTimeout = "urn:vais-agents:python-plugin-handshake-timeout" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.LoadFailed = "urn:vais-agents:python-plugin-load-failed" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.Unavailable = "urn:vais-agents:python-plugin-unavailable" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.UrnPrefix = "urn:vais-agents:" -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy
+Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy.ExponentialBackoff = 1 -> Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy
+Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy.Never = 0 -> Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy
+Vais.Agents.Runtime.Plugins.Python.IPythonPluginHost
+Vais.Agents.Runtime.Plugins.Python.IPythonPluginHost.LoadedPlugins.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin!>!
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.<Clone>$() -> Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin!
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Deconstruct(out Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor! Descriptor, out Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus Status, out int? ProcessId, out ModelContextProtocol.Client.McpClient? McpClient) -> void
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Descriptor.get -> Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor!
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Descriptor.init -> void
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Equals(Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin? other) -> bool
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.LoadedPythonPlugin(Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor! Descriptor, Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus Status, int? ProcessId, ModelContextProtocol.Client.McpClient? McpClient) -> void
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.McpClient.get -> ModelContextProtocol.Client.McpClient?
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.McpClient.init -> void
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.ProcessId.get -> int?
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.ProcessId.init -> void
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Status.get -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Status.init -> void
+override Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.operator !=(Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin? left, Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin? right) -> bool
+static Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin.operator ==(Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin? left, Vais.Agents.Runtime.Plugins.Python.LoadedPythonPlugin? right) -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Loading = 0 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Ready = 1 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Restarting = 2 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Unavailable = 3 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginServiceCollectionExtensions
+static Vais.Agents.Runtime.Plugins.Python.PythonPluginServiceCollectionExtensions.AddPythonPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

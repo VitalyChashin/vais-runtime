@@ -14,9 +14,24 @@ namespace Vais.Agents.Core.Tests;
 /// </summary>
 public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
 {
+    // One-time setup: register a listener so _isolationSource.StartActivity returns non-null.
+    // Each test starts a root span from this source to seed a unique TraceId; CreateListener
+    // then filters captured activities to that TraceId, preventing bleed-in from parallel tests.
+    private static readonly ActivitySource _isolationSource = new("vais.test.streaming-retry-isolation");
+
+    static StatefulAiAgent_StreamingRetryTelemetryTests()
+    {
+        ActivitySource.AddActivityListener(new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == "vais.test.streaming-retry-isolation",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+        });
+    }
+
     [Fact]
     public async Task SingleAttempt_EmitsOneAttemptSpan()
     {
+        using var root = _isolationSource.StartActivity("test-root");
         var recorded = new List<Activity>();
         using var listener = CreateListener(recorded);
 
@@ -43,6 +58,7 @@ public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
     [Fact]
     public async Task RetryOnce_EmitsTwoAttemptSpans()
     {
+        using var root = _isolationSource.StartActivity("test-root");
         var recorded = new List<Activity>();
         using var listener = CreateListener(recorded);
 
@@ -75,6 +91,7 @@ public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
     [Fact]
     public async Task RetryTwice_EmitsThreeAttemptSpans()
     {
+        using var root = _isolationSource.StartActivity("test-root");
         var recorded = new List<Activity>();
         using var listener = CreateListener(recorded);
 
@@ -108,6 +125,7 @@ public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
     [Fact]
     public async Task AllRetriesExhausted_ParentSpanError_ChildSpansAllError()
     {
+        using var root = _isolationSource.StartActivity("test-root");
         var recorded = new List<Activity>();
         using var listener = CreateListener(recorded);
 
@@ -140,6 +158,7 @@ public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
     [Fact]
     public async Task FilterDomainException_NoChildSpan_ImmediatelyFails()
     {
+        using var root = _isolationSource.StartActivity("test-root");
         var recorded = new List<Activity>();
         using var listener = CreateListener(recorded);
 
@@ -167,13 +186,18 @@ public sealed class StatefulAiAgent_StreamingRetryTelemetryTests
         attemptSpans.Should().BeEmpty("filter-domain exceptions bypass retry, so no attempt spans");
     }
 
+    // Filters captured spans to the TraceId of the current activity (set by the test's root
+    // isolation span) so parallel-test spans don't bleed into this test's recorded list.
     private static ActivityListener CreateListener(List<Activity> sink)
     {
+        var traceId = Activity.Current?.TraceId;
         var listener = new ActivityListener
         {
             ShouldListenTo = src => src.Name == AgenticDiagnostics.ActivitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = sink.Add,
+            ActivityStopped = traceId is null
+                ? sink.Add
+                : a => { if (a.TraceId == traceId) sink.Add(a); },
         };
         ActivitySource.AddActivityListener(listener);
         return listener;

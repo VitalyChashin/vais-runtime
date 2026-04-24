@@ -184,9 +184,11 @@ Behind the scenes: `POST /v1/agents/weather/invoke` → `AgentLifecycleManager.I
 
 ## 9. Update the plugin
 
-Changed the agent's behaviour? Rebuild the plugin, rebuild (or re-push) the runtime image, cycle the pod. There's **no hot reload in v0.18** — plugins load once at silo startup. Operators treat plugin updates like any other deploy.
+Changed the agent's behaviour? You have two options:
 
-For local iteration with a bind mount, restart the container after `dotnet publish` — the non-collectible load context means an in-process reload is not available.
+**Standard deploy (v0.18+).** Rebuild the plugin, rebuild (or re-push) the runtime image, cycle the pod. Operators treat this like any other deploy.
+
+**Hot reload (v0.22+).** Set `VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap` and bind-mount the plugin directory. Copy a new build of the DLL into the mount — the runtime detects the change, loads the new DLL into a fresh collectible `AssemblyLoadContext`, atomically swaps the registry entry, and invalidates the translator cache. No pod restart required. See [concepts/runtime-plugins.md §Hot reload](../concepts/runtime-plugins.md#hot-reload-v022) for the full swap sequence.
 
 ## Troubleshooting
 

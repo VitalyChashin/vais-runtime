@@ -2,6 +2,8 @@
 
 **v0.18 Pillar C.** The runtime loads code-authored `IAiAgent` implementations from DLLs dropped under `/var/lib/vais/plugins` and routes manifests to them when `AgentHandlerRef.TypeName` matches. Partners ship agents whose behaviour doesn't fit the "model + prompt + tools" declarative shape — custom loops, proprietary providers, deterministic fallbacks — without rebuilding the runtime container.
 
+> **v0.23:** Python tool-contributing plugins are now supported via a separate loader path (`IPythonPluginHost`, `INamedToolSourceProvider`). Python plugins contribute **tools** rather than a full agent loop, using the MCP stdio protocol. See [polyglot-plugins.md](polyglot-plugins.md).
+
 ## What ships
 
 One new library package — `Vais.Agents.Runtime.Plugins` — plus additions to existing packages:
@@ -179,9 +181,21 @@ Operational guidance:
 - Audit plugin dependency closures — a compromised transitive pulls in the same DI access as the plugin itself.
 - For multi-tenant isolation, run one runtime per trust boundary and use the HTTP control plane's JWT layer for auth. Plugins are a **trusted-code** extension mechanism; they are not a sandbox.
 
-## Not in scope for v0.18
+## Hot reload (v0.22)
 
-- **Hot reload.** Plugins load once; updates require a pod cycle. Collectible `AssemblyLoadContext` + grain-reactivation-on-plugin-change is a future consideration.
+Set `VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap`. The runtime starts a background `FileSystemWatcher` on the plugins directory. When a new DLL is copied in, `DefaultPluginReloader`:
+
+1. Loads the new DLL into a fresh **collectible** `AssemblyLoadContext`.
+2. Atomically swaps the handler registry entry.
+3. Calls all registered `IPluginReloadHook` implementations — including `TranslatorInvalidationHook`, which clears the manifest-translator cache for every agent whose `handler.typeName` belongs to the swapped plugin.
+4. Calls `Unload()` on the old context so it can be GC-collected.
+
+No pod restart, no manifest re-apply. The policy defaults to `Disabled` (v0.18-compatible).
+
+See the [PluginAgentWeather sample](../../samples/PluginAgentWeather/README.md#hot-reload-without-restarting-the-host-v022) for a worked example.
+
+## Not in scope for v0.18 / still out of scope
+
 - **Non-.NET plugins.** WASM / gRPC / stdio plugin servers are not part of this pillar — the ABI is .NET-only.
 - **Sandboxing.** No assembly-level permission capture or service-access blocklists. Trust boundary = runtime pod.
 - **Plugin discovery via `vais list-plugins`.** The HTTP surface does not enumerate loaded plugins in v0.18; startup logs record the load manifest.

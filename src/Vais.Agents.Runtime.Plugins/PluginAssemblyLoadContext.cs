@@ -15,8 +15,8 @@ namespace Vais.Agents.Runtime.Plugins;
 /// plugin's own folder via <see cref="AssemblyDependencyResolver"/>.
 /// </summary>
 /// <remarks>
-/// Non-collectible in v0.18 — plugins load once at silo startup and stay for
-/// the process lifetime. Pillar 3 master-plan non-goal excludes hot reload.
+/// Collectible since v0.22 — enables the GC to reclaim the old load context
+/// after a hot-reload swap once all plugin type references are released.
 /// </remarks>
 internal sealed class PluginAssemblyLoadContext : AssemblyLoadContext
 {
@@ -50,7 +50,7 @@ internal sealed class PluginAssemblyLoadContext : AssemblyLoadContext
     private readonly AssemblyDependencyResolver _resolver;
 
     public PluginAssemblyLoadContext(string primaryAssemblyPath)
-        : base(name: Path.GetFileNameWithoutExtension(primaryAssemblyPath), isCollectible: false)
+        : base(name: Path.GetFileNameWithoutExtension(primaryAssemblyPath), isCollectible: true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(primaryAssemblyPath);
         _resolver = new AssemblyDependencyResolver(primaryAssemblyPath);

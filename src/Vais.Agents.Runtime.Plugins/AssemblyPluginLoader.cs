@@ -67,6 +67,18 @@ public sealed class AssemblyPluginLoader
             registry.HandlerTypeNames.Count);
     }
 
+    /// <summary>
+    /// Load exactly one plugin from <paramref name="pluginFolder"/> into
+    /// <paramref name="registry"/>. Used by <see cref="DefaultPluginReloader"/>
+    /// for targeted reloads without rescanning the full plugins directory.
+    /// </summary>
+    internal void LoadPlugin(string pluginFolder, PluginHandlerRegistry registry)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginFolder);
+        ArgumentNullException.ThrowIfNull(registry);
+        TryLoadPlugin(pluginFolder, registry);
+    }
+
     private void TryLoadPlugin(string folder, PluginHandlerRegistry registry)
     {
         var pluginName = Path.GetFileName(folder);

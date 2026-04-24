@@ -422,7 +422,9 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             }
             var command = item.TryGetProperty("command", out var cEl) ? cEl.GetString() : null;
             var url = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
-            if ((command is null) == (url is null))
+            // "plugin" transport means the server is managed by the runtime (e.g. Python plugin via
+            // INamedToolSourceProvider) — no command/url needed or validated.
+            if (!string.Equals(transport, "plugin", StringComparison.Ordinal) && (command is null) == (url is null))
             {
                 errors.Add($"{prefix}spec.mcpServers[{name}] must set exactly one of command (for stdio) or url (for http/sse)");
             }

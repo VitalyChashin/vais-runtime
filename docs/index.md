@@ -20,6 +20,7 @@ One page per pillar. Each explains what it is, the core types, how to wire it, e
 - [Architecture](concepts/architecture.md) — the 27 packages, layered diagram, dependency rules.
 - [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation (v0.17 Pillar B); Model / SystemPromptSpec / Tools / Guardrails translation.
 - [Runtime plugins](concepts/runtime-plugins.md) — code-authored `IAiAgent` DLLs loaded at silo startup; plugin-branch in the translator (v0.18 Pillar C).
+- [Polyglot plugins](concepts/polyglot-plugins.md) — Python MCP plugins spawned as subprocesses; tools contributed to the agent registry via `INamedToolSourceProvider` (v0.23).
 - [Session + memory](concepts/session.md) — `IAgentSession`, working vs session history, `IMemoryStore` scopes.
 - [Context](concepts/context.md) — `IContextProvider` chain, `IContextWindowPacker`, merge rules.
 - [Prompt](concepts/prompt.md) — `ISystemPromptComposer`, contributors, `IPromptTemplate`.
@@ -66,6 +67,7 @@ Task-focused, sample-backed recipes.
 - [Deploy the runtime to Kubernetes](guides/deploy-the-runtime-to-kubernetes.md) — Helm install from kind to production with external Redis (v0.16).
 - [Author an agent in YAML](guides/author-an-agent-in-yaml.md) — pure-YAML declarative agent, no consumer C# (v0.17).
 - [Package an agent as a plugin](guides/package-an-agent-as-a-plugin.md) — code-authored `IAiAgent` DLL + overlay image + `vais apply`/`invoke` (v0.18).
+- [Package a Python plugin](guides/package-a-python-plugin.md) — FastMCP stdio server + `plugin.yaml` + overlay image + declarative agent (v0.23).
 - [Deploy OTel and Langfuse](guides/deploy-otel-and-langfuse.md)
 
 ## Reference

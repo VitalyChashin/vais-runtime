@@ -17,6 +17,7 @@ using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Runtime.Host;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins;
+using Vais.Agents.Runtime.Plugins.Python;
 
 namespace Vais.Agents.Runtime.Host.Tests;
 
@@ -346,5 +347,76 @@ public class CompositionRootTests
         var invoker = sp.GetService<IAgentRemoteInvoker>();
 
         invoker.Should().NotBeNull(because: "AddAgentRemoteInvoker must register IAgentRemoteInvoker for cross-runtime graph refs to work.");
+    }
+
+    [Fact]
+    public void Composition_PythonPluginHost_Registered_When_PythonPluginsDirectory_Set()
+    {
+        // v0.23 Python-plugins pillar: a non-empty PythonPluginsDirectory wires AddPythonPlugins,
+        // which registers IPythonPluginHost as a singleton. Missing directory is fine — the loader
+        // is a no-op and the host resolves with zero loaded plugins.
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-python-plugins-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { PythonPluginsDirectory = tempRoot };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        var host = sp.GetService<IPythonPluginHost>();
+
+        host.Should().NotBeNull(because: "a non-empty PythonPluginsDirectory must register IPythonPluginHost.");
+    }
+
+    [Fact]
+    public void Composition_PythonPluginHost_Not_Registered_When_PythonPluginsDirectory_Null()
+    {
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { PythonPluginsDirectory = null };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        var host = sp.GetService<IPythonPluginHost>();
+
+        host.Should().BeNull(because: "null PythonPluginsDirectory disables the Python plugin loader — IPythonPluginHost is not registered.");
+    }
+
+    [Fact]
+    public void Composition_INamedToolSourceProvider_Registered_When_PythonPluginsDirectory_Set()
+    {
+        // INamedToolSourceProvider must be in DI so the manifest translator can resolve
+        // mcp: tool sources backed by Python plugins.
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-python-plugins-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { PythonPluginsDirectory = tempRoot };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        var providers = sp.GetServices<INamedToolSourceProvider>().ToList();
+
+        providers.Should().ContainSingle(because: "AddPythonPlugins must register exactly one INamedToolSourceProvider.");
+        providers[0].Should().BeAssignableTo<IPythonPluginHost>(
+            because: "the PythonPluginHostService implements both IPythonPluginHost and INamedToolSourceProvider — the same singleton is forwarded.");
+    }
+
+    [Fact]
+    public void Composition_INamedToolSourceProvider_Reaches_Translator()
+    {
+        // Ordering lock: AddPythonPlugins must run before AddAgentManifestInstantiator so the
+        // translator's sp.GetServices<INamedToolSourceProvider>() call at build time captures
+        // the registered provider. If the registration order ever drifts, mcp: tool refs stop
+        // resolving even though AddPythonPlugins appears to be wired.
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-python-plugins-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PythonPluginsDirectory = tempRoot });
+
+        using var sp = services.BuildServiceProvider();
+        var translator = sp.GetRequiredService<IAgentManifestTranslator>();
+        var providers = sp.GetServices<INamedToolSourceProvider>().ToList();
+
+        translator.Should().NotBeNull();
+        providers.Should().ContainSingle(because: "both translator and provider must resolve from the same root — confirms AddPythonPlugins preceded AddAgentManifestInstantiator.");
     }
 }

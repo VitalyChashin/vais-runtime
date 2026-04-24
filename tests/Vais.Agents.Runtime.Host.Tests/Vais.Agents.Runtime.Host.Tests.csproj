@@ -22,8 +22,16 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
   </ItemGroup>
 
-  <ItemGroup Label="v0.18 plugin fixture — built as a sibling assembly for PluginLoadingIntegrationTests, NOT linked into the test assembly.">
+  <ItemGroup Label="Plugin fixtures — built as sibling assemblies, NOT linked into the test assembly.">
     <ProjectReference Include="..\Vais.Agents.Runtime.Host.PluginFixture\Vais.Agents.Runtime.Host.PluginFixture.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV1\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV1.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV2\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV2.csproj"
                       ReferenceOutputAssembly="false"
                       Private="false"
                       SkipGetTargetFrameworkProperties="true" />

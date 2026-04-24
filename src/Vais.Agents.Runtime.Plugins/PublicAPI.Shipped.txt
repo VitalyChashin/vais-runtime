@@ -51,3 +51,40 @@ override Vais.Agents.Runtime.Plugins.PluginDescriptor.ToString() -> string!
 static Vais.Agents.Runtime.Plugins.PluginDescriptor.operator !=(Vais.Agents.Runtime.Plugins.PluginDescriptor? left, Vais.Agents.Runtime.Plugins.PluginDescriptor? right) -> bool
 static Vais.Agents.Runtime.Plugins.PluginDescriptor.operator ==(Vais.Agents.Runtime.Plugins.PluginDescriptor? left, Vais.Agents.Runtime.Plugins.PluginDescriptor? right) -> bool
 static Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions.AddAgentPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! pluginsDirectory, Vais.Agents.Runtime.Plugins.PluginLoaderOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Runtime.Plugins.IPluginReloadHook
+Vais.Agents.Runtime.Plugins.IPluginReloadHook.OnReloadedAsync(Vais.Agents.Runtime.Plugins.PluginReloadResult! result, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Runtime.Plugins.IPluginReloader
+Vais.Agents.Runtime.Plugins.IPluginReloader.ReloadAsync(string! pluginPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.PluginReloadResult!>!
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.ReloadPolicy.get -> Vais.Agents.Runtime.Plugins.ReloadPolicy
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.ReloadPolicy.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult
+Vais.Agents.Runtime.Plugins.PluginReloadResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.PluginReloadResult!
+Vais.Agents.Runtime.Plugins.PluginReloadResult.Deconstruct(out Vais.Agents.Runtime.Plugins.PluginDescriptor? OldDescriptor, out Vais.Agents.Runtime.Plugins.PluginDescriptor? NewDescriptor, out Vais.Agents.Runtime.Plugins.PluginReloadStatus Status, out string? FailureUrn, out System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.Equals(Vais.Agents.Runtime.Plugins.PluginReloadResult? other) -> bool
+Vais.Agents.Runtime.Plugins.PluginReloadResult.FailureException.get -> System.Exception?
+Vais.Agents.Runtime.Plugins.PluginReloadResult.FailureException.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Plugins.PluginReloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.NewDescriptor.get -> Vais.Agents.Runtime.Plugins.PluginDescriptor?
+Vais.Agents.Runtime.Plugins.PluginReloadResult.NewDescriptor.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.OldDescriptor.get -> Vais.Agents.Runtime.Plugins.PluginDescriptor?
+Vais.Agents.Runtime.Plugins.PluginReloadResult.OldDescriptor.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.PluginReloadResult(Vais.Agents.Runtime.Plugins.PluginDescriptor? OldDescriptor, Vais.Agents.Runtime.Plugins.PluginDescriptor? NewDescriptor, Vais.Agents.Runtime.Plugins.PluginReloadStatus Status, string? FailureUrn, System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Plugins.PluginReloadResult.Status.get -> Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadResult.Status.init -> void
+Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadStatus.AbiMismatch = 2 -> Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadStatus.LoadFailed = 1 -> Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadStatus.NoChange = 3 -> Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.PluginReloadStatus
+Vais.Agents.Runtime.Plugins.PluginReloadUrns
+const Vais.Agents.Runtime.Plugins.PluginReloadUrns.PluginReloadAbiMismatch = "urn:vais-agents:plugin-reload-abi-mismatch" -> string!
+const Vais.Agents.Runtime.Plugins.PluginReloadUrns.PluginReloadFailed = "urn:vais-agents:plugin-reload-failed" -> string!
+Vais.Agents.Runtime.Plugins.ReloadPolicy
+Vais.Agents.Runtime.Plugins.ReloadPolicy.Disabled = 0 -> Vais.Agents.Runtime.Plugins.ReloadPolicy
+Vais.Agents.Runtime.Plugins.ReloadPolicy.DrainAndSwap = 1 -> Vais.Agents.Runtime.Plugins.ReloadPolicy
+override Vais.Agents.Runtime.Plugins.PluginReloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.PluginReloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.PluginReloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.PluginReloadResult.operator !=(Vais.Agents.Runtime.Plugins.PluginReloadResult? left, Vais.Agents.Runtime.Plugins.PluginReloadResult? right) -> bool
+static Vais.Agents.Runtime.Plugins.PluginReloadResult.operator ==(Vais.Agents.Runtime.Plugins.PluginReloadResult? left, Vais.Agents.Runtime.Plugins.PluginReloadResult? right) -> bool

@@ -1,0 +1,18 @@
+[project]
+name = "research-planner"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+  "mcp >=1.27,<2",
+  "pydantic >=2.8,<3",
+]
+
+[tool.vais.plugin]
+targetApiVersion = "0.23"
+tools = ["decompose_task", "score_plan_completeness", "summarize_findings"]
+
+[project.entry-points."vais.plugins"]
+server = "research_planner.server:main"
+
+[tool.uv]
+dev-dependencies = ["ruff", "pytest"]

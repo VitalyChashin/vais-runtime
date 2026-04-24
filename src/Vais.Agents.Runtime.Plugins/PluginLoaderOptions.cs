@@ -34,6 +34,35 @@ public sealed class PluginLoaderOptions
     /// (first registration wins). Defaults to true.
     /// </summary>
     public bool FailOnHandlerCollision { get; init; } = true;
+
+    /// <summary>
+    /// Controls whether plugin DLLs can be reloaded at runtime without
+    /// restarting the host. Defaults to <see cref="ReloadPolicy.Disabled"/>
+    /// to preserve v0.18 startup-only behaviour. Set to
+    /// <see cref="ReloadPolicy.DrainAndSwap"/> to opt in to hot-reload.
+    /// </summary>
+    public ReloadPolicy ReloadPolicy { get; init; } = ReloadPolicy.Disabled;
+}
+
+/// <summary>
+/// Controls the plugin hot-reload strategy.
+/// </summary>
+public enum ReloadPolicy
+{
+    /// <summary>
+    /// Plugins load once at silo startup and stay for the process lifetime.
+    /// No filesystem watcher is created. This is the default
+    /// and matches v0.18 behaviour.
+    /// </summary>
+    Disabled = 0,
+
+    /// <summary>
+    /// When a plugin DLL changes on disk, the runtime drains in-flight
+    /// requests to the old plugin, atomically swaps the handler registry to
+    /// the new load context, then deactivates affected Orleans grains so they
+    /// re-activate against the new plugin on next invoke.
+    /// </summary>
+    DrainAndSwap = 1,
 }
 
 /// <summary>

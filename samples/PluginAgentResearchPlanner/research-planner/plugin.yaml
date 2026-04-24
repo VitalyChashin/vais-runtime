@@ -1,0 +1,13 @@
+apiVersion: vais.agents/v1
+kind: Plugin
+metadata:
+  name: research-planner
+spec:
+  runtime: python
+  entrypoint: src/research_planner/server.py
+  python:
+    version: "3.13"
+    interpreter: .venv/bin/python
+  health:
+    handshakeTimeoutSeconds: 5
+    restartPolicy: exponentialBackoff

@@ -3,12 +3,14 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Vais.Agents.Runtime.Plugins;
 
 /// <summary>
-/// DI entry point for the v0.18 Pillar C plugin loader.
+/// DI entry point for the plugin loader and optional hot-reload watcher.
 /// </summary>
 public static class PluginServiceCollectionExtensions
 {
@@ -19,12 +21,21 @@ public static class PluginServiceCollectionExtensions
     /// when resolving <c>AgentHandlerRef.TypeName</c>.
     /// </summary>
     /// <remarks>
-    /// The directory scan happens synchronously during the call. Non-fatal
-    /// per-plugin failures (missing DLL, ABI mismatch, convention miss)
-    /// log a WARN and continue; fatal errors (handler-name collision with
+    /// <para>
+    /// The directory scan happens lazily on first resolve of
+    /// <see cref="IPluginHandlerRegistry"/>. Non-fatal per-plugin failures
+    /// (missing DLL, ABI mismatch, convention miss) log a WARN and continue;
+    /// fatal errors (handler-name collision with
     /// <see cref="PluginLoaderOptions.FailOnHandlerCollision"/> true,
-    /// unreadable directory root) throw
-    /// <see cref="PluginLoadException"/>.
+    /// unreadable directory root) throw <see cref="PluginLoadException"/>.
+    /// </para>
+    /// <para>
+    /// When <see cref="PluginLoaderOptions.ReloadPolicy"/> is
+    /// <see cref="ReloadPolicy.DrainAndSwap"/>, this method additionally
+    /// registers <see cref="IPluginReloader"/> and a background
+    /// <see cref="IHostedService"/> that watches the directory for DLL
+    /// changes and triggers hot-reloads after a 200 ms debounce.
+    /// </para>
     /// </remarks>
     public static IServiceCollection AddAgentPlugins(
         this IServiceCollection services,
@@ -34,8 +45,8 @@ public static class PluginServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsDirectory);
 
-        var registry = new PluginHandlerRegistry();
         var loaderOptions = options ?? new PluginLoaderOptions();
+        var registry = new PluginHandlerRegistry();
 
         services.TryAddSingleton<IPluginHandlerRegistry>(sp =>
         {
@@ -46,6 +57,29 @@ public static class PluginServiceCollectionExtensions
             loader.Load(pluginsDirectory, registry);
             return registry;
         });
+
+        if (loaderOptions.ReloadPolicy == ReloadPolicy.DrainAndSwap)
+        {
+            services.TryAddSingleton<IPluginReloader>(sp =>
+            {
+                // Ensure registry is populated before the reloader is used.
+                sp.GetRequiredService<IPluginHandlerRegistry>();
+                var loaderLogger = sp.GetService<ILogger<AssemblyPluginLoader>>();
+                var reloaderLogger = sp.GetService<ILogger<DefaultPluginReloader>>();
+                var loader = new AssemblyPluginLoader(loaderOptions, loaderLogger);
+                var hooks = sp.GetServices<IPluginReloadHook>();
+                return new DefaultPluginReloader(loader, registry, hooks, reloaderLogger);
+            });
+
+            services.AddSingleton<IHostedService>(sp =>
+            {
+                var reloader = sp.GetRequiredService<IPluginReloader>();
+                var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
+                var logger = sp.GetService<ILogger<PluginWatcherService>>()
+                    ?? NullLogger<PluginWatcherService>.Instance;
+                return new PluginWatcherService(reloader, lifetime, pluginsDirectory, logger);
+            });
+        }
 
         return services;
     }
