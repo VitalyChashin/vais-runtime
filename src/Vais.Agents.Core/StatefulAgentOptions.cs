@@ -235,6 +235,22 @@ public sealed class StatefulAgentOptions
     public IAgentJournal? Journal { get; init; }
 
     /// <summary>
+    /// Controls the granularity of replay when a streaming run is resumed via
+    /// <see cref="Journal"/>. The default <c>ToolOnly</c> mode replays only
+    /// tool-call outcomes and re-invokes the provider for fresh deltas.
+    /// <c>Full</c> mode replays both tool-call outcomes and completion
+    /// deltas, bypassing the provider entirely.
+    /// </summary>
+    /// <remarks>
+    /// When <c>Full</c> mode is enabled, each <see cref="CompletionUpdate"/>
+    /// yielded during streaming is journaled as a <see cref="CompletionDeltaRecorded"/>
+    /// entry. On resume, the exact delta sequence is re-yielded verbatim, enabling
+    /// deterministic delta-by-delta reproduction at the cost of additional journal
+    /// storage.
+    /// </remarks>
+    public ReplayMode ReplayMode { get; init; } = Vais.Agents.ReplayMode.ToolOnly;
+
+    /// <summary>
     /// Factory that produces the <see cref="AgentContext.RunId"/> stamped on every
     /// <c>AskAsync</c> / <c>StreamAsync</c> invocation. Default is
     /// <c>Guid.NewGuid().ToString("N")</c> — a collision-free 32-hex identifier.

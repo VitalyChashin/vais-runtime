@@ -140,7 +140,6 @@ Vais.Agents.Core.StatefulAgentOptions.RunIdFactory.get -> System.Func<string!>?
 Vais.Agents.Core.StatefulAgentOptions.RunIdFactory.init -> void
 Vais.Agents.Core.StatefulAgentOptions.Session.get -> Vais.Agents.IAgentSession?
 Vais.Agents.Core.StatefulAgentOptions.Session.init -> void
-Vais.Agents.Core.StatefulAgentOptions.StatefulAgentOptions() -> void
 Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.IStreamingAgentFilter!>!
 Vais.Agents.Core.StatefulAgentOptions.StreamingFilters.init -> void
 Vais.Agents.Core.StatefulAgentOptions.StreamingResiliencePipeline.get -> Polly.ResiliencePipeline?

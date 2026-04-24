@@ -1,1 +1,12 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.CompletionDeltaRecordedSurrogateConverter
+Vais.Agents.Hosting.Orleans.CompletionDeltaRecordedSurrogateConverter.CompletionDeltaRecordedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.CompletionDeltaRecordedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.JournalEntrySurrogate surrogate) -> Vais.Agents.CompletionDeltaRecorded!
+Vais.Agents.Hosting.Orleans.CompletionDeltaRecordedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.CompletionDeltaRecorded! value) -> Vais.Agents.Hosting.Orleans.JournalEntrySurrogate
+Vais.Agents.Hosting.Orleans.JournalEntryKind.CompletionDeltaRecorded = 1 -> Vais.Agents.Hosting.Orleans.JournalEntryKind
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.CompletionTokens -> int?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.ModelId -> string?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.PromptTokens -> int?
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.SequenceNumber -> int
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.TextDelta -> string!
+Vais.Agents.Hosting.Orleans.JournalEntrySurrogate.ToolCallsJson -> string?

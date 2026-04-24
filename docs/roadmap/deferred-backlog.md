@@ -198,9 +198,13 @@ Source: [milestone v0.17 wrap-up](../../plans/actor-agents-oss-milestone-log.md)
   with attempt index, status (Ok/Error), and error type tags. Source:
   [milestone v0.10 §Deferred](../../plans/actor-agents-oss-milestone-log.md)
   (2026-04-20). **SHIPPED v0.21**.
-- **Streaming journal replay.** v0.5's `IAgentJournal` stays tool-call-granular; per-delta
-  replay is deferred. Source: same (2026-04-20). Next step: tied to the durable-execution
-  workstream.
+- ~~**Streaming journal replay.**~~ v0.21 adds `ReplayMode.Full` as an opt-in mode on
+  `StatefulAgentOptions`; each `CompletionUpdate` delta is journaled as a
+  `CompletionDeltaRecorded` entry (with a monotone `SequenceNumber`) and replayed
+  verbatim on resume, bypassing the provider entirely. Tool outcomes are replayed from
+  the existing `ToolCallRecorded` journal entries — no re-invocation on resume. Source:
+  [milestone v0.10 §Deferred](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-20). **SHIPPED v0.21**.
 - **Langfuse v3 local compose recipe.** v0.16 ships Langfuse v2 (v3's web + worker +
   clickhouse split is too heavy for dev). Partners wanting v3 fidelity run the Helm chart
   against a platform-team Langfuse. Source: milestone log Pillar A (2026-04-21). Next step:

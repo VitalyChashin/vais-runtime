@@ -44,3 +44,31 @@ public sealed record ToolCallRecorded(
     ToolCallOutcome Outcome,
     DateTimeOffset At)
     : JournalEntry(RunId, At);
+
+/// <summary>
+/// A completion delta (text fragment, metadata, or tool calls) yielded to the
+/// streaming consumer during a run. On full replay when <see cref="Vais.Agents.ReplayMode.Full"/>
+/// is enabled, deltas are re-yielded verbatim without re-invoking the provider.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Deltas are journaled only when the agent's replay mode is
+/// <see cref="Vais.Agents.ReplayMode.Full"/>. In the default <see cref="Vais.Agents.ReplayMode.ToolOnly"/> mode,
+/// deltas are not journaled and the provider is re-invoked on resume.
+/// </para>
+/// <para>
+/// The <see cref="SequenceNumber"/> provides ordering guarantees and enables future
+/// per-delta resume (resuming from an arbitrary delta index). In v0.21, replay always
+/// starts from the beginning of a resumed run; per-delta resume is a future enhancement.
+/// </para>
+/// </remarks>
+/// <param name="RunId">Run this entry belongs to.</param>
+/// <param name="SequenceNumber">Monotonic delta index within the run (0, 1, 2, ...).</param>
+/// <param name="Delta">The raw completion update from the provider.</param>
+/// <param name="At">UTC timestamp when the delta was yielded.</param>
+public sealed record CompletionDeltaRecorded(
+    string RunId,
+    int SequenceNumber,
+    CompletionUpdate Delta,
+    DateTimeOffset At)
+    : JournalEntry(RunId, At);

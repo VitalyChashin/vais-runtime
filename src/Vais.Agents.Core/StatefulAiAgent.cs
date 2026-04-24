@@ -52,6 +52,8 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
     private readonly RunBudget _budget;
     private readonly IToolCallDispatcher _toolCallDispatcher;
+    private readonly IAgentJournal _journal;
+    private readonly ReplayMode _replayMode;
     private readonly Func<string> _runIdFactory;
     private readonly string? _agentName;
 
@@ -99,6 +101,8 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _budget = options.Budget ?? RunBudget.Unlimited;
         _toolCallDispatcher = options.ToolCallDispatcher
             ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus, options.Journal);
+        _journal = options.Journal ?? NullAgentJournal.Instance;
+        _replayMode = options.ReplayMode;
         _runIdFactory = options.RunIdFactory ?? DefaultRunIdFactory;
         _agentName = options.AgentName;
         _session = options.Session ?? new InMemoryAgentSession(
@@ -448,6 +452,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         string? finalModelId = null;
         var totalToolCalls = 0;
         var turnIndex = 0;
+        var deltaSequence = 0;
         Exception? failure = null;
         var loopDone = false;
 
@@ -506,6 +511,103 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             string? turnModelId = null;
             int? turnPromptTokens = null;
             int? turnCompletionTokens = null;
+            var skipProvider = false; // Set to true when we replay from journal
+            var skipToolDispatch = false; // Set to true when we replay tool outcomes from journal
+            List<ToolCallRecorded>? replayedToolOutcomes = null;
+
+            // Full replay mode check: if we have journaled deltas for this run,
+            // replay them instead of calling the provider. This enables
+            // deterministic delta-by-delta reproduction on resume.
+            if (_replayMode == ReplayMode.Full && context.RunId is not null && _journal is not NullAgentJournal)
+            {
+                var replayEntries = new List<JournalEntry>();
+                await foreach (var entry in _journal.ReadAsync(context.RunId, cancellationToken))
+                {
+                    replayEntries.Add(entry);
+                }
+
+                var deltasToReplay = replayEntries
+                    .OfType<CompletionDeltaRecorded>()
+                    .Where(e => e.SequenceNumber >= deltaSequence)
+                    .OrderBy(e => e.SequenceNumber)
+                    .ToList();
+
+                if (deltasToReplay.Count > 0)
+                {
+                    skipProvider = true;
+
+                    // Replay journaled deltas verbatim, bypassing the provider entirely.
+                    foreach (var recorded in deltasToReplay)
+                    {
+                        var update = recorded.Delta;
+
+                        // Last-update-wins metadata aggregation per turn (same as live path).
+                        if (update.ModelId is not null)
+                        {
+                            turnModelId = update.ModelId;
+                            finalModelId = update.ModelId;
+                        }
+                        if (update.PromptTokens is not null)
+                        {
+                            turnPromptTokens = update.PromptTokens;
+                        }
+                        if (update.CompletionTokens is not null)
+                        {
+                            turnCompletionTokens = update.CompletionTokens;
+                        }
+                        if (update.ToolCalls is { Count: > 0 })
+                        {
+                            turnToolCalls = update.ToolCalls;
+                        }
+
+                        if (update.TextDelta.Length > 0)
+                        {
+                            turnAccumulator.Append(update.TextDelta);
+                        }
+
+                        // Yield the replayed delta.
+                        yield return new CompletionDelta(
+                            recorded.At,
+                            eventContext,
+                            update.TextDelta,
+                            update.ModelId,
+                            update.PromptTokens,
+                            update.CompletionTokens,
+                            update.ToolCalls);
+
+                        // Advance delta sequence to match the replayed state.
+                        deltaSequence = recorded.SequenceNumber + 1;
+                    }
+
+                    // If we replayed deltas with tool calls, replay the tool outcomes from journal
+                    // and skip the tool dispatch logic to avoid re-invoking tools.
+                    if (turnToolCalls is { Count: > 0 })
+                    {
+                        var toolOutcomes = replayEntries.OfType<ToolCallRecorded>().ToList();
+                        if (toolOutcomes.Count > 0)
+                        {
+                            skipToolDispatch = true;
+                            replayedToolOutcomes = toolOutcomes;
+                            foreach (var outcome in toolOutcomes)
+                            {
+                                yield return new ToolCallStarted(
+                                    outcome.At,
+                                    eventContext,
+                                    outcome.CallId,
+                                    outcome.ToolName);
+                                yield return new ToolCallCompleted(
+                                    outcome.Outcome.Error is null ? outcome.At : outcome.At.Add(TimeSpan.FromTicks(1)),
+                                    eventContext,
+                                    outcome.Outcome.CallId,
+                                    outcome.ToolName,
+                                    outcome.Outcome.Error is null,
+                                    outcome.Outcome.Error,
+                                    Duration: TimeSpan.Zero);
+                            }
+                        }
+                    }
+                }
+            }
 
             // Phase 1 — retry boundary with per-attempt telemetry. `_streamingPipeline`
             // retries the streaming-filter chain's enumerator-open + first `MoveNextAsync`
@@ -515,13 +617,16 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             // `IsFilterDomainException`) so a filter-thrown denial/interrupt/budget
             // trip reaches the caller on first firing. Each retry attempt emits a
             // "stream_attempt" child span with attempt index and status tracking.
-            int attemptIndex = 0;
-            IAsyncEnumerator<CompletionUpdate>? enumerator = null;
-            CompletionUpdate? firstUpdate = null;
-            var streamLive = false;
-
-            try
+            // Skip this phase entirely if we replayed deltas from the journal.
+            if (!skipProvider)
             {
+                int attemptIndex = 0;
+                IAsyncEnumerator<CompletionUpdate>? enumerator = null;
+                CompletionUpdate? firstUpdate = null;
+                var streamLive = false;
+
+                try
+                {
                 await _streamingPipeline.ExecuteAsync(async attemptCt =>
                 {
                     var currentAttempt = System.Threading.Interlocked.Increment(ref attemptIndex) - 1;
@@ -597,6 +702,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             // MoveNextAsync exceptions go through local try/catch that captures
             // `failure` and breaks out of the delta loop, leaving the outer
             // try/finally to dispose the enumerator cleanly.
+            // Skip Phase 2 entirely when we replayed deltas from the journal.
             if (streamLive)
             {
                 var currentUpdate = firstUpdate;
@@ -672,6 +778,25 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                             update.CompletionTokens,
                             update.ToolCalls);
 
+                        // Journal the delta for full replay mode. This happens after yielding
+                        // so the consumer receives the delta regardless of journal success.
+                        if (_replayMode == ReplayMode.Full && context.RunId is not null && _journal is not NullAgentJournal)
+                        {
+                            try
+                            {
+                                await _journal.AppendAsync(new CompletionDeltaRecorded(
+                                    RunId: context.RunId,
+                                    SequenceNumber: deltaSequence++,
+                                    Delta: update,
+                                    At: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Journal failures are logged but don't break the stream.
+                                _logger.LogWarning(ex, "Journal append failed for delta {SequenceNumber}; continuing.", deltaSequence - 1);
+                            }
+                        }
+
                         // Advance — post-first-delta MoveNextAsync failures surface on `failure`
                         // and are NOT retried (yielded deltas are committed).
                         var advanced = false;
@@ -707,6 +832,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                         await enumerator.DisposeAsync().ConfigureAwait(false);
                     }
                 }
+            }
             }
 
             if (failure is not null)
@@ -788,6 +914,21 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 AgentChatRole.Assistant,
                 turnAccumulator.ToString(),
                 ToolCalls: turnToolCalls));
+
+            // Skip tool dispatch if we already replayed tool outcomes from journal
+            if (skipToolDispatch)
+            {
+                // Append replayed tool outcomes to working history; replayedToolOutcomes was
+                // populated in the full-replay block above so we avoid a second journal read.
+                foreach (var outcome in replayedToolOutcomes ?? [])
+                {
+                    workingHistory.Add(new ChatTurn(
+                        AgentChatRole.Tool,
+                        outcome.Outcome.Result ?? string.Empty,
+                        ToolCallId: outcome.CallId));
+                }
+                continue;
+            }
 
             var toolFailure = false;
             foreach (var toolCall in turnToolCalls)
