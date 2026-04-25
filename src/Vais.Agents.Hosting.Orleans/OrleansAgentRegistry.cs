@@ -52,7 +52,7 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var directory = _grainFactory.GetGrain<IAgentRegistryDirectoryGrain>(DirectoryKey);
-        var ids = await directory.ListIdsAsync();
+        var ids = await directory.ListIdsAsync().ConfigureAwait(false);
 
         foreach (var id in ids)
         {
@@ -62,7 +62,7 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
             }
 
             var grain = _grainFactory.GetGrain<IAgentRegistryGrain>(id);
-            var manifestsJson = await grain.ListAsync();
+            var manifestsJson = await grain.ListAsync().ConfigureAwait(false);
             foreach (var json in manifestsJson)
             {
                 var manifest = DeserializeManifest(json);
@@ -96,7 +96,7 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
         cancellationToken.ThrowIfCancellationRequested();
 
         var grain = _grainFactory.GetGrain<IAgentRegistryGrain>(id);
-        var json = await grain.GetAsync(version);
+        var json = await grain.GetAsync(version).ConfigureAwait(false);
         return json is null ? null : DeserializeManifest(json);
     }
 
@@ -108,7 +108,7 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
 
         var grain = _grainFactory.GetGrain<IAgentRegistryGrain>(manifest.Id);
         var json = SerializeManifest(manifest);
-        var echoed = await grain.RegisterAsync(json);
+        var echoed = await grain.RegisterAsync(json).ConfigureAwait(false);
         return DeserializeManifest(echoed);
     }
 
@@ -119,6 +119,9 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
     /// in-process grain RPC (sub-millisecond); sync-over-async is acceptable
     /// for the apply / create path.
     /// </summary>
+    // TODO: duck-typed callers (AgentLifecycleManager) should be ported to RegisterAsync so
+    // this sync-over-async bridge can be removed. Safe today because callers run off HTTP threads,
+    // not inside grain activations.
     public AgentManifest Register(AgentManifest manifest) =>
         RegisterAsync(manifest, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
@@ -138,6 +141,7 @@ public sealed class OrleansAgentRegistry : IAgentRegistry
     /// duck-types onto. The version arg is required (not optional) to match the
     /// exact reflection signature.
     /// </summary>
+    // TODO: same as Register — port AgentLifecycleManager to RemoveAsync to eliminate this bridge.
     public bool Remove(string id, string version) =>
         RemoveAsync(id, version, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 

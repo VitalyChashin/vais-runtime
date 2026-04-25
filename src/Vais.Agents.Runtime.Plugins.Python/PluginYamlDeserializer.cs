@@ -43,9 +43,28 @@ internal sealed class PluginYamlMetadata
 internal sealed class PluginYamlSpec
 {
     public string Runtime { get; set; } = "";
+
+    /// <summary>
+    /// Discriminator for the plugin kind. One of <c>mcp-tool-server</c> (default, v0.23)
+    /// or <c>agent-handler</c> (v0.24). Absent means <c>mcp-tool-server</c>.
+    /// </summary>
+    public string Kind { get; set; } = "";
+
     public string Entrypoint { get; set; } = "";
     public PluginYamlPythonSpec? Python { get; set; }
     public PluginYamlHealthSpec? Health { get; set; }
+
+    /// <summary>Present when <see cref="Kind"/> is <c>agent-handler</c>.</summary>
+    public PluginYamlHandlerSpec? Handler { get; set; }
+}
+
+internal sealed class PluginYamlHandlerSpec
+{
+    /// <summary>
+    /// The <c>AgentHandlerRef.TypeName</c> this plugin registers. Must be unique across
+    /// all loaded plugins (both .NET and Python). Required when spec.kind == agent-handler.
+    /// </summary>
+    public string TypeName { get; set; } = "";
 }
 
 internal sealed class PluginYamlPythonSpec
@@ -58,4 +77,7 @@ internal sealed class PluginYamlHealthSpec
 {
     public int HandshakeTimeoutSeconds { get; set; } = 5;
     public string RestartPolicy { get; set; } = "never";
+
+    /// <summary>Per-invoke timeout for agent-handler plugins. Default 60 s.</summary>
+    public int InvokeTimeoutSeconds { get; set; } = 60;
 }

@@ -62,26 +62,26 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
 
     /// <summary>
     /// Register the silo-side dependencies required by <see cref="AiAgentGrain"/>:
-    /// a <see cref="Func{String, StatefulAgentOptions}"/> that produces per-agent options.
+    /// a <see cref="Func{String, CancellationToken, ValueTask}"/> that produces per-agent options.
     /// Expects <see cref="ICompletionProvider"/> to be registered separately (consumers
     /// choose between the SK and MAF adapter packages).
     /// </summary>
     /// <param name="services">The silo's DI container.</param>
     /// <param name="configureAgents">
-    /// Optional. Given an agent id, returns the <see cref="StatefulAgentOptions"/> for that
-    /// agent. Default: a plain options instance with <see cref="StatefulAgentOptions.AgentName"/>
-    /// set to the id.
+    /// Optional. Given an agent id and cancellation token, returns the
+    /// <see cref="StatefulAgentOptions"/> for that agent. Default: a plain options instance
+    /// with <see cref="StatefulAgentOptions.AgentName"/> set to the id.
     /// </param>
     public static IServiceCollection ConfigureAgentGrains(
         this IServiceCollection services,
-        Func<IServiceProvider, string, StatefulAgentOptions>? configureAgents = null)
+        Func<IServiceProvider, string, CancellationToken, ValueTask<StatefulAgentOptions>>? configureAgents = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddSingleton<Func<string, StatefulAgentOptions>>(sp =>
+        services.TryAddSingleton<Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>>(sp =>
             configureAgents is null
-                ? id => new StatefulAgentOptions { AgentName = id }
-                : id => configureAgents(sp, id));
+                ? (id, _) => ValueTask.FromResult(new StatefulAgentOptions { AgentName = id })
+                : (id, ct) => configureAgents(sp, id, ct));
         return services;
     }
 

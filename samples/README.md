@@ -1,6 +1,6 @@
 # Vais.Agents — samples
 
-27 runnable samples. Each is a standalone .NET 9 console app or YAML-only configuration directory, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
+29 runnable samples. Each is a standalone .NET 9 console app or YAML-only configuration directory, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
 
 Run any sample with:
 
@@ -8,7 +8,7 @@ Run any sample with:
 dotnet run --project samples/<Name>
 ```
 
-Most samples are deterministic (scripted fake completion provider) and need no API key. The live-LLM sample (`HelloAgent`) gates on `OPENAI_API_KEY`. The Orleans persistence samples need Docker.
+Most samples are deterministic (scripted fake completion provider) and need no API key. The live-LLM sample (`HelloAgent`) gates on `OPENAI_API_KEY`. The Orleans persistence samples need Docker. Two Python agent samples (`PluginAgentLangGraphResearcher` hermetic, `PluginAgentLangGraphResearcherLive` live-LLM) need no .NET build.
 
 ## Index
 
@@ -37,6 +37,8 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [A2ARemoteAgentExample](A2ARemoteAgentExample) | `A2ARemoteAgentTool` with stubbed `IA2AClient` | Protocols.A2A + A2A SDK | ~85 | — | [delegate-to-a2a-remote-agent](../docs/guides/delegate-to-a2a-remote-agent.md) |
 | [PluginAgentWeather](PluginAgentWeather) | v0.18 code-authored agent packaged as a runtime plugin (`[VaisPlugin]`, overlay Dockerfile, `vais apply`/`vais invoke`) | Abstractions, Core | ~45 | — | [package-an-agent-as-a-plugin](../docs/guides/package-an-agent-as-a-plugin.md) |
 | [PluginAgentResearchPlanner](PluginAgentResearchPlanner) | v0.23 Python plugin contributing tools (`decompose_task`, `score_plan_completeness`, `summarize_findings`) to a declarative agent via `transport: plugin` + `INamedToolSourceProvider` | — (Python + YAML) | ~120 | `ANTHROPIC_API_KEY` + `TAVILY_API_KEY` | [polyglot-plugins](../docs/concepts/polyglot-plugins.md), [package-a-python-plugin](../docs/guides/package-a-python-plugin.md) |
+| [PluginAgentLangGraphResearcher](PluginAgentLangGraphResearcher) | v0.24 hermetic Python agent-handler using LangGraph-style two-node graph (plan→summarize + router); no real LLM calls — deterministic, CI-safe | — (Python + YAML) | ~120 | — | [polyglot-plugins](../docs/concepts/polyglot-plugins.md) |
+| [PluginAgentLangGraphResearcherLive](PluginAgentLangGraphResearcherLive) | v0.24 live-LLM Python agent-handler using real `langgraph.StateGraph` + `langchain-openai.ChatOpenAI`; same plan→summarize topology, real GPT-4o-mini calls | — (Python + YAML) | ~130 | `OPENAI_API_KEY` (runtime host env) | [polyglot-plugins](../docs/concepts/polyglot-plugins.md) |
 | [runtime-docker-compose](runtime-docker-compose) | v0.20 Phase 3 — start the runtime with docker-compose (localhost + clustered + OPA/OTel/Langfuse overlays) | — (config only) | 0 | — | [install-the-runtime](../docs/getting-started/install-the-runtime.md) |
 | [declarative-agent-yaml](declarative-agent-yaml) | v0.20 Phase 3 — deploy a declarative agent via YAML manifest and `vais apply`; no C# required | — (YAML only) | 0 | `OPENAI_API_KEY` | [deploy-your-first-agent](../docs/getting-started/deploy-your-first-agent.md) |
 | [code-agent-plugin](code-agent-plugin) | v0.20 Phase 3 — code-authored IAiAgent plugin that injects IHttpClientFactory and calls OpenAI directly | Abstractions, Core | ~80 | `OPENAI_API_KEY` | [package-an-agent-as-a-plugin](../docs/guides/package-an-agent-as-a-plugin.md) |

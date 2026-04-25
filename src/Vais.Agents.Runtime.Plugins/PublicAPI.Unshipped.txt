@@ -1,1 +1,2 @@
 #nullable enable
+Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.Register(Vais.Agents.IAgentHandlerFactory! factory, string! ownerPluginName) -> void

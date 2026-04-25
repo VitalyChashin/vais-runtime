@@ -9,9 +9,17 @@ namespace Vais.Agents.Runtime.Plugins;
 /// <see cref="AssemblyPluginLoader"/> at silo startup; queried by the v0.18
 /// manifest translator to decide whether a manifest's <c>Handler.TypeName</c>
 /// routes to a plugin or falls through to the v0.17 declarative path.
+/// Also supports runtime registration of Python-backed agent handlers (v0.24).
 /// </summary>
 public interface IPluginHandlerRegistry
 {
+    /// <summary>
+    /// Register a handler factory. Throws <see cref="PluginLoadException"/> with
+    /// <see cref="PluginUrns.PluginHandlerCollision"/> if <paramref name="factory"/>'s
+    /// <c>HandlerTypeName</c> is already registered.
+    /// </summary>
+    void Register(IAgentHandlerFactory factory, string ownerPluginName);
+
     /// <summary>Look up a factory by <c>Handler.TypeName</c>. Returns <c>true</c> when found.</summary>
     bool TryGet(string handlerTypeName, out IAgentHandlerFactory? factory);
 

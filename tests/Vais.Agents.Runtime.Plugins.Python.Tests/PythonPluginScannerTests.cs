@@ -27,7 +27,7 @@ public sealed class PythonPluginScannerTests : IDisposable
         new(new PythonPluginLoaderOptions
         {
             PluginsDirectory = _pluginsRoot,
-            RuntimeAbiVersion = abiVersion ?? "0.23",
+            RuntimeAbiVersion = abiVersion ?? PythonPluginAbi.CurrentVersion,
             DefaultHandshakeTimeoutSeconds = 5,
         });
 
@@ -61,7 +61,7 @@ public sealed class PythonPluginScannerTests : IDisposable
         name = "my-plugin"
 
         [tool.vais.plugin]
-        targetApiVersion = "0.23"
+        targetApiVersion = "0.24"
         tools = ["tool_a", "tool_b"]
         """;
 
@@ -116,7 +116,7 @@ public sealed class PythonPluginScannerTests : IDisposable
         d.PluginDirectory.Should().Be(folder);
         d.InterpreterPath.Should().Be(Path.GetFullPath(Path.Combine(folder, ".venv/bin/python")));
         d.EntrypointPath.Should().Be(Path.GetFullPath(Path.Combine(folder, "src/server.py")));
-        d.TargetApiVersion.Should().Be("0.23");
+        d.TargetApiVersion.Should().Be("0.24");
         d.HandshakeTimeoutSeconds.Should().Be(5);
         d.RestartPolicy.Should().Be(PythonRestartPolicy.ExponentialBackoff);
         d.DeclaredTools.Should().BeEquivalentTo(new[] { "tool_a", "tool_b" }, o => o.WithStrictOrdering());

@@ -59,4 +59,44 @@ public static class PythonPluginUrns
     /// Non-fatal: the runtime continues loading other plugins.
     /// </summary>
     public const string AmbiguousFolder = UrnPrefix + "python-plugin-ambiguous-folder";
+
+    // -----------------------------------------------------------------------
+    // v0.24 — Python agent handler URNs
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// A <c>vais/agent.invoke</c> call to the Python subprocess failed with an
+    /// exception or the subprocess returned a JSON-RPC error response.
+    /// The agent turn fails; the session state is unchanged.
+    /// </summary>
+    public const string AgentInvokeFailed = UrnPrefix + "python-agent-invoke-failed";
+
+    /// <summary>
+    /// A <c>vais/agent.invoke</c> call did not complete within
+    /// <c>spec.health.invokeTimeoutSeconds</c>. The subprocess is <b>not</b> killed;
+    /// it remains Ready for the next call. Three consecutive timeouts escalate to a
+    /// subprocess restart.
+    /// </summary>
+    public const string AgentInvokeTimeout = UrnPrefix + "python-agent-invoke-timeout";
+
+    /// <summary>
+    /// The <c>new_state</c> field returned by <c>vais/agent.invoke</c> exceeds the
+    /// configured maximum state size (<see cref="PythonPluginLoaderOptions.MaxAgentStateSizeBytes"/>).
+    /// The agent turn fails; the previous state is preserved unchanged.
+    /// </summary>
+    public const string AgentStateTooLarge = UrnPrefix + "python-agent-state-too-large";
+
+    /// <summary>
+    /// The Python subprocess returned a malformed JSON-RPC response to a
+    /// <c>vais/agent.*</c> call (missing required fields, wrong type, etc.).
+    /// The agent turn fails; the session state is unchanged.
+    /// </summary>
+    public const string AgentProtocolError = UrnPrefix + "python-agent-protocol-error";
+
+    /// <summary>
+    /// A Python plugin's <c>handler.typeName</c> collides with a handler already registered
+    /// by a .NET plugin or another Python plugin. The Python plugin is marked Unavailable.
+    /// Mirrors the <c>urn:vais-agents:plugin-handler-collision</c> precedent from v0.18.
+    /// </summary>
+    public const string AgentHandlerCollision = UrnPrefix + "python-agent-handler-collision";
 }

@@ -248,12 +248,18 @@ Before adding a sample, check the table in `samples/README.md` — if the scenar
 - Scheme: `0.X.0-preview` (`X` = pillar number). Example: `v0.20.0-preview`.
 - Release is an **annotated git tag** on the relevant main-branch commit. Tag message summarises pillar / pillars shipped.
 - Packages inherit version from `Directory.Build.props` → `VersionPrefix` + `VersionSuffix` (overridden per-tag at pack time in CI when CI is wired). Do not commit a version bump without tagging.
+- **Changelog discipline.** [`CHANGELOG.md`](CHANGELOG.md) is the human-facing record of every notable change. Rules:
+  - Every feature, fix, or breaking change goes under `## [Unreleased]` as it lands — don't batch them at release time.
+  - Use the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) section categories: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`.
+  - Breaking API changes must be listed under `Changed` with migration guidance (old signature → new signature, what callers must do).
+  - At a milestone, rename `[Unreleased]` to the new version + date (e.g. `## [0.24.0-preview] — 2026-05-01`), add a fresh empty `## [Unreleased]` block above it.
 - At a milestone:
   1. Tick every completed item in the current phase / pillar plan under `plans/`.
   2. Append a dated entry to [`plans/actor-agents-oss-milestone-log.md`](plans/actor-agents-oss-milestone-log.md) summarising what shipped.
-  3. Promote `PublicAPI.Unshipped.txt` → `PublicAPI.Shipped.txt` for every affected project.
-  4. Create the annotated tag.
-  5. Add a "Deferred to the next pillar" bullet to the milestone log for each item that slipped.
+  3. Rename `[Unreleased]` in `CHANGELOG.md` to the new version block; add a new empty `[Unreleased]` section above it.
+  4. Promote `PublicAPI.Unshipped.txt` → `PublicAPI.Shipped.txt` for every affected project.
+  5. Create the annotated tag.
+  6. Add a "Deferred to the next pillar" bullet to the milestone log for each item that slipped.
 
 A "pillar" is a coherent feature set scoped to one preview version. A phase is a group of pillars pursuing one thematic goal (see `plans/`).
 
@@ -307,6 +313,7 @@ Guidance for AI assistants working in this repo:
 8. **Every public type needs XML docs.** If you add one without a doc comment, CI will fail.
 9. **When in doubt about scope, ask.** Large unsolicited refactors are rejected on principle — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 10. **Record deferred work.** If your PR defers something, add it to [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md) with a dated entry.
+11. **Update `CHANGELOG.md` for every notable change.** Add an entry under `## [Unreleased]` — `Added` for new features, `Changed` for behaviour or API changes (include migration guidance for breaking changes), `Fixed` for bug fixes. Do this in the same commit as the change, not as a follow-up.
 
 ---
 

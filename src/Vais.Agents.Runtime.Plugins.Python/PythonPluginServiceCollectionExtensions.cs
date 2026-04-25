@@ -36,7 +36,8 @@ public static class PythonPluginServiceCollectionExtensions
         services.TryAddSingleton<IPythonPluginHost>(sp =>
         {
             var loggerFactory = sp.GetService<ILoggerFactory>();
-            return new PythonPluginHostService(options, loggerFactory);
+            var handlerRegistry = sp.GetService<IPluginHandlerRegistry>();
+            return new PythonPluginHostService(options, loggerFactory, handlerRegistry: handlerRegistry);
         });
 
         if (!alreadyRegistered)

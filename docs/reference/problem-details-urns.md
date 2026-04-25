@@ -67,6 +67,18 @@ Emitted by `IPythonPluginHost` at silo startup — startup-log-only unless `tran
 
 URN structure: `urn:vais-agents:<slug>` where `<slug>` is lowercase kebab-case. No version suffix — the URN is the contract; renaming an existing URN is a **breaking change** and requires a major-version bump.
 
+### Python agent (v0.24 Pillar F)
+
+Emitted by `PythonSubprocessSupervisor` and `PythonAgentShim` during agent invocation. Unlike v0.23 plugin URNs (startup-log-only), these surface as exceptions to the grain caller and may propagate to HTTP clients as `500` errors.
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:python-agent-invoke-failed` | `500` | The Python `invoke` coroutine threw an unhandled exception, or the subprocess returned a JSON-RPC error response. State is unchanged. | v0.24 | Check Python subprocess stderr in runtime container logs; fix user code. |
+| `urn:vais-agents:python-agent-invoke-timeout` | `504` | `vais/agent.invoke` did not complete within `invokeTimeoutSeconds`. The subprocess is **not** killed; it remains Ready for the next call. State is unchanged. | v0.24 | Increase `invokeTimeoutSeconds` in `plugin.yaml`; optimise the agent loop. |
+| `urn:vais-agents:python-agent-state-too-large` | `500` | The `newState` blob returned by the subprocess exceeds `MaxAgentStateSizeBytes` (default 1 MiB). The previous state is preserved; this turn's state is discarded. | v0.24 | Trim the state payload; raise `VAIS_PYTHON_AGENT_MAX_STATE_BYTES`; or cap LangGraph history on the Python side. |
+| `urn:vais-agents:python-agent-protocol-error` | `500` | The subprocess returned a response that could not be deserialised as `AgentInvokeResponse` (malformed JSON, missing required fields). State is unchanged. | v0.24 | Ensure the server correctly serialises `assistantMessage`; check `vais-agent-sdk` version matches `targetApiVersion = "0.24"`. |
+| `urn:vais-agents:python-agent-handler-collision` | — | **Startup log only.** A Python `handler.typeName` conflicts with an already-registered .NET or Python plugin handler. Both are refused; neither loads. | v0.24 | Ensure `handler.typeName` is globally unique across all plugins in the plugins directory. |
+
 ## Usage from a typed client
 
 ```csharp

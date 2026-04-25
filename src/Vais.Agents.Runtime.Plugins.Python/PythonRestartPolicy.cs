@@ -34,5 +34,5 @@ public enum PythonRestartPolicy
 public static class PythonPluginAbi
 {
     /// <summary>ABI version that Python plugins must declare in <c>[tool.vais.plugin].targetApiVersion</c>.</summary>
-    public const string CurrentVersion = "0.23";
+    public const string CurrentVersion = "0.24";
 }

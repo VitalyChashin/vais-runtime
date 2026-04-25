@@ -1,0 +1,23 @@
+[project]
+name = "langgraph-researcher"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic >=2.8,<3",
+  # vais-agent-sdk is installed from the local monorepo path below.
+  # Replace with "vais-agent-sdk>=0.24" once published to PyPI.
+]
+
+[tool.vais.plugin]
+targetApiVersion = "0.24"
+kind = "agent-handler"
+handlerTypeName = "langgraph_researcher.agent.ResearcherAgent"
+
+[project.entry-points."vais.plugins"]
+server = "langgraph_researcher.server:main"
+
+[tool.uv]
+dev-dependencies = ["pytest >=8", "pytest-asyncio >=0.23"]
+
+[tool.uv.sources]
+vais-agent-sdk = { path = "../../python-agent-sdk", editable = true }

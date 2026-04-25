@@ -1,0 +1,33 @@
+# docker-compose.yml — PluginAgentLangGraphResearcherLive
+#
+# Builds the Vais runtime + live LangGraph Python agent-handler from source.
+# Run from this directory:
+#
+#   docker compose up --build
+#
+# Then register and invoke the agent:
+#
+#   vais config set-context local --server http://localhost:8080
+#   vais apply -f research-agent-live.yaml
+#   vais invoke research-agent-live --text "What is quantum computing?"
+
+services:
+  runtime:
+    build:
+      context: ../..    # repo root — both src/ and samples/ must be in context
+      dockerfile: samples/PluginAgentLangGraphResearcherLive/Dockerfile
+    image: vais-researcher-live:local
+    container_name: vais-researcher-live
+    environment:
+      VAIS_HOSTING_MODE: localhost
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      VAIS_PYTHON_PLUGINS_DIRECTORY: /var/lib/vais/python-plugins
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s

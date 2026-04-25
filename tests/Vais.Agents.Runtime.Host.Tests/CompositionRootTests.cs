@@ -162,8 +162,8 @@ public class CompositionRootTests
         sp.GetService<IAgentManifestTranslator>()
             .Should().NotBeNull(because: "AddAgentManifestInstantiator must register the translator as a singleton.");
 
-        sp.GetService<Func<string, StatefulAgentOptions>>()
-            .Should().NotBeNull(because: "ConfigureAgentGrains must install a Func<string, StatefulAgentOptions> so AiAgentGrain's activation path has something to call.");
+        sp.GetService<Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>>()
+            .Should().NotBeNull(because: "ConfigureAgentGrains must install a Func<string, CancellationToken, ValueTask<StatefulAgentOptions>> so AiAgentGrain's activation path has something to call.");
     }
 
     [Fact]

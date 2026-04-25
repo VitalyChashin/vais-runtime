@@ -36,7 +36,7 @@ Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory
 Vais.Agents.Runtime.Instantiation.Guardrails.RegexDenylistOutputGuardrailFactory.RegexDenylistOutputGuardrailFactory() -> void
 Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator
 Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.TranslateAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Core.StatefulAgentOptions!>
-Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.TranslateForGrain(System.IServiceProvider! serviceProvider, string! agentId) -> Vais.Agents.Core.StatefulAgentOptions!
+Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.TranslateForGrain(System.IServiceProvider! serviceProvider, string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Core.StatefulAgentOptions!>
 Vais.Agents.Runtime.Instantiation.ICompletionProviderPool
 Vais.Agents.Runtime.Instantiation.ICompletionProviderPool.GetAsync(Vais.Agents.ModelSpec! spec, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ICompletionProvider!>
 Vais.Agents.Runtime.Instantiation.IGuardrailFactory

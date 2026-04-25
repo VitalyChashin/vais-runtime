@@ -24,4 +24,12 @@ public sealed class AiAgentGrainState
     /// </summary>
     [Id(1)]
     public List<ChatTurn> History { get; set; } = new();
+
+    /// <summary>
+    /// Opaque state blob for <see cref="Core.IOpaqueStateCarrier"/> agents (e.g. Python
+    /// agent plugins that carry a LangGraph snapshot). <see langword="null"/> when not
+    /// applicable or not yet set. Stored and returned verbatim; the agent interprets it.
+    /// </summary>
+    [Id(2)]
+    public string? OpaqueState { get; set; }
 }

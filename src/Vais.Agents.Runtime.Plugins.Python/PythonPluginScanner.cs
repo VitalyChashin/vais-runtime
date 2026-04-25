@@ -202,18 +202,36 @@ internal sealed class PythonPluginScanner
             ? folder
             : Path.GetFullPath(Path.Combine(folder, entrypointRel));
 
-        if (section.Tools.Count == 0)
-        {
-            _logger.LogWarning(
-                "Python plugin '{Name}' in '{Folder}' declares no tools in [tool.vais.plugin].tools.",
-                doc.Metadata?.Name ?? Path.GetFileName(folder), folder);
-        }
-
         var pluginName = doc.Metadata?.Name is { Length: > 0 } n ? n : Path.GetFileName(folder);
         var handshakeTimeout = doc.Spec.Health is { HandshakeTimeoutSeconds: > 0 } h
             ? h.HandshakeTimeoutSeconds
             : _options.DefaultHandshakeTimeoutSeconds;
+        var invokeTimeout = doc.Spec.Health is { InvokeTimeoutSeconds: > 0 } ih
+            ? ih.InvokeTimeoutSeconds
+            : _options.DefaultInvokeTimeoutSeconds;
         var restartPolicy = ParseRestartPolicy(doc.Spec.Health?.RestartPolicy);
+        var handlerKind = ParseHandlerKind(doc.Spec.Kind);
+
+        // Agent-handler plugins: validate the required handler.typeName field.
+        string? handlerTypeName = null;
+        if (handlerKind == PythonHandlerKind.AgentHandler)
+        {
+            handlerTypeName = doc.Spec.Handler?.TypeName;
+            if (string.IsNullOrWhiteSpace(handlerTypeName))
+            {
+                _logger.LogWarning(
+                    "[{Urn}] Python agent-handler plugin '{Name}' in '{Folder}' has " +
+                    "spec.kind: agent-handler but spec.handler.typeName is missing or empty — skipping.",
+                    PythonPluginUrns.LoadFailed, pluginName, folder);
+                return null;
+            }
+        }
+        else if (section.Tools.Count == 0)
+        {
+            _logger.LogWarning(
+                "Python plugin '{Name}' in '{Folder}' declares no tools in [tool.vais.plugin].tools.",
+                pluginName, folder);
+        }
 
         return new PythonPluginDescriptor(
             Name: pluginName,
@@ -224,7 +242,10 @@ internal sealed class PythonPluginScanner
             HandshakeTimeoutSeconds: handshakeTimeout,
             RestartPolicy: restartPolicy,
             DeclaredTools: section.Tools,
-            SecretRefs: new Dictionary<string, string>());
+            SecretRefs: new Dictionary<string, string>(),
+            HandlerKind: handlerKind,
+            HandlerTypeName: handlerTypeName,
+            InvokeTimeoutSeconds: invokeTimeout);
     }
 
     private static bool IsPathInsideDirectory(string path, string directory)
@@ -241,5 +262,12 @@ internal sealed class PythonPluginScanner
         {
             "exponentialbackoff" => PythonRestartPolicy.ExponentialBackoff,
             _ => PythonRestartPolicy.Never,
+        };
+
+    private static PythonHandlerKind ParseHandlerKind(string? kind) =>
+        kind?.Replace("-", "").ToLowerInvariant() switch
+        {
+            "agenthandler" => PythonHandlerKind.AgentHandler,
+            _ => PythonHandlerKind.McpToolServer,
         };
 }

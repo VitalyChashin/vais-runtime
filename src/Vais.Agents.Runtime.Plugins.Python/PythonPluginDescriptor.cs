@@ -27,6 +27,20 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// The supervisor validates this list against <c>tools/list</c> after handshake.</param>
 /// <param name="SecretRefs">Environment-variable secret references for the subprocess.
 /// Populated by the runtime host (PR 3); empty at scan time.</param>
+/// <param name="HandlerKind">
+/// Whether this plugin provides MCP tools (default) or a Python-backed <see cref="IAiAgent"/>.
+/// Read from <c>spec.kind</c> in <c>plugin.yaml</c>.
+/// </param>
+/// <param name="HandlerTypeName">
+/// The <c>AgentHandlerRef.TypeName</c> this plugin registers when
+/// <paramref name="HandlerKind"/> is <see cref="PythonHandlerKind.AgentHandler"/>.
+/// Null for tool-server plugins.
+/// </param>
+/// <param name="InvokeTimeoutSeconds">
+/// Per-invoke timeout for agent invocations. Applies only when
+/// <paramref name="HandlerKind"/> is <see cref="PythonHandlerKind.AgentHandler"/>.
+/// Defaults to 60 seconds.
+/// </param>
 public sealed record PythonPluginDescriptor(
     string Name,
     string PluginDirectory,
@@ -36,4 +50,7 @@ public sealed record PythonPluginDescriptor(
     int HandshakeTimeoutSeconds,
     PythonRestartPolicy RestartPolicy,
     IReadOnlyList<string> DeclaredTools,
-    IReadOnlyDictionary<string, string> SecretRefs);
+    IReadOnlyDictionary<string, string> SecretRefs,
+    PythonHandlerKind HandlerKind = PythonHandlerKind.McpToolServer,
+    string? HandlerTypeName = null,
+    int InvokeTimeoutSeconds = 60);

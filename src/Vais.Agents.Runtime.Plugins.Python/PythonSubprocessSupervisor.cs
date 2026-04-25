@@ -12,7 +12,7 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// Per-plugin state machine: spawn subprocess → MCP handshake → Ready → restart on crash.
 /// Internal; one instance per <see cref="PythonPluginDescriptor"/>.
 /// </summary>
-internal sealed class PythonSubprocessSupervisor : IAsyncDisposable
+internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgentChannel
 {
     private static readonly TimeSpan[] DefaultBackoffDelays =
         [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4)];
@@ -39,7 +39,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable
     internal int? ProcessId { get { lock (_stateLock) return _processId; } }
 
     /// <summary>The descriptor this supervisor was created for.</summary>
-    internal PythonPluginDescriptor Descriptor => _descriptor;
+    public PythonPluginDescriptor Descriptor => _descriptor;
 
     /// <summary>Live MCP client when <see cref="Status"/> is <see cref="PythonPluginStatus.Ready"/>.</summary>
     internal McpClient? McpClient { get { lock (_stateLock) return _mcpClient; } }
@@ -53,7 +53,9 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable
 
     // Production constructor — uses RealSubprocessHandle
     internal PythonSubprocessSupervisor(PythonPluginDescriptor descriptor, ILoggerFactory? loggerFactory = null)
-        : this(descriptor, loggerFactory, static d => new RealSubprocessHandle(d), backoffDelays: null) { }
+        : this(descriptor, loggerFactory, static d => new RealSubprocessHandle(d), backoffDelays: null)
+    {
+    }
 
     // Test constructor — visible via InternalsVisibleTo
     internal PythonSubprocessSupervisor(
@@ -93,6 +95,66 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable
     {
         await StopAsync().ConfigureAwait(false);
         _stopCts.Dispose();
+    }
+
+    // -------------------------------------------------------------------------
+    // Agent invocation (v0.24)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Send a <c>vais/agent.invoke</c> JSON-RPC call to the subprocess and return
+    /// its response. Throws <see cref="InvalidOperationException"/> when the
+    /// supervisor is not <see cref="PythonPluginStatus.Ready"/>, and
+    /// <see cref="TimeoutException"/> when the call exceeds
+    /// <see cref="PythonPluginDescriptor.InvokeTimeoutSeconds"/>.
+    /// </summary>
+    public async Task<AgentInvokeResponse> InvokeAgentAsync(
+        AgentInvokeRequest request,
+        CancellationToken ct)
+    {
+        McpClient? client;
+        lock (_stateLock)
+            client = _status == PythonPluginStatus.Ready ? _mcpClient : null;
+
+        if (client is null)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Cannot invoke Python agent '{Name}' — supervisor status is {Status}.",
+                PythonPluginUrns.Unavailable, _descriptor.Name, Status);
+            throw new InvalidOperationException(
+                $"[{PythonPluginUrns.Unavailable}] Python plugin '{_descriptor.Name}' is unavailable.");
+        }
+
+        using var invokeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        invokeCts.CancelAfter(TimeSpan.FromSeconds(_descriptor.InvokeTimeoutSeconds));
+
+        try
+        {
+            return await client.SendRequestAsync<AgentInvokeRequest, AgentInvokeResponse>(
+                "vais/agent.invoke",
+                request,
+                AgentProtocolJson.Options,
+                new RequestId(Guid.NewGuid().ToString()),
+                invokeCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Python agent '{Name}' invoke timed out after {Seconds}s.",
+                PythonPluginUrns.AgentInvokeTimeout, _descriptor.Name, _descriptor.InvokeTimeoutSeconds);
+            throw new TimeoutException(
+                $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_descriptor.Name}' " +
+                $"invoke timed out after {_descriptor.InvokeTimeoutSeconds}s.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "[{Urn}] Python agent '{Name}' invoke failed.",
+                PythonPluginUrns.AgentInvokeFailed, _descriptor.Name);
+            throw new InvalidOperationException(
+                $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_descriptor.Name}' " +
+                $"invoke failed: {ex.Message}", ex);
+        }
     }
 
     // -------------------------------------------------------------------------

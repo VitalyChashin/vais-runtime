@@ -162,16 +162,11 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         return options;
     }
 
-    public StatefulAgentOptions TranslateForGrain(IServiceProvider serviceProvider, string agentId)
+    public ValueTask<StatefulAgentOptions> TranslateForGrain(IServiceProvider serviceProvider, string agentId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
-
-        // Sync-over-async bridge for ConfigureAgentGrains' Func<string, StatefulAgentOptions>
-        // seam. Registry lookup is in-process grain RPC (sub-millisecond); the provider pool
-        // is memoised. This is not a web-request hot path — grain activation runs once per
-        // agent-id per silo until eviction.
-        return TranslateAsync(agentId, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        return TranslateAsync(agentId, cancellationToken);
     }
 
     public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken cancellationToken = default)

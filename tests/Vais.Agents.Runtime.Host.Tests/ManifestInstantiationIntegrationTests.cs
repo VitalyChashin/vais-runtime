@@ -20,7 +20,7 @@ namespace Vais.Agents.Runtime.Host.Tests;
 /// 1. <c>CompositionRoot.ConfigureServices</c> wires the translator, model
 ///    providers, guardrails, and <c>ConfigureAgentGrains</c> factory correctly.
 /// 2. A registered manifest flows through the translator at grain-activation
-///    time (simulated by invoking the registered <c>Func&lt;string, StatefulAgentOptions&gt;</c>).
+///    time (simulated by invoking the registered <c>Func&lt;string, CancellationToken, ValueTask&lt;StatefulAgentOptions&gt;&gt;</c>).
 /// 3. The resulting <see cref="StatefulAgentOptions.CompletionProvider"/> is
 ///    set to the factory-produced provider.
 /// 4. A <see cref="StatefulAiAgent"/> constructed from those options runs
@@ -48,8 +48,8 @@ public class ManifestInstantiationIntegrationTests
 
         // Simulate grain activation: call the ConfigureAgentGrains-registered factory
         // with the agent id, just as AiAgentGrain.OnActivateAsync would.
-        var factory = sp.GetRequiredService<Func<string, StatefulAgentOptions>>();
-        var options = factory("weather");
+        var factory = sp.GetRequiredService<Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>>();
+        var options = await factory("weather", CancellationToken.None);
 
         // Assert: translator produced options with provider + system prompt + budget.
         options.AgentName.Should().Be("weather");
@@ -74,12 +74,12 @@ public class ManifestInstantiationIntegrationTests
         using var sp = services.BuildServiceProvider();
         var registry = (InMemoryAgentRegistry)sp.GetRequiredService<IAgentRegistry>();
         var translator = sp.GetRequiredService<IAgentManifestTranslator>();
-        var factory = sp.GetRequiredService<Func<string, StatefulAgentOptions>>();
+        var factory = sp.GetRequiredService<Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>>();
 
         var v1 = BuildWeatherManifest() with { SystemPrompt = new SystemPromptSpec(Inline: "v1 prompt") };
         registry.Register(v1);
 
-        var optsV1 = factory("weather");
+        var optsV1 = await factory("weather", CancellationToken.None);
         optsV1.SystemPrompt.Should().Be("v1 prompt");
 
         // Update flow: re-register with new prompt then invalidate the translator cache.
@@ -95,7 +95,7 @@ public class ManifestInstantiationIntegrationTests
         invalidated.Should().BeTrue(because: "the translator cached v1's options; InvalidateAsync must drop the entry.");
 
         // Next grain activation sees the new manifest.
-        var optsV2 = factory("weather");
+        var optsV2 = await factory("weather", CancellationToken.None);
         optsV2.SystemPrompt.Should().Be("v2 prompt");
     }
 

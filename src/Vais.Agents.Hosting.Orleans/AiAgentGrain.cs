@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
@@ -38,8 +39,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
     private readonly IPersistentState<AiAgentGrainState> _state;
     private readonly ICompletionProvider? _defaultProvider;
-    private readonly Func<string, StatefulAgentOptions> _optionsFactory;
+    private readonly Func<string, CancellationToken, ValueTask<StatefulAgentOptions>> _optionsFactory;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<AiAgentGrain> _logger;
+    private string? _agentId;
     private IAiAgent? _agent;
 
     /// <summary>
@@ -56,21 +59,41 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     public AiAgentGrain(
         [PersistentState("state", StorageName)] IPersistentState<AiAgentGrainState> state,
         ICompletionProvider? provider = null,
-        Func<string, StatefulAgentOptions>? optionsFactory = null,
+        Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>? optionsFactory = null,
         ILoggerFactory? loggerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         _state = state;
         _defaultProvider = provider;
-        _optionsFactory = optionsFactory ?? (id => new StatefulAgentOptions { AgentName = id });
+        _optionsFactory = optionsFactory ?? ((id, _) => ValueTask.FromResult(new StatefulAgentOptions { AgentName = id }));
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _logger = _loggerFactory.CreateLogger<AiAgentGrain>();
     }
 
     /// <inheritdoc />
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var id = this.GetPrimaryKeyString();
-        var supplied = _optionsFactory(id);
+        _agentId = this.GetPrimaryKeyString();
+        using var scope = _logger.BeginScope("{AgentId}", _agentId);
+        using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.activate");
+        activity?.SetTag(AgenticTags.AgentName, _agentId);
+
+        _logger.LogDebug("Grain activating");
+
+        var sw = Stopwatch.StartNew();
+        StatefulAgentOptions supplied;
+        try
+        {
+            supplied = await _optionsFactory(_agentId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            _logger.LogError(ex, "Options factory failed after {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            throw;
+        }
+
+        _logger.LogDebug("Options factory returned in {ElapsedMs}ms", sw.ElapsedMilliseconds);
 
         // v0.18 Pillar C plugin branch: translator already constructed a
         // concrete IAiAgent (plugin-authored). The grain treats it verbatim —
@@ -83,19 +106,26 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             {
                 _agent.SystemPrompt = persistedPrompt;
             }
-            return base.OnActivateAsync(cancellationToken);
+            // v0.24 — restore opaque state blob for Python (and any future) plugin agents.
+            if (_agent is IOpaqueStateCarrier carrier && _state.State.OpaqueState is { } blob)
+            {
+                carrier.OpaqueState = blob;
+            }
+            _logger.LogInformation("Grain activated in {ElapsedMs}ms, mode=plugin", sw.ElapsedMilliseconds);
+            await base.OnActivateAsync(cancellationToken);
+            return;
         }
 
         var provider = supplied.CompletionProvider ?? _defaultProvider
             ?? throw new InvalidOperationException(
-                $"Agent grain '{id}' activated but no ICompletionProvider is available. " +
+                $"Agent grain '{_agentId}' activated but no ICompletionProvider is available. " +
                 "Either register a silo-wide ICompletionProvider in DI (v0.16 pattern) or " +
                 "configure the manifest instantiator (v0.17 Pillar B) so the translator " +
                 "supplies a per-agent provider via StatefulAgentOptions.CompletionProvider.");
 
         var seeded = new StatefulAgentOptions
         {
-            AgentName = supplied.AgentName ?? id,
+            AgentName = supplied.AgentName ?? _agentId,
             SystemPrompt = _state.State.SystemPrompt ?? supplied.SystemPrompt,
             Filters = supplied.Filters,
             UsageSink = supplied.UsageSink,
@@ -110,19 +140,28 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         };
 
         _agent = new StatefulAiAgent(provider, seeded, _loggerFactory.CreateLogger<StatefulAiAgent>());
-        return base.OnActivateAsync(cancellationToken);
+        _logger.LogInformation("Grain activated in {ElapsedMs}ms, mode=declarative", sw.ElapsedMilliseconds);
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<string> AskAsync(string userMessage)
     {
         var agent = EnsureAgent();
+        using var scope = _logger.BeginScope("{AgentId}", _agentId);
+        using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.ask");
+        activity?.SetTag(AgenticTags.AgentName, _agentId);
+
+        var sw = Stopwatch.StartNew();
         var reply = await agent.AskAsync(userMessage);
 
         _state.State.History = agent.History.ToList();
         _state.State.SystemPrompt = agent.SystemPrompt;
+        if (agent is IOpaqueStateCarrier carrier)
+            _state.State.OpaqueState = carrier.OpaqueState;
         await _state.WriteStateAsync();
 
+        _logger.LogDebug("AskAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return reply;
     }
 
@@ -155,6 +194,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         var agent = EnsureAgent();
         agent.Reset();
         _state.State.History = new List<ChatTurn>();
+        _state.State.OpaqueState = null;
         await _state.WriteStateAsync();
     }
 

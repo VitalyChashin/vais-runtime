@@ -1,0 +1,10 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: research-agent
+  version: "1.0"
+spec:
+  handler:
+    typeName: langgraph_researcher.agent.ResearcherAgent
+  protocols:
+    - kind: Http

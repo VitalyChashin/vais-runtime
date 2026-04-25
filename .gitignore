@@ -30,3 +30,9 @@ deploy/compose/data/
 
 # CodeGraph generated index (tool artifact, never committed)
 .codegraph/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+.venv/

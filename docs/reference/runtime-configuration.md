@@ -107,6 +107,21 @@ v0.23 Pillar E. Opt-in — disabled by default because Python is an optional run
 
 `appsettings.json` key: `PythonPlugins:Directory`.
 
+### Python agent settings (v0.24)
+
+Additional env vars that apply when a plugin with `kind: agent-handler` is loaded:
+
+| Env var | Default | Values | Notes |
+|---|---|---|---|
+| `VAIS_PYTHON_AGENT_MAX_STATE_BYTES` | `1048576` (1 MiB) | Positive integer, or `0` to disable | Maximum byte length (UTF-8) of the `newState` blob returned by `vais/agent.invoke`. Blobs that exceed this are rejected with `urn:vais-agents:python-agent-state-too-large`; the previous state is preserved. Set to `0` to disable the check (not recommended in production). |
+
+`invokeTimeoutSeconds` is set per-plugin in `plugin.yaml` (`spec.health.invokeTimeoutSeconds`, default `60`) rather than as a global env var — different agent plugins may have different latency profiles.
+
+**Startup log lines for agent-handler plugins:**
+
+- `Python agent plugin '<name>' registered handler typeName '<typeName>' (pid=<N>).`
+- `Python agent handler collision: typeName '<typeName>' already registered. Plugin '<name>' skipped.`
+
 ## Logging
 
 The baked `appsettings.json` sets these log-levels:

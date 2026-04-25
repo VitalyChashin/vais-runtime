@@ -32,6 +32,13 @@ public sealed class PythonPluginLoaderOptions
     public int DefaultHandshakeTimeoutSeconds { get; init; } = 5;
 
     /// <summary>
+    /// Per-invoke timeout used when <c>plugin.yaml</c> does not specify
+    /// <c>spec.health.invokeTimeoutSeconds</c>. Applies only to
+    /// <see cref="PythonHandlerKind.AgentHandler"/> plugins. Defaults to 60 seconds.
+    /// </summary>
+    public int DefaultInvokeTimeoutSeconds { get; init; } = 60;
+
+    /// <summary>
     /// When <see langword="true"/>, the subprocess supervisor (PR 2) runs
     /// <c>uv sync --frozen</c> inside the plugin directory if <c>.venv/</c> is
     /// absent at startup. Intended for development workflows; production images
@@ -39,4 +46,13 @@ public sealed class PythonPluginLoaderOptions
     /// Defaults to <see langword="false"/>.
     /// </summary>
     public bool FallbackUvSync { get; init; } = false;
+
+    /// <summary>
+    /// Maximum byte size of the opaque state blob a Python agent-handler plugin may
+    /// return in <c>newState</c> on each <c>vais/agent.invoke</c> response.
+    /// Turns that exceed this limit are rejected with
+    /// <see cref="PythonPluginUrns.AgentStateTooLarge"/>; the previous state is
+    /// preserved. Set to 0 to disable the check. Defaults to 1 MiB.
+    /// </summary>
+    public int MaxAgentStateSizeBytes { get; init; } = 1 * 1024 * 1024;
 }

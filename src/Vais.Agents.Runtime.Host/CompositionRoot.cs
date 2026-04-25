@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Vais.Agents;
 using Vais.Agents.Control;
@@ -67,8 +68,11 @@ internal static class CompositionRoot
         {
             silo.UseLocalhostClustering();
             silo.AddMemoryGrainStorage("Default");
+            silo.AddMemoryGrainStorage(AiAgentGrain.StorageName);
             silo.AddMemoryGrainStorage("PubSubStore"); // required by AddMemoryStreams pub-sub
             silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
+            // LLM-backed grains (plan + summarize) routinely exceed the 30-second default.
+            silo.Configure<SiloMessagingOptions>(o => o.ResponseTimeout = TimeSpan.FromMinutes(2));
             return;
         }
 
@@ -159,8 +163,8 @@ internal static class CompositionRoot
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();
 
-        services.ConfigureAgentGrains((sp, id) =>
-            sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id));
+        services.ConfigureAgentGrains(async (sp, id, ct) =>
+            await sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id, ct).ConfigureAwait(false));
 
         services.AddSingleton<IAuditLog, LoggerAuditLog>();
         services.AddSingleton<IAgentLifecycleManager>(sp => new AgentLifecycleManager(

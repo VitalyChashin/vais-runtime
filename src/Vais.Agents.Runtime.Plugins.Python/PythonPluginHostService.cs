@@ -24,23 +24,27 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<PythonPluginHostService> _logger;
     private readonly Func<PythonPluginDescriptor, PythonSubprocessSupervisor> _supervisorFactory;
+    private readonly IPluginHandlerRegistry? _handlerRegistry;
 
     private readonly List<PythonSubprocessSupervisor> _supervisors = [];
 
     internal PythonPluginHostService(
         PythonPluginLoaderOptions? options = null,
-        ILoggerFactory? loggerFactory = null)
-        : this(options, loggerFactory, supervisorFactory: null) { }
+        ILoggerFactory? loggerFactory = null,
+        IPluginHandlerRegistry? handlerRegistry = null)
+        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry) { }
 
-    // Test constructor — inject a custom supervisor factory
+    // Test constructor — inject a custom supervisor factory (handlerRegistry optional).
     internal PythonPluginHostService(
         PythonPluginLoaderOptions? options,
         ILoggerFactory? loggerFactory,
-        Func<PythonPluginDescriptor, PythonSubprocessSupervisor>? supervisorFactory)
+        Func<PythonPluginDescriptor, PythonSubprocessSupervisor>? supervisorFactory,
+        IPluginHandlerRegistry? handlerRegistry = null)
     {
         _options = options ?? new PythonPluginLoaderOptions();
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<PythonPluginHostService>();
+        _handlerRegistry = handlerRegistry;
         _supervisorFactory = supervisorFactory
             ?? (d => new PythonSubprocessSupervisor(d, _loggerFactory));
     }
@@ -109,6 +113,33 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
                 lock (_supervisors) _supervisors.Add(supervisor);
                 supervisor.Start();
                 await supervisor.InitialHandshakeTask.ConfigureAwait(false);
+
+                // Register agent-handler factory after successful handshake (v0.24).
+                if (descriptor.HandlerKind == PythonHandlerKind.AgentHandler &&
+                    supervisor.Status == PythonPluginStatus.Ready &&
+                    _handlerRegistry is { } registry)
+                {
+                    try
+                    {
+                        var factory = new PythonAgentShimFactory(
+                            supervisor,
+                            _options.MaxAgentStateSizeBytes,
+                            _loggerFactory);
+                        registry.Register(factory, descriptor.Name);
+                        _logger.LogInformation(
+                            "Registered Python agent handler '{TypeName}' for plugin '{Name}'.",
+                            descriptor.HandlerTypeName, descriptor.Name);
+                    }
+                    catch (PluginLoadException ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "[{Urn}] Python agent handler '{TypeName}' collides with an existing " +
+                            "registration — plugin '{Name}' marked unavailable.",
+                            PythonPluginUrns.AgentHandlerCollision,
+                            descriptor.HandlerTypeName,
+                            descriptor.Name);
+                    }
+                }
             }
             finally
             {

@@ -1,0 +1,269 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes are expected until the first tagged alpha.
+
+---
+
+## [Unreleased]
+
+### Added
+- `PythonAgentShim` — `IAiAgent` backed by a Python subprocess via the new `vais/agent.*` JSON-RPC MCP extension (v0.24). Supports opaque state round-trips so Python agents maintain their own internal state across turns without the .NET side parsing it.
+- `IOpaqueStateCarrier` interface wired through `AiAgentGrain` — the grain persists the opaque blob alongside history so Python agent state survives silo restarts.
+- `AgentInvokeRequest` / `AgentInvokeResponse` JSON-RPC protocol types and `IPythonAgentChannel` abstraction for the Python subprocess channel.
+
+### Changed
+- **Breaking:** `IAgentManifestTranslator.TranslateForGrain` signature changed from `StatefulAgentOptions TranslateForGrain(IServiceProvider, string)` (sync) to `ValueTask<StatefulAgentOptions> TranslateForGrain(IServiceProvider, string, CancellationToken)` (async). Update call sites from `translator.TranslateForGrain(sp, id)` to `await translator.TranslateForGrain(sp, id, ct)`.
+- **Breaking:** `ConfigureAgentGrains` now accepts `Func<IServiceProvider, string, CancellationToken, ValueTask<StatefulAgentOptions>>?` instead of `Func<IServiceProvider, string, StatefulAgentOptions>?`. The DI-registered type changes from `Func<string, StatefulAgentOptions>` to `Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>`. Update lambdas from `(sp, id) => new StatefulAgentOptions { ... }` to `(sp, id, ct) => ValueTask.FromResult(new StatefulAgentOptions { ... })`.
+- **Breaking:** `AiAgentGrain` constructor parameter `optionsFactory` type changed from `Func<string, StatefulAgentOptions>?` to `Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>?`.
+- `AiAgentGrain.OnActivateAsync` is now truly `async` — it awaits the options factory directly instead of blocking via `GetAwaiter().GetResult()`. This eliminates the Orleans grain activation deadlock that caused 2-minute `ResponseTimeout` failures on first invocation.
+
+### Fixed
+- **Orleans grain activation deadlock.** `OnActivateAsync` → `TranslateForGrain` → `GetAwaiter().GetResult()` blocked the Orleans single-threaded scheduler while waiting for an inner grain RPC whose continuation was posted back to that same blocked scheduler — deadlock held for exactly `SiloMessagingOptions.ResponseTimeout` (2 minutes). Root cause: `OrleansAgentRegistry` methods lacked `ConfigureAwait(false)` and `TranslateForGrain` used a sync-over-async bridge. Both issues resolved.
+- Added `ConfigureAwait(false)` to four grain-to-grain calls in `OrleansAgentRegistry` (`ListAsync`, `GetAsync`, `RegisterAsync`) — independent fix that unblocks the deadlock even with the old sync bridge.
+
+### Added (observability)
+- `OrleansDiagnostics` — new public class in `Vais.Agents.Hosting.Orleans` exposing `ActivitySourceName = "Vais.Agents.Hosting.Orleans"` and a shared `ActivitySource` for Orleans grain spans.
+- `AiAgentGrain` now emits `grain.activate` and `grain.ask` OTel spans tagged with `vais.agent.name`. Both spans are automatically picked up by `AddAgenticInstrumentation` — no consumer changes required.
+- `AiAgentGrain` now logs structured events at `Debug`/`Information`/`Error` level (category `Vais.Agents.Hosting.Orleans.AiAgentGrain`): grain activating, options factory elapsed time, activation mode (`plugin`/`declarative`), and per-ask elapsed time. Factory exceptions are logged at `Error` with elapsed milliseconds — enough to distinguish an Orleans deadlock (factory blocked for ~120 000 ms) from a slow but successful cold-start. Enable `Debug` in appsettings to see per-method timing; `Information` is on by default.
+- `AddAgenticInstrumentation(TracerProviderBuilder)` now also registers the `"Vais.Agents.Hosting.Orleans"` source in addition to `"Vais.Agents"`.
+
+---
+
+## [0.23.0-preview] — 2026-04-24
+
+### Added
+- **Python plugin pillar.** MCP stdio subprocess hosting for Python agents. Deploy a `pyproject.toml`-based Python package alongside the runtime; the host spawns it, handshakes via MCP `initialize` + `tools/list`, and restarts on crash with exponential backoff.
+- `PythonSubprocessSupervisor` — per-plugin state machine: spawn → MCP handshake → Ready → restart loop. Configurable handshake timeout, invoke timeout, and restart policy (`Never` / `ExponentialBackoff`).
+- `PythonPluginHostService` — `IHostedService` that scans the plugins directory, starts supervisors in parallel, and exposes `IPythonPluginHost` for introspection.
+- `PythonPluginScanner` / `PluginYamlDeserializer` — discovers Python plugin packages via `pyproject.toml` `[tool.vais.plugin]` metadata.
+- `PythonPluginDescriptor` record — captures plugin name, directory, interpreter path, entrypoint, ABI version, handshake/invoke timeouts, restart policy, declared tools, and secret refs.
+- `INamedToolSourceProvider` — extension point for per-named-server `IToolSource` lookup. Implemented by `PythonPluginHostService` so MCP tool references in agent manifests resolve to the running subprocess client.
+- `PythonPluginUrns` — structured URN constants for all plugin lifecycle events (`load-failed`, `handshake-timeout`, `exited`, `unavailable`, `abi-mismatch`, `ambiguous-folder`).
+- ABI version negotiation: plugin declares `target_api_version` in `pyproject.toml`; host rejects mismatched versions with `abi-mismatch` URN.
+- `AddPythonPlugins` DI extension wiring `PythonPluginHostService` + `INamedToolSourceProvider` into the silo.
+- `PluginAgentResearchPlanner` sample — LangGraph-based research-planner Python agent deployed as a plugin, with `pyproject.toml`, venv setup, and `docker-compose` overlay.
+- `PythonEchoWireTests` — wire-level integration tests for `PythonSubprocessSupervisor` including timeout, asyncio dispatch, and restart scenarios.
+- Concept doc `docs/concepts/polyglot-agents.md` and guide `docs/guides/package-a-python-agent.md`.
+- `ManifestInstantiationUrns.McpServerUnavailable` and `McpToolNotFound` URN constants.
+
+### Changed
+- `AiAgentGrainState` gains `OpaqueState` property for persisting plugin-agent opaque blobs across silo restarts.
+
+---
+
+## [0.21.0-preview] — 2026-04-22
+
+### Added
+- **Streaming journal replay** (`ReplayMode.Full`). `OrleansAgentJournal.ReadAsync` replays persisted `JournalEntry` records as an `IAsyncEnumerable<JournalEntry>`, including `CompletionDeltaRecorded` entries for streaming deltas.
+- `CompletionDeltaRecorded` journal entry kind — records each streaming completion chunk with model id, prompt/completion tokens, and text delta.
+- **Per-attempt retry telemetry.** `StatefulAiAgent`'s resilience pipeline now emits attempt-number tags on every retry so dashboards can bucket retries vs. first-try calls.
+- **A2A cross-runtime graph nodes.** `RemoteAgentNode` resolves the target runtime URL from the graph manifest's `A2ARemoteAgents` declarations and calls it over the A2A wire protocol, enabling graph steps to fan out to agents in other Vais.Agents clusters or third-party A2A endpoints.
+- **OIDC/OAuth 2.0 token exchange for cross-runtime identity propagation.** Three propagation modes: `Forward` (pass the inbound bearer token), `ServiceAccount` (use a pre-configured client-credential token), and `TokenExchange` (RFC 8693 subject-token exchange). Configured per `RemoteRuntime` entry in `Vais:RemoteRuntimes`.
+
+---
+
+## [0.20.0-preview] — 2026-04-21
+
+### Added
+- **Cross-runtime graph refs.** Agent graph manifests can reference agents on remote Vais.Agents runtimes (or any A2A-compatible endpoint). `runtimeUrl` field on `AgentNodeRef` selects the target cluster.
+- `runtimeUrl` propagation through all manifest loaders (JSON, YAML, CRD schema).
+- `AgentRemoteInvoker` service + typed HTTP client for outbound cross-runtime A2A calls.
+- Concept doc + guide for cross-runtime graphs.
+
+---
+
+## [0.19.0-preview] — 2026-04-21
+
+### Added
+- **Agent graph as a first-class deployable.** `AgentGraphManifest` can be registered via `vais apply -f` and stored in Orleans grain storage (`OrleansAgentGraphRegistry`) so graph definitions survive silo restart.
+- `IAgentGraphRegistry` / `OrleansAgentGraphRegistry` — durable graph manifest storage, mirroring `IAgentRegistry` for agent manifests.
+- CRD schema for `AgentGraph` Kubernetes custom resource.
+- Helm chart additions for graph registry grain storage.
+
+---
+
+## [0.18.0-preview] — 2026-04-21
+
+### Added
+- **Plugin loader wired into `Runtime.Host`.** `CompositionRoot` now discovers and loads code-authored plugin assemblies (`.dll` files in a configurable plugin directory) at startup via `AssemblyLoadContext` isolation.
+- `PythonPluginsDirectory` runtime option — enables the Python plugin scan path when set.
+- Plugin agent factory registration flows through `IPluginHandlerRegistry` into `AgentManifestTranslator`.
+
+---
+
+## [0.17.0-preview] — 2026-04-21
+
+### Added
+- **Declarative agent translator (Pillar B).** `AgentManifestTranslator` translates a stored `AgentManifest` into `StatefulAgentOptions`, resolving model provider, system prompt (inline / template-ref / file-ref), static tools, MCP tools, A2A remote agents, and guardrails.
+- `IAgentManifestTranslator` — interface with `TranslateAsync` + `TranslateForGrain` + `InvalidateAsync`.
+- `ICompletionProviderPool` — memoised provider pool; shares a single SDK client across all activations of the same `ModelSpec`.
+- Per-agent provider resolution: each agent grain gets the provider declared in its manifest's `ModelSpec` rather than a silo-wide singleton.
+- `ConfigureAgentGrains` extension wired to the translator in `CompositionRoot` — grain activation now reads the manifest and instantiates the correct provider automatically.
+- Builtin guardrail factories: `LengthCap`, `RegexAllowlist`, `RegexDenylist` (input), `LlmAsJudge` (output).
+- `FileSystemPromptFileLoader` and `IPromptTemplateRegistry` for system-prompt resolution.
+- `ManifestInstantiationUrns` — structured error URNs for all translation failure modes.
+- `TranslatorInvalidationHook` — invalidates the translator cache on `UpdateAsync` / `EvictAsync` so the next grain activation picks up the new manifest.
+
+### Changed
+- `AiAgentGrain` now derives its `ICompletionProvider` from the per-agent options supplied by the translator (v0.17 Pillar B wire-through) rather than requiring a silo-wide `ICompletionProvider` registration.
+
+---
+
+## [0.16.0-preview] — 2026-04-21
+
+### Added
+- **`Vais.Agents.Runtime.Host`** — the deployable runtime container entrypoint. Hosts an Orleans silo, exposes the agent control-plane HTTP API, and wires all pillars together via `CompositionRoot`.
+- `RuntimeOptions` — typed configuration model for the runtime container (Orleans connection strings, plugin directories, remote runtime URLs, OPA endpoint, etc.).
+- Docker image build (`src/Vais.Agents.Runtime.Host/Dockerfile`).
+- `docker-compose.localhost.yml` base recipe + `opa`, `langfuse`, `otel`, `clustered` overlays.
+- Helm chart `deploy/helm/vais-agents-runtime/`.
+- `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
+
+---
+
+## [0.15.0-preview] — 2026-04-20
+
+### Added
+- **`vais` CLI** (`Vais.Agents.Cli`). Subcommands: `apply`, `get`, `delete`, `invoke`, `logs`, `graph apply/get/delete/invoke`.
+- `vais apply -f <manifest.yaml>` — deploy an agent or graph manifest to a running runtime.
+- `vais invoke <agent-id> "<message>"` — send a chat turn and stream the reply.
+- Shell completions for `bash`, `zsh`, `fish`, `PowerShell`.
+- `docs/reference/cli.md` — full subcommand reference.
+
+---
+
+## [0.14.0-preview] — 2026-04-20
+
+### Added
+- **OPA policy-engine pillar.** `IAgentPolicyEngine` backed by Open Policy Agent; evaluates `allow` decisions for every agent invocation, tool call, and graph step.
+- `OpaAgentPolicyEngine` — HTTP client to an OPA sidecar; bundles the built-in Rego policy bundle.
+- `AgentLifecycleManager` policy enforcement: `CreateAsync` / `UpdateAsync` / `EvictAsync` check `allow` before mutating registry state.
+- `AddOpaAgentPolicyEngine` DI extension; `OpaOptions` configuration model.
+- `docs/concepts/policy.md` and Helm sidecar values for OPA.
+
+---
+
+## [0.13.0-preview] — 2026-04-20
+
+### Added
+- **Kubernetes operator pillar** (`Vais.Agents.Control.KubernetesOperator.Host`). Watches `AgentManifest` and `AgentGraph` CRDs; reconciles the agent registry and graph registry to match declared state.
+- `AgentManifestReconciler` and `AgentGraphReconciler` — idempotent reconcile loops using KubeOps.
+- CRD YAML definitions for `AgentManifest` and `AgentGraph` (v1alpha1).
+- Helm chart `deploy/helm/vais-agents-operator/`.
+- `deploy/crds/` — standalone CRD install for non-Helm environments.
+- `docs/guides/deploy-the-operator.md`.
+
+---
+
+## [0.12.0-preview] — 2026-04-20
+
+### Added
+- **SSE streaming invoke** (`POST /v1/agents/{id}/invoke/stream`). Server-Sent Events endpoint that streams `delta` events as the agent generates tokens, followed by a `done` event.
+- `StreamAsync` on `IAiAgent` / `StatefulAiAgent` — yields `AgentStreamChunk` items; backed by provider-native streaming (SK / MAF).
+- Streaming wire format: newline-delimited `data: {...}` events per SSE spec.
+- `OrleansAgentRuntime.StreamAsync` grain method with `GrainCancellationToken` for SSE disconnect propagation.
+
+---
+
+## [0.11.0-preview] — 2026-04-20
+
+### Added
+- **OpenAPI spec** auto-generated from the HTTP control-plane endpoints; exposed at `/openapi/v1.json` and `/swagger`.
+- **Idempotency-Key middleware** (`X-Idempotency-Key` header). Duplicate requests within the TTL window return the cached response; in-flight duplicates wait and share the result.
+- `IIdempotencyStore` + `OrleansIdempotencyStore` — durable idempotency record storage backed by `IIdempotencyKeyGrain`.
+- `AddOrleansIdempotencyStore` DI extension; `IdempotencyOptions` configuration model.
+- `docs/reference/problem-details-urns.md` — full URN taxonomy for all Problem Details error types.
+
+---
+
+## [0.10.0-preview] — 2026-04-20
+
+### Added
+- **Filter + resilience pipeline on `StreamAsync`.** `IAgentFilter`, `IInputGuardrail`, `IOutputGuardrail`, and `IToolGuardrail` now apply to streaming paths as well as request/response.
+- `Polly`-backed resilience pipeline on `StatefulAiAgent` — configurable retry, circuit-breaker, and timeout policies via `StatefulAgentOptions.ResiliencePipeline`.
+- `IUsageSink` — callback for token usage reporting per turn; receives prompt + completion counts.
+- `AgentBudget` — `MaxTurns` and `MaxTokens` hard caps enforced inside the agent loop; raises `BudgetExceededException`.
+
+---
+
+## [0.9.0-preview] — 2026-04-20
+
+### Added
+- **Agent graph orchestration pillar.** `IAgentGraph<TState>` — a DAG of agent nodes with conditional routing, parallel fan-out, and human-in-the-loop interrupt/resume.
+- `InProcessGraphOrchestrator` — runs a graph to completion or to an `Interrupt` in-process; persists checkpoints via `IGraphCheckpointer`.
+- `OrleansCheckpointer` — durable graph checkpoint storage backed by `IGraphCheckpointGrain`.
+- `AgentGraphManifest` — YAML/JSON declarative format for graph topology.
+- `GraphInterrupted` / `ResumeAsync` for human-in-the-loop patterns.
+- `AddOrleansGraphCheckpointer` DI extension.
+- `docs/concepts/graphs.md`.
+
+---
+
+## [0.8.0-preview] — 2026-04-19
+
+### Added
+- **A2A inbound server pillar.** `AddA2AAgentServer` mounts a standards-compliant [Agent-to-Agent (A2A) protocol](https://github.com/google-a2a/A2A) endpoint on the HTTP server; any A2A-capable client can discover and invoke registered agents.
+- `OrleansTaskStore` — durable A2A task storage (`ITaskStore`) backed by `IA2ATaskGrain`; tasks survive silo restart.
+- `AddOrleansA2ATaskStore` DI extension.
+- `docs/concepts/a2a.md` and interoperability guide.
+
+---
+
+## [0.7.0-preview] — 2026-04-19
+
+### Added
+- **MCP server pillar** (`Vais.Agents.McpServer`). Exposes registered agents as MCP tools over stdio transport, streamable-HTTP transport, or both simultaneously.
+- JWT dual-headed auth: accepts both MCP-native `Authorization` headers and the control-plane's existing JWT bearer tokens.
+- `list_resources` / `read_resource` MCP endpoints — agents as named resources with history content.
+- `McpAgentServer` builder + `AddMcpAgentServer` DI extension.
+- `docs/concepts/mcp-server.md`.
+
+---
+
+## [0.6.0-preview] — 2026-04-19
+
+### Added
+- **Agent control-plane HTTP server** (`Vais.Agents.Runtime.Server`). REST endpoints: `POST /v1/agents` (apply), `GET /v1/agents/{id}`, `DELETE /v1/agents/{id}`, `POST /v1/agents/{id}/invoke`, `GET /v1/agents` (list), and graph equivalents.
+- JWT authentication middleware; `IAgentContextAccessor` extracts tenant/user/correlation from the token into `AgentContext`.
+- `IAuditLog` + `LoggerAuditLog` — structured audit events for every create/invoke/delete lifecycle step.
+- JSON and YAML manifest loaders (`IManifestLoader`) with shared JSON-Schema validation.
+- `AgentLifecycleManager` — orchestrates registry + runtime + policy across create/update/evict.
+- Problem Details error shaping with `urn:vais-agents:*` URN types for all failure modes.
+- Typed HTTP client (`AgentControlPlaneClient`) for .NET consumers of the control-plane API.
+
+---
+
+## [0.5.0-preview] — 2026-04-19
+
+### Added
+- **Durable journal pillar.** `IAgentJournal` records every tool call (name, arguments, result, call-id, timestamp) to a persistent log; `OrleansAgentJournal` is the Orleans-backed implementation.
+- `IAgentRunJournalGrain` / `AgentRunJournalGrain` — grain storing `JournalEntry` records per run-id.
+- `RunId` stamped on every agent run; threaded through `DefaultToolCallDispatcher` so all tool calls in a run share the id.
+- `ResumeAsync(runId)` — restores the agent to its end-of-turn state from a prior run by replaying the journal.
+- `AddOrleansAgentJournal` DI extension; `OrleansAgentJournal` wired into `CompositionRoot`.
+
+---
+
+## [0.4.0-preview] — 2026-04-19
+
+### Added
+- Initial public documentation set (`docs/`) covering concepts, getting-started guides, reference pages, ADRs, and roadmap.
+- 20 samples under `samples/` covering every pillar through v0.4.
+- `samples/README.md` learning-path table.
+
+---
+
+## [0.3.0-preview] — 2026-04-19
+
+### Added
+- Package rename: all packages migrated from `Vais2.Agents.*` to `Vais.Agents.*` namespace.
+- `Vais.Agents.Abstractions` — core contracts: `IAiAgent`, `IAgentRuntime`, `IAgentRegistry`, `IAgentSession`, `ChatTurn`, `AgentManifest`, and all extension-point interfaces.
+- `Vais.Agents.Core` — `StatefulAiAgent`, `InMemoryAgentRuntime`, `InMemoryAgentRegistry`, `DefaultToolCallDispatcher`.
+- `Vais.Agents.Hosting.Orleans` — `AiAgentGrain`, `OrleansAgentRuntime`, `OrleansAgentRegistry`, `OrleansAgentSession`, and all supporting grains and surrogates.
+- `Vais.Agents.Ai.SemanticKernel` + `Vais.Agents.Ai.MicrosoftAgentFramework` — completion provider adapters.
+- `Microsoft.CodeAnalysis.PublicApiAnalyzers` enabled across all packable projects.
+- Central Package Management (`Directory.Packages.props`).
+- `AGENTS.md` — AI assistant briefing for this repository.

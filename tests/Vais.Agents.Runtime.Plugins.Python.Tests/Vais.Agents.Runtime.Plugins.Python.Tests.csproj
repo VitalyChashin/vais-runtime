@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

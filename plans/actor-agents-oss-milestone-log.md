@@ -1573,3 +1573,53 @@ Pillar plan: [`actor-agents-oss-v0.15-cli-pillar.md`](./actor-agents-oss-v0.15-c
 
 **Tag handling.** User will apply `git tag v0.23.0-preview` after verifying the build. Do not tag autonomously.
 
+---
+
+### 2026-04-24 — v0.24 Pillar F: First-class Python agents complete
+
+**Goal.** Promote Python plugins from MCP tool servers to full grain-backed agents: durable state, typed wire protocol, Python SDK, hermetic sample, integration tests, and full docs.
+
+**Shipped across three PRs.**
+
+- **PR 1 — Core .NET wiring:**
+  - `IPythonAgentChannel` interface extracted from `PythonSubprocessSupervisor` so `PythonAgentShim` can be unit-tested without spawning a subprocess.
+  - `PythonAgentShim` implements `IAiAgent` + `IOpaqueStateCarrier`; drives `vais/agent.invoke` and `vais/agent.reset` over the existing stdio MCP channel via `McpClient.SendRequestAsync`.
+  - `PythonHandlerKind` enum (`McpToolServer` / `AgentHandler`) added to `PythonPluginDescriptor`; loader reads `kind: agent-handler` from `plugin.yaml` and routes to `PythonAgentShim` instead of `McpToolSourceAdapter`.
+  - `PythonPluginLoaderOptions` gains `MaxAgentStateSizeBytes` (default 1 MiB) and `DefaultInvokeTimeoutSeconds` (default 60).
+  - New v0.24 URNs: `python-agent-invoke-failed`, `python-agent-invoke-timeout`, `python-agent-state-too-large`, `python-agent-protocol-error`, `python-agent-handler-collision`.
+  - 73 unit tests (all passing); new `PythonAgentShimTests` with fake channel + 3 `IOpaqueStateCarrier` tests.
+
+- **PR 2 — Durability + Python SDK + hermetic sample + integration tests:**
+  - `IOpaqueStateCarrier` interface added to `Vais.Agents.Core` — grain-agnostic opaque blob pass-through.
+  - `AiAgentGrainState.OpaqueState [Id(2)]` — durable Python state field; restored on `OnActivateAsync`, saved after each `AskAsync`, cleared on `ResetAsync`.
+  - `vais-agent-sdk` (Python package in `samples/python-agent-sdk/`): `AgentRequest`, `AgentResponse`, `AgentUsage`, `AgentJournalEntry` Pydantic models + `run(invoke)` synchronous-stdin dispatcher (Windows-compatible; 19 pytest passing).
+  - `samples/PluginAgentLangGraphResearcher/` — hermetic two-node state machine (plan → summarize, heuristic/no LLM), serves as the hermetic integration test target; `plugin.yaml` with `kind: agent-handler`, `pyproject.toml` with `targetApiVersion = "0.24"`, overlay Dockerfile.
+  - `PythonAgentWireTests` — 3 integration tests gated by `VAIS_RUN_PYTHON_PLUGIN_TESTS=1`; use production `PythonSubprocessSupervisor`; all pass in ~15s with Python installed.
+
+- **PR 3 — Docs, PublicAPI promotion, ABI bump:**
+  - `docs/concepts/polyglot-agents.md` — new: three-way comparison table, architecture diagram, wire protocol JSON examples, state model, lifecycle, error URNs.
+  - `docs/guides/package-a-python-agent.md` — new: 10-step guide, troubleshooting table, state persistence reference.
+  - `docs/reference/problem-details-urns.md` — v0.24 Python agent URN table (5 URNs).
+  - `docs/reference/runtime-configuration.md` — `VAIS_PYTHON_AGENT_MAX_STATE_BYTES`, `invokeTimeoutSeconds` note, startup log lines.
+  - `docs/roadmap/deferred-backlog.md` — PARTIALLY SHIPPED bullet updated to include v0.24; v0.24.x backlog listed.
+  - `PythonPluginAbi.CurrentVersion` bumped `"0.23"` → `"0.24"`.
+  - `samples/PluginAgentResearchPlanner/research-planner/pyproject.toml` `targetApiVersion` updated to `"0.24"`.
+  - All four `PublicAPI.Unshipped.txt` files cleared; new entries promoted to `Shipped.txt` (Abstractions, Core, Hosting.Orleans, Runtime.Plugins.Python).
+
+**Surprises / findings.**
+
+- **Windows asyncio `ProactorEventLoop` incompatibility.** `asyncio.loop.connect_read_pipe` fails on Windows with `OSError [WinError 6]`. The Python SDK runner was rewritten to use a synchronous `for raw in sys.stdin` loop with `asyncio.run()` per message — MCP stdio uses newline-delimited JSON (no Content-Length framing), so synchronous line reading is fully correct.
+- **FastMCP cannot register custom method handlers.** The Python side needs a bespoke JSON-RPC dispatcher; FastMCP only handles MCP spec methods. The `vais-agent-sdk` implements its own dispatch table.
+- **`McpClient.SendRequestAsync` accepts custom method names.** `.NET` MCP client is not limited to spec methods — `"vais/agent.invoke"` works as-is, no monkey-patching required.
+- **Explicit interface implementation required for `IOpaqueStateCarrier` on `PythonAgentShim`.** The grain casts via `is IOpaqueStateCarrier` so explicit impl is fine and keeps `_opaqueState` private to the shim.
+- **PublicAPI const value tracking.** Bumping `PythonPluginAbi.CurrentVersion` from `"0.23"` to `"0.24"` requires a `Shipped.txt` update (the analyzer tracks the string value, not just the symbol name).
+
+**Deferred to v0.24.x.**
+
+- Streaming `vais/agent.stream` wire method (per-token SSE-style events from Python agent).
+- Hot-reload of Python agent plugin without silo restart.
+- Per-tool-call telemetry events from Python subprocess.
+- Secret propagation to Python agent subprocesses (env var injection of `secretRefs`).
+
+**Tag handling.** User will apply `git tag v0.24.0-preview` after verifying the build. Do not tag autonomously.
+

@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Plugin
+metadata:
+  name: langgraph-researcher-live
+spec:
+  runtime: python
+  kind: agent-handler
+  handler:
+    typeName: langgraph_researcher_live.agent.ResearcherAgent
+  entrypoint: src/langgraph_researcher_live/server.py
+  python:
+    version: "3.11"
+    interpreter: .venv/bin/python
+  health:
+    handshakeTimeoutSeconds: 10
+    restartPolicy: exponentialBackoff
+    invokeTimeoutSeconds: 60
+  # OPENAI_API_KEY must be present in the .NET runtime host environment —
+  # it is inherited by the Python subprocess on Process.Start.
+  # Secret propagation via secretRefs env-var injection is tracked as a v0.24
+  # deferred backlog item (§1 Identity & security in docs/roadmap/deferred-backlog.md).

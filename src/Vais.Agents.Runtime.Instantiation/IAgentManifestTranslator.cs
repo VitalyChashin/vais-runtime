@@ -9,9 +9,9 @@ namespace Vais.Agents.Runtime.Instantiation;
 /// <summary>
 /// Translates a stored <c>AgentManifest</c> into <see cref="StatefulAgentOptions"/>
 /// ready to seed a <c>StatefulAiAgent</c>. The translator is the v0.17 Pillar B
-/// seam — grain activation (<c>Func&lt;string, StatefulAgentOptions&gt;</c> from
-/// <c>ConfigureAgentGrains</c>) calls <see cref="TranslateForGrain"/>; code paths
-/// that want async + cancellation go through <see cref="TranslateAsync"/>.
+/// seam — grain activation (<c>Func&lt;string, CancellationToken, ValueTask&lt;StatefulAgentOptions&gt;&gt;</c>
+/// from <c>ConfigureAgentGrains</c>) calls <see cref="TranslateForGrain"/>; callers
+/// that want async + cancellation can also go directly through <see cref="TranslateAsync"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -39,17 +39,11 @@ public interface IAgentManifestTranslator : IAgentManifestInvalidator
     ValueTask<StatefulAgentOptions> TranslateAsync(string agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Synchronous entry point for the Orleans grain-activation seam
-    /// (<c>ConfigureAgentGrains(sp, id =&gt; translator.TranslateForGrain(sp, id))</c>).
-    /// Blocks on the underlying registry call — safe because the call is an
-    /// in-process grain RPC (sub-millisecond in healthy clusters).
+    /// Async entry point for the Orleans grain-activation seam
+    /// (<c>ConfigureAgentGrains(async (sp, id, ct) =&gt; await translator.TranslateForGrain(sp, id, ct))</c>).
+    /// Delegates to <see cref="TranslateAsync"/> — no sync-over-async bridging.
     /// </summary>
-    /// <remarks>
-    /// Prefer <see cref="TranslateAsync"/> where an async context is available;
-    /// this method exists because <c>Func&lt;string, StatefulAgentOptions&gt;</c> is
-    /// not async.
-    /// </remarks>
-    StatefulAgentOptions TranslateForGrain(IServiceProvider serviceProvider, string agentId);
+    ValueTask<StatefulAgentOptions> TranslateForGrain(IServiceProvider serviceProvider, string agentId, CancellationToken cancellationToken = default);
 
     // NB: InvalidateAsync is declared on IAgentManifestInvalidator (inherited).
     // AgentLifecycleManager (Control.InProcess) depends on the parent interface

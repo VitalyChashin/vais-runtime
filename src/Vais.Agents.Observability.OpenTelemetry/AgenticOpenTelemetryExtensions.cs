@@ -24,7 +24,9 @@ public static class AgenticOpenTelemetryExtensions
     public static TracerProviderBuilder AddAgenticInstrumentation(this TracerProviderBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        return builder.AddSource(AgenticDiagnostics.ActivitySourceName);
+        return builder
+            .AddSource(AgenticDiagnostics.ActivitySourceName)
+            .AddSource("Vais.Agents.Hosting.Orleans");
     }
 
     /// <summary>

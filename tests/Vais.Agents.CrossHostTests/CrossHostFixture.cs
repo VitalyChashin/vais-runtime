@@ -176,12 +176,12 @@ public sealed class CrossHostFixture : IAsyncLifetime
                 services.AddSingleton<ICompletionProvider, HistorySizeProvider>();
                 services.AddSingleton<IUsageSink>(sink);
                 services.AddSingleton<IAgentFilter>(filter);
-                services.ConfigureAgentGrains((sp, id) => new StatefulAgentOptions
+                services.ConfigureAgentGrains((sp, id, ct) => ValueTask.FromResult(new StatefulAgentOptions
                 {
                     AgentName = id,
                     UsageSink = sp.GetRequiredService<IUsageSink>(),
                     Filters = sp.GetServices<IAgentFilter>().ToArray(),
-                });
+                }));
             });
         }
     }
@@ -198,12 +198,12 @@ public sealed class CrossHostFixture : IAsyncLifetime
                 services.AddSingleton<ICompletionProvider, HistorySizeProvider>();
                 services.AddSingleton<IUsageSink>(sink);
                 services.AddSingleton<IAgentFilter>(filter);
-                services.ConfigureAgentGrains((sp, id) => new StatefulAgentOptions
+                services.ConfigureAgentGrains((sp, id, ct) => ValueTask.FromResult(new StatefulAgentOptions
                 {
                     AgentName = id,
                     UsageSink = sp.GetRequiredService<IUsageSink>(),
                     Filters = sp.GetServices<IAgentFilter>().ToArray(),
-                });
+                }));
             });
         }
     }

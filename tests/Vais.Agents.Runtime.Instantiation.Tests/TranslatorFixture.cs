@@ -210,6 +210,9 @@ internal sealed class TranslatorFixture
         public IReadOnlyCollection<string> HandlerTypeNames => _byName.Keys;
 
         public IReadOnlyCollection<PluginDescriptor> Plugins => Array.Empty<PluginDescriptor>();
+
+        public void Register(IAgentHandlerFactory factory, string ownerPluginName)
+            => _byName[factory.HandlerTypeName] = factory;
     }
 
     private sealed class FakeAgentRegistry : IAgentRegistry

@@ -1,11 +1,10 @@
 #nullable enable
 Vais.Agents.Runtime.Plugins.Python.PythonPluginAbi
-const Vais.Agents.Runtime.Plugins.Python.PythonPluginAbi.CurrentVersion = "0.23" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginAbi.CurrentVersion = "0.24" -> string!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.<Clone>$() -> Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.DeclaredTools.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.DeclaredTools.init -> void
-Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Deconstruct(out string! Name, out string! PluginDirectory, out string! InterpreterPath, out string! EntrypointPath, out string! TargetApiVersion, out int HandshakeTimeoutSeconds, out Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, out System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs) -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.EntrypointPath.get -> string!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.EntrypointPath.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Equals(Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor? other) -> bool
@@ -17,7 +16,6 @@ Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Name.get -> string!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Name.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PluginDirectory.get -> string!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PluginDirectory.init -> void
-Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PythonPluginDescriptor(string! Name, string! PluginDirectory, string! InterpreterPath, string! EntrypointPath, string! TargetApiVersion, int HandshakeTimeoutSeconds, Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs) -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.RestartPolicy.get -> Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.RestartPolicy.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.SecretRefs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
@@ -77,3 +75,23 @@ Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Restarting = 2 -> Vais.Age
 Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus.Unavailable = 3 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginStatus
 Vais.Agents.Runtime.Plugins.Python.PythonPluginServiceCollectionExtensions
 static Vais.Agents.Runtime.Plugins.Python.PythonPluginServiceCollectionExtensions.AddPythonPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind
+Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind.AgentHandler = 1 -> Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind
+Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind.McpToolServer = 0 -> Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandlerKind.get -> Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandlerKind.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandlerTypeName.get -> string?
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.HandlerTypeName.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.InvokeTimeoutSeconds.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.InvokeTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.PythonPluginDescriptor(string! Name, string! PluginDirectory, string! InterpreterPath, string! EntrypointPath, string! TargetApiVersion, int HandshakeTimeoutSeconds, Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs, Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind HandlerKind = Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind.McpToolServer, string? HandlerTypeName = null, int InvokeTimeoutSeconds = 60) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.Deconstruct(out string! Name, out string! PluginDirectory, out string! InterpreterPath, out string! EntrypointPath, out string! TargetApiVersion, out int HandshakeTimeoutSeconds, out Vais.Agents.Runtime.Plugins.Python.PythonRestartPolicy RestartPolicy, out System.Collections.Generic.IReadOnlyList<string!>! DeclaredTools, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! SecretRefs, out Vais.Agents.Runtime.Plugins.Python.PythonHandlerKind HandlerKind, out string? HandlerTypeName, out int InvokeTimeoutSeconds) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.DefaultInvokeTimeoutSeconds.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.DefaultInvokeTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.MaxAgentStateSizeBytes.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.MaxAgentStateSizeBytes.init -> void
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AgentHandlerCollision = "urn:vais-agents:python-agent-handler-collision" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AgentInvokeFailed = "urn:vais-agents:python-agent-invoke-failed" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AgentInvokeTimeout = "urn:vais-agents:python-agent-invoke-timeout" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AgentProtocolError = "urn:vais-agents:python-agent-protocol-error" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.AgentStateTooLarge = "urn:vais-agents:python-agent-state-too-large" -> string!

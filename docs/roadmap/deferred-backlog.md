@@ -4,7 +4,7 @@
 
 This catalogue lists every item that was explicitly **deferred**, flagged as **out of scope**,
 or kept as an **open question** during Phases 0 through 3 of the Vais.Agents OSS build-out
-(v0.1 through v0.20-preview + Pillar F docs + samples). It is an input for Phase 4 roadmap
+(v0.1 through v0.24-preview). It is an input for Phase 4 roadmap
 planning — not a prioritised plan. Entries are grouped by theme, dated, and cross-linked to
 the plan document that originated them.
 
@@ -47,6 +47,11 @@ update the Appendix dates if the Phase 3 non-goals change state.
 - **`ServiceAccountPrincipalMapper` runtime-side opt-in**: shipped but unwired by default.
   Source: same as above. Next step: add a Helm values toggle + a smoketest for the
   namespace-to-tenant mapping.
+- **Secret propagation to Python agent subprocesses.** v0.24 defers `secretRefs` env-var
+  injection — the `plugin.yaml` `spec.secrets` block is parsed but not forwarded to the
+  subprocess environment at startup. Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-24). Next step: v0.24.x polish pillar — inject each resolved secret as
+  `VAIS_SECRET_<REF>=<value>` before `Process.Start`.
 - **OPA bundle-server + signature verification.** Policies are loaded from disk / ConfigMap
   today; there is no signed-bundle pipeline. Source:
   [v0.14 OPA findings](../../plans/actor-agents-oss-v0.14-opa-policy-engine-findings.md)
@@ -75,11 +80,21 @@ update the Appendix dates if the Phase 3 non-goals change state.
   (2026-04-21) + [v0.22 pillar plan](../../plans/actor-agents-oss-v0.22-plugin-hot-reload-pillar.md).
   **SHIPPED v0.22**.
 - ~~**Non-.NET plugins** (Python, Node, WASM / gRPC / stdio sidecars). v0.18 ABI is .NET-only.~~
-  **PARTIALLY SHIPPED v0.23 (Python only — Node/Go/Rust remain deferred).** Python plugins ship
-  as FastMCP stdio subprocesses managed by `IPythonPluginHost`; tools are contributed to the
-  agent registry via `INamedToolSourceProvider`. Source: milestone log v0.18 (2026-04-21) +
-  [v0.23 pillar plan](../../plans/actor-agents-oss-v0.23-python-plugins-pillar.md).
+  **PARTIALLY SHIPPED v0.23 + v0.24 (Python only — Node/Go/Rust remain deferred).**
+  v0.23: Python tool plugins ship as FastMCP stdio subprocesses; tools contributed via `INamedToolSourceProvider`.
+  v0.24: Python *agent* plugins — first-class Python agents with Orleans durability, `vais/agent.*` JSON-RPC protocol, `vais-agent-sdk`, `IOpaqueStateCarrier` grain-state integration, and the hermetic `PluginAgentLangGraphResearcher` sample.
+  Source: milestone log v0.18 (2026-04-21) + [v0.23 pillar plan](../../plans/actor-agents-oss-v0.23-python-plugins-pillar.md) + [v0.24 pillar plan](../../plans/actor-agents-oss-v0.24-python-agents-pillar.md).
   Remaining: Node.js, Go, Rust, WASM sidecars — still deferred.
+- **Python agent streaming (`vais/agent.stream`).** v0.24 only supports unary
+  `vais/agent.invoke`. Per-token SSE-style events from the Python subprocess are deferred.
+  Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
+  Next step: add a `vais/agent.stream` JSON-RPC method to the wire protocol; the SDK runner
+  yields chunks; the .NET shim implements `IStreamingAiAgent`.
+- **Python agent plugin hot-reload without silo restart.** The v0.22 `.NET`
+  `ReloadPolicy.DrainAndSwap` mechanism does not apply to Python subprocesses; a config
+  change requires a silo restart to pick up a new `plugin.yaml`. Source: same (2026-04-24).
+  Next step: extend `DefaultPluginReloader` to signal the `PythonSubprocessSupervisor` to
+  drain, kill, and restart the subprocess in-place.
 - **`vais plugins list` / `/v1/plugins` endpoint.** Plugin discovery is via startup logs
   only. Source: milestone log v0.18 (2026-04-21). Next step: small v0.18.x polish pillar
   once tagged.
@@ -223,6 +238,13 @@ Source: [milestone v0.17 wrap-up](../../plans/actor-agents-oss-milestone-log.md)
   [milestone M3e entries](../../plans/actor-agents-oss-milestone-log.md) (2026-04-18).
   Next step: fold into an orchestrator-events pillar once streamed tool-call parity tests
   are in (see §4 orchestration above).
+- **Per-tool-call telemetry events from Python agent subprocesses.** v0.24 emits a single
+  span per `vais/agent.invoke` round-trip; individual tool calls made inside the Python
+  process are invisible to the .NET OTel pipeline. Source:
+  [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
+  Next step: define an out-of-band telemetry channel (e.g. a second stdio stream or MCP
+  notifications) so the subprocess can emit `ToolCallStarted` / `ToolCallCompleted` events
+  back to the supervisor.
 
 ### 9. Persistence
 
@@ -333,6 +355,11 @@ integration + decision-log forwarding (also in §Observability).
 - **`v0.17.0-preview` tag application** — same protocol; deferred to user confirmation.
   Source: [milestone Pillar B wrap-up](../../plans/actor-agents-oss-milestone-log.md).
   Same confirmation step.
+- **`v0.24.0-preview` tag applied 2026-04-24.** Marks the v0.24 Pillar F completion:
+  Python agent plugins with Orleans durability, `vais-agent-sdk`, `IOpaqueStateCarrier`,
+  hermetic `PluginAgentLangGraphResearcher` sample, and full docs. Remote push pending
+  if/when the repo gains a remote. Source:
+  [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
 - **Image signing + SBOM at every preview tag.** Not in Phase 3; folds into §5 runtime
   container CI hardening. Source:
   [Phase 3 plan Pillar A §Deferred](../../plans/actor-agents-oss-phase-3-runtime-productisation.md)
@@ -348,7 +375,7 @@ Straight from `actor-agents-oss-phase-3-runtime-productisation.md` §Non-goals
 - **Multi-region / leader-election.** Single-region, single-leader runtime only.
 - **Identity-provider implementations.** See §1 Identity & security above.
 - ~~**Dynamic plugin hot-reload.**~~ See §3 Plugins & hosting above. **SHIPPED v0.22**.
-- ~~**Non-.NET plugins.**~~ See §3 Plugins & hosting above. **PARTIALLY SHIPPED v0.23 (Python only).**
+- ~~**Non-.NET plugins.**~~ See §3 Plugins & hosting above. **PARTIALLY SHIPPED v0.23 + v0.24 (Python tool plugins + Python agent plugins; Node/Go/Rust remain deferred).**
 - **Visual-designer / UI.** Dashboard out of scope. CLI + `kubectl` + Grafana are the
   surface.
 - **Samples migration.** The housekeeping-samples plan stays deferred; Pillar F's

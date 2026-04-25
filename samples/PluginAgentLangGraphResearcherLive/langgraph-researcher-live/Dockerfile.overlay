@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+# Overlay Dockerfile: layers the live LangGraph plugin onto a published runtime image.
+# Build context: samples/ (parent of PluginAgentLangGraphResearcherLive/)
+#
+# Usage (from samples/):
+#   docker build \
+#     -f PluginAgentLangGraphResearcherLive/langgraph-researcher-live/Dockerfile.overlay \
+#     -t my-registry/vais-researcher-live:0.24.0 .
+#
+# For local development (builds runtime from source) use docker-compose.yml instead.
+
+# ── Stage 1: Build the Python plugin venv on Linux ───────────────────────────
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS python-builder
+WORKDIR /plugin
+
+# vais-agent-sdk — replace with `uv pip install vais-agent-sdk>=0.24` once published to PyPI.
+COPY python-agent-sdk /sdk
+COPY PluginAgentLangGraphResearcherLive/langgraph-researcher-live/pyproject.toml pyproject.toml
+COPY PluginAgentLangGraphResearcherLive/langgraph-researcher-live/src src
+
+RUN uv venv .venv \
+    && uv pip install --python .venv/bin/python /sdk \
+    && uv pip install --python .venv/bin/python \
+       "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3"
+
+# ── Stage 2: Overlay onto the published Vais runtime image ───────────────────
+FROM ghcr.io/vais-agents/runtime:0.24.0-preview
+WORKDIR /var/lib/vais/python-plugins/langgraph-researcher-live
+
+COPY --from=python-builder /plugin/.venv .venv
+COPY --from=python-builder /plugin/src src
+COPY PluginAgentLangGraphResearcherLive/langgraph-researcher-live/plugin.yaml plugin.yaml
+COPY PluginAgentLangGraphResearcherLive/langgraph-researcher-live/pyproject.toml pyproject.toml
+
+ENV VAIS_PYTHON_PLUGINS_DIRECTORY=/var/lib/vais/python-plugins
+# Pass OPENAI_API_KEY at runtime:
+#   docker run -e OPENAI_API_KEY=$OPENAI_API_KEY ...

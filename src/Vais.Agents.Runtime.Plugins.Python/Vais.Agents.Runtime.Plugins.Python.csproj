@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\Vais.Agents.Protocols.Mcp\Vais.Agents.Protocols.Mcp.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
   </ItemGroup>
 
   <ItemGroup>

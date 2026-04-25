@@ -1,0 +1,11 @@
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+WORKDIR /plugin
+COPY pyproject.toml .
+# Install vais-agent-sdk from PyPI once published; for now copy the local module.
+COPY ../../../python-agent-sdk /sdk
+RUN uv venv .venv && uv pip install --python .venv/bin/python /sdk && uv pip install --python .venv/bin/python -e .
+
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+WORKDIR /plugin
+COPY --from=builder /plugin/.venv .venv
+COPY src src
