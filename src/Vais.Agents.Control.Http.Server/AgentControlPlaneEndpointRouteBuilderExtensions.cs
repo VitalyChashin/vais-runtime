@@ -51,7 +51,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 "the same key + same body replay the original response; different body ⇒ 422 " +
                 "urn:vais-agents:idempotency-mismatch.")
             .Accepts<AgentManifest>("application/json", "application/yaml")
-            .Produces<AgentHandle>(StatusCodes.Status201Created)
+            .Produces<AgentApplyResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -83,7 +83,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 "PATCH semantics: supply the full new manifest; the server records it as a new version. " +
                 "Honours the Idempotency-Key header when the idempotency middleware is mounted.")
             .Accepts<AgentManifest>("application/json", "application/yaml")
-            .Produces<AgentHandle>(StatusCodes.Status200OK)
+            .Produces<AgentApplyResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -329,6 +329,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         HttpContext http,
         IAgentLifecycleManager manager,
         IAgentManifestLoader loader,
+        CapturingManifestApplyDiagnosticsSink? sink,
         CancellationToken ct)
     {
         string body;
@@ -355,8 +356,12 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         var manifest = parsed[0];
         try
         {
+            using var capture = sink?.BeginCapture();
             var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
-            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}", handle);
+            var warnings = capture?.Drain() ?? Array.Empty<ApplyDiagnostic>();
+            return Results.Created(
+                $"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}",
+                new AgentApplyResponse(handle, warnings));
         }
         catch (Exception ex)
         {
@@ -419,6 +424,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         IAgentLifecycleManager manager,
         IAgentRegistry registry,
         IAgentManifestLoader loader,
+        CapturingManifestApplyDiagnosticsSink? sink,
         string id,
         string? version,
         CancellationToken ct)
@@ -453,8 +459,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 return Results.NotFound(new { error = $"agent '{id}' not found" });
             }
             var currentHandle = new AgentHandle(id, existingVersion);
+            using var capture = sink?.BeginCapture();
             var newHandle = await manager.UpdateAsync(currentHandle, manifest, ct).ConfigureAwait(false);
-            return Results.Ok(newHandle);
+            var warnings = capture?.Drain() ?? Array.Empty<ApplyDiagnostic>();
+            return Results.Ok(new AgentApplyResponse(newHandle, warnings));
         }
         catch (Exception ex)
         {

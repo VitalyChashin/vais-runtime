@@ -101,10 +101,11 @@ update the Appendix dates if the Phase 3 non-goals change state.
   `IPluginHandlerRegistry` DI (returns empty list when absent), public API surface declared
   in `PublicAPI.Unshipped.txt`, and two TestServer integration tests.
   Source: milestone log v0.18 (2026-04-21). **SHIPPED v0.27**.
-- **HTTP control-plane `IManifestApplyDiagnosticsSink` implementation.** Sink contract +
-  translator emission work today; no HTTP layer consumes it. Source: milestone log v0.18
-  (2026-04-21). Next step: polish PR — thread warn records onto the `vais apply` response
-  body.
+- ~~**HTTP control-plane `IManifestApplyDiagnosticsSink` implementation.**~~ v0.28 ships
+  `CapturingManifestApplyDiagnosticsSink` (AsyncLocal-scoped singleton), `ApplyDiagnostic` +
+  `AgentApplyResponse` DTOs (server + client), Create/Update handlers capture and drain
+  warnings into the response body, `IManifestApplyDiagnosticsSink` wired via
+  `AddAgentControlPlane()`. Source: milestone log v0.18 (2026-04-21). **SHIPPED v0.28**.
 
 ### 4. Orchestration & graph
 

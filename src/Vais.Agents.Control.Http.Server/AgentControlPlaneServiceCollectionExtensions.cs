@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;
 
 namespace Vais.Agents.Control.Http;
@@ -23,6 +24,16 @@ public static class AgentControlPlaneServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<IAgentManifestLoader, JsonAgentManifestLoader>();
         services.TryAddSingleton<JsonAgentGraphManifestLoader>();
+
+        // Register the capturing sink as both the concrete type (HTTP handlers resolve
+        // it directly to call BeginCapture) and the interface (the manifest translator
+        // resolves IManifestApplyDiagnosticsSink from DI at construction time).
+        // AddSingleton (not TryAdd) so the HTTP layer always owns the interface binding.
+        // Hosts wishing to fan-out to a custom sink should wrap this instance.
+        services.TryAddSingleton<CapturingManifestApplyDiagnosticsSink>();
+        services.AddSingleton<IManifestApplyDiagnosticsSink>(
+            sp => sp.GetRequiredService<CapturingManifestApplyDiagnosticsSink>());
+
         return services;
     }
 

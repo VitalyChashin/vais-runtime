@@ -4,6 +4,20 @@
 namespace Vais.Agents.Control.Http;
 
 /// <summary>
+/// Client-side wire type for <c>POST /v1/agents</c> and <c>PATCH /v1/agents/{id}</c>.
+/// Mirrors the server's <c>AgentApplyResponse</c> without depending on the server package.
+/// </summary>
+public sealed record AgentApplyResponse(
+    AgentHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
+
+/// <summary>
+/// Client-side wire type for a non-fatal diagnostic in an apply response.
+/// Mirrors the server's <c>ApplyDiagnostic</c>.
+/// </summary>
+public sealed record ApplyDiagnostic(string Urn, string Detail);
+
+/// <summary>
 /// Client-side wire type for <c>GET /v1/agents/{id}</c>. Mirrors the server's
 /// equivalent shape in <c>Vais.Agents.Control.Http.Server</c> — the client
 /// package re-declares the shape instead of depending on the server package,

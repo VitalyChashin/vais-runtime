@@ -1,4 +1,32 @@
 #nullable enable
+override Vais.Agents.Control.Http.AgentApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentApplyResponse.ToString() -> string!
+override Vais.Agents.Control.Http.ApplyDiagnostic.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ApplyDiagnostic.GetHashCode() -> int
+override Vais.Agents.Control.Http.ApplyDiagnostic.ToString() -> string!
+static Vais.Agents.Control.Http.AgentApplyResponse.operator !=(Vais.Agents.Control.Http.AgentApplyResponse? left, Vais.Agents.Control.Http.AgentApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentApplyResponse.operator ==(Vais.Agents.Control.Http.AgentApplyResponse? left, Vais.Agents.Control.Http.AgentApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.ApplyDiagnostic.operator !=(Vais.Agents.Control.Http.ApplyDiagnostic? left, Vais.Agents.Control.Http.ApplyDiagnostic? right) -> bool
+static Vais.Agents.Control.Http.ApplyDiagnostic.operator ==(Vais.Agents.Control.Http.ApplyDiagnostic? left, Vais.Agents.Control.Http.ApplyDiagnostic? right) -> bool
+Vais.Agents.Control.Http.AgentApplyResponse
+Vais.Agents.Control.Http.AgentApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentApplyResponse!
+Vais.Agents.Control.Http.AgentApplyResponse.AgentApplyResponse(Vais.Agents.AgentHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.AgentApplyResponse.Deconstruct(out Vais.Agents.AgentHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.AgentApplyResponse.Equals(Vais.Agents.Control.Http.AgentApplyResponse? other) -> bool
+Vais.Agents.Control.Http.AgentApplyResponse.Handle.get -> Vais.Agents.AgentHandle!
+Vais.Agents.Control.Http.AgentApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.AgentApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.AgentApplyResponse.Warnings.init -> void
+Vais.Agents.Control.Http.ApplyDiagnostic
+Vais.Agents.Control.Http.ApplyDiagnostic.<Clone>$() -> Vais.Agents.Control.Http.ApplyDiagnostic!
+Vais.Agents.Control.Http.ApplyDiagnostic.ApplyDiagnostic(string! Urn, string! Detail) -> void
+Vais.Agents.Control.Http.ApplyDiagnostic.Deconstruct(out string! Urn, out string! Detail) -> void
+Vais.Agents.Control.Http.ApplyDiagnostic.Detail.get -> string!
+Vais.Agents.Control.Http.ApplyDiagnostic.Detail.init -> void
+Vais.Agents.Control.Http.ApplyDiagnostic.Equals(Vais.Agents.Control.Http.ApplyDiagnostic? other) -> bool
+Vais.Agents.Control.Http.ApplyDiagnostic.Urn.get -> string!
+Vais.Agents.Control.Http.ApplyDiagnostic.Urn.init -> void
 Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider
 Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider.ForwardingRemoteIdentityProvider() -> void
 Vais.Agents.Control.Http.ForwardingRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
