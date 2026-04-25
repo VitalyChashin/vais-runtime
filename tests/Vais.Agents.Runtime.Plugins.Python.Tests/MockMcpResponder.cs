@@ -83,5 +83,5 @@ internal sealed class MockMcpResponder
     }
 
     private static string BuildResult(JsonElement idEl, string resultJson) =>
-        $$"""{"jsonrpc":"2.0","id":{{idEl}},"result":{{resultJson.Trim()}}}""";
+        $$"""{"jsonrpc":"2.0","id":{{idEl.GetRawText()}},"result":{{resultJson.Trim()}}}""";
 }

@@ -23,7 +23,8 @@ internal sealed record AgentInvokeResponse(
     [property: JsonPropertyName("assistantMessage")] string AssistantMessage,
     [property: JsonPropertyName("newState")] string? NewState,
     [property: JsonPropertyName("usage")] IReadOnlyList<AgentInvokeUsage>? Usage,
-    [property: JsonPropertyName("journal")] IReadOnlyList<AgentInvokeJournalEntry>? Journal);
+    [property: JsonPropertyName("journal")] IReadOnlyList<AgentInvokeJournalEntry>? Journal,
+    [property: JsonPropertyName("deltas")] IReadOnlyList<string>? Deltas = null);
 
 internal sealed record AgentInvokeUsage(
     [property: JsonPropertyName("model")] string Model,
@@ -41,6 +42,20 @@ internal sealed record AgentResetRequest(
 
 /// <summary>Empty response for <c>vais/agent.reset</c> — server returns <c>{}</c>.</summary>
 internal sealed record AgentResetResponse();
+
+// ── Streaming (v0.26) ────────────────────────────────────────────────────────
+
+/// <summary>
+/// Internal frame yielded by <see cref="IPythonAgentChannel.StreamAgentAsync"/>.
+/// Exactly one of the properties is non-null:
+/// <list type="bullet">
+///   <item><see cref="TextDelta"/> — a streaming text chunk from the Python agent.</item>
+///   <item><see cref="FinalResponse"/> — the terminal frame, carrying the assembled response.</item>
+/// </list>
+/// </summary>
+internal sealed record AgentStreamFrame(
+    string? TextDelta,
+    AgentInvokeResponse? FinalResponse);
 
 /// <summary>Shared <see cref="JsonSerializerOptions"/> for the <c>vais/agent.*</c> wire protocol.</summary>
 internal static class AgentProtocolJson

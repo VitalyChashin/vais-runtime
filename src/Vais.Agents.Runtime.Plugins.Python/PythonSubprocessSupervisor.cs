@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
@@ -332,6 +333,98 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
                 signal?.TrySetResult();
             }
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Agent streaming (v0.26)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Send a <c>vais/agent.stream</c> JSON-RPC call and yield response frames.
+    /// Delta frames (from <see cref="AgentInvokeResponse.Deltas"/>) carry
+    /// <see cref="AgentStreamFrame.TextDelta"/>; the terminal frame carries
+    /// <see cref="AgentStreamFrame.FinalResponse"/>.
+    /// Deltas are bundled in the JSON-RPC response — no notification race.
+    /// </summary>
+    public async IAsyncEnumerable<AgentStreamFrame> StreamAgentAsync(
+        AgentInvokeRequest request,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        McpClient? client;
+        lock (_stateLock)
+        {
+            if (_draining || _status != PythonPluginStatus.Ready)
+                client = null;
+            else
+            {
+                client = _mcpClient;
+                Interlocked.Increment(ref _activeInvokes);
+            }
+        }
+
+        if (client is null)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Cannot stream Python agent '{Name}' — supervisor status is {Status}.",
+                PythonPluginUrns.Unavailable, _liveDescriptor.Name, Status);
+            throw new InvalidOperationException(
+                $"[{PythonPluginUrns.Unavailable}] Python plugin '{_liveDescriptor.Name}' is unavailable.");
+        }
+
+        using var invokeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        invokeCts.CancelAfter(TimeSpan.FromSeconds(_liveDescriptor.InvokeTimeoutSeconds));
+
+        AgentInvokeResponse response;
+        try
+        {
+            response = await client.SendRequestAsync<AgentInvokeRequest, AgentInvokeResponse>(
+                "vais/agent.stream",
+                request,
+                AgentProtocolJson.Options,
+                new RequestId(Guid.NewGuid().ToString()),
+                invokeCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Python agent '{Name}' stream timed out after {Seconds}s.",
+                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds);
+            if (Interlocked.Decrement(ref _activeInvokes) == 0)
+            {
+                TaskCompletionSource? signal;
+                lock (_stateLock) signal = _drainSignal;
+                signal?.TrySetResult();
+            }
+            throw new TimeoutException(
+                $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_liveDescriptor.Name}' " +
+                $"stream timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "[{Urn}] Python agent '{Name}' stream failed.",
+                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name);
+            if (Interlocked.Decrement(ref _activeInvokes) == 0)
+            {
+                TaskCompletionSource? signal;
+                lock (_stateLock) signal = _drainSignal;
+                signal?.TrySetResult();
+            }
+            throw new InvalidOperationException(
+                $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
+                $"stream failed: {ex.Message}", ex);
+        }
+
+        if (Interlocked.Decrement(ref _activeInvokes) == 0)
+        {
+            TaskCompletionSource? signal;
+            lock (_stateLock) signal = _drainSignal;
+            signal?.TrySetResult();
+        }
+
+        foreach (var delta in response.Deltas ?? [])
+            yield return new AgentStreamFrame(delta, null);
+        yield return new AgentStreamFrame(null, response);
     }
 
     // -------------------------------------------------------------------------

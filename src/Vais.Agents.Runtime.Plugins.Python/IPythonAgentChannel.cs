@@ -19,4 +19,12 @@ internal interface IPythonAgentChannel
     /// and <see cref="TimeoutException"/> on invoke timeout.
     /// </summary>
     Task<AgentInvokeResponse> InvokeAgentAsync(AgentInvokeRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Send a <c>vais/agent.stream</c> call and yield the response as a sequence of
+    /// <see cref="AgentStreamFrame"/>s. Delta frames carry <see cref="AgentStreamFrame.TextDelta"/>;
+    /// the single terminal frame carries <see cref="AgentStreamFrame.FinalResponse"/>.
+    /// Throws <see cref="InvalidOperationException"/> when the subprocess is unavailable.
+    /// </summary>
+    IAsyncEnumerable<AgentStreamFrame> StreamAgentAsync(AgentInvokeRequest request, CancellationToken ct);
 }

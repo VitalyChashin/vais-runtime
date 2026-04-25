@@ -85,11 +85,11 @@ update the Appendix dates if the Phase 3 non-goals change state.
   v0.24: Python *agent* plugins — first-class Python agents with Orleans durability, `vais/agent.*` JSON-RPC protocol, `vais-agent-sdk`, `IOpaqueStateCarrier` grain-state integration, and the hermetic `PluginAgentLangGraphResearcher` sample.
   Source: milestone log v0.18 (2026-04-21) + [v0.23 pillar plan](../../plans/actor-agents-oss-v0.23-python-plugins-pillar.md) + [v0.24 pillar plan](../../plans/actor-agents-oss-v0.24-python-agents-pillar.md).
   Remaining: Node.js, Go, Rust, WASM sidecars — still deferred.
-- **Python agent streaming (`vais/agent.stream`).** v0.24 only supports unary
-  `vais/agent.invoke`. Per-token SSE-style events from the Python subprocess are deferred.
-  Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
-  Next step: add a `vais/agent.stream` JSON-RPC method to the wire protocol; the SDK runner
-  yields chunks; the .NET shim implements `IStreamingAiAgent`.
+- ~~**Python agent streaming (`vais/agent.stream`).**~~ v0.26 ships `vais/agent.stream`
+  JSON-RPC method: the SDK runner collects chunks and bundles them as `deltas` in the
+  response; the .NET shim implements `IStreamingAiAgent` and yields delta frames then a
+  terminal `TurnCompleted` event. Deltas are bundled in the response (not notifications)
+  to avoid the MCP SDK notification dispatch race. **SHIPPED v0.26**.
 - ~~**Python agent plugin hot-reload without silo restart.**~~ v0.25 ships
   `DrainAndRestartAsync` on `PythonSubprocessSupervisor`, `DefaultPythonPluginReloader`,
   and `PythonPluginWatcherService` — drain-and-swap hot-reload for Python subprocesses

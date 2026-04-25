@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,7 +28,7 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// the single-writer guarantee.
 /// </para>
 /// </remarks>
-internal sealed class PythonAgentShim : IAiAgent, IOpaqueStateCarrier
+internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStateCarrier
 {
     private readonly IPythonAgentChannel _supervisor;
     private readonly int _maxStateSizeBytes;
@@ -107,6 +108,121 @@ internal sealed class PythonAgentShim : IAiAgent, IOpaqueStateCarrier
             .ConfigureAwait(false);
 
         return response.AssistantMessage;
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<AgentEvent> StreamAsync(
+        string userMessage,
+        AgentContext context,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
+
+        await Session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken)
+            .ConfigureAwait(false);
+
+        var start = DateTimeOffset.UtcNow;
+        yield return new TurnStarted(start, context, userMessage);
+
+        var request = new AgentInvokeRequest(
+            AgentId: Session.AgentId,
+            SessionId: Session.SessionId,
+            UserMessage: userMessage,
+            State: _opaqueState,
+            TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
+            Context: null);
+
+        AgentInvokeResponse? finalResponse = null;
+        Exception? streamError = null;
+        bool wasCancelled = false;
+
+        // Manual enumeration lets us catch exceptions from MoveNextAsync while still
+        // yielding inside the outer try/finally (yield in try+catch is disallowed by C#).
+        var enumerator = _supervisor.StreamAgentAsync(request, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (true)
+            {
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    wasCancelled = true;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    streamError = ex;
+                    break;
+                }
+
+                if (!hasNext) break;
+
+                var frame = enumerator.Current;
+                if (frame.TextDelta is { } text)
+                    yield return new CompletionDelta(DateTimeOffset.UtcNow, context, text);
+                else if (frame.FinalResponse is { } resp)
+                    finalResponse = resp;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+
+        if (wasCancelled)
+            yield break;
+
+        if (streamError is not null)
+        {
+            yield return new TurnFailed(DateTimeOffset.UtcNow, context,
+                streamError.GetType().Name, streamError.Message, DateTimeOffset.UtcNow - start);
+            yield break;
+        }
+
+        if (finalResponse is null)
+        {
+            yield return new TurnFailed(DateTimeOffset.UtcNow, context,
+                "StreamError", "No final response received from Python agent.",
+                DateTimeOffset.UtcNow - start);
+            yield break;
+        }
+
+        if (finalResponse.NewState is { } ns &&
+            _maxStateSizeBytes > 0 &&
+            Encoding.UTF8.GetByteCount(ns) > _maxStateSizeBytes)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Python agent '{AgentId}' returned state of {Size} bytes " +
+                "(limit {Limit}) — stream turn rejected, previous state preserved.",
+                PythonPluginUrns.AgentStateTooLarge,
+                Session.AgentId,
+                Encoding.UTF8.GetByteCount(ns),
+                _maxStateSizeBytes);
+            yield return new TurnFailed(DateTimeOffset.UtcNow, context,
+                "AgentStateTooLarge",
+                $"[{PythonPluginUrns.AgentStateTooLarge}] Python agent state exceeded {_maxStateSizeBytes} bytes.",
+                DateTimeOffset.UtcNow - start);
+            yield break;
+        }
+
+        _opaqueState = finalResponse.NewState;
+        await Session.AppendAsync(
+            new ChatTurn(AgentChatRole.Assistant, finalResponse.AssistantMessage), cancellationToken)
+            .ConfigureAwait(false);
+
+        yield return new TurnCompleted(
+            DateTimeOffset.UtcNow,
+            context,
+            finalResponse.AssistantMessage,
+            ModelId: finalResponse.Usage?.FirstOrDefault()?.Model,
+            PromptTokens: finalResponse.Usage?.Sum(u => u.InputTokens),
+            CompletionTokens: finalResponse.Usage?.Sum(u => u.OutputTokens),
+            Duration: DateTimeOffset.UtcNow - start);
     }
 
     /// <inheritdoc />

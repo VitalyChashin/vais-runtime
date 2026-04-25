@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
@@ -49,6 +50,15 @@ public sealed class PythonAgentShimTests
 
         public Task<AgentInvokeResponse> InvokeAgentAsync(AgentInvokeRequest request, CancellationToken ct)
             => Task.FromResult(_handler(request));
+
+        public async IAsyncEnumerable<AgentStreamFrame> StreamAgentAsync(
+            AgentInvokeRequest request, [EnumeratorCancellation] CancellationToken ct)
+        {
+            await Task.CompletedTask;
+            var resp = _handler(request);
+            yield return new AgentStreamFrame(resp.AssistantMessage, null);
+            yield return new AgentStreamFrame(null, resp);
+        }
     }
 
     private sealed class ThrowingChannel : IPythonAgentChannel
@@ -75,6 +85,13 @@ public sealed class PythonAgentShimTests
 
         public Task<AgentInvokeResponse> InvokeAgentAsync(AgentInvokeRequest request, CancellationToken ct)
             => Task.FromException<AgentInvokeResponse>(_exception);
+
+        public async IAsyncEnumerable<AgentStreamFrame> StreamAgentAsync(
+            AgentInvokeRequest request, [EnumeratorCancellation] CancellationToken ct)
+        {
+            await Task.FromException(_exception);
+            yield break;
+        }
     }
 
     private static PythonAgentShim MakeShim(
