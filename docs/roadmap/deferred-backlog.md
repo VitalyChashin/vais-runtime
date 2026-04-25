@@ -90,11 +90,12 @@ update the Appendix dates if the Phase 3 non-goals change state.
   Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
   Next step: add a `vais/agent.stream` JSON-RPC method to the wire protocol; the SDK runner
   yields chunks; the .NET shim implements `IStreamingAiAgent`.
-- **Python agent plugin hot-reload without silo restart.** The v0.22 `.NET`
-  `ReloadPolicy.DrainAndSwap` mechanism does not apply to Python subprocesses; a config
-  change requires a silo restart to pick up a new `plugin.yaml`. Source: same (2026-04-24).
-  Next step: extend `DefaultPluginReloader` to signal the `PythonSubprocessSupervisor` to
-  drain, kill, and restart the subprocess in-place.
+- ~~**Python agent plugin hot-reload without silo restart.**~~ v0.25 ships
+  `DrainAndRestartAsync` on `PythonSubprocessSupervisor`, `DefaultPythonPluginReloader`,
+  and `PythonPluginWatcherService` — drain-and-swap hot-reload for Python subprocesses
+  triggered by `plugin.yaml` / `*.py` / `pyproject.toml` changes with a 200 ms debounce.
+  Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
+  **SHIPPED v0.25**.
 - **`vais plugins list` / `/v1/plugins` endpoint.** Plugin discovery is via startup logs
   only. Source: milestone log v0.18 (2026-04-21). Next step: small v0.18.x polish pillar
   once tagged.

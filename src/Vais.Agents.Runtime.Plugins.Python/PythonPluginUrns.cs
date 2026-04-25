@@ -99,4 +99,35 @@ public static class PythonPluginUrns
     /// Mirrors the <c>urn:vais-agents:plugin-handler-collision</c> precedent from v0.18.
     /// </summary>
     public const string AgentHandlerCollision = UrnPrefix + "python-agent-handler-collision";
+
+    // -----------------------------------------------------------------------
+    // v0.25 — Python plugin hot-reload URNs
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// A hot-reload was triggered but the new <c>plugin.yaml</c> specifies a different
+    /// <c>handler.typeName</c> than the running plugin. In-place reload is not
+    /// supported when the handler identity changes; a silo restart is required.
+    /// </summary>
+    public const string ReloadHandlerTypeNameChanged = UrnPrefix + "python-reload-handler-type-name-changed";
+
+    /// <summary>
+    /// A hot-reload was triggered but the new subprocess failed its MCP handshake.
+    /// The plugin transitions to <see cref="PythonPluginStatus.Unavailable"/>.
+    /// </summary>
+    public const string ReloadHandshakeFailed = UrnPrefix + "python-reload-handshake-failed";
+
+    /// <summary>
+    /// A hot-reload was triggered for a plugin name that has no running supervisor —
+    /// either the plugin was never loaded at startup or the folder was created after
+    /// the host started. A silo restart is required to load new plugin folders.
+    /// </summary>
+    public const string ReloadNoSupervisor = UrnPrefix + "python-reload-no-supervisor";
+
+    /// <summary>
+    /// A hot-reload was triggered but the re-scan of <c>plugin.yaml</c> /
+    /// <c>pyproject.toml</c> failed (file unreadable, parse error, ABI mismatch, etc.).
+    /// The running subprocess is unaffected.
+    /// </summary>
+    public const string ReloadScanFailed = UrnPrefix + "python-reload-scan-failed";
 }

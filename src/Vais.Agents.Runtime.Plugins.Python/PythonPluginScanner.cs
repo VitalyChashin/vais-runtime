@@ -80,7 +80,7 @@ internal sealed class PythonPluginScanner
         return result;
     }
 
-    private PythonPluginDescriptor? TryLoadDescriptor(string folder)
+    internal PythonPluginDescriptor? TryLoadDescriptor(string folder)
     {
         var yamlPath = Path.Combine(folder, "plugin.yaml");
         if (!File.Exists(yamlPath))

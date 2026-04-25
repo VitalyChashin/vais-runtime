@@ -10,6 +10,9 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 
 /// <summary>
 /// Per-plugin state machine: spawn subprocess → MCP handshake → Ready → restart on crash.
+/// Supports in-place hot-reload via <see cref="DrainAndRestartAsync"/> when
+/// <see cref="PythonPluginLoaderOptions.ReloadPolicy"/> is
+/// <see cref="ReloadPolicy.DrainAndSwap"/>.
 /// Internal; one instance per <see cref="PythonPluginDescriptor"/>.
 /// </summary>
 internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgentChannel
@@ -19,12 +22,36 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
 
     private readonly TimeSpan[] _backoffDelays;
 
+    // Original descriptor kept for type-name guard in DrainAndRestartAsync.
     private readonly PythonPluginDescriptor _descriptor;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly Func<PythonPluginDescriptor, ISubprocessHandle> _handleFactory;
-    private readonly CancellationTokenSource _stopCts = new();
-    private readonly TaskCompletionSource<bool> _initialHandshakeTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    // _liveDescriptor is updated on each successful hot-reload cycle.
+    // All spawning paths read this field rather than _descriptor so the new
+    // interpreter path / timeout / etc. take effect immediately.
+    private PythonPluginDescriptor _liveDescriptor;
+
+    // _stopCts is replaced on each reload cycle; not readonly so DrainAndRestartAsync
+    // can create a fresh one after stopping the old lifecycle.
+    private CancellationTokenSource _stopCts = new();
+
+    // Replaced each Start / DrainAndRestartAsync call so callers can await the
+    // current handshake independently of prior cycles.
+    private TaskCompletionSource<bool> _currentHandshakeTcs =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    // Drain tracking ─────────────────────────────────────────────────────────
+    // _activeInvokes is read/written with Interlocked; the increment is gated
+    // under _stateLock so _draining=true prevents new acquisitions atomically.
+    private int _activeInvokes = 0;
+    private bool _draining = false;                  // under _stateLock
+    private TaskCompletionSource? _drainSignal = null; // under _stateLock
+
+    // Serializes concurrent hot-reload requests (debounce handles burst at the
+    // file-watcher level but two CPU threads can still race here).
+    private readonly SemaphoreSlim _reloadLock = new(1, 1);
 
     private readonly object _stateLock = new();
     private PythonPluginStatus _status = PythonPluginStatus.Loading;
@@ -38,18 +65,19 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     /// <summary>OS PID of the live subprocess, or <see langword="null"/>.</summary>
     internal int? ProcessId { get { lock (_stateLock) return _processId; } }
 
-    /// <summary>The descriptor this supervisor was created for.</summary>
-    public PythonPluginDescriptor Descriptor => _descriptor;
+    /// <summary>The live descriptor (updated on hot-reload).</summary>
+    public PythonPluginDescriptor Descriptor => _liveDescriptor;
 
     /// <summary>Live MCP client when <see cref="Status"/> is <see cref="PythonPluginStatus.Ready"/>.</summary>
     internal McpClient? McpClient { get { lock (_stateLock) return _mcpClient; } }
 
     /// <summary>
-    /// Completes (with <see langword="true"/> on success) when the initial MCP handshake
+    /// Completes (with <see langword="true"/> on success) when the current MCP handshake
     /// finishes — regardless of whether it succeeded or failed. Awaited by
     /// <see cref="PythonPluginHostService"/> during <c>StartAsync</c> to bound startup parallelism.
+    /// On hot-reload a new TCS is created per cycle; this property always returns the current one.
     /// </summary>
-    internal Task<bool> InitialHandshakeTask => _initialHandshakeTcs.Task;
+    internal Task<bool> InitialHandshakeTask => _currentHandshakeTcs.Task;
 
     // Production constructor — uses RealSubprocessHandle
     internal PythonSubprocessSupervisor(PythonPluginDescriptor descriptor, ILoggerFactory? loggerFactory = null)
@@ -65,6 +93,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         TimeSpan[]? backoffDelays = null)
     {
         _descriptor = descriptor;
+        _liveDescriptor = descriptor;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<PythonSubprocessSupervisor>();
         _handleFactory = handleFactory;
@@ -84,7 +113,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     internal async Task StopAsync()
     {
         _stopCts.Cancel();
-        _initialHandshakeTcs.TrySetResult(false); // unblock any still-pending handshake wait
+        _currentHandshakeTcs.TrySetResult(false); // unblock any still-pending handshake wait
 
         try { await _lifecycleTask.ConfigureAwait(false); }
         catch (OperationCanceledException) { }
@@ -95,6 +124,133 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     {
         await StopAsync().ConfigureAwait(false);
         _stopCts.Dispose();
+        _reloadLock.Dispose();
+    }
+
+    // -------------------------------------------------------------------------
+    // Hot-reload (v0.25)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Drains in-flight invokes, stops the current subprocess, spawns a new one
+    /// with <paramref name="newDescriptor"/>, and returns when the handshake completes.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> when the new subprocess is Ready;
+    /// <see langword="false"/> when <paramref name="newDescriptor"/> changes
+    /// <c>HandlerTypeName</c> (refused — silo restart required) or when the new
+    /// subprocess handshake fails.
+    /// </returns>
+    internal async Task<bool> DrainAndRestartAsync(
+        PythonPluginDescriptor newDescriptor,
+        TimeSpan drainTimeout,
+        CancellationToken ct)
+    {
+        // Guard: HandlerTypeName change is not supported in-place.
+        if (!string.Equals(
+                newDescriptor.HandlerTypeName, _liveDescriptor.HandlerTypeName,
+                StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "[{Urn}] Python plugin '{Name}' hot-reload refused: HandlerTypeName changed " +
+                "from '{Old}' to '{New}' — silo restart required.",
+                PythonPluginUrns.ReloadHandlerTypeNameChanged,
+                _liveDescriptor.Name,
+                _liveDescriptor.HandlerTypeName,
+                newDescriptor.HandlerTypeName);
+            return false;
+        }
+
+        await _reloadLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _logger.LogInformation(
+                "python-reload-begin: plugin '{Name}' drain-timeout={Timeout}s.",
+                _liveDescriptor.Name, (int)drainTimeout.TotalSeconds);
+
+            // ── DRAIN ────────────────────────────────────────────────────────
+            // Setting _draining under _stateLock prevents any new InvokeAgentAsync
+            // from incrementing _activeInvokes.  Any invoke that already holds the
+            // lock and incremented will decrement in its finally block and signal
+            // _drainSignal when the count reaches zero.
+            TaskCompletionSource drainSignal;
+            lock (_stateLock)
+            {
+                _draining = true;
+                drainSignal = _drainSignal = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+            // If already zero (no concurrent invokes), complete immediately.
+            if (Volatile.Read(ref _activeInvokes) == 0)
+                drainSignal.TrySetResult();
+
+            using var drainCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            drainCts.CancelAfter(drainTimeout);
+            try
+            {
+                await drainSignal.Task.WaitAsync(drainCts.Token).ConfigureAwait(false);
+                _logger.LogDebug(
+                    "python-reload: all in-flight invokes drained for '{Name}'.",
+                    _liveDescriptor.Name);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(
+                    "python-reload: drain timed out for '{Name}' — forcing reload.",
+                    _liveDescriptor.Name);
+            }
+
+            // ── STOP OLD LIFECYCLE ───────────────────────────────────────────
+            var oldStopCts = _stopCts;
+            oldStopCts.Cancel();
+            _currentHandshakeTcs.TrySetResult(false); // unblock anyone awaiting old handshake
+
+            try { await _lifecycleTask.ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Lifecycle ended with error during hot-reload of '{Name}'.",
+                    _liveDescriptor.Name);
+            }
+
+            oldStopCts.Dispose();
+
+            // Reset state — lifecycle task is complete so no concurrent modifications.
+            lock (_stateLock)
+            {
+                _status = PythonPluginStatus.Loading;
+                _processId = null;
+                _mcpClient = null;
+                _draining = false;
+                _drainSignal = null;
+            }
+            Volatile.Write(ref _activeInvokes, 0);
+
+            // ── START NEW LIFECYCLE ──────────────────────────────────────────
+            _liveDescriptor = newDescriptor;
+            _stopCts = new CancellationTokenSource();
+            _currentHandshakeTcs = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            _lifecycleTask = RunLifecycleAsync(_stopCts.Token);
+
+            // ── AWAIT NEW HANDSHAKE ──────────────────────────────────────────
+            bool ok = await _currentHandshakeTcs.Task.WaitAsync(ct).ConfigureAwait(false);
+
+            if (ok)
+                _logger.LogInformation(
+                    "python-reload-success: plugin '{Name}'.", newDescriptor.Name);
+            else
+                _logger.LogWarning(
+                    "[{Urn}] python-reload-failed: plugin '{Name}' handshake failed after reload.",
+                    PythonPluginUrns.ReloadHandshakeFailed, newDescriptor.Name);
+
+            return ok;
+        }
+        finally
+        {
+            _reloadLock.Release();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -104,8 +260,8 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     /// <summary>
     /// Send a <c>vais/agent.invoke</c> JSON-RPC call to the subprocess and return
     /// its response. Throws <see cref="InvalidOperationException"/> when the
-    /// supervisor is not <see cref="PythonPluginStatus.Ready"/>, and
-    /// <see cref="TimeoutException"/> when the call exceeds
+    /// supervisor is not <see cref="PythonPluginStatus.Ready"/> or is draining for
+    /// a hot-reload, and <see cref="TimeoutException"/> when the call exceeds
     /// <see cref="PythonPluginDescriptor.InvokeTimeoutSeconds"/>.
     /// </summary>
     public async Task<AgentInvokeResponse> InvokeAgentAsync(
@@ -114,19 +270,30 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     {
         McpClient? client;
         lock (_stateLock)
-            client = _status == PythonPluginStatus.Ready ? _mcpClient : null;
+        {
+            // Refuse when draining (reload in progress) or not Ready.
+            if (_draining || _status != PythonPluginStatus.Ready)
+                client = null;
+            else
+            {
+                client = _mcpClient;
+                // Increment while holding _stateLock so _draining=true cannot be
+                // missed between the check and the increment.
+                Interlocked.Increment(ref _activeInvokes);
+            }
+        }
 
         if (client is null)
         {
             _logger.LogWarning(
                 "[{Urn}] Cannot invoke Python agent '{Name}' — supervisor status is {Status}.",
-                PythonPluginUrns.Unavailable, _descriptor.Name, Status);
+                PythonPluginUrns.Unavailable, _liveDescriptor.Name, Status);
             throw new InvalidOperationException(
-                $"[{PythonPluginUrns.Unavailable}] Python plugin '{_descriptor.Name}' is unavailable.");
+                $"[{PythonPluginUrns.Unavailable}] Python plugin '{_liveDescriptor.Name}' is unavailable.");
         }
 
         using var invokeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        invokeCts.CancelAfter(TimeSpan.FromSeconds(_descriptor.InvokeTimeoutSeconds));
+        invokeCts.CancelAfter(TimeSpan.FromSeconds(_liveDescriptor.InvokeTimeoutSeconds));
 
         try
         {
@@ -141,19 +308,29 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         {
             _logger.LogWarning(
                 "[{Urn}] Python agent '{Name}' invoke timed out after {Seconds}s.",
-                PythonPluginUrns.AgentInvokeTimeout, _descriptor.Name, _descriptor.InvokeTimeoutSeconds);
+                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds);
             throw new TimeoutException(
-                $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_descriptor.Name}' " +
-                $"invoke timed out after {_descriptor.InvokeTimeoutSeconds}s.");
+                $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_liveDescriptor.Name}' " +
+                $"invoke timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex,
                 "[{Urn}] Python agent '{Name}' invoke failed.",
-                PythonPluginUrns.AgentInvokeFailed, _descriptor.Name);
+                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name);
             throw new InvalidOperationException(
-                $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_descriptor.Name}' " +
+                $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
                 $"invoke failed: {ex.Message}", ex);
+        }
+        finally
+        {
+            // Decrement and signal drain if this was the last in-flight invoke.
+            if (Interlocked.Decrement(ref _activeInvokes) == 0)
+            {
+                TaskCompletionSource? signal;
+                lock (_stateLock) signal = _drainSignal;
+                signal?.TrySetResult();
+            }
         }
     }
 
@@ -170,12 +347,12 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         {
             if (handle is not null) await DisposeHandleAndClientAsync(client, handle).ConfigureAwait(false);
             SetState(PythonPluginStatus.Unavailable, null, null);
-            _initialHandshakeTcs.TrySetResult(false);
+            _currentHandshakeTcs.TrySetResult(false);
             return;
         }
 
         SetState(PythonPluginStatus.Ready, handle!.ProcessId, client);
-        _initialHandshakeTcs.TrySetResult(true);
+        _currentHandshakeTcs.TrySetResult(true);
 
         // --- Restart loop ---
         int restartAttempts = 0;
@@ -186,7 +363,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
 
             if (ct.IsCancellationRequested)
             {
-                // Graceful shutdown
+                // Graceful shutdown (StopAsync or DrainAndRestartAsync cancelled lifecycle).
                 await DisposeHandleAndClientAsync(client, handle).ConfigureAwait(false);
                 return;
             }
@@ -194,7 +371,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             // Process exited unexpectedly
             _logger.LogWarning(
                 "[{Urn}] Python plugin '{Name}' (PID {Pid}) exited unexpectedly.",
-                PythonPluginUrns.Exited, _descriptor.Name, handle!.ProcessId);
+                PythonPluginUrns.Exited, _liveDescriptor.Name, handle!.ProcessId);
 
             var deadHandle = handle;
             handle = null; client = null;
@@ -202,11 +379,11 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             await DisposeHandleAndClientAsync(null, deadHandle).ConfigureAwait(false);
 
             // Check restart eligibility
-            if (_descriptor.RestartPolicy == PythonRestartPolicy.Never)
+            if (_liveDescriptor.RestartPolicy == PythonRestartPolicy.Never)
             {
                 _logger.LogWarning(
                     "[{Urn}] Python plugin '{Name}' is now unavailable (RestartPolicy=Never).",
-                    PythonPluginUrns.Unavailable, _descriptor.Name);
+                    PythonPluginUrns.Unavailable, _liveDescriptor.Name);
                 SetState(PythonPluginStatus.Unavailable, null, null);
                 return;
             }
@@ -215,7 +392,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             {
                 _logger.LogWarning(
                     "[{Urn}] Python plugin '{Name}' is now unavailable after {N} restart attempt(s).",
-                    PythonPluginUrns.Unavailable, _descriptor.Name, _backoffDelays.Length);
+                    PythonPluginUrns.Unavailable, _liveDescriptor.Name, _backoffDelays.Length);
                 SetState(PythonPluginStatus.Unavailable, null, null);
                 return;
             }
@@ -226,7 +403,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
 
             _logger.LogInformation(
                 "Restarting Python plugin '{Name}' (attempt {Attempt}/{Max}) after {Delay}s backoff.",
-                _descriptor.Name, restartAttempts, _backoffDelays.Length, delay.TotalSeconds);
+                _liveDescriptor.Name, restartAttempts, _backoffDelays.Length, delay.TotalSeconds);
 
             try { await Task.Delay(delay, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }
@@ -242,7 +419,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
                 {
                     _logger.LogWarning(
                         "[{Urn}] Python plugin '{Name}' restart attempt {Attempt} failed; marking unavailable.",
-                        PythonPluginUrns.Unavailable, _descriptor.Name, restartAttempts);
+                        PythonPluginUrns.Unavailable, _liveDescriptor.Name, restartAttempts);
                     SetState(PythonPluginStatus.Unavailable, null, null);
                 }
                 return;
@@ -261,23 +438,26 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     {
         ISubprocessHandle? handle = null;
 
+        // Use the live descriptor so hot-reloads pick up updated interpreter / entrypoint.
+        var desc = _liveDescriptor;
+
         try
         {
-            handle = _handleFactory(_descriptor);
+            handle = _handleFactory(desc);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[{Urn}] Failed to spawn process for Python plugin '{Name}'.",
-                PythonPluginUrns.LoadFailed, _descriptor.Name);
+                PythonPluginUrns.LoadFailed, desc.Name);
             return (false, null, null);
         }
 
         // Fire-and-forget stderr reader — completes when the process's stderr stream closes.
-        _ = ForwardStderrAsync(handle.StandardError, _descriptor.Name, stopToken);
+        _ = ForwardStderrAsync(handle.StandardError, desc.Name, stopToken);
 
         // Bound the entire handshake (initialize + tools/list) by a single timeout CTS.
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(stopToken);
-        handshakeCts.CancelAfter(TimeSpan.FromSeconds(_descriptor.HandshakeTimeoutSeconds));
+        handshakeCts.CancelAfter(TimeSpan.FromSeconds(desc.HandshakeTimeoutSeconds));
 
         McpClient? client = null;
         try
@@ -302,7 +482,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             var tools = await client.ListToolsAsync((ModelContextProtocol.RequestOptions?)null, handshakeCts.Token)
                 .ConfigureAwait(false);
 
-            VerifyDeclaredTools(tools);
+            VerifyDeclaredTools(tools, desc);
 
             return (true, handle, client);
         }
@@ -310,7 +490,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         {
             _logger.LogWarning(
                 "[{Urn}] MCP handshake timed out ({Seconds}s) for Python plugin '{Name}'.",
-                PythonPluginUrns.HandshakeTimeout, _descriptor.HandshakeTimeoutSeconds, _descriptor.Name);
+                PythonPluginUrns.HandshakeTimeout, desc.HandshakeTimeoutSeconds, desc.Name);
             if (client is not null)
                 try { await client.DisposeAsync().ConfigureAwait(false); } catch { }
             handle.Kill();
@@ -329,7 +509,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[{Urn}] MCP handshake failed for Python plugin '{Name}'.",
-                PythonPluginUrns.LoadFailed, _descriptor.Name);
+                PythonPluginUrns.LoadFailed, desc.Name);
             if (client is not null)
                 try { await client.DisposeAsync().ConfigureAwait(false); } catch { }
             handle.Kill();
@@ -342,15 +522,15 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     // Helpers
     // -------------------------------------------------------------------------
 
-    private void VerifyDeclaredTools(IList<McpClientTool> serverTools)
+    private void VerifyDeclaredTools(IList<McpClientTool> serverTools, PythonPluginDescriptor desc)
     {
-        if (_descriptor.DeclaredTools.Count == 0)
+        if (desc.DeclaredTools.Count == 0)
             return;
 
         var serverNames = serverTools.Select(t => t.Name)
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var declared in _descriptor.DeclaredTools)
+        foreach (var declared in desc.DeclaredTools)
         {
             if (!serverNames.Contains(declared))
             {
@@ -358,7 +538,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
                     "Python plugin '{Name}': declared tool '{Tool}' was not found in the " +
                     "tools/list response (python-plugin-tool-mismatch). " +
                     "The pyproject.toml [tool.vais.plugin].tools list may be out of date.",
-                    _descriptor.Name, declared);
+                    desc.Name, declared);
             }
         }
     }

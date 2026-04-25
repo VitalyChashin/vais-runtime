@@ -1,1 +1,33 @@
 #nullable enable
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.get -> Vais.Agents.Runtime.Plugins.ReloadPolicy
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadDrainTimeoutSeconds.get -> int
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadDrainTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Deconstruct(out string! PluginName, out Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus Status, out string? FailureUrn, out System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Equals(Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult? other) -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.FailureException.get -> System.Exception?
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.FailureException.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.PluginName.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.PluginName.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.PythonPluginReloadResult(string! PluginName, Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus Status, string? FailureUrn, System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Status.get -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Status.init -> void
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.operator !=(Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult? left, Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult? right) -> bool
+static Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.operator ==(Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult? left, Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult? right) -> bool
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus.HandlerTypeNameChanged = 1 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus.HandshakeFailed = 3 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus.NoSupervisor = 4 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus.ScanFailed = 2 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadHandlerTypeNameChanged = "urn:vais-agents:python-reload-handler-type-name-changed" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadHandshakeFailed = "urn:vais-agents:python-reload-handshake-failed" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadNoSupervisor = "urn:vais-agents:python-reload-no-supervisor" -> string!
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadScanFailed = "urn:vais-agents:python-reload-scan-failed" -> string!

@@ -19,6 +19,13 @@ public static class PythonPluginServiceCollectionExtensions
     /// <see cref="PythonPluginLoaderOptions.PluginsDirectory"/>, spawns one subprocess per
     /// Python plugin, performs the MCP handshake, and marks each plugin Ready or Unavailable.
     /// </summary>
+    /// <remarks>
+    /// When <see cref="PythonPluginLoaderOptions.ReloadPolicy"/> is
+    /// <see cref="ReloadPolicy.DrainAndSwap"/>, this method additionally registers
+    /// <see cref="IPythonPluginReloader"/> and a background <see cref="IHostedService"/>
+    /// that watches each plugin directory for <c>plugin.yaml</c>, <c>*.py</c>, and
+    /// <c>pyproject.toml</c> changes and triggers in-place hot-reloads after a 200 ms debounce.
+    /// </remarks>
     /// <param name="services">The DI container.</param>
     /// <param name="options">
     /// Loader options. When <see langword="null"/>, defaults are used
@@ -30,6 +37,8 @@ public static class PythonPluginServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        var opts = options ?? new PythonPluginLoaderOptions();
+
         // Guard double-registration: only add the IHostedService forwarder once.
         var alreadyRegistered = services.Any(sd => sd.ServiceType == typeof(IPythonPluginHost));
 
@@ -37,7 +46,7 @@ public static class PythonPluginServiceCollectionExtensions
         {
             var loggerFactory = sp.GetService<ILoggerFactory>();
             var handlerRegistry = sp.GetService<IPluginHandlerRegistry>();
-            return new PythonPluginHostService(options, loggerFactory, handlerRegistry: handlerRegistry);
+            return new PythonPluginHostService(opts, loggerFactory, handlerRegistry: handlerRegistry);
         });
 
         if (!alreadyRegistered)
@@ -46,6 +55,27 @@ public static class PythonPluginServiceCollectionExtensions
                 (IHostedService)sp.GetRequiredService<IPythonPluginHost>());
             services.AddSingleton<INamedToolSourceProvider>(sp =>
                 (INamedToolSourceProvider)sp.GetRequiredService<IPythonPluginHost>());
+        }
+
+        if (opts.ReloadPolicy == ReloadPolicy.DrainAndSwap)
+        {
+            services.TryAddSingleton<IPythonPluginReloader>(sp =>
+            {
+                // Resolve the concrete type so we can call TryGetSupervisor.
+                var host = (PythonPluginHostService)sp.GetRequiredService<IPythonPluginHost>();
+                var loggerFactory = sp.GetService<ILoggerFactory>();
+                var drainTimeout = TimeSpan.FromSeconds(opts.ReloadDrainTimeoutSeconds);
+                return new DefaultPythonPluginReloader(host, opts, drainTimeout, loggerFactory);
+            });
+
+            services.AddSingleton<IHostedService>(sp =>
+            {
+                var reloader = sp.GetRequiredService<IPythonPluginReloader>();
+                var host = sp.GetRequiredService<IPythonPluginHost>();
+                var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
+                var logger = sp.GetService<ILogger<PythonPluginWatcherService>>();
+                return new PythonPluginWatcherService(reloader, host, lifetime, logger);
+            });
         }
 
         return services;

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,7 +27,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     private readonly Func<PythonPluginDescriptor, PythonSubprocessSupervisor> _supervisorFactory;
     private readonly IPluginHandlerRegistry? _handlerRegistry;
 
-    private readonly List<PythonSubprocessSupervisor> _supervisors = [];
+    // Keyed by plugin name for O(1) lookup during hot-reload.
+    private readonly Dictionary<string, PythonSubprocessSupervisor> _supervisors =
+        new(StringComparer.Ordinal);
 
     internal PythonPluginHostService(
         PythonPluginLoaderOptions? options = null,
@@ -59,10 +62,26 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         get
         {
             lock (_supervisors)
-                return _supervisors
+                return _supervisors.Values
                     .Select(s => new LoadedPythonPlugin(s.Descriptor, s.Status, s.ProcessId, s.McpClient))
                     .ToList();
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal — hot-reload support (v0.25)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns the supervisor for the named plugin, or <see langword="false"/> when
+    /// no supervisor was registered at startup. Used by <see cref="DefaultPythonPluginReloader"/>.
+    /// </summary>
+    internal bool TryGetSupervisor(
+        string name,
+        [NotNullWhen(true)] out PythonSubprocessSupervisor? supervisor)
+    {
+        lock (_supervisors)
+            return _supervisors.TryGetValue(name, out supervisor);
     }
 
     // -------------------------------------------------------------------------
@@ -74,9 +93,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     {
         lock (_supervisors)
         {
-            var supervisor = _supervisors.FirstOrDefault(
-                s => string.Equals(s.Descriptor.Name, name, StringComparison.Ordinal));
-            if (supervisor is null || supervisor.Status != PythonPluginStatus.Ready)
+            if (!_supervisors.TryGetValue(name, out var supervisor))
+                return null;
+            if (supervisor.Status != PythonPluginStatus.Ready)
                 return null;
             return new McpToolSource(supervisor.McpClient!);
         }
@@ -110,7 +129,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
             try
             {
                 var supervisor = _supervisorFactory(descriptor);
-                lock (_supervisors) _supervisors.Add(supervisor);
+                lock (_supervisors) _supervisors[descriptor.Name] = supervisor;
                 supervisor.Start();
                 await supervisor.InitialHandshakeTask.ConfigureAwait(false);
 
@@ -149,23 +168,31 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
 
         await Task.WhenAll(startTasks).ConfigureAwait(false);
 
-        var ready = _supervisors.Count(s => s.Status == PythonPluginStatus.Ready);
-        var unavailable = _supervisors.Count - ready;
+        int ready, total;
+        lock (_supervisors)
+        {
+            total = _supervisors.Count;
+            ready = _supervisors.Values.Count(s => s.Status == PythonPluginStatus.Ready);
+        }
 
         _logger.LogInformation(
             "Python plugin startup complete — {Ready} ready, {Unavailable} unavailable.",
-            ready, unavailable);
+            ready, total - ready);
     }
 
     /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_supervisors.Count == 0)
+        PythonSubprocessSupervisor[] supervisors;
+        lock (_supervisors)
+            supervisors = _supervisors.Values.ToArray();
+
+        if (supervisors.Length == 0)
             return;
 
-        _logger.LogInformation("Stopping {Count} Python plugin supervisor(s).", _supervisors.Count);
+        _logger.LogInformation("Stopping {Count} Python plugin supervisor(s).", supervisors.Length);
 
-        var stopTasks = _supervisors.Select(s => s.StopAsync()).ToArray();
+        var stopTasks = supervisors.Select(s => s.StopAsync()).ToArray();
         await Task.WhenAll(stopTasks).ConfigureAwait(false);
 
         _logger.LogInformation("All Python plugin supervisors stopped.");

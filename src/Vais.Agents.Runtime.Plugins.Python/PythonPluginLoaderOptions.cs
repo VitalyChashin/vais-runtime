@@ -55,4 +55,20 @@ public sealed class PythonPluginLoaderOptions
     /// preserved. Set to 0 to disable the check. Defaults to 1 MiB.
     /// </summary>
     public int MaxAgentStateSizeBytes { get; init; } = 1 * 1024 * 1024;
+
+    /// <summary>
+    /// Controls whether Python plugin subprocesses can be hot-reloaded (drain → kill →
+    /// respawn) when <c>plugin.yaml</c>, <c>*.py</c>, or <c>pyproject.toml</c> files
+    /// change on disk. Defaults to <see cref="Plugins.ReloadPolicy.Disabled"/> to
+    /// preserve v0.24 startup-only behaviour. Set to
+    /// <see cref="Plugins.ReloadPolicy.DrainAndSwap"/> to opt in.
+    /// </summary>
+    public ReloadPolicy ReloadPolicy { get; init; } = ReloadPolicy.Disabled;
+
+    /// <summary>
+    /// How long to wait for in-flight <c>vais/agent.invoke</c> calls to complete before
+    /// forcing a hot-reload. After this window the reload proceeds and any lingering
+    /// invocations will receive an error on their next I/O attempt. Defaults to 30 seconds.
+    /// </summary>
+    public int ReloadDrainTimeoutSeconds { get; init; } = 30;
 }
