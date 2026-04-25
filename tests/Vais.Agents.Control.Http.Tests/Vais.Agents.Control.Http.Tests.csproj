@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Http.Client\Vais.Agents.Control.Http.Client.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
   </ItemGroup>
 
   <ItemGroup>

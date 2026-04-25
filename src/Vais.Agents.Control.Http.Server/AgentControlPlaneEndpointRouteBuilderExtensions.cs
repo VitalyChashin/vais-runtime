@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Control.Http;
 
@@ -164,6 +165,31 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithTags("Health");
 
         MapGraphControlPlane(builder, prefix);
+        MapPluginControlPlane(builder, prefix);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Mount only the plugin inspection endpoint (v0.27). Useful for hosts that want
+    /// the plugin list route without the full control-plane surface, or for isolated testing.
+    /// </summary>
+    public static IEndpointRouteBuilder MapPluginControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var plugins = builder.MapGroup(prefix).WithTags("Plugins");
+
+        // GET /plugins — List
+        plugins.MapGet("/plugins", PluginListAsync)
+            .WithName("Plugins.List")
+            .WithSummary("List all plugins loaded into this host.")
+            .WithDescription(
+                "Returns a snapshot of every plugin currently loaded by AssemblyPluginLoader or PythonPluginLoader. " +
+                "Includes the handler TypeNames each plugin advertises. " +
+                "Returns 200 with an empty items array when no plugin infrastructure is registered.")
+            .Produces<PluginListResponse>(StatusCodes.Status200OK);
 
         return builder;
     }
@@ -285,6 +311,18 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return builder;
+    }
+
+    private static IResult PluginListAsync(HttpContext http)
+    {
+        var registry = http.RequestServices.GetService<IPluginHandlerRegistry>();
+        if (registry is null)
+            return Results.Ok(new PluginListResponse(Array.Empty<PluginInfo>()));
+
+        var items = registry.Plugins
+            .Select(d => new PluginInfo(d.Name, d.AssemblyPath, d.TargetApiVersion, d.Handlers, d.LoadedViaAttribute))
+            .ToArray();
+        return Results.Ok(new PluginListResponse(items));
     }
 
     private static async Task<IResult> CreateAsync(

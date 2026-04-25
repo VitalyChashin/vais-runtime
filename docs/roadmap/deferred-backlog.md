@@ -96,9 +96,11 @@ update the Appendix dates if the Phase 3 non-goals change state.
   triggered by `plugin.yaml` / `*.py` / `pyproject.toml` changes with a 200 ms debounce.
   Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md) (2026-04-24).
   **SHIPPED v0.25**.
-- **`vais plugins list` / `/v1/plugins` endpoint.** Plugin discovery is via startup logs
-  only. Source: milestone log v0.18 (2026-04-21). Next step: small v0.18.x polish pillar
-  once tagged.
+- ~~**`vais plugins list` / `/v1/plugins` endpoint.**~~ v0.27 ships `GET /v1/plugins`:
+  `PluginInfo` + `PluginListResponse` DTOs, `MapPluginControlPlane` extension, optional
+  `IPluginHandlerRegistry` DI (returns empty list when absent), public API surface declared
+  in `PublicAPI.Unshipped.txt`, and two TestServer integration tests.
+  Source: milestone log v0.18 (2026-04-21). **SHIPPED v0.27**.
 - **HTTP control-plane `IManifestApplyDiagnosticsSink` implementation.** Sink contract +
   translator emission work today; no HTTP layer consumes it. Source: milestone log v0.18
   (2026-04-21). Next step: polish PR — thread warn records onto the `vais apply` response
