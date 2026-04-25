@@ -1,4 +1,7 @@
 #nullable enable
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.SecretDeclarations.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginDescriptor.SecretDeclarations.init -> void
+const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.SecretResolutionFailed = "urn:vais-agents:python-plugin-secret-resolution-failed" -> string!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.get -> Vais.Agents.Runtime.Plugins.ReloadPolicy
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadDrainTimeoutSeconds.get -> int

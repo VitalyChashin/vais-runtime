@@ -111,4 +111,49 @@ public sealed class PluginYamlDeserializerTests
 
         act.Should().Throw<YamlDotNet.Core.YamlException>();
     }
+
+    // -----------------------------------------------------------------------
+    // v0.31 — spec.secrets block
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void Deserialize_SecretsBlock_MapsRefNamesToUris()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: Plugin
+            metadata:
+              name: secrets-plugin
+            spec:
+              runtime: python
+              entrypoint: server.py
+              secrets:
+                MY_API_KEY: "secret://env/OPENAI_API_KEY"
+                DB_PASSWORD: "secret://file//run/secrets/db-password"
+            """;
+
+        var doc = _sut.Deserialize(yaml);
+
+        doc!.Spec!.Secrets.Should().HaveCount(2);
+        doc.Spec.Secrets["MY_API_KEY"].Should().Be("secret://env/OPENAI_API_KEY");
+        doc.Spec.Secrets["DB_PASSWORD"].Should().Be("secret://file//run/secrets/db-password");
+    }
+
+    [Fact]
+    public void Deserialize_NoSecretsBlock_ReturnsEmptySecrets()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: Plugin
+            metadata:
+              name: no-secrets
+            spec:
+              runtime: python
+              entrypoint: server.py
+            """;
+
+        var doc = _sut.Deserialize(yaml);
+
+        doc!.Spec!.Secrets.Should().BeEmpty();
+    }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -221,6 +222,28 @@ internal static class CompositionRoot
         services.AddAgentControlPlane();
         services.AddAgentControlPlaneIdempotency();
         services.AddAgentControlPlaneOpenApi();
+
+        // 4b. v0.30 JWT authentication + principal mapping. Off-by-default — existing localhost
+        //     semantics unchanged. When VAIS_JWT_AUTHORITY is set the full bearer-token pipeline
+        //     is wired. VAIS_SA_PRINCIPAL_MAPPER=true must be registered BEFORE
+        //     AddAgentControlPlaneJwtAuth so TryAddSingleton<DefaultPrincipalMapper> inside it
+        //     sees an existing registration and skips the default.
+        if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
+        {
+            if (options.UseSaPrincipalMapper)
+            {
+                services.AddSingleton<IPrincipalMapper, ServiceAccountPrincipalMapper>();
+            }
+
+            services.AddAgentControlPlaneJwtAuth(o =>
+            {
+                o.Authority = options.JwtAuthority;
+                if (!string.IsNullOrWhiteSpace(options.JwtAudience))
+                {
+                    o.Audience = options.JwtAudience;
+                }
+            });
+        }
 
         // 5. Optional observability. Off unless either the OTel endpoint env var or the
         //    console-exporter toggle is set; off-by-default keeps hello-world overhead zero.

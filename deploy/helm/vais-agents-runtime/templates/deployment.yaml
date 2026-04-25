@@ -75,6 +75,18 @@ spec:
             - name: VAIS_LANGFUSE_PROJECT
               value: {{ .Values.observability.langfuse.project | quote }}
             {{- end }}
+            {{- if .Values.auth.jwtAuthority }}
+            - name: VAIS_JWT_AUTHORITY
+              value: {{ .Values.auth.jwtAuthority | quote }}
+            {{- if .Values.auth.jwtAudience }}
+            - name: VAIS_JWT_AUDIENCE
+              value: {{ .Values.auth.jwtAudience | quote }}
+            {{- end }}
+            {{- if .Values.auth.serviceAccountPrincipalMapper }}
+            - name: VAIS_SA_PRINCIPAL_MAPPER
+              value: "true"
+            {{- end }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -109,15 +121,48 @@ spec:
             - "--server"
             - "--addr=:8181"
             - "--log-format=json"
+            {{- if eq (include "vais-agents-runtime.opaBundleMode" .) "true" }}
+            - "--config-file=/opa-config/config.yaml"
+            {{- else }}
             - "/policies"
+            {{- end }}
+          {{- if eq (include "vais-agents-runtime.opaBundleMode" .) "true" }}
+          {{- $hasSigningEnv := and .Values.opa.bundle.signing.enabled .Values.opa.bundle.signing.existingSecret }}
+          {{- $hasAuthEnv := .Values.opa.bundle.serviceAuthTokenSecret }}
+          {{- if or $hasSigningEnv $hasAuthEnv }}
+          env:
+            {{- if $hasSigningEnv }}
+            - name: OPA_BUNDLE_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.opa.bundle.signing.existingSecret | quote }}
+                  key: {{ .Values.opa.bundle.signing.existingSecretKey | quote }}
+            {{- end }}
+            {{- if $hasAuthEnv }}
+            - name: BUNDLE_SERVER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.opa.bundle.serviceAuthTokenSecret | quote }}
+                  key: {{ .Values.opa.bundle.serviceAuthTokenSecretKey | quote }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
           ports:
             - name: opa
               containerPort: 8181
               protocol: TCP
           volumeMounts:
+            {{- if eq (include "vais-agents-runtime.opaBundleMode" .) "true" }}
+            - name: opa-config
+              mountPath: /opa-config
+              readOnly: true
+            - name: opa-tmp
+              mountPath: /tmp
+            {{- else }}
             - name: opa-policy
               mountPath: /policies
               readOnly: true
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -156,9 +201,17 @@ spec:
           {{- end }}
         {{- end }}
         {{- if eq (include "vais-agents-runtime.opaSidecar" .) "true" }}
+        {{- if eq (include "vais-agents-runtime.opaBundleMode" .) "true" }}
+        - name: opa-config
+          configMap:
+            name: {{ include "vais-agents-runtime.opaConfigMapName" . }}
+        - name: opa-tmp
+          emptyDir: {}
+        {{- else }}
         - name: opa-policy
           configMap:
             name: {{ include "vais-agents-runtime.opaPolicyConfigMapName" . }}
+        {{- end }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

@@ -25,8 +25,9 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// <param name="RestartPolicy">Subprocess restart policy on crash.</param>
 /// <param name="DeclaredTools">Tool names declared in <c>[tool.vais.plugin].tools</c>.
 /// The supervisor validates this list against <c>tools/list</c> after handshake.</param>
-/// <param name="SecretRefs">Environment-variable secret references for the subprocess.
-/// Populated by the runtime host (PR 3); empty at scan time.</param>
+/// <param name="SecretRefs">Resolved env-var entries injected into the subprocess at spawn time
+/// (key = env var name, value = secret value). Populated by the runtime host from
+/// <see cref="SecretDeclarations"/> before the supervisor is created.</param>
 /// <param name="HandlerKind">
 /// Whether this plugin provides MCP tools (default) or a Python-backed <see cref="IAiAgent"/>.
 /// Read from <c>spec.kind</c> in <c>plugin.yaml</c>.
@@ -53,4 +54,13 @@ public sealed record PythonPluginDescriptor(
     IReadOnlyDictionary<string, string> SecretRefs,
     PythonHandlerKind HandlerKind = PythonHandlerKind.McpToolServer,
     string? HandlerTypeName = null,
-    int InvokeTimeoutSeconds = 60);
+    int InvokeTimeoutSeconds = 60)
+{
+    /// <summary>
+    /// Raw secret declarations from <c>spec.secrets</c> in <c>plugin.yaml</c>
+    /// (ref-name → secret URI). Populated at scan time; resolved into
+    /// <see cref="SecretRefs"/> by the runtime host before subprocess spawn.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> SecretDeclarations { get; init; }
+        = new Dictionary<string, string>();
+}

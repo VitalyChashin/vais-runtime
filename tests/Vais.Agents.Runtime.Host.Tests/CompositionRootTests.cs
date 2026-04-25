@@ -3,12 +3,14 @@
 
 using A2A;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Orleans;
 using Vais.Agents;
 using Vais.Agents.Control;
+using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
 using Xunit;
 using Vais.Agents.Control.Policy.Opa;
@@ -398,6 +400,67 @@ public class CompositionRootTests
         providers.Should().ContainSingle(because: "AddPythonPlugins must register exactly one INamedToolSourceProvider.");
         providers[0].Should().BeAssignableTo<IPythonPluginHost>(
             because: "the PythonPluginHostService implements both IPythonPluginHost and INamedToolSourceProvider — the same singleton is forwarded.");
+    }
+
+    [Fact]
+    public void Composition_JwtAuth_Not_Registered_When_JwtAuthority_Null()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = null });
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<IAuthenticationSchemeProvider>().Should().BeNull(
+            because: "no VAIS_JWT_AUTHORITY → AddAuthentication is never called → auth pipeline is absent.");
+    }
+
+    [Fact]
+    public void Composition_JwtAuth_Registered_When_JwtAuthority_Set()
+    {
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { JwtAuthority = "https://oidc.example.com/realms/test" };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<IAuthenticationSchemeProvider>().Should().NotBeNull(
+            because: "VAIS_JWT_AUTHORITY set → AddAgentControlPlaneJwtAuth must wire authentication services.");
+
+        sp.GetRequiredService<IPrincipalMapper>().Should().BeOfType<DefaultPrincipalMapper>(
+            because: "without UseSaPrincipalMapper, the default mapper must be registered by AddAgentControlPlaneJwtAuth.");
+    }
+
+    [Fact]
+    public void Composition_ServiceAccountPrincipalMapper_Registered_When_UseSaPrincipalMapper_Set()
+    {
+        var services = BuildBaseline();
+        var options = new RuntimeOptions
+        {
+            JwtAuthority = "https://oidc.example.com/realms/test",
+            UseSaPrincipalMapper = true,
+        };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredService<IPrincipalMapper>().Should().BeOfType<ServiceAccountPrincipalMapper>(
+            because: "UseSaPrincipalMapper=true must register ServiceAccountPrincipalMapper before AddAgentControlPlaneJwtAuth so TryAddSingleton<DefaultPrincipalMapper> skips the default.");
+    }
+
+    [Fact]
+    public void Composition_JwtAuth_ContextAccessor_Registered_When_JwtAuthority_Set()
+    {
+        var services = BuildBaseline();
+        var options = new RuntimeOptions { JwtAuthority = "https://oidc.example.com/realms/test" };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<AsyncLocalAgentContextAccessor>().Should().NotBeNull(
+            because: "AddAgentControlPlaneJwtAuth must wire AsyncLocalAgentContextAccessor for the principal-mapping middleware to push principals onto.");
     }
 
     [Fact]

@@ -5,6 +5,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace Vais.Agents.Control.Http;
@@ -123,6 +125,63 @@ internal sealed class HttpAgentRemoteInvoker : IAgentRemoteInvoker, IDisposable
         finally
         {
             response?.Dispose();
+        }
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<AgentEvent> StreamAsync(
+        string runtimeUrl,
+        AgentHandle handle,
+        AgentInvocationRequest request,
+        string? bearerToken,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeUrl);
+        ArgumentNullException.ThrowIfNull(handle);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var normalised = NormaliseUrl(runtimeUrl);
+        var path = handle.Version is { Length: > 0 }
+            ? $"/v1/agents/{Uri.EscapeDataString(handle.AgentId)}/invoke/stream?version={Uri.EscapeDataString(handle.Version)}"
+            : $"/v1/agents/{Uri.EscapeDataString(handle.AgentId)}/invoke/stream";
+
+        string? outboundToken = bearerToken;
+        if (_identityProvider is not null)
+        {
+            var credential = await _identityProvider
+                .AcquireOutboundTokenAsync(normalised, bearerToken, cancellationToken)
+                .ConfigureAwait(false);
+            outboundToken = credential.Value;
+        }
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(request, options: JsonOptions),
+        };
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        if (!string.IsNullOrEmpty(outboundToken))
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", outboundToken);
+
+        var client = GetOrCreateClient(normalised);
+        using var response = await client
+            .SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await TryReadDetailAsync(response, cancellationToken).ConfigureAwait(false);
+            throw new RemoteAgentInvocationException(runtimeUrl, response.StatusCode, detail);
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using (stream.ConfigureAwait(false))
+        {
+            var parser = SseParser.Create(stream, AgentSseParser.ParseEventFrame);
+            await foreach (var item in parser.EnumerateAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (item.Data is { } evt)
+                    yield return evt;
+            }
         }
     }
 

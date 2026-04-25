@@ -115,12 +115,24 @@ further wiring needed.
 ## Known limitations (v0.14.0-preview)
 
 - v0.13 operator chart doesn't yet expose the `extraContainers` hook —
-  overlay requires a manual patch or chart fork. The v0.14.1 polish
-  pillar addresses this.
+  overlay requires a manual patch or chart fork.
 - Policy reload on ConfigMap change relies on OPA's `--watch` flag or
-  a rolling-restart of the Deployment. For production, consider a
-  separate OPA StatefulSet + bundle server.
+  a rolling-restart of the Deployment. For production, consider the
+  bundle server pattern (see below).
 - Fail-mode semantics are caller-side only. If OPA itself is reachable
   but Rego has a bug (e.g. missing `allow` rule), you get a 4xx from
   the adapter (`InvalidOperationException`) — diagnostic error, not a
   policy denial. Fix the rego and restart.
+
+---
+
+## Bundle server pattern (v0.32+)
+
+The **runtime Helm chart** (`deploy/helm/vais-agents-runtime`) now natively
+supports OPA bundle-server polling + RS256/ES256/HS256 bundle signature
+verification via the `opa.bundle.*` values block — no manual chart patching
+required.
+
+See [`samples/opa-bundle-server/README.md`](../opa-bundle-server/README.md)
+for the full workflow: build a bundle → sign with `opa sign` → serve via
+nginx → configure the Helm chart → OPA polls + verifies.

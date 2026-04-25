@@ -174,7 +174,7 @@ internal static class JournalEntrySurrogateHelpers
 
     private static string SerializeJson(JsonElement value) => value.GetRawText();
 
-    private static IReadOnlyList<ToolCallRequest>? ParseToolCalls(string? json)
+    internal static IReadOnlyList<ToolCallRequest>? ParseToolCalls(string? json)
     {
         if (string.IsNullOrEmpty(json))
         {
@@ -196,7 +196,7 @@ internal static class JournalEntrySurrogateHelpers
         return results;
     }
 
-    private static string? SerializeToolCalls(IReadOnlyList<ToolCallRequest>? toolCalls)
+    internal static string? SerializeToolCalls(IReadOnlyList<ToolCallRequest>? toolCalls)
     {
         if (toolCalls is null || toolCalls.Count == 0)
         {

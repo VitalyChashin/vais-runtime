@@ -1,1 +1,17 @@
 #nullable enable
+Vais.Agents.Control.IRemoteRuntimeTopology
+Vais.Agents.Control.IRemoteRuntimeTopology.GetEntries() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.RemoteRuntimeEntry!>!
+Vais.Agents.Control.RemoteRuntimeEntry
+Vais.Agents.Control.RemoteRuntimeEntry.<Clone>$() -> Vais.Agents.Control.RemoteRuntimeEntry!
+Vais.Agents.Control.RemoteRuntimeEntry.Deconstruct(out string! Url, out string! IdentityMode) -> void
+Vais.Agents.Control.RemoteRuntimeEntry.Equals(Vais.Agents.Control.RemoteRuntimeEntry? other) -> bool
+Vais.Agents.Control.RemoteRuntimeEntry.IdentityMode.get -> string!
+Vais.Agents.Control.RemoteRuntimeEntry.IdentityMode.init -> void
+Vais.Agents.Control.RemoteRuntimeEntry.RemoteRuntimeEntry(string! Url, string! IdentityMode) -> void
+Vais.Agents.Control.RemoteRuntimeEntry.Url.get -> string!
+Vais.Agents.Control.RemoteRuntimeEntry.Url.init -> void
+override Vais.Agents.Control.RemoteRuntimeEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.RemoteRuntimeEntry.GetHashCode() -> int
+override Vais.Agents.Control.RemoteRuntimeEntry.ToString() -> string!
+static Vais.Agents.Control.RemoteRuntimeEntry.operator !=(Vais.Agents.Control.RemoteRuntimeEntry? left, Vais.Agents.Control.RemoteRuntimeEntry? right) -> bool
+static Vais.Agents.Control.RemoteRuntimeEntry.operator ==(Vais.Agents.Control.RemoteRuntimeEntry? left, Vais.Agents.Control.RemoteRuntimeEntry? right) -> bool

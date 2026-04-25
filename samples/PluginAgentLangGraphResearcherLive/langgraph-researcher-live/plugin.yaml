@@ -15,7 +15,5 @@ spec:
     handshakeTimeoutSeconds: 10
     restartPolicy: exponentialBackoff
     invokeTimeoutSeconds: 60
-  # OPENAI_API_KEY must be present in the .NET runtime host environment —
-  # it is inherited by the Python subprocess on Process.Start.
-  # Secret propagation via secretRefs env-var injection is tracked as a v0.24
-  # deferred backlog item (§1 Identity & security in docs/roadmap/deferred-backlog.md).
+  secrets:
+    OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"

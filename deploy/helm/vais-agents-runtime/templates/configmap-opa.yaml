@@ -4,7 +4,7 @@ run a pod-local OPA sidecar AND the consumer did not supply a pre-existing
 `opa.configMapName`. Skipped entirely when `opa.baseUrl` points at external
 OPA (the ConfigMap would be orphaned) or when OPA is disabled.
 */}}
-{{- if and (eq (include "vais-agents-runtime.opaSidecar" .) "true") (not .Values.opa.configMapName) }}
+{{- if and (eq (include "vais-agents-runtime.opaSidecar" .) "true") (not .Values.opa.configMapName) (not (eq (include "vais-agents-runtime.opaBundleMode" .) "true")) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

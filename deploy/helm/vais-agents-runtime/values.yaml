@@ -63,6 +63,40 @@ opa:
   # precedence over `policy` when set.
   configMapName: ""
 
+  # Bundle server configuration. Applies only when running the pod-local OPA
+  # sidecar (opa.enabled=true and opa.baseUrl empty). When enabled, the sidecar
+  # polls a bundle server instead of loading Rego from a ConfigMap.
+  # Consumers pointing at an external OPA manage that OPA's bundle config directly.
+  bundle:
+    enabled: false
+    # Bundle server URL including protocol, host, and port.
+    # Example: http://opa-bundles.vais-agents.svc:8888
+    url: ""
+    # Path on the bundle server to the bundle archive.
+    resource: /bundle.tar.gz
+    # Polling interval bounds. OPA jitters between min and max.
+    polling:
+      minDelaySeconds: 60
+      maxDelaySeconds: 120
+    # Optional bearer-token auth for the bundle server.
+    # Reference an existing K8s Secret; the token is injected as the
+    # BUNDLE_SERVER_TOKEN env var and substituted into the OPA config at startup.
+    serviceAuthTokenSecret: ""
+    serviceAuthTokenSecretKey: token
+    # Bundle signature verification. When enabled, OPA refuses to load bundles
+    # that are not signed with the configured key.
+    signing:
+      enabled: false
+      # Key identifier. Must match the --signing-key-id used with `opa sign`.
+      keyId: vais-bundle-key
+      # Signing algorithm: RS256 (RSA, default) | ES256 (ECDSA) | HS256 (HMAC).
+      algorithm: RS256
+      # Reference to an existing K8s Secret containing the PEM-encoded public key
+      # (RS256/ES256) or HMAC secret (HS256). The value is injected as the
+      # OPA_BUNDLE_SIGNING_KEY env var and substituted into the OPA config at startup.
+      existingSecret: ""
+      existingSecretKey: key.pem
+
 # Optional observability sinks. Both off unless configured.
 observability:
   otel:
@@ -87,6 +121,20 @@ plugins:
   #   - `persistentVolumeClaimName` empty → emptyDir (ephemeral; not a real
   #     plugin story, but keeps the mount shape stable for Pillar C).
   persistentVolumeClaimName: ""
+
+# v0.30 JWT bearer authentication. Off-by-default → existing localhost semantics
+# unchanged. When jwtAuthority is set the full bearer-token pipeline is wired on
+# the runtime host. serviceAccountPrincipalMapper swaps in the K8s SA mapper so
+# system:serviceaccount:<namespace>:<sa> sub claims are split into Id + TenantId.
+auth:
+  # OIDC authority URL (e.g. https://keycloak.example.com/realms/my-realm).
+  # Empty → auth pipeline disabled (VAIS_JWT_AUTHORITY unset).
+  jwtAuthority: ""
+  # Optional token audience restriction. Empty → audience validation disabled.
+  jwtAudience: ""
+  # When true, ServiceAccountPrincipalMapper is registered instead of
+  # DefaultPrincipalMapper. Enable for K8s SA JWT tokens.
+  serviceAccountPrincipalMapper: false
 
 # Kubernetes Service fronting the pod(s). ClusterIP + HTTP 8080 by default;
 # for LoadBalancer / NodePort set `service.type` accordingly.

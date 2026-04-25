@@ -25,12 +25,19 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 /// riding MAF's executor fan-out + streaming-event infrastructure.
 /// </para>
 /// <para>
-/// <b>Known gaps in v0.9:</b>
+/// <b>Durable resume.</b> When an <see cref="IGraphCheckpointer"/> is supplied the
+/// orchestrator implements <see cref="IResumableAgentGraph{TState}"/>: interrupt nodes
+/// save a checkpoint before halting; <see cref="ResumeAsync"/> / <see cref="ResumeStreamAsync"/>
+/// reload that state and rebuild the MAF workflow starting at the interrupt node, which
+/// skips its body via the <see cref="GraphMessage.ResumeFromNodeId"/> flag and evaluates
+/// outgoing edges — identical semantics to <c>InProcessGraphOrchestrator.ResumeAsync</c>.
+/// </para>
+/// <para>
+/// <b>Remaining gaps as of v0.36:</b>
 /// </para>
 /// <list type="bullet">
 ///   <item><description>MAF-native conditional edges (<c>AddEdge&lt;T&gt;(source, target, condition)</c>) — unused; all routing happens inside the executor.</description></item>
-///   <item><description>RequestPort-based HITL — interrupt nodes halt via <c>IWorkflowContext.RequestHaltAsync</c> + emit a <see cref="GraphInterrupted"/> event; durable resume lands in PR 4 alongside the OrleansCheckpointer.</description></item>
-///   <item><description>MAF's <c>CheckpointManager</c> — wiring to our <see cref="IGraphCheckpointer"/> lands in PR 4.</description></item>
+///   <item><description>RequestPort-based HITL — not used; interrupt nodes halt via <c>IWorkflowContext.RequestHaltAsync</c> + emit a <see cref="GraphInterrupted"/> event instead.</description></item>
 /// </list>
 /// <para>
 /// Consumers who want MAF's richer Workflow features (fan-out/fan-in, sub-workflows,
@@ -39,7 +46,7 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 /// and use <c>InProcessExecution</c> themselves — the adapter is thin by design.
 /// </para>
 /// </remarks>
-public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
+public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>
 {
     private readonly AgentGraphManifest _manifest;
     private readonly IAgentRegistry _registry;
@@ -48,11 +55,24 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
     private readonly Func<string>? _runIdFactory;
+    private readonly IGraphCheckpointer? _checkpointer;
 
     /// <summary>Default max-step ceiling matching the in-process orchestrator.</summary>
     public const int DefaultMaxSteps = 1000;
 
     /// <summary>Construct the MAF-backed orchestrator.</summary>
+    /// <param name="manifest">Graph manifest to run.</param>
+    /// <param name="registry">Agent registry for resolving agent-kind nodes.</param>
+    /// <param name="lifecycle">Lifecycle manager for invoking resolved agents.</param>
+    /// <param name="predicateResolver">Resolver for <see cref="GraphHandlerRef"/> edge predicates. Null means handler-ref predicates throw.</param>
+    /// <param name="effectResolver">Resolver for <see cref="GraphHandlerRef"/> edge effects.</param>
+    /// <param name="codeNodeResolver">Resolver for Code-kind nodes. Null means code-kind nodes throw.</param>
+    /// <param name="runIdFactory">Factory for run ids stamped on events and checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
+    /// <param name="checkpointer">
+    /// Checkpoint store used by <see cref="ResumeAsync"/> / <see cref="ResumeStreamAsync"/>.
+    /// Pass an <c>InMemoryCheckpointer</c> for tests. Null skips all checkpoint saves
+    /// (compatible with v0.9 callers that do not need durable resume).
+    /// </param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -60,7 +80,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
-        Func<string>? runIdFactory = null)
+        Func<string>? runIdFactory = null,
+        IGraphCheckpointer? checkpointer = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -72,6 +93,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
         _runIdFactory = runIdFactory;
+        _checkpointer = checkpointer;
     }
 
     /// <inheritdoc />
@@ -79,7 +101,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
     {
         ArgumentNullException.ThrowIfNull(context);
         IDictionary<string, JsonElement> bag = StateBagConverter.ToBag(initial);
-        await foreach (var _ in RunAsync(bag, context, cancellationToken).ConfigureAwait(false))
+        await foreach (var _ in RunAsync(bag, context, resumeFromNodeId: null, resumedRunId: null, cancellationToken).ConfigureAwait(false))
         {
             // Drain the event stream; state is mutated in-place on the passed `bag`.
         }
@@ -91,35 +113,130 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
     {
         ArgumentNullException.ThrowIfNull(context);
         var bag = StateBagConverter.ToBag(initial);
-        return RunAsync(bag, context, cancellationToken);
+        return RunAsync(bag, context, resumeFromNodeId: null, resumedRunId: null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<TState> ResumeAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        ArgumentNullException.ThrowIfNull(context);
+        if (_checkpointer is null)
+        {
+            throw new InvalidOperationException(
+                "Cannot resume a MafGraphOrchestrator that was constructed without a checkpointer. " +
+                "Pass an IGraphCheckpointer to the constructor to enable durable resume.");
+        }
+        if (checkpoint.NextNodeId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot resume from checkpoint '{checkpoint.RunId}' — no NextNodeId (was the graph already completed?).");
+        }
+        if (!string.Equals(checkpoint.GraphId, _manifest.Id, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Checkpoint belongs to graph '{checkpoint.GraphId}'; this orchestrator hosts '{_manifest.Id}'.");
+        }
+
+        var bag = new Dictionary<string, JsonElement>(checkpoint.State, StringComparer.Ordinal);
+        if (resumePayload is not null)
+        {
+            bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
+        }
+
+        await foreach (var _ in RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken).ConfigureAwait(false))
+        {
+            // Drain.
+        }
+
+        return StateBagConverter.FromBag<TState>(bag);
+    }
+
+    /// <summary>
+    /// Stream variant of <see cref="ResumeAsync"/> — yields the full <see cref="AgentGraphEvent"/>
+    /// taxonomy starting with <see cref="GraphResumed"/>.
+    /// </summary>
+    public IAsyncEnumerable<AgentGraphEvent> ResumeStreamAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        ArgumentNullException.ThrowIfNull(context);
+        if (_checkpointer is null)
+        {
+            throw new InvalidOperationException(
+                "Cannot resume a MafGraphOrchestrator that was constructed without a checkpointer.");
+        }
+        if (checkpoint.NextNodeId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot resume from checkpoint '{checkpoint.RunId}' — no NextNodeId.");
+        }
+        var bag = new Dictionary<string, JsonElement>(checkpoint.State, StringComparer.Ordinal);
+        if (resumePayload is not null)
+        {
+            bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
+        }
+        return RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken);
     }
 
     private async IAsyncEnumerable<AgentGraphEvent> RunAsync(
         IDictionary<string, JsonElement> state,
         AgentContext context,
+        string? resumeFromNodeId,
+        string? resumedRunId,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var runId = _runIdFactory?.Invoke() ?? Guid.NewGuid().ToString("N");
+        var runId = resumedRunId ?? _runIdFactory?.Invoke() ?? Guid.NewGuid().ToString("N");
         var maxSteps = _manifest.MaxSteps ?? DefaultMaxSteps;
+        var isResume = resumeFromNodeId is not null;
 
+        // Build the MAF workflow starting at the resume node (for resume) or the manifest
+        // entry (for fresh runs). Starting at the interrupt node ensures the initial message
+        // is delivered directly to that executor, where it skips its body via ResumeFromNodeId.
         var workflow = MafGraphBuilder.Build(
             _manifest,
             _registry,
             _lifecycle,
             _predicateResolver,
             _effectResolver,
-            _codeNodeResolver);
+            _codeNodeResolver,
+            startNodeId: resumeFromNodeId,
+            checkpointer: _checkpointer);
 
         var watch = Stopwatch.StartNew();
-        yield return new GraphStarted(
-            DateTimeOffset.UtcNow, context, runId, 0,
-            _manifest.Id, _manifest.Version, _manifest.Entry);
+
+        if (isResume)
+        {
+            // Resume semantics: read the interrupt id from state for event correlation.
+            var resumedInterruptId = state.TryGetValue("resume.interruptId", out var ii) && ii.ValueKind == JsonValueKind.String
+                ? ii.GetString() ?? string.Empty
+                : string.Empty;
+            yield return new GraphResumed(
+                DateTimeOffset.UtcNow, context, runId, 0,
+                resumeFromNodeId!, resumedInterruptId);
+        }
+        else
+        {
+            yield return new GraphStarted(
+                DateTimeOffset.UtcNow, context, runId, 0,
+                _manifest.Id, _manifest.Version, _manifest.Entry);
+        }
 
         var initialMessage = new GraphMessage(
             State: new Dictionary<string, JsonElement>(state, StringComparer.Ordinal),
             SuperStep: 0,
             RunId: runId,
-            MaxSteps: maxSteps);
+            MaxSteps: maxSteps)
+        {
+            ResumeFromNodeId = resumeFromNodeId,
+        };
 
         // Run the workflow via MAF's InProcessExecution. The node executors send
         // GraphMessages to target node ids; terminal nodes emit via YieldOutputAsync.
@@ -151,7 +268,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
 
         if (finalMessage is not null)
         {
-            // Copy final state back to caller's bag so InvokeAsync sees the result.
+            // Copy final state back to caller's bag so InvokeAsync / ResumeAsync see the result.
             state.Clear();
             foreach (var (k, v) in finalMessage.State)
             {
@@ -159,7 +276,6 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>
             }
 
             // Interrupted runs already emitted GraphInterrupted — don't also mark them Completed.
-            // The caller resumes by re-invoking (durable resume semantics land in PR 4).
             if (!interrupted)
             {
                 yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
@@ -260,8 +376,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
-        Func<string>? runIdFactory = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, runIdFactory)
+        Func<string>? runIdFactory = null,
+        IGraphCheckpointer? checkpointer = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, checkpointer)
     {
     }
 }

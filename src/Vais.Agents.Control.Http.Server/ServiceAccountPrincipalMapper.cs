@@ -3,7 +3,7 @@
 
 using System.Security.Claims;
 
-namespace Vais.Agents.Control.Kubernetes;
+namespace Vais.Agents.Control.Http;
 
 /// <summary>
 /// <see cref="IPrincipalMapper"/> specialised for Kubernetes
@@ -14,18 +14,19 @@ namespace Vais.Agents.Control.Kubernetes;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Optional: consumers opt in via
+/// Opt in at the runtime host via <c>VAIS_SA_PRINCIPAL_MAPPER=true</c>
+/// (or <c>VAIS_SA_PRINCIPAL_MAPPER=true</c> in Helm <c>auth.serviceAccountPrincipalMapper</c>),
+/// or directly with
 /// <c>services.AddSingleton&lt;IPrincipalMapper, ServiceAccountPrincipalMapper&gt;()</c>
-/// on the runtime side. The default <c>DefaultPrincipalMapper</c>
-/// shipped by v0.6 maps <c>sub</c> → <c>Id</c> without the namespace →
-/// <c>TenantId</c> split — it's sufficient for non-K8s deployments.
+/// before calling <see cref="AgentControlPlaneAuthServiceCollectionExtensions.AddAgentControlPlaneJwtAuth"/>.
+/// The default <c>DefaultPrincipalMapper</c> maps <c>sub</c> → <c>Id</c>
+/// without the namespace → <c>TenantId</c> split — sufficient for non-K8s
+/// deployments.
 /// </para>
 /// <para>
-/// Claims not matching the SA shape fall back to the shipped-v0.6
-/// default behaviour: <c>Id</c> = <c>sub</c> (or empty), <c>TenantId</c>
-/// = <c>tenant_id</c> claim if present, otherwise null. Keeps behaviour
-/// predictable for mixed-auth scenarios (a runtime serving both SA and
-/// human OIDC tokens).
+/// Claims not matching the SA shape fall back to the default behaviour:
+/// <c>Id</c> = <c>sub</c>, <c>TenantId</c> = <c>tenant_id</c> claim if
+/// present, otherwise null.
 /// </para>
 /// </remarks>
 public sealed class ServiceAccountPrincipalMapper : IPrincipalMapper
@@ -70,6 +71,7 @@ public sealed class ServiceAccountPrincipalMapper : IPrincipalMapper
         {
             return null;
         }
+
         return scopeClaim.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 }

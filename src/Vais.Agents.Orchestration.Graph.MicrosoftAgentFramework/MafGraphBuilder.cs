@@ -25,6 +25,16 @@ public static class MafGraphBuilder
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
+    /// <param name="startNodeId">
+    /// Override the workflow entry executor. Null (the default) uses <see cref="AgentGraphManifest.Entry"/>.
+    /// Pass the interrupt node's id on resume so <see cref="InProcessExecution"/> delivers
+    /// the initial <see cref="GraphMessage"/> directly to that executor, which then skips its
+    /// body and evaluates outgoing edges via its <see cref="GraphMessage.ResumeFromNodeId"/> flag.
+    /// </param>
+    /// <param name="checkpointer">
+    /// Checkpointer wired into each <see cref="GraphNodeExecutor"/>. Null skips all checkpoint
+    /// saves (identical to v0.9 behaviour). Required for <see cref="IResumableAgentGraph{TState}"/>.
+    /// </param>
     public static Workflow Build(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -35,7 +45,9 @@ public static class MafGraphBuilder
         AgentContext? context = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
+        string? bearerToken = null,
+        string? startNodeId = null,
+        IGraphCheckpointer? checkpointer = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -49,12 +61,13 @@ public static class MafGraphBuilder
             executors[node.Id] = new GraphNodeExecutor(
                 node, manifest, registry, lifecycle,
                 predicateResolver, effectResolver, codeNodeResolver, context,
-                remoteInvoker, a2aInvoker, bearerToken);
+                remoteInvoker, a2aInvoker, bearerToken, checkpointer);
         }
 
-        if (!executors.TryGetValue(manifest.Entry, out var startExecutor))
+        var effectiveStart = startNodeId ?? manifest.Entry;
+        if (!executors.TryGetValue(effectiveStart, out var startExecutor))
         {
-            throw new InvalidOperationException($"Entry node '{manifest.Entry}' not found in graph '{manifest.Id}'.");
+            throw new InvalidOperationException($"Start node '{effectiveStart}' not found in graph '{manifest.Id}'.");
         }
 
         var builder = new WorkflowBuilder(ExecutorBindingExtensions.BindExecutor(startExecutor))

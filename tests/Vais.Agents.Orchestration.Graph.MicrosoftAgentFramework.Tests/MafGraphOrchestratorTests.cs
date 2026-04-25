@@ -238,6 +238,216 @@ public sealed class MafGraphOrchestratorTests
         workflow.Name.Should().Be("customer-router");
     }
 
+    // ---- v0.36 durable resume ----
+
+    /// <summary>
+    /// Spike: verifies that MafGraphBuilder.Build with startNodeId = "wait" produces a
+    /// workflow whose StartExecutorId is "wait", proving InProcessExecution delivers the
+    /// initial message to the specified non-entry executor.
+    /// </summary>
+    [Fact]
+    public void MafGraphBuilder_StartNodeId_Override_Sets_StartExecutorId()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "resume-spike", Version: "1.0", Entry: "pre",
+            Nodes: new[]
+            {
+                new GraphNode("pre", "Agent", Ref: new GraphAgentRef("pre")),
+                new GraphNode("wait", "Interrupt", InterruptReason: "HITL"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("pre", "wait"),
+                new GraphEdge("wait", "end"),
+            });
+
+        var workflow = MafGraphBuilder.Build(manifest, registry, lifecycle, startNodeId: "wait");
+
+        workflow.StartExecutorId.Should().Be("wait");
+    }
+
+    [Fact]
+    public async Task Interrupt_Saves_Checkpoint_And_ResumeAsync_Continues_To_End()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("pre"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "resumable-maf", Version: "1.0", Entry: "pre",
+            Nodes: new[]
+            {
+                new GraphNode("pre", "Agent", Ref: new GraphAgentRef("pre")),
+                new GraphNode("wait", "Interrupt", InterruptReason: "awaiting human"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("pre", "wait"),
+                new GraphEdge("wait", "end"),
+            });
+
+        var checkpointer = new InMemoryCheckpointer();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+
+        // First run — should stop at the Interrupt node and save a checkpoint.
+        var run1Events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            run1Events.Add(e);
+        }
+
+        run1Events.OfType<GraphInterrupted>().Should().ContainSingle();
+        run1Events.OfType<GraphCompleted>().Should().BeEmpty();
+
+        // Checkpoint must be persisted.
+        var interrupted = run1Events.OfType<GraphInterrupted>().Single();
+        var checkpoint = await checkpointer.LoadAsync(interrupted.RunId);
+        checkpoint.Should().NotBeNull();
+        checkpoint!.NextNodeId.Should().Be("wait");
+        checkpoint.IsComplete.Should().BeFalse();
+
+        // Resume on a fresh orchestrator instance — should complete.
+        var orchestrator2 = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+        var run2Events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator2.ResumeStreamAsync(checkpoint, resumePayload: (IDictionary<string, JsonElement>?)null, new AgentContext()))
+        {
+            run2Events.Add(e);
+        }
+
+        run2Events.OfType<GraphResumed>().Should().ContainSingle()
+            .Which.ResumedFromNodeId.Should().Be("wait");
+        run2Events.OfType<GraphCompleted>().Should().ContainSingle();
+        run2Events.OfType<GraphInterrupted>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Cross_Host_InProcess_Interrupted_Resumes_On_Maf()
+    {
+        // Advisor's strongest parity test: run InProcess to interrupt, load checkpoint,
+        // resume on a fresh MafGraphOrchestrator, assert same final state.
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"answer\":42}"));
+        await lifecycle.CreateAsync(ManifestFor("pre"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "cross-host-resume", Version: "1.0", Entry: "pre",
+            Nodes: new[]
+            {
+                new GraphNode("pre", "Agent", Ref: new GraphAgentRef("pre"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "answer" })),
+                new GraphNode("wait", "Interrupt"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("pre", "wait"),
+                new GraphEdge("wait", "end"),
+            });
+
+        // Phase 1: InProcess runs to interrupt.
+        var checkpointer = new InMemoryCheckpointer();
+        var inprocOrchestrator = new InProcessGraphOrchestrator(manifest, registry, lifecycle, checkpointer);
+        var inprocEvents = new List<AgentGraphEvent>();
+        await foreach (var e in inprocOrchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            inprocEvents.Add(e);
+        }
+
+        inprocEvents.OfType<GraphInterrupted>().Should().ContainSingle();
+        var runId = inprocEvents.OfType<GraphInterrupted>().Single().RunId;
+        var checkpoint = await checkpointer.LoadAsync(runId);
+        checkpoint.Should().NotBeNull();
+        checkpoint!.State.Should().ContainKey("answer");
+
+        // Phase 2: Resume on MAF.
+        var mafOrchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+        var mafEvents = new List<AgentGraphEvent>();
+        await foreach (var e in mafOrchestrator.ResumeStreamAsync(checkpoint, resumePayload: (IDictionary<string, JsonElement>?)null, new AgentContext()))
+        {
+            mafEvents.Add(e);
+        }
+
+        mafEvents.OfType<GraphResumed>().Should().ContainSingle();
+        mafEvents.OfType<GraphCompleted>().Should().ContainSingle();
+
+        // Final checkpoint (saved on End) must be complete.
+        var finalCheckpoint = await checkpointer.LoadAsync(runId);
+        finalCheckpoint!.IsComplete.Should().BeTrue();
+        finalCheckpoint.State.Should().ContainKey("answer");
+        finalCheckpoint.State["answer"].GetInt32().Should().Be(42);
+    }
+
+    [Fact]
+    public async Task ResumeAsync_Without_Checkpointer_Throws_InvalidOperationException()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "no-cp", Version: "1.0", Entry: "end",
+            Nodes: new[] { new GraphNode("end", "End") },
+            Edges: Array.Empty<GraphEdge>());
+
+        // No checkpointer supplied.
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+        var dummyCheckpoint = new GraphCheckpoint(
+            "runId", "no-cp", "1.0",
+            new Dictionary<string, JsonElement>(),
+            NextNodeId: "end", SuperStepIndex: 0,
+            PendingInterruptId: null, IsComplete: false,
+            CreatedAt: DateTimeOffset.UtcNow);
+
+        await FluentActions.Invoking(async () =>
+                await orchestrator.ResumeAsync(dummyCheckpoint, resumePayload: null, new AgentContext()))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*checkpointer*");
+    }
+
+    [Fact]
+    public async Task ResumeAsync_Preserves_State_Through_Interrupt()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"score\":7}"));
+        await lifecycle.CreateAsync(ManifestFor("scorer"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "state-preserve", Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("review", "Interrupt", InterruptReason: "human review"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("scorer", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        var checkpointer = new InMemoryCheckpointer();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+
+        // Run to interrupt — capture the RunId from the emitted event.
+        string? capturedRunId = null;
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            if (e is GraphInterrupted gi) capturedRunId = gi.RunId;
+        }
+
+        capturedRunId.Should().NotBeNull();
+        var cp = await checkpointer.LoadAsync(capturedRunId!);
+        cp.Should().NotBeNull();
+        // Scorer's output should be captured in the checkpoint state.
+        cp!.State.Should().ContainKey("score");
+        cp.State["score"].GetInt32().Should().Be(7);
+
+        // Resume — final state must still carry the pre-interrupt score.
+        var orchestrator2 = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+        var finalState = await orchestrator2.ResumeAsync(cp, resumePayload: null, new AgentContext());
+
+        finalState.Should().ContainKey("score");
+        finalState["score"].GetInt32().Should().Be(7);
+    }
+
     // ---- helpers ----
 
     private static AgentGraphManifest BuildHandoffGraph() => new(

@@ -4,6 +4,7 @@
 using System.IO.Pipelines;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Vais.Agents.Control;
 using Xunit;
 
 namespace Vais.Agents.Runtime.Plugins.Python.Tests;
@@ -199,6 +200,126 @@ public sealed class PythonPluginHostServiceTests : IDisposable
         var source = provider.GetByName("not-a-plugin");
 
         source.Should().BeNull();
+
+        await svc.StopAsync(CancellationToken.None);
+    }
+
+    // -----------------------------------------------------------------------
+    // v0.31 — Secret resolution
+    // -----------------------------------------------------------------------
+
+    private void CreatePluginFolderWithSecrets(string name, string secretsYaml)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_pluginsRoot, name)).FullName;
+        File.WriteAllText(Path.Combine(folder, "plugin.yaml"), $"""
+            apiVersion: vais.agents/v1
+            kind: Plugin
+            metadata:
+              name: {name}
+            spec:
+              runtime: python
+              entrypoint: src/server.py
+              python:
+                version: "3.13"
+                interpreter: .venv/bin/python
+              health:
+                handshakeTimeoutSeconds: 5
+                restartPolicy: exponentialBackoff
+            {secretsYaml}
+            """);
+        File.WriteAllText(Path.Combine(folder, "pyproject.toml"), """
+            [project]
+            name = "placeholder"
+
+            [tool.vais.plugin]
+            targetApiVersion = "0.23"
+            tools = ["tool_a"]
+            """);
+    }
+
+    private sealed class FakeSecretResolver : ISecretResolver
+    {
+        private readonly Dictionary<string, string> _map;
+        internal FakeSecretResolver(Dictionary<string, string> map) => _map = map;
+
+        public ValueTask<string> ResolveAsync(string secretUri, CancellationToken ct = default) =>
+            _map.TryGetValue(secretUri, out var v)
+                ? ValueTask.FromResult(v)
+                : throw new SecretNotFoundException(secretUri);
+    }
+
+    [Fact]
+    public async Task StartAsync_SecretsDeclared_ResolvedRefsInjectedIntoDescriptor()
+    {
+        CreatePluginFolderWithSecrets("plugin-secrets",
+            "  secrets:\n    MY_KEY: \"secret://env/MY_KEY\"");
+
+        PythonPluginDescriptor? captured = null;
+        PythonSubprocessSupervisor CapturingSupervisor(PythonPluginDescriptor d)
+        {
+            captured = d;
+            return MakeFakeSupervisor(d);
+        }
+
+        var resolver = new FakeSecretResolver(new() { ["secret://env/MY_KEY"] = "the-value" });
+        var svc = new PythonPluginHostService(MakeOptions(), NullLoggerFactory.Instance,
+            CapturingSupervisor, secretResolver: resolver);
+
+        await svc.StartAsync(CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.SecretRefs.Should().ContainKey("VAIS_SECRET_MY_KEY");
+        captured.SecretRefs["VAIS_SECRET_MY_KEY"].Should().Be("the-value");
+
+        await svc.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_SecretResolutionFails_PluginSkipped()
+    {
+        CreatePluginFolderWithSecrets("plugin-missing-secret",
+            "  secrets:\n    MISSING: \"secret://env/DOES_NOT_EXIST\"");
+
+        var resolver = new FakeSecretResolver(new()); // nothing to resolve
+        var svc = new PythonPluginHostService(MakeOptions(), NullLoggerFactory.Instance,
+            MakeFakeSupervisor, secretResolver: resolver);
+
+        await svc.StartAsync(CancellationToken.None);
+
+        svc.LoadedPlugins.Should().BeEmpty("plugin with unresolvable secret must be skipped");
+
+        await svc.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_SecretsWithNoResolver_PluginSkipped()
+    {
+        CreatePluginFolderWithSecrets("plugin-no-resolver",
+            "  secrets:\n    MY_KEY: \"secret://env/SOME_KEY\"");
+
+        // No ISecretResolver passed — secrets can't be resolved.
+        var svc = new PythonPluginHostService(MakeOptions(), NullLoggerFactory.Instance,
+            MakeFakeSupervisor, secretResolver: null);
+
+        await svc.StartAsync(CancellationToken.None);
+
+        svc.LoadedPlugins.Should().BeEmpty("plugin declares secrets but resolver absent");
+
+        await svc.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_NoSecretsDeclared_PluginLoadsWithoutResolver()
+    {
+        CreatePluginFolder("plugin-no-secrets"); // uses CreatePluginFolder (no secrets block)
+
+        // No resolver needed — plugin has no secrets.
+        var svc = new PythonPluginHostService(MakeOptions(), NullLoggerFactory.Instance,
+            MakeFakeSupervisor, secretResolver: null);
+
+        await svc.StartAsync(CancellationToken.None);
+
+        svc.LoadedPlugins.Should().ContainSingle().Which.Status.Should().Be(PythonPluginStatus.Ready);
 
         await svc.StopAsync(CancellationToken.None);
     }

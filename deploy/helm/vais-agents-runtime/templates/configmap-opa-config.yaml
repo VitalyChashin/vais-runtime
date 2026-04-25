@@ -1,0 +1,48 @@
+{{- /*
+OPA server config.yaml rendered as a ConfigMap. Used only when the chart
+runs a pod-local OPA sidecar in bundle-polling mode (opaBundleMode=true).
+
+Secrets (bearer token, signing key) are NOT embedded in this ConfigMap.
+They are injected into the OPA sidecar as environment variables
+(BUNDLE_SERVER_TOKEN, OPA_BUNDLE_SIGNING_KEY) via secretKeyRef mounts in
+deployment.yaml. OPA resolves the ${...} placeholders at startup.
+*/}}
+{{- if eq (include "vais-agents-runtime.opaBundleMode" .) "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vais-agents-runtime.opaConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vais-agents-runtime.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opa-config
+data:
+  config.yaml: |
+    services:
+      vais-bundle-server:
+        url: {{ required "opa.bundle.url is required when opa.bundle.enabled=true" .Values.opa.bundle.url | quote }}
+        {{- if .Values.opa.bundle.serviceAuthTokenSecret }}
+        credentials:
+          bearer:
+            token: "${BUNDLE_SERVER_TOKEN}"
+        {{- end }}
+
+    bundles:
+      vais-agents:
+        service: vais-bundle-server
+        resource: {{ .Values.opa.bundle.resource | quote }}
+        polling:
+          min_delay_seconds: {{ .Values.opa.bundle.polling.minDelaySeconds }}
+          max_delay_seconds: {{ .Values.opa.bundle.polling.maxDelaySeconds }}
+        {{- if .Values.opa.bundle.signing.enabled }}
+        signing:
+          keyid: {{ .Values.opa.bundle.signing.keyId | quote }}
+        {{- end }}
+
+    {{- if .Values.opa.bundle.signing.enabled }}
+    keys:
+      {{ .Values.opa.bundle.signing.keyId }}:
+        algorithm: {{ .Values.opa.bundle.signing.algorithm }}
+        key: "${OPA_BUNDLE_SIGNING_KEY}"
+    {{- end }}
+{{- end }}

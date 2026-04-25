@@ -101,6 +101,18 @@ public static class PythonPluginUrns
     public const string AgentHandlerCollision = UrnPrefix + "python-agent-handler-collision";
 
     // -----------------------------------------------------------------------
+    // v0.31 — Secret propagation URNs
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// A Python plugin declares secrets in <c>spec.secrets</c> but the runtime could not
+    /// resolve one or more secret URIs (missing env var, file not found, unknown scheme,
+    /// or no <c>ISecretResolver</c> registered). The plugin is skipped on startup
+    /// or the reload is aborted; the running subprocess is unaffected during a reload.
+    /// </summary>
+    public const string SecretResolutionFailed = UrnPrefix + "python-plugin-secret-resolution-failed";
+
+    // -----------------------------------------------------------------------
     // v0.25 — Python plugin hot-reload URNs
     // -----------------------------------------------------------------------
 

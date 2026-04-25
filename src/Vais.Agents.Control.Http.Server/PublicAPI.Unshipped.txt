@@ -34,6 +34,36 @@ override Vais.Agents.Control.Http.PluginListResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.PluginListResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.PluginListResponse.ToString() -> string!
 static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapPluginControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapRuntimeTopologyControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+override Vais.Agents.Control.Http.RuntimeInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RuntimeInfo.GetHashCode() -> int
+override Vais.Agents.Control.Http.RuntimeInfo.ToString() -> string!
+override Vais.Agents.Control.Http.RuntimeListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RuntimeListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.RuntimeListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.RuntimeInfo.operator !=(Vais.Agents.Control.Http.RuntimeInfo? left, Vais.Agents.Control.Http.RuntimeInfo? right) -> bool
+static Vais.Agents.Control.Http.RuntimeInfo.operator ==(Vais.Agents.Control.Http.RuntimeInfo? left, Vais.Agents.Control.Http.RuntimeInfo? right) -> bool
+static Vais.Agents.Control.Http.RuntimeListResponse.operator !=(Vais.Agents.Control.Http.RuntimeListResponse? left, Vais.Agents.Control.Http.RuntimeListResponse? right) -> bool
+static Vais.Agents.Control.Http.RuntimeListResponse.operator ==(Vais.Agents.Control.Http.RuntimeListResponse? left, Vais.Agents.Control.Http.RuntimeListResponse? right) -> bool
+Vais.Agents.Control.Http.RuntimeInfo
+Vais.Agents.Control.Http.RuntimeInfo.<Clone>$() -> Vais.Agents.Control.Http.RuntimeInfo!
+Vais.Agents.Control.Http.RuntimeInfo.Deconstruct(out string! Url, out string! IdentityMode) -> void
+Vais.Agents.Control.Http.RuntimeInfo.Equals(Vais.Agents.Control.Http.RuntimeInfo? other) -> bool
+Vais.Agents.Control.Http.RuntimeInfo.IdentityMode.get -> string!
+Vais.Agents.Control.Http.RuntimeInfo.IdentityMode.init -> void
+Vais.Agents.Control.Http.RuntimeInfo.RuntimeInfo(string! Url, string! IdentityMode) -> void
+Vais.Agents.Control.Http.RuntimeInfo.Url.get -> string!
+Vais.Agents.Control.Http.RuntimeInfo.Url.init -> void
+Vais.Agents.Control.Http.RuntimeListResponse
+Vais.Agents.Control.Http.RuntimeListResponse.<Clone>$() -> Vais.Agents.Control.Http.RuntimeListResponse!
+Vais.Agents.Control.Http.RuntimeListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>! Items) -> void
+Vais.Agents.Control.Http.RuntimeListResponse.Equals(Vais.Agents.Control.Http.RuntimeListResponse? other) -> bool
+Vais.Agents.Control.Http.RuntimeListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>!
+Vais.Agents.Control.Http.RuntimeListResponse.Items.init -> void
+Vais.Agents.Control.Http.RuntimeListResponse.RuntimeListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>! Items) -> void
+Vais.Agents.Control.Http.ServiceAccountPrincipalMapper
+Vais.Agents.Control.Http.ServiceAccountPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! user) -> Vais.Agents.AgentPrincipal?
+Vais.Agents.Control.Http.ServiceAccountPrincipalMapper.ServiceAccountPrincipalMapper() -> void
 static Vais.Agents.Control.Http.PluginInfo.operator !=(Vais.Agents.Control.Http.PluginInfo? left, Vais.Agents.Control.Http.PluginInfo? right) -> bool
 static Vais.Agents.Control.Http.PluginInfo.operator ==(Vais.Agents.Control.Http.PluginInfo? left, Vais.Agents.Control.Http.PluginInfo? right) -> bool
 static Vais.Agents.Control.Http.PluginListResponse.operator !=(Vais.Agents.Control.Http.PluginListResponse? left, Vais.Agents.Control.Http.PluginListResponse? right) -> bool

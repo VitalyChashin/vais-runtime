@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Runtime.CompilerServices;
+
 namespace Vais.Agents.Hosting.Orleans;
 
 /// <summary>
@@ -24,7 +26,7 @@ namespace Vais.Agents.Hosting.Orleans;
 /// contexts use the underlying <see cref="IAiAgentGrain"/> methods directly.
 /// </para>
 /// </remarks>
-internal sealed class OrleansAiAgentProxy : IAiAgent
+internal sealed class OrleansAiAgentProxy : IAiAgent, IStreamingAiAgent
 {
     private readonly IAiAgentGrain _grain;
     private readonly string _agentId;
@@ -75,6 +77,31 @@ internal sealed class OrleansAiAgentProxy : IAiAgent
         _systemPromptCache = await _grain.GetSystemPromptAsync().ConfigureAwait(false);
         _cacheInitialised = true;
         return reply;
+    }
+
+    public async IAsyncEnumerable<AgentEvent> StreamAsync(
+        string userMessage,
+        AgentContext context,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var evt in _grain.StreamAgentAsync(userMessage, context, cancellationToken))
+                yield return evt;
+        }
+        finally
+        {
+            try
+            {
+                _historyCache = await _grain.GetHistoryAsync().ConfigureAwait(false);
+                _systemPromptCache = await _grain.GetSystemPromptAsync().ConfigureAwait(false);
+                _cacheInitialised = true;
+            }
+            catch
+            {
+                // Cache refresh failed; leave existing cache (stale but not incorrect).
+            }
+        }
     }
 
     public void Reset()

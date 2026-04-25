@@ -66,6 +66,30 @@ internal sealed record RuntimeOptions
     /// </summary>
     public string? PythonPluginsDirectory { get; init; }
 
+    /// <summary>
+    /// v0.30 OIDC authority URL (e.g. <c>https://keycloak.example.com/realms/my-realm</c>).
+    /// When set, the full JWT bearer-token authentication pipeline is wired on the runtime host.
+    /// Null ⇒ auth pipeline disabled — existing localhost semantics unchanged.
+    /// Set via <c>VAIS_JWT_AUTHORITY</c>.
+    /// </summary>
+    public string? JwtAuthority { get; init; }
+
+    /// <summary>
+    /// v0.30 optional token audience restriction. Applied only when <see cref="JwtAuthority"/> is set.
+    /// Null ⇒ audience validation is disabled.
+    /// Set via <c>VAIS_JWT_AUDIENCE</c>.
+    /// </summary>
+    public string? JwtAudience { get; init; }
+
+    /// <summary>
+    /// v0.30 Kubernetes ServiceAccount principal mapper opt-in. When <see langword="true"/> and
+    /// <see cref="JwtAuthority"/> is set, <c>ServiceAccountPrincipalMapper</c> is registered in
+    /// preference to <c>DefaultPrincipalMapper</c> — extracts <c>TenantId</c> from the SA namespace
+    /// in <c>system:serviceaccount:&lt;namespace&gt;:&lt;sa&gt;</c> sub claims.
+    /// Set <c>VAIS_SA_PRINCIPAL_MAPPER=true</c> to enable.
+    /// </summary>
+    public bool UseSaPrincipalMapper { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -84,6 +108,9 @@ internal sealed record RuntimeOptions
             PluginsDirectory = PluginsEnv("VAIS_PLUGINS_DIRECTORY"),
             PluginsHotReload = ParseReloadPolicy(Env("VAIS_PLUGINS_RELOAD_POLICY")),
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
+            JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
+            JwtAudience = Env("VAIS_JWT_AUDIENCE"),
+            UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
         };
 
         static string? Env(string name)

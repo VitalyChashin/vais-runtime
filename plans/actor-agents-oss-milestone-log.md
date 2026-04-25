@@ -1623,3 +1623,370 @@ Pillar plan: [`actor-agents-oss-v0.15-cli-pillar.md`](./actor-agents-oss-v0.15-c
 
 **Tag handling.** User will apply `git tag v0.24.0-preview` after verifying the build. Do not tag autonomously.
 
+---
+
+### 2026-04-25 — v0.29 Identity pillar: `IAgentIdentityProvider` OIDC adapter complete
+
+**Goal.** Ship the first concrete implementation of the `IAgentIdentityProvider` contract that has been contract-only since v0.4. Covers both directions: inbound JWT Bearer validation and outbound OAuth2 `client_credentials` token acquisition. Works with any OIDC-compliant IdP (Keycloak, Auth0, Microsoft Entra).
+
+**What landed.**
+
+- **`Vais.Agents.Identity.Oidc`** — new standalone NuGet-packagable project:
+  - `OidcAgentIdentityOptions` — `Authority`, `ClientId`, `Audience?`, `ValidateAudience` (opt-in, default `false`), `ValidateIssuer` (default `true`), `ClockSkew` (default 30 s).
+  - `OidcAgentIdentityProvider` — implements `IAgentIdentityProvider` + `IDisposable`:
+    - Inbound: extracts Bearer token from `AgentInvocationRequest.Metadata["authorization"]`, validates via `JsonWebTokenHandler` + JWKS from OIDC discovery; maps `sub` → `Id`, `tid`/`tenant_id` → `TenantId`, `scope`/`scp` → `Scopes`.
+    - Outbound: `client_credentials` grant against the discovered token endpoint; per-`(agentId, credentialRef)` in-memory cache with 30-second expiry safety margin using double-checked lock + `SemaphoreSlim` per key (same pattern as `OidcTokenExchangeRemoteIdentityProvider`).
+  - `OidcAgentIdentityServiceCollectionExtensions.AddOidcAgentIdentity(configure?)` — registers `IConfigurationManager<OpenIdConnectConfiguration>` (auto-refreshing JWKS), typed `HttpClient`, and `IAgentIdentityProvider` singleton.
+  - `PublicAPI.Shipped.txt` + `PublicAPI.Unshipped.txt` wired; public API analyzer clean.
+
+- **`Vais.Agents.Abstractions`** — `AgentInvocationMetadataKeys` static class with `Authorization = "authorization"` constant. IdP-neutral; any future inbound adapter reads the same key. Added to `PublicAPI.Unshipped.txt`.
+
+- **`Microsoft.IdentityModel.JsonWebTokens 8.0.1`** + **`Microsoft.IdentityModel.Protocols.OpenIdConnect 8.0.1`** pinned in `Directory.Packages.props` (floor matches the transitive version from `Microsoft.AspNetCore.Authentication.JwtBearer 9.0.0`).
+
+- **`Vais.Agents.Identity.Oidc.Tests`** — 14 unit tests, all green, no network calls:
+  - `OidcAgentIdentityProviderInboundTests` (8 tests): generates RSA key pair in-process, creates real JWTs with `JsonWebTokenHandler`, injects `StaticConfigurationManager<OpenIdConnectConfiguration>` — covers principal mapping, Bearer stripping, missing/empty auth header, wrong signing key, expired token (zero clock skew), `scp` claim fallback.
+  - `OidcAgentIdentityProviderOutboundTests` (6 tests): uses `RecordingHttpMessageHandler` + `FakeTimeProvider` (Microsoft.Extensions.TimeProvider.Testing) — covers token response, form-body field check, cache hit, cache expiry refresh, per-agent isolation, upstream 401 error.
+
+**Surprises / findings.**
+
+- **`AcquireOutboundAsync` receives only `credentialRef` (not `Type`).** The interface passes the secret URI only; there is no `Type` field at the call site. The OIDC provider unconditionally does `client_credentials` — this is correct for the adapter but the constraint is documented in XML doc comments.
+- **`ValidateAudience` default must be `false`.** Setting `ValidateAudience=true` without `Audience` throws on every token. Honest default: `false`, with opt-in by setting both `ValidateAudience=true` and `Audience`. The provider enforces `ValidateAudience && !string.IsNullOrEmpty(Audience)` as the effective flag.
+- **`IConfigurationManager<OpenIdConnectConfiguration>` for testability.** Injecting the interface rather than the concrete `ConfigurationManager<T>` lets tests pass `StaticConfigurationManager<OpenIdConnectConfiguration>` with pre-loaded JWKS — no mock framework needed, no network.
+- **Auth0 / Entra compatibility is free.** OIDC discovery + standard `client_credentials` grant works identically against Auth0 (`{domain}/.well-known/openid-configuration`) and Entra (`{tenant-id}/v2.0/.well-known/openid-configuration`). No IdP-specific code.
+
+**Deferred.**
+
+- Auth0 / Entra integration tests (need real tenant credentials — CI cannot carry them).
+- JWKS rotation retry on `SecurityTokenSignatureKeyNotFoundException` (the `ConfigurationManager` auto-refreshes on a 24-hour cadence; explicit `RequestRefresh()` on rotation is a post-v0.29 hardening item).
+- `CompositionRoot` opt-in wiring for `AddOidcAgentIdentity` (the adapter ships as a leaf; wiring is consumer-side via `AddOidcAgentIdentity()`).
+- `ServiceAccountPrincipalMapper` Helm toggle — still unwired.
+
+**Tag handling.** User will apply `git tag v0.29.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.30 `ServiceAccountPrincipalMapper` runtime-side opt-in
+
+**Goal.** Wire the full JWT bearer-authentication pipeline into the runtime host so that Kubernetes ServiceAccount tokens can authenticate against the control plane without any consumer-side code. Scope B: class move + full env-var + Helm toggle + auth pipeline in `Program.cs`.
+
+**What landed.**
+
+- **`ServiceAccountPrincipalMapper` moved** from `Vais.Agents.Control.KubernetesOperator` (namespace `Vais.Agents.Control.Kubernetes`) → `Vais.Agents.Control.Http.Server` (namespace `Vais.Agents.Control.Http`). Motivation: `KubernetesOperator` depends on `KubeOps.Abstractions` + `KubeOps.Operator`; pulling those into the runtime host via a new project reference would be unacceptable bloat. `Control.Http.Server` is already referenced by `Runtime.Host`. ⚠️ Breaking change for any consumer who imported the old namespace.
+
+- **`RuntimeOptions`** — three new properties parsed from env vars:
+  - `JwtAuthority` (`string?`) — `VAIS_JWT_AUTHORITY`: OIDC discovery authority URL.
+  - `JwtAudience` (`string?`) — `VAIS_JWT_AUDIENCE`: optional token audience restriction.
+  - `UseSaPrincipalMapper` (`bool`) — `VAIS_SA_PRINCIPAL_MAPPER=true`: opt-in SA mapper.
+
+- **`CompositionRoot.ConfigureServices`** — new block after step 4 (HTTP control plane): when `JwtAuthority` is set, registers `ServiceAccountPrincipalMapper` BEFORE `AddAgentControlPlaneJwtAuth` when `UseSaPrincipalMapper=true` (so `TryAddSingleton<DefaultPrincipalMapper>` inside the extension is skipped), then calls `AddAgentControlPlaneJwtAuth(o => { o.Authority = ...; o.Audience = ... })`.
+
+- **`Program.cs`** — conditional `UseAuthentication()` + `UseAuthorization()` + `UseAgentControlPlanePrincipalMapping()` gated on `JwtAuthority` being set; startup log gains `jwt=` field.
+
+- **Helm chart** — `deploy/helm/vais-agents-runtime/values.yaml`: new `auth:` section (`jwtAuthority`, `jwtAudience`, `serviceAccountPrincipalMapper`). `templates/deployment.yaml`: conditional env var blocks for the three auth vars.
+
+- **`PublicAPI.Shipped.txt`** — `KubernetesOperator` entries for `ServiceAccountPrincipalMapper` removed (class moved). `Control.Http.Server/PublicAPI.Unshipped.txt` entries added with new `Vais.Agents.Control.Http` namespace.
+
+- **Tests** — `Vais.Agents.Runtime.Host.Tests` gains:
+  - `ServiceAccountPrincipalMapperTests` (8 unit tests): SA sub format → namespace extraction, non-SA sub → passthrough, missing sub → null, scope extraction, `NameIdentifier` claim fallback, truncated SA sub → fallback.
+  - `CompositionRootTests` additions (4 tests): JWT auth absent when no authority; auth wired when authority set + default mapper; SA mapper wins when flag set + ordering invariant; `AsyncLocalAgentContextAccessor` wired.
+
+- **Build.** 58 projects, 0 errors, 0 warnings. 35/35 new + existing composition + mapper tests green. 59/59 `KubernetesOperator.Tests` green (no regression).
+
+**Surprises / findings.**
+
+- **`Program.cs` had zero JWT wiring before this pillar.** `IPrincipalMapper` was registered but `UseAuthentication` / `UseAgentControlPlanePrincipalMapping` were never called. The mapper was wired via DI but the middleware chain never ran — discovering this was the root reason Scope B was necessary rather than Scope A (which would have been a no-op without Program.cs changes).
+- **Ordering invariant is critical.** `AddSingleton<IPrincipalMapper, ServiceAccountPrincipalMapper>()` must precede `AddAgentControlPlaneJwtAuth(...)` because the extension uses `TryAddSingleton<DefaultPrincipalMapper>`. Reversed order silently falls back to the default. Locked in by the `Composition_ServiceAccountPrincipalMapper_Registered_When_UseSaPrincipalMapper_Set` composition test.
+- **`JwtBearerOptions.Authority` is framework-available in `Runtime.Host`.** No package reference needed — `Microsoft.NET.Sdk.Web` includes `Microsoft.AspNetCore.App` shared framework which carries `JwtBearerOptions`.
+
+**Deferred.**
+
+- Auth0 / Entra / Keycloak integration tests for the full runtime-auth path (need real tenant credentials).
+- JWKS rotation retry (`RequestRefresh()` on `SecurityTokenSignatureKeyNotFoundException`).
+- `AddOidcAgentIdentity` wiring in `CompositionRoot` (the OIDC adapter ships as a leaf library; wiring is still consumer-side).
+- mTLS / API-key alternative auth schemes.
+
+**Tag handling.** User will apply `git tag v0.30.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.31 Secret propagation to Python agent subprocesses
+
+**What shipped.**
+
+End-to-end wiring of `spec.secrets` from `plugin.yaml` into Python subprocess environment variables:
+
+- **`PluginYamlSpec.Secrets`** — new `Dictionary<string, string>` property on the YAML model; maps ref-names to `secret://…` URIs. Deserialized by `PluginYamlDeserializer` via YamlDotNet's `IgnoreUnmatchedProperties` path.
+- **`PythonPluginDescriptor.SecretDeclarations`** — new `IReadOnlyDictionary<string, string>` body-property (default empty); populated by `PythonPluginScanner` from parsed YAML. Ref-name validation enforces `[A-Za-z_][A-Za-z0-9_]*`; invalid names cause the plugin to be skipped with `urn:vais-agents:python-plugin-load-failed`.
+- **`PythonPluginHostService.ResolveSecretsAsync`** — resolves each declaration via the injected `ISecretResolver?`; returns a new descriptor with `SecretRefs` populated as `VAIS_SECRET_<REF>=<value>`. Missing resolver or unresolvable URI → plugin skipped with `urn:vais-agents:python-plugin-secret-resolution-failed`.
+- **`DefaultPythonPluginReloader`** — same resolution logic applied after each re-scan; reload aborted with `ScanFailed + SecretResolutionFailed` URN on failure.
+- **`PythonPluginServiceCollectionExtensions`** — `AddPythonPlugins` resolves `ISecretResolver?` from DI and passes it to the host and reloader.
+- **`PythonPluginUrns.SecretResolutionFailed`** — new URN constant (`urn:vais-agents:python-plugin-secret-resolution-failed`).
+- **`Vais.Agents.Runtime.Plugins.Python.csproj`** — added `ProjectReference` to `Vais.Agents.Control.Abstractions` (holds `ISecretResolver` / `SecretNotFoundException`).
+- **Sample `PluginAgentLangGraphResearcherLive/plugin.yaml`** — replaced stale deferred-backlog comment with live `spec.secrets: OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"` block.
+- **Sample `graph.py`** — updated to read `VAIS_SECRET_OPENAI_API_KEY` from env (via module-level `_OPENAI_API_KEY = os.environ["VAIS_SECRET_OPENAI_API_KEY"]`) and pass it explicitly to `ChatOpenAI(api_key=...)`. The sample now fully exercises the secret injection pipeline rather than relying on env-var inheritance.
+- **10 new tests** across `PluginYamlDeserializerTests`, `PythonPluginScannerTests`, and `PythonPluginHostServiceTests`.
+
+**Environment variable naming.** `VAIS_SECRET_<REF>` where `<REF>` is the ref-name verbatim from `plugin.yaml`. The Python subprocess reads `os.environ["VAIS_SECRET_MY_KEY"]` directly.
+
+**Resolution semantics.** Failure is treated as a load failure (plugin skipped / reload aborted), not a silent no-op, to prevent the subprocess starting with missing credentials.
+
+**Deferred.**
+- `secret://k8s/…` scheme (Kubernetes Secret direct lookup without the operator) — not needed today; consumers use `secret://env/…` with K8s secrets mounted as env vars.
+- Per-secret rotation without silo restart — would require a reload trigger from the secret store; out of scope.
+
+**Tag handling.** User will apply `git tag v0.31.0-preview` after verifying the build. Do not tag autonomously.
+
+
+---
+
+### 2026-04-25 — v0.32 OPA bundle-server + signature verification
+
+**What shipped.**
+
+Helm chart + samples closing the v0.14 deferred item: _"Policies are loaded from disk / ConfigMap today; there is no signed-bundle pipeline."_ The `Vais.Agents.Control.Policy.Opa` .NET adapter is **unchanged** — bundle distribution is OPA-internal.
+
+**Helm chart `opa.bundle.*` sub-values block (`deploy/helm/vais-agents-runtime/`).**
+
+- `values.yaml` — new `opa.bundle.*` block: `enabled`, `url`, `resource`, `polling.{min,max}DelaySeconds`, `serviceAuthTokenSecret / Key`, `signing.{enabled, keyId, algorithm, existingSecret, existingSecretKey}`. Signing defaults to RS256 (PKI-standard).
+- `templates/configmap-opa-config.yaml` (new) — renders an OPA-native `config.yaml` ConfigMap when `opaBundleMode=true` (sidecar mode + bundle enabled). Contains `services:` + `bundles:` + optional `keys:` sections. Secrets (signing key, bearer token) are referenced as `${OPA_BUNDLE_SIGNING_KEY}` / `${BUNDLE_SERVER_TOKEN}` OPA env-substitution placeholders — never embedded in the ConfigMap.
+- `templates/_helpers.tpl` — two new helpers: `vais-agents-runtime.opaBundleMode` (true when sidecar + bundle enabled) and `vais-agents-runtime.opaConfigMapName`.
+- `templates/deployment.yaml` — OPA sidecar now has two render paths: ConfigMap-mount (default, unchanged) and bundle mode. In bundle mode: args switch to `--config-file=/opa-config/config.yaml`; `opa-config` volume + `opa-tmp` emptyDir (required for `readOnlyRootFilesystem: true` + OPA's temp bundle cache) added; `OPA_BUNDLE_SIGNING_KEY` / `BUNDLE_SERVER_TOKEN` env vars injected via `secretKeyRef` only when the corresponding secrets are configured.
+- `templates/configmap-opa.yaml` — updated guard: skips rendering the policy ConfigMap in bundle mode (it is unused and would be orphaned).
+
+**Smoke-tested via `helm template`:** default (no OPA); ConfigMap mode; bundle mode (no signing); bundle mode + signing; bundle mode + signing + bearer-token auth. All render correctly.
+
+**Sample `samples/opa-bundle-server/`.**
+
+- `bundle/vais-agents.rego` — starter deny-closed Rego: allows Invoke/Query/Signal from any known principal; allows Create/Update/Evict/Cancel only from the `ops` tenant.
+- `Dockerfile` — nginx 1.27-alpine image; serves `/bundle.tar.gz` on port 8888.
+- `nginx.conf` — minimal nginx with ETag support (OPA conditional-request optimisation).
+- `sign-bundle.sh` — builds an OPA bundle (`opa build`); optionally signs it (`opa sign` + `openssl genrsa`) and writes the RS256 key pair. Outputs kubectl + Helm commands to wire the public key into Kubernetes.
+- `docker-compose.yaml` — local-dev stack: `bundle-server` (nginx) + `opa` (polling the bundle server). Commented-out signing config block for when `--sign` is used.
+- `README.md` — full walkthrough: Quick Start (unsigned local dev) → Signed bundle (production) → Authenticated bundle server → Helm values reference → CI publishing pattern.
+
+**`samples/opa-sidecar/README.md`** — updated Known Limitations section; added cross-link to `samples/opa-bundle-server/` noting that the runtime Helm chart now has native `opa.bundle.*` support.
+
+**Deferred (still in §11 OPA/policy polish backlog).**
+- `deploy/helm/vais-agents-operator/` OPA integration — separate item.
+- OPA decision-log forwarding — separate §Observability item.
+- Embedded Wasm adapter, Envoy ext-authz — separate items.
+
+**Tag handling.** User will apply `git tag v0.32.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.33 SSE streaming for cross-runtime invokes
+
+**What shipped.**
+
+`IAgentRemoteInvoker.StreamAsync` — the streaming counterpart to v0.20's `InvokeAsync`, closing
+the deferred §2 cross-runtime backlog item.
+
+- **`IAgentRemoteInvoker.StreamAsync`** (new interface method on `Vais.Agents.IAgentRemoteInvoker`).
+  Returns `IAsyncEnumerable<AgentEvent>`. Identical parameter list to `InvokeAsync` (runtimeUrl,
+  handle, request, bearerToken, cancellationToken). 501 from the remote (Orleans proxy with no
+  streaming support) surfaces as `RemoteAgentInvocationException` — callers can detect it via
+  `ex.Status == HttpStatusCode.NotImplemented`.
+
+- **`AgentSseParser`** (new `internal static` class in `Vais.Agents.Control.Http.Client`).
+  Extracted from `AgentControlPlaneClient.ParseAgentEventFrame` (private method deleted).
+  `AgentSseParser.ParseEventFrame` is the single canonical SSE event-name → `AgentEvent` subtype
+  switch, shared by both `AgentControlPlaneClient.InvokeStreamEventsAsync` and the new
+  `HttpAgentRemoteInvoker.StreamAsync`. No drift risk when new `AgentEvent` subtypes are added.
+
+- **`HttpAgentRemoteInvoker.StreamAsync`** (implemented in `Vais.Agents.Control.Http.Client`).
+  POSTs to `/v1/agents/{id}/invoke/stream?version=X`, sets `Accept: text/event-stream`,
+  forwards bearer token + identity-provider transformation (mirrors `InvokeAsync`),
+  uses `HttpCompletionOption.ResponseHeadersRead` + `System.Net.ServerSentEvents.SseParser`.
+  No retry logic (unlike `InvokeAsync`) — a mid-stream failure cannot safely be replayed.
+
+- **Test stub updates.** `StubRemoteInvoker` and `ThrowingRemoteInvoker` in
+  `InProcessGraphOrchestrator_RemoteBranchTests` + `StubRemoteInvoker` in
+  `InProcessGraphOrchestrator_A2ABranchTests` updated to implement the new interface method.
+
+- **6 new tests** in `HttpAgentRemoteInvokerTests`: full event taxonomy round-trip, bearer token
+  forwarding, null bearer = no auth header, path construction with/without version, 501 →
+  `RemoteAgentInvocationException`, and unknown event names skipped (forward-compat).
+
+- **`PublicAPI.Unshipped.txt`** — `IAgentRemoteInvoker.StreamAsync` declared.
+
+**Orchestrator wiring.** `InProcessGraphOrchestrator` and `GraphNodeExecutor` (MAF) continue to
+call `InvokeAsync` for remote graph-node execution. Threading remote `AgentEvent` objects through
+the graph's `AgentGraphEvent` stream requires a separate event-bus design call; deferred.
+
+**Deferred.**
+
+- Orchestrator passthrough of remote `AgentEvent` objects through the graph stream — needs an
+  event-bus design call first (see §4 Orchestration backlog).
+- `vais get-remote-runtimes` / runtime topology discovery — separate CLI polish pillar (§2).
+- `OrleansAiAgentProxy.StreamAsync` passthrough — returns 501 by design; revisit when a
+  consumer needs silo-spanning streaming (§2).
+
+**Tag handling.** User will apply `git tag v0.33.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.34 Runtime topology discovery (`vais get-remote-runtimes`)
+
+**What shipped.**
+
+`GET /v1/runtimes` server endpoint + `GetRemoteRuntimesAsync()` client method + `vais get-remote-runtimes` CLI command, closing the §2 deferred backlog item.
+
+- **`IRemoteRuntimeTopology` + `RemoteRuntimeEntry`** (new in `Vais.Agents.Control.Abstractions`,
+  namespace `Vais.Agents.Control`). `RemoteRuntimeEntry(string Url, string IdentityMode)` — no
+  credentials. Consumers read the topology snapshot via `GetEntries()`.
+
+- **`SimpleRemoteRuntimeTopology`** (`internal` in `Vais.Agents.Control.Http.Client`). Wraps a
+  pre-built `IReadOnlyList<RemoteRuntimeEntry>` built from `RemoteRuntimeOptionsMap` at
+  `AddAgentRemoteInvoker` call time.
+
+- **`AddAgentRemoteInvoker` DI registration** — both overloads (parameterless + map-based) now
+  call `services.TryAddSingleton<IRemoteRuntimeTopology>(...)`. The map-based overload projects
+  each `RemoteRuntimeOptions` entry to `RemoteRuntimeEntry(url, identityMode.ToString())`,
+  stripping `ClientId`, `ClientSecretRef`, `TokenExchangeEndpoint`, `Audience`,
+  `ServiceAccountTokenPath`, `RetryDelays`, etc.
+
+- **`RuntimeInfo` + `RuntimeListResponse`** — declared in both `Vais.Agents.Control.Http.Server`
+  (`RuntimeContracts.cs`) and re-declared in `Vais.Agents.Control.Http.Client` (`WireTypes.cs`).
+  Same dual-declaration pattern as `AgentApplyResponse`.
+
+- **`GET /v1/runtimes`** endpoint handler in `AgentControlPlaneEndpointRouteBuilderExtensions`.
+  Exposed as a standalone `MapRuntimeTopologyControlPlane()` extension (same pattern as
+  `MapPluginControlPlane`) and called from `MapAgentControlPlane()`. Resolves
+  `IRemoteRuntimeTopology` via `GetService<>` (optional) — returns empty list when not
+  registered, never throws.
+
+- **`IAgentControlPlaneClient.GetRemoteRuntimesAsync()`** — default DIM returns an empty
+  `RuntimeListResponse` so existing mock implementations compile unchanged.
+  `AgentControlPlaneClient` overrides: `GET /v1/runtimes`, deserialise response.
+
+- **`vais get-remote-runtimes` CLI command** (`GetRemoteRuntimesCommand`). Table output:
+  URL | IDENTITY MODE columns. Supports `--output table|json|yaml`, `--context`, `--token`.
+  Registered in `Program.cs`.
+
+- **4 new endpoint tests** in `RemoteRuntimeTopologyEndpointTests`:
+  — 200 with configured runtimes
+  — 200 with empty items when topology not registered
+  — sensitive-fields leak test (clientSecret, clientId, clientSecretRef, tokenPath, tokenExchangeEndpoint, audience must not appear in response body)
+  — response structure contains only Url + IdentityMode
+
+- **`PublicAPI.Unshipped.txt`** updated in 3 projects: `Vais.Agents.Control.Abstractions`,
+  `Vais.Agents.Control.Http.Client`, `Vais.Agents.Control.Http.Server`.
+
+**Deferred.**
+
+- Orchestrator passthrough of remote `AgentEvent` objects through the graph stream — needs an
+  event-bus design call first (see §4 Orchestration backlog).
+- `OrleansAiAgentProxy.StreamAsync` passthrough — returns 501 by design. (SHIPPED v0.35)
+
+**Tag handling.** User will apply `git tag v0.34.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.35 Orleans streaming passthrough (`OrleansAiAgentProxy.StreamAsync`)
+
+**Goal.** Eliminate the 501 `urn:vais-agents:streaming-not-supported` returned by the HTTP
+SSE endpoint when the runtime is Orleans-backed. `OrleansAiAgentProxy` should implement
+`IStreamingAiAgent` so the HTTP server's `if (agent is not IStreamingAiAgent)` gate passes.
+
+**What landed.**
+
+- **`IAiAgentGrain.StreamAgentAsync`** — new grain interface method returning
+  `IAsyncEnumerable<AgentEvent>`, leveraging Orleans 10.x native streaming support
+  (confirmed from Microsoft Learn docs). The grain turn is held open for the full
+  duration; state is persisted on the terminal `TurnCompleted` or `TurnFailed` event
+  (before it is yielded) so persistence is consistent regardless of subsequent failures.
+- **`AiAgentGrain.StreamAgentAsync`** — delegates to the inner `IStreamingAiAgent`
+  (both `StatefulAiAgent` and `PythonAgentShim` implement it). Sets OTel activity
+  status to Error on `TurnFailed`. Logs completion time at Debug.
+- **`OrleansAiAgentProxy : IAiAgent, IStreamingAiAgent`** — `StreamAsync` forwards to
+  `_grain.StreamAgentAsync`; refreshes `_historyCache` / `_systemPromptCache` in a
+  `finally` block (errors suppressed — stale cache is safe) so `proxy.History` reflects
+  the post-stream state.
+- **`AgentEventSurrogate` extended for `CompletionDelta`** — `AgentEventKind.CompletionDelta = 9`,
+  fields `[Id(22)] TextDelta` and `[Id(23)] ToolCallsJson`, `CompletionDeltaSurrogateConverter`
+  registered. `JournalEntrySurrogateHelpers.ParseToolCalls` / `SerializeToolCalls` promoted
+  to `internal static` for reuse.
+- **`IStreamingAiAgent.cs` doc updated** — removed stale claim that Orleans doesn't support
+  `IAsyncEnumerable<T>` grain returns; notes v0.35 Orleans 10.x support.
+- **Tests** — `StreamingHistorySizeProvider` added to the Orleans test cluster fixture;
+  3 new grain integration tests: event-ordering, history-persistence, multi-turn history
+  accumulation. All 78 Orleans tests pass; full-solution run clean (0 failures).
+
+**Key finding.** Orleans 10.x natively supports `IAsyncEnumerable<T>` grain method returns
+with `CancellationToken` pass-through (confirmed via Microsoft Learn / Orleans cancellation
+tokens docs). The prior `IStreamingAiAgent` doc comment was incorrect.
+
+**Deferred.**
+
+- True silo-spanning streaming visibility (Orleans grain turn held for full stream duration —
+  currently acceptable; no consumer has reported contention yet).
+- Proxy `StreamAsync` does not emit events to `IAgentEventBus` (consistent with
+  `IStreamingAiAgent` contract; event-bus fan-out remains a non-streaming concern).
+
+**Tag handling.** User will apply `git tag v0.35.0-preview` after verifying the build. Do not tag autonomously.
+
+---
+
+### 2026-04-25 — v0.36 MAF `GraphNodeExecutor` durable resume parity
+
+**Goal.** Close the gap flagged in the v0.9 deferred-backlog (§4 Orchestration): the MAF
+adapter's `MafGraphOrchestrator` did not implement `IResumableAgentGraph<TState>` because
+MAF's own `CheckpointManager` uses a different checkpoint format. This pillar wires Vais's
+own `IGraphCheckpointer` into the MAF path, bypassing MAF's format entirely.
+
+**What landed.**
+
+- **`GraphMessage.ResumeFromNodeId`** (non-positional `init` property) — carries the
+  interrupt-node id from `MafGraphOrchestrator.RunAsync` into the first MAF executor call.
+  The targeted executor skips its body and evaluates outgoing edges (MAF's equivalent of
+  InProcess's `skipNodeBody` flag). Cleared on every outgoing message so only the targeted
+  executor skips; downstream executors run normally.
+- **`MafGraphBuilder.Build` — `startNodeId` + `checkpointer` params** — `startNodeId`
+  overrides the workflow entry executor; for resume runs this is the interrupt node, so
+  `InProcessExecution` delivers the initial `GraphMessage` directly to that executor (proved
+  by the spike test `MafGraphBuilder_StartNodeId_Override_Sets_StartExecutorId`). `checkpointer`
+  is threaded down to each `GraphNodeExecutor`.
+- **`GraphNodeExecutor` checkpointing** — saves checkpoints at the three InProcess parity points:
+  interrupt (before halting), end (on completion), per-step (after body execution, inside the
+  body guard so no checkpoint is written for the skipped resume iteration). `IGraphCheckpointer`
+  is optional (null = v0.9 no-op, backward-compatible).
+- **`MafGraphOrchestrator<TState> : IResumableAgentGraph<TState>`** — `ResumeAsync` /
+  `ResumeStreamAsync` added; validates checkpoint, rehydrates state bag, splices
+  `"resume.payload"`, rebuilds the workflow starting at the interrupt node, emits
+  `GraphResumed` at run start. `IGraphCheckpointer` is an optional constructor parameter
+  (null = no-op, compatible with all v0.9 callers). `ResumeAsync` and `ResumeStreamAsync`
+  throw `InvalidOperationException` if called without a checkpointer.
+- **`PublicAPI.Unshipped.txt`** — new constructor overloads, `ResumeAsync`,
+  `ResumeStreamAsync`, updated `MafGraphBuilder.Build` signature, `GraphMessage.ResumeFromNodeId`
+  property, `*REMOVED*` entries for the old shorter signatures.
+- **Tests (5 new):**
+  - `MafGraphBuilder_StartNodeId_Override_Sets_StartExecutorId` — spike confirming MAF
+    delivers initial message to the non-entry start executor.
+  - `Interrupt_Saves_Checkpoint_And_ResumeAsync_Continues_To_End` — MAF run → interrupt →
+    load checkpoint → MAF resume → `GraphCompleted`.
+  - `Cross_Host_InProcess_Interrupted_Resumes_On_Maf` — InProcess runs to interrupt; MAF
+    resumes from the same `IGraphCheckpointer`; final checkpoint `IsComplete = true` with
+    correct state.
+  - `ResumeAsync_Without_Checkpointer_Throws_InvalidOperationException` — null-checkpointer
+    guard.
+  - `ResumeAsync_Preserves_State_Through_Interrupt` — state written before interrupt is
+    present in checkpoint and in the resumed final state.
+  - All 14 MAF tests pass; full-solution run clean (0 failures).
+
+**Key finding.** MAF's `ICheckpointManager` format bridging was never needed. `StartExecutorId`
+on `WorkflowBuilder` is the only hook required: building with the interrupt node as entry
+causes `InProcessExecution` to deliver the initial message there directly. The
+`GraphMessage.ResumeFromNodeId` flag then makes that executor skip its body — identical
+semantics to InProcess's `skipNodeBody`. No MAF-internal checkpoint API is touched.
+
+**Deferred.**
+
+- HITL `RequestPort`-based interrupts (deferred v0.9 alongside durable resume; now that
+  checkpointing works the remaining gap is the `RequestPort` wiring, which needs a separate
+  design for inbound resume payloads via MAF's port surface).
+- Per-super-step checkpoint save ordering vs. MAF's `ExecutorCompletedEvent` — currently saved
+  inside the executor body (parity with InProcess); if MAF's event stream is re-ordered by
+  future versions this may need adjustment.
+
+**Tag handling.** User will apply `git tag v0.36.0-preview` after verifying the build. Do not tag autonomously.

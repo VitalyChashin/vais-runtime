@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using Vais.Agents;
@@ -201,6 +202,181 @@ public sealed class HttpAgentRemoteInvokerTests
             bearerToken: null);
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    // ─── StreamAsync ──────────────────────────────────────────────────────────
+
+    private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+
+    private static HttpResponseMessage SseResponse(IEnumerable<(string EventName, string DataJson)> frames)
+    {
+        var sb = new StringBuilder();
+        foreach (var (name, data) in frames)
+        {
+            sb.Append("event: ").Append(name).Append('\n');
+            sb.Append("data: ").Append(data).Append('\n');
+            sb.Append('\n');
+        }
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(sb.ToString(), Encoding.UTF8, "text/event-stream"),
+        };
+    }
+
+    [Fact]
+    public async Task StreamAsync_YieldsFullEventTaxonomy()
+    {
+        var at = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var ctx = new AgentContext();
+        var frames = new[]
+        {
+            ("turn.started",    JsonSerializer.Serialize(new TurnStarted(at, ctx, "hi"), SseJsonOptions)),
+            ("delta",           JsonSerializer.Serialize(new CompletionDelta(at, ctx, "hello"), SseJsonOptions)),
+            ("turn.completed",  JsonSerializer.Serialize(new TurnCompleted(at, ctx, "hello", null, null, null, TimeSpan.Zero), SseJsonOptions)),
+        };
+        var invoker = BuildInvoker(_ => SseResponse(frames));
+        var events = new List<AgentEvent>();
+
+        await foreach (var e in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", "1.0"),
+            new AgentInvocationRequest("hi"),
+            bearerToken: null))
+        {
+            events.Add(e);
+        }
+
+        events.Should().HaveCount(3);
+        events[0].Should().BeOfType<TurnStarted>();
+        events[1].Should().BeOfType<CompletionDelta>().Which.TextDelta.Should().Be("hello");
+        events[2].Should().BeOfType<TurnCompleted>();
+    }
+
+    [Fact]
+    public async Task StreamAsync_ForwardsBearerToken()
+    {
+        string? capturedAuth = null;
+        var invoker = BuildInvoker(req =>
+        {
+            capturedAuth = req.Headers.Authorization?.ToString();
+            return SseResponse([]);
+        });
+
+        await foreach (var _ in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", "1.0"),
+            new AgentInvocationRequest("hi"),
+            bearerToken: "stream-tok"))
+        { }
+
+        capturedAuth.Should().Be("Bearer stream-tok");
+    }
+
+    [Fact]
+    public async Task StreamAsync_NullBearerToken_NoAuthHeader()
+    {
+        string? capturedAuth = null;
+        var invoker = BuildInvoker(req =>
+        {
+            capturedAuth = req.Headers.Authorization?.ToString();
+            return SseResponse([]);
+        });
+
+        await foreach (var _ in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", "1.0"),
+            new AgentInvocationRequest("hi"),
+            bearerToken: null))
+        { }
+
+        capturedAuth.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StreamAsync_BuildsCorrectPath_WithVersion()
+    {
+        string? capturedPath = null;
+        var invoker = BuildInvoker(req =>
+        {
+            capturedPath = req.RequestUri?.PathAndQuery;
+            return SseResponse([]);
+        });
+
+        await foreach (var _ in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", "2.0"),
+            new AgentInvocationRequest("hi"),
+            bearerToken: null))
+        { }
+
+        capturedPath.Should().Be("/v1/agents/agent-1/invoke/stream?version=2.0");
+    }
+
+    [Fact]
+    public async Task StreamAsync_BuildsCorrectPath_NoVersion()
+    {
+        string? capturedPath = null;
+        var invoker = BuildInvoker(req =>
+        {
+            capturedPath = req.RequestUri?.PathAndQuery;
+            return SseResponse([]);
+        });
+
+        await foreach (var _ in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", string.Empty),
+            new AgentInvocationRequest("hi"),
+            bearerToken: null))
+        { }
+
+        capturedPath.Should().Be("/v1/agents/agent-1/invoke/stream");
+    }
+
+    [Fact]
+    public async Task StreamAsync_501_ThrowsRemoteAgentInvocationException()
+    {
+        var invoker = BuildInvoker(_ => new HttpResponseMessage(HttpStatusCode.NotImplemented)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+        });
+
+        var act = async () =>
+        {
+            await foreach (var _ in invoker.StreamAsync(
+                "https://runtime-b.svc",
+                new AgentHandle("agent-1", "1.0"),
+                new AgentInvocationRequest("hi"),
+                bearerToken: null))
+            { }
+        };
+
+        var ex = await act.Should().ThrowAsync<RemoteAgentInvocationException>();
+        ex.Which.Status.Should().Be(HttpStatusCode.NotImplemented);
+    }
+
+    [Fact]
+    public async Task StreamAsync_UnknownEventNames_Skipped()
+    {
+        var at = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var ctx = new AgentContext();
+        var frames = new[]
+        {
+            ("future.event",   "{}"),
+            ("turn.completed", JsonSerializer.Serialize(new TurnCompleted(at, ctx, "ok", null, null, null, TimeSpan.Zero), SseJsonOptions)),
+        };
+        var invoker = BuildInvoker(_ => SseResponse(frames));
+        var events = new List<AgentEvent>();
+
+        await foreach (var e in invoker.StreamAsync(
+            "https://runtime-b.svc",
+            new AgentHandle("agent-1", "1.0"),
+            new AgentInvocationRequest("hi"),
+            bearerToken: null))
+        {
+            events.Add(e);
+        }
+
+        events.Should().ContainSingle().Which.Should().BeOfType<TurnCompleted>();
     }
 }
 

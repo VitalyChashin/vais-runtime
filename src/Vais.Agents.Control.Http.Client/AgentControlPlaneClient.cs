@@ -252,7 +252,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await using (stream.ConfigureAwait(false))
         {
-            var parser = SseParser.Create(stream, ParseAgentEventFrame);
+            var parser = SseParser.Create(stream, AgentSseParser.ParseEventFrame);
             await foreach (var item in parser.EnumerateAsync(cancellationToken).ConfigureAwait(false))
             {
                 if (item.Data is { } evt)
@@ -473,6 +473,15 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<RuntimeListResponse> GetRemoteRuntimesAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/v1/runtimes", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<RuntimeListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new RuntimeListResponse(Array.Empty<RuntimeInfo>());
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch
@@ -487,27 +496,6 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             "graph.completed"   => JsonSerializer.Deserialize<GraphCompleted>(data, JsonOptions),
             "graph.failed"      => JsonSerializer.Deserialize<GraphFailed>(data, JsonOptions),
             _                   => null,
-        };
-    }
-
-    private static AgentEvent? ParseAgentEventFrame(string eventType, ReadOnlySpan<byte> data)
-    {
-        // SSE event name is the wire discriminator; body JSON carries the concrete record's
-        // fields with no type-discriminator property. Unknown event names are skipped
-        // (forward-compat: the shipped hierarchy can grow new subtypes additively).
-        return eventType switch
-        {
-            "turn.started"         => JsonSerializer.Deserialize<TurnStarted>(data, JsonOptions),
-            "turn.completed"       => JsonSerializer.Deserialize<TurnCompleted>(data, JsonOptions),
-            "turn.failed"          => JsonSerializer.Deserialize<TurnFailed>(data, JsonOptions),
-            "tool.started"         => JsonSerializer.Deserialize<ToolCallStarted>(data, JsonOptions),
-            "tool.completed"       => JsonSerializer.Deserialize<ToolCallCompleted>(data, JsonOptions),
-            "tool.replayed"        => JsonSerializer.Deserialize<ToolCallReplayed>(data, JsonOptions),
-            "guardrail.triggered"  => JsonSerializer.Deserialize<GuardrailTriggered>(data, JsonOptions),
-            "interrupt.raised"     => JsonSerializer.Deserialize<InterruptRaised>(data, JsonOptions),
-            "handoff.requested"    => JsonSerializer.Deserialize<HandoffRequested>(data, JsonOptions),
-            "delta"                => JsonSerializer.Deserialize<CompletionDelta>(data, JsonOptions),
-            _                      => null,
         };
     }
 

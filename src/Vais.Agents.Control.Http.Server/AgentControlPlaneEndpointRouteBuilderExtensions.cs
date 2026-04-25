@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;
 using Vais.Agents.Runtime.Plugins;
 
@@ -166,6 +167,31 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         MapGraphControlPlane(builder, prefix);
         MapPluginControlPlane(builder, prefix);
+        MapRuntimeTopologyControlPlane(builder, prefix);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Mount only the runtime topology endpoint (v0.34). Useful for hosts that want the
+    /// <c>GET /v1/runtimes</c> route without the full control-plane surface, or for isolated testing.
+    /// </summary>
+    public static IEndpointRouteBuilder MapRuntimeTopologyControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var runtimes = builder.MapGroup(prefix).WithTags("Runtimes");
+
+        // GET /runtimes — Remote runtime topology
+        runtimes.MapGet("/runtimes", RuntimeListAsync)
+            .WithName("Runtimes.List")
+            .WithSummary("List remote runtimes configured on this host.")
+            .WithDescription(
+                "Returns the URL and identity mode for each remote runtime registered via AddAgentRemoteInvoker. " +
+                "Credentials (client secrets, token paths) are never included. " +
+                "Returns 200 with an empty items array when no remote runtimes are configured.")
+            .Produces<RuntimeListResponse>(StatusCodes.Status200OK);
 
         return builder;
     }
@@ -311,6 +337,18 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return builder;
+    }
+
+    private static IResult RuntimeListAsync(HttpContext http)
+    {
+        var topology = http.RequestServices.GetService<IRemoteRuntimeTopology>();
+        if (topology is null)
+            return Results.Ok(new RuntimeListResponse(Array.Empty<RuntimeInfo>()));
+
+        var items = topology.GetEntries()
+            .Select(e => new RuntimeInfo(e.Url, e.IdentityMode))
+            .ToArray();
+        return Results.Ok(new RuntimeListResponse(items));
     }
 
     private static IResult PluginListAsync(HttpContext http)

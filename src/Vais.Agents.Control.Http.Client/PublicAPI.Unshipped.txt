@@ -80,3 +80,31 @@ Vais.Agents.Control.Http.CompositeRemoteIdentityProvider
 Vais.Agents.Control.Http.CompositeRemoteIdentityProvider.CompositeRemoteIdentityProvider(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Http.IRemoteIdentityProvider!>! providers, Vais.Agents.Control.Http.IRemoteIdentityProvider! fallback) -> void
 Vais.Agents.Control.Http.CompositeRemoteIdentityProvider.AcquireOutboundTokenAsync(string! runtimeUrl, string? inboundBearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
 static Vais.Agents.Control.Http.HttpAgentRemoteInvokerServiceCollectionExtensions.AddAgentRemoteInvoker(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Control.Http.RemoteRuntimeOptionsMap!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+override Vais.Agents.Control.Http.RuntimeInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RuntimeInfo.GetHashCode() -> int
+override Vais.Agents.Control.Http.RuntimeInfo.ToString() -> string!
+override Vais.Agents.Control.Http.RuntimeListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RuntimeListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.RuntimeListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.RuntimeInfo.operator !=(Vais.Agents.Control.Http.RuntimeInfo? left, Vais.Agents.Control.Http.RuntimeInfo? right) -> bool
+static Vais.Agents.Control.Http.RuntimeInfo.operator ==(Vais.Agents.Control.Http.RuntimeInfo? left, Vais.Agents.Control.Http.RuntimeInfo? right) -> bool
+static Vais.Agents.Control.Http.RuntimeListResponse.operator !=(Vais.Agents.Control.Http.RuntimeListResponse? left, Vais.Agents.Control.Http.RuntimeListResponse? right) -> bool
+static Vais.Agents.Control.Http.RuntimeListResponse.operator ==(Vais.Agents.Control.Http.RuntimeListResponse? left, Vais.Agents.Control.Http.RuntimeListResponse? right) -> bool
+Vais.Agents.Control.Http.RuntimeInfo
+Vais.Agents.Control.Http.RuntimeInfo.<Clone>$() -> Vais.Agents.Control.Http.RuntimeInfo!
+Vais.Agents.Control.Http.RuntimeInfo.Deconstruct(out string! Url, out string! IdentityMode) -> void
+Vais.Agents.Control.Http.RuntimeInfo.Equals(Vais.Agents.Control.Http.RuntimeInfo? other) -> bool
+Vais.Agents.Control.Http.RuntimeInfo.IdentityMode.get -> string!
+Vais.Agents.Control.Http.RuntimeInfo.IdentityMode.init -> void
+Vais.Agents.Control.Http.RuntimeInfo.RuntimeInfo(string! Url, string! IdentityMode) -> void
+Vais.Agents.Control.Http.RuntimeInfo.Url.get -> string!
+Vais.Agents.Control.Http.RuntimeInfo.Url.init -> void
+Vais.Agents.Control.Http.RuntimeListResponse
+Vais.Agents.Control.Http.RuntimeListResponse.<Clone>$() -> Vais.Agents.Control.Http.RuntimeListResponse!
+Vais.Agents.Control.Http.RuntimeListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>! Items) -> void
+Vais.Agents.Control.Http.RuntimeListResponse.Equals(Vais.Agents.Control.Http.RuntimeListResponse? other) -> bool
+Vais.Agents.Control.Http.RuntimeListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>!
+Vais.Agents.Control.Http.RuntimeListResponse.Items.init -> void
+Vais.Agents.Control.Http.RuntimeListResponse.RuntimeListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>! Items) -> void
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRemoteRuntimesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RuntimeListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRemoteRuntimesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RuntimeListResponse!>!

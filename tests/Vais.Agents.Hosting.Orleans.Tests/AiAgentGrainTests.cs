@@ -112,6 +112,70 @@ public sealed class AiAgentGrainTests
     }
 
     [Fact]
+    public async Task StreamAgentAsync_Yields_TurnStarted_CompletionDelta_TurnCompleted_In_Order()
+    {
+        var grain = _fx.Cluster.GrainFactory.GetGrain<IAiAgentGrain>("grain-stream-order");
+        try
+        {
+            var events = new List<AgentEvent>();
+            await foreach (var evt in grain.StreamAgentAsync("hello", AgentContext.Empty))
+                events.Add(evt);
+
+            events.Should().HaveCount(3);
+            events[0].Should().BeOfType<TurnStarted>().Which.UserMessage.Should().Be("hello");
+            events[1].Should().BeOfType<CompletionDelta>().Which.TextDelta.Should().Be("history-size=1");
+            events[2].Should().BeOfType<TurnCompleted>().Which.AssistantText.Should().Be("history-size=1");
+        }
+        finally
+        {
+            await grain.DeleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StreamAgentAsync_Persists_History_After_TurnCompleted()
+    {
+        var grain = _fx.Cluster.GrainFactory.GetGrain<IAiAgentGrain>("grain-stream-persist");
+        try
+        {
+            await foreach (var _ in grain.StreamAgentAsync("hello", AgentContext.Empty)) { }
+
+            var history = await grain.GetHistoryAsync();
+            history.Should().HaveCount(2);
+            history[0].Role.Should().Be(AgentChatRole.User);
+            history[0].Text.Should().Be("hello");
+            history[1].Role.Should().Be(AgentChatRole.Assistant);
+            history[1].Text.Should().Be("history-size=1");
+        }
+        finally
+        {
+            await grain.DeleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StreamAgentAsync_Second_Turn_Sees_Prior_History()
+    {
+        var grain = _fx.Cluster.GrainFactory.GetGrain<IAiAgentGrain>("grain-stream-multiturn");
+        try
+        {
+            await foreach (var _ in grain.StreamAgentAsync("turn-1", AgentContext.Empty)) { }
+
+            var events = new List<AgentEvent>();
+            await foreach (var evt in grain.StreamAgentAsync("turn-2", AgentContext.Empty))
+                events.Add(evt);
+
+            // Second turn: history has 2 prior turns (user+assistant from turn-1) + new user turn = 3.
+            var delta = events.OfType<CompletionDelta>().Single();
+            delta.TextDelta.Should().Be("history-size=3");
+        }
+        finally
+        {
+            await grain.DeleteAsync();
+        }
+    }
+
+    [Fact]
     public async Task Delete_Clears_State_So_Next_Activation_Starts_Fresh()
     {
         var grainId = "grain-delete";

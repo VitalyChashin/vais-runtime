@@ -1,0 +1,22 @@
+#nullable enable
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.Audience.get -> string?
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.Audience.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.Authority.get -> string!
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.Authority.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ClockSkew.get -> System.TimeSpan
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ClockSkew.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ClientId.get -> string!
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ClientId.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.OidcAgentIdentityOptions() -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ValidateAudience.get -> bool
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ValidateAudience.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ValidateIssuer.get -> bool
+Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions.ValidateIssuer.set -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider
+Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider.AcquireOutboundAsync(string! agentId, string! credentialRef, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.OutboundCredential!>
+Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider.AuthenticateInboundAsync(Vais.Agents.AgentInvocationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentPrincipal!>
+Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider.Dispose() -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider.OidcAgentIdentityProvider(System.Net.Http.HttpClient! httpClient, Microsoft.IdentityModel.Protocols.IConfigurationManager<Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration!>! configurationManager, Microsoft.Extensions.Options.IOptions<Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions!>! options, Vais.Agents.Control.ISecretResolver! secretResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Identity.Oidc.OidcAgentIdentityProvider!>? logger = null) -> void
+Vais.Agents.Identity.Oidc.OidcAgentIdentityServiceCollectionExtensions
+static Vais.Agents.Identity.Oidc.OidcAgentIdentityServiceCollectionExtensions.AddOidcAgentIdentity(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Identity.Oidc.OidcAgentIdentityOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

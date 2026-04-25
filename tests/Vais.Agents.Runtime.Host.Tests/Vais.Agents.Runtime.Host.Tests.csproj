@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Host\Vais.Agents.Runtime.Host.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Policy.Opa\Vais.Agents.Control.Policy.Opa.csproj" />

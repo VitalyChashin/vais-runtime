@@ -46,3 +46,9 @@ public sealed record AgentGraphQueryResponse(
 public sealed record AgentGraphListResponse(
     IReadOnlyList<AgentGraphManifest> Items,
     string? NextCursor = null);
+
+/// <summary>Client-side wire type for a single entry in <c>GET /v1/runtimes</c>.</summary>
+public sealed record RuntimeInfo(string Url, string IdentityMode);
+
+/// <summary>Client-side wire type for <c>GET /v1/runtimes</c>.</summary>
+public sealed record RuntimeListResponse(IReadOnlyList<RuntimeInfo> Items);

@@ -50,6 +50,9 @@ app.Configure(config =>
     config.AddCommand<SignalCommand>("signal")
         .WithDescription("Send a signal (with arbitrary JSON payload) to an in-flight run.");
 
+    config.AddCommand<GetRemoteRuntimesCommand>("get-remote-runtimes")
+        .WithDescription("List remote runtimes configured on the target host.");
+
     config.AddBranch("config", branch =>
     {
         branch.SetDescription("Inspect and mutate the ~/.vais/config.yaml file.");

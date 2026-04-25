@@ -38,6 +38,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     private readonly IAgentRemoteInvoker? _remoteInvoker;
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
+    private readonly IGraphCheckpointer? _checkpointer;
 
     public GraphNodeExecutor(
         GraphNode node,
@@ -50,7 +51,8 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         AgentContext context,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
+        string? bearerToken = null,
+        IGraphCheckpointer? checkpointer = null)
         : base(id: node.Id)
     {
         _node = node;
@@ -64,6 +66,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         _remoteInvoker = remoteInvoker;
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
+        _checkpointer = checkpointer;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -73,8 +76,15 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     {
         var state = message.State;
 
-        // Enforce the graph's max-step ceiling.
-        if (message.SuperStep >= message.MaxSteps)
+        // Resume semantics: when ResumeFromNodeId targets this executor, skip its body
+        // and jump directly to outgoing-edge evaluation — the MAF equivalent of
+        // InProcessGraphOrchestrator's skipNodeBody flag.
+        var skipBody = message.ResumeFromNodeId is not null &&
+                       string.Equals(message.ResumeFromNodeId, _node.Id, StringComparison.Ordinal);
+
+        // Enforce the graph's max-step ceiling (not checked on the resume's first skip iteration,
+        // matching InProcess semantics where the interrupt node itself doesn't count as a step).
+        if (!skipBody && message.SuperStep >= message.MaxSteps)
         {
             throw new GraphRecursionException(_manifest.Id, message.MaxSteps);
         }
@@ -85,17 +95,34 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         // suppress the ExecutorCompletedEvent for this node, so we don't call it here.
         if (string.Equals(_node.Kind, "End", StringComparison.Ordinal))
         {
+            if (_checkpointer is not null)
+            {
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    message.RunId, _manifest.Id, _manifest.Version,
+                    new Dictionary<string, JsonElement>(state),
+                    NextNodeId: null, SuperStepIndex: message.SuperStep,
+                    PendingInterruptId: null, IsComplete: true,
+                    CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+            }
             var finalMessage = message with { SourceNodeId = _node.Id };
             await context.YieldOutputAsync(finalMessage).ConfigureAwait(false);
             return;
         }
 
-        // Interrupt — emit event + yield + halt. RequestHaltAsync prevents MAF from
-        // auto-routing the message to the declared outgoing edge (which would
-        // bypass the pause semantics). Durable resume lands in PR 4.
-        if (string.Equals(_node.Kind, "Interrupt", StringComparison.Ordinal))
+        // Interrupt — emit event + yield + halt. Durable checkpoint saved before halting.
+        // On resume (skipBody), skip the halt and fall through to outgoing-edge evaluation.
+        if (string.Equals(_node.Kind, "Interrupt", StringComparison.Ordinal) && !skipBody)
         {
             var interruptId = Guid.NewGuid().ToString("N");
+            if (_checkpointer is not null)
+            {
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    message.RunId, _manifest.Id, _manifest.Version,
+                    new Dictionary<string, JsonElement>(state),
+                    NextNodeId: _node.Id, SuperStepIndex: message.SuperStep,
+                    PendingInterruptId: interruptId, IsComplete: false,
+                    CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+            }
             await context.AddEventAsync(new GraphInterruptedEvent(_node.Id, interruptId, _node.InterruptReason)).ConfigureAwait(false);
             var interruptedMessage = message with { SourceNodeId = _node.Id };
             await context.YieldOutputAsync(interruptedMessage).ConfigureAwait(false);
@@ -103,39 +130,59 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
             return;
         }
 
-        // Execute the node body (Agent or Code).
-        IReadOnlyDictionary<string, JsonElement> nodeOutput;
-        if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
+        // Execute the node body (Agent or Code) — skipped on the resume's first iteration
+        // (skipBody) and skipped implicitly when this is an Interrupt node in resume mode
+        // (the interrupt's outgoing edges are all we evaluate).
+        if (!skipBody)
         {
-            nodeOutput = await ExecuteAgentNodeAsync(state, cancellationToken).ConfigureAwait(false);
-        }
-        else if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
-        {
-            if (_node.HandlerRef is null || _codeNodeResolver is null)
+            IReadOnlyDictionary<string, JsonElement> nodeOutput;
+            if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException($"Code-kind node '{_node.Id}' needs a HandlerRef + code-node resolver.");
+                nodeOutput = await ExecuteAgentNodeAsync(state, cancellationToken).ConfigureAwait(false);
             }
-            var handler = _codeNodeResolver(_node.HandlerRef);
-            var input = FilterByInputBinding(state, _node.StateBindings);
-            nodeOutput = await handler.ExecuteAsync(input, _context, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            throw new NotSupportedException($"Unknown node kind '{_node.Kind}' on node '{_node.Id}'.");
-        }
-
-        // Merge node output into state (same reducer rules as the in-process orchestrator).
-        if (nodeOutput.Count > 0)
-        {
-            var filtered = FilterByOutputBinding(nodeOutput, _node.StateBindings);
-            var changed = GraphStateReducers.Merge(state, filtered);
-            if (changed.Count > 0)
+            else if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
             {
-                await context.AddEventAsync(new StateUpdatedEvent(changed)).ConfigureAwait(false);
+                if (_node.HandlerRef is null || _codeNodeResolver is null)
+                {
+                    throw new InvalidOperationException($"Code-kind node '{_node.Id}' needs a HandlerRef + code-node resolver.");
+                }
+                var handler = _codeNodeResolver(_node.HandlerRef);
+                var input = FilterByInputBinding(state, _node.StateBindings);
+                nodeOutput = await handler.ExecuteAsync(input, _context, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new NotSupportedException($"Unknown node kind '{_node.Kind}' on node '{_node.Id}'.");
+            }
+
+            // Merge node output into state (same reducer rules as the in-process orchestrator).
+            if (nodeOutput.Count > 0)
+            {
+                var filtered = FilterByOutputBinding(nodeOutput, _node.StateBindings);
+                var changed = GraphStateReducers.Merge(state, filtered);
+                if (changed.Count > 0)
+                {
+                    await context.AddEventAsync(new StateUpdatedEvent(changed)).ConfigureAwait(false);
+                }
+            }
+
+            // Per-step checkpoint — inside the body-execution block to mirror InProcess:
+            // no checkpoint is written for the skipped-body resume iteration.
+            if (_checkpointer is not null)
+            {
+                await _checkpointer.SaveAsync(new GraphCheckpoint(
+                    message.RunId, _manifest.Id, _manifest.Version,
+                    new Dictionary<string, JsonElement>(state),
+                    NextNodeId: _node.Id, SuperStepIndex: message.SuperStep,
+                    PendingInterruptId: null, IsComplete: false,
+                    CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
             }
         }
 
         // Select next node by scanning outgoing edges in manifest order (first-match-wins).
+        // Clear ResumeFromNodeId on all outgoing messages so downstream executors run normally.
+        var baseOutgoing = skipBody ? message with { ResumeFromNodeId = null } : message;
+
         GraphEdge? matchedEdge = null;
         foreach (var edge in _manifest.Edges.Where(e => string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
         {
@@ -151,7 +198,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         if (matchedEdge is null)
         {
             // No matching outgoing edge — treat as implicit completion.
-            var implicitFinal = message with { SourceNodeId = _node.Id };
+            var implicitFinal = baseOutgoing with { SourceNodeId = _node.Id };
             await context.YieldOutputAsync(implicitFinal).ConfigureAwait(false);
             await context.RequestHaltAsync().ConfigureAwait(false);
             return;
@@ -167,12 +214,11 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         await context.AddEventAsync(new EdgeTraversedEvent(matchedEdge.From, matchedEdge.To)).ConfigureAwait(false);
 
         // Forward the updated message to the next node.
-        var outgoing = new GraphMessage(
-            State: state,
-            SuperStep: message.SuperStep + 1,
-            RunId: message.RunId,
-            MaxSteps: message.MaxSteps,
-            SourceNodeId: _node.Id);
+        var outgoing = baseOutgoing with
+        {
+            SuperStep = message.SuperStep + 1,
+            SourceNodeId = _node.Id,
+        };
         await context.SendMessageAsync(outgoing, matchedEdge.To, cancellationToken).ConfigureAwait(false);
     }
 

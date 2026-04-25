@@ -39,36 +39,59 @@ update the Appendix dates if the Phase 3 non-goals change state.
 
 ### 1. Identity & security
 
-- **`IAgentIdentityProvider` implementations.** The contract shipped in v0.4 (§9.8); Phase 3
-  kept it contract-only. Keycloak / Auth0 / Entra adapters never landed. Source:
-  [Phase 3 plan §Non-goals](../../plans/actor-agents-oss-phase-3-runtime-productisation.md)
-  + [milestone log v0.4 control plane](../../plans/actor-agents-oss-milestone-log.md) (2026-04-18).
-  Next step: decide which IdP is first (Keycloak is the natural design-partner choice).
-- **`ServiceAccountPrincipalMapper` runtime-side opt-in**: shipped but unwired by default.
-  Source: same as above. Next step: add a Helm values toggle + a smoketest for the
-  namespace-to-tenant mapping.
-- **Secret propagation to Python agent subprocesses.** v0.24 defers `secretRefs` env-var
-  injection — the `plugin.yaml` `spec.secrets` block is parsed but not forwarded to the
-  subprocess environment at startup. Source: [milestone log v0.24](../../plans/actor-agents-oss-milestone-log.md)
-  (2026-04-24). Next step: v0.24.x polish pillar — inject each resolved secret as
-  `VAIS_SECRET_<REF>=<value>` before `Process.Start`.
-- **OPA bundle-server + signature verification.** Policies are loaded from disk / ConfigMap
-  today; there is no signed-bundle pipeline. Source:
-  [v0.14 OPA findings](../../plans/actor-agents-oss-v0.14-opa-policy-engine-findings.md)
-  (2026-04-20). Next step: post-v0.14 polish pillar once a consumer asks.
+- **`IAgentIdentityProvider` implementations.** ✅ SHIPPED v0.29 —
+  `Vais.Agents.Identity.Oidc` delivers `OidcAgentIdentityProvider`: inbound JWT
+  validation via OIDC discovery + JWKS, outbound `client_credentials` token acquisition
+  with per-`(agentId, credentialRef)` cache. Works with Keycloak, Auth0, Microsoft Entra,
+  and any OIDC-compliant IdP. `AgentInvocationMetadataKeys.Authorization` constant added
+  to Abstractions. Source: [milestone log v0.29](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-25).
+- **`ServiceAccountPrincipalMapper` runtime-side opt-in**: ✅ SHIPPED v0.30 —
+  class moved from `Vais.Agents.Control.KubernetesOperator` → `Vais.Agents.Control.Http.Server`
+  (namespace `Vais.Agents.Control.Http`); full JWT bearer pipeline wired in
+  `CompositionRoot` + `Program.cs` behind `VAIS_JWT_AUTHORITY` env var;
+  `VAIS_SA_PRINCIPAL_MAPPER=true` swaps the K8s SA mapper; Helm `auth.*` toggle added.
+  Source: [milestone log v0.30](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-25).
+- ~~**Secret propagation to Python agent subprocesses.**~~ v0.31 ships `spec.secrets` YAML
+  block parsing, ref-name validation (`[A-Za-z_][A-Za-z0-9_]*`), `SecretDeclarations`
+  property on `PythonPluginDescriptor`, and `ISecretResolver`-backed resolution in
+  `PythonPluginHostService` + `DefaultPythonPluginReloader` — each resolved secret is
+  injected as `VAIS_SECRET_<REF>=<value>` into the subprocess environment. Plugins with
+  unresolvable secrets are skipped at startup; hot-reloads are aborted. New URN
+  `urn:vais-agents:python-plugin-secret-resolution-failed`. **SHIPPED v0.31**.
+- ~~**OPA bundle-server + signature verification.**~~ v0.32 ships the runtime
+  Helm chart `opa.bundle.*` sub-values block (url, polling, signing with RS256/ES256/HS256,
+  auth-token Secret reference), a new `configmap-opa-config.yaml` template that renders OPA's
+  native `config.yaml` with env-substitution placeholders for secrets, deployment.yaml sidecar
+  path that switches to `--config-file` in bundle mode, and the `samples/opa-bundle-server/`
+  sample (nginx Dockerfile + `sign-bundle.sh` + `docker-compose.yaml` + README). No changes to
+  the .NET adapter. Source: [milestone log v0.32](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-25). **SHIPPED v0.32**.
 
 ### 2. Cross-runtime extensions
 
-- **SSE streaming for cross-runtime invokes (`IAgentRemoteInvoker.StreamAsync`).** v0.20
-  ships unary remote invokes only. Source: same (2026-04-21). Next step: v0.21 follow-up
-  PR — stream via the v0.12 SSE client helpers.
-- **`vais get-remote-runtimes` / runtime topology discovery.** Not in Pillar E or F.
-  Source: same (2026-04-21). Next step: future CLI polish pillar.
-- **Orleans streaming passthrough (`OrleansAiAgentProxy.StreamAsync`).** The Orleans
-  streaming path returns 501 `urn:vais-agents:streaming-not-supported`. Source:
-  [v0.12 SSE findings](../../plans/actor-agents-oss-v0.12-sse-streaming-invoke-findings.md)
+- ~~**SSE streaming for cross-runtime invokes (`IAgentRemoteInvoker.StreamAsync`).**~~ v0.33
+  ships `StreamAsync` on `IAgentRemoteInvoker` backed by `HttpAgentRemoteInvoker`: POSTs to
+  `/v1/agents/{id}/invoke/stream`, uses `System.Net.ServerSentEvents.SseParser` via the
+  extracted shared `AgentSseParser`; `ParseAgentEventFrame` de-duplicated from
+  `AgentControlPlaneClient`; bearer token + identity-provider forwarding mirrors `InvokeAsync`.
+  501 responses surface as `RemoteAgentInvocationException`. Source: [milestone log v0.33](../../plans/actor-agents-oss-milestone-log.md) (2026-04-25). **SHIPPED v0.33**.
+- ~~**`vais get-remote-runtimes` / runtime topology discovery.**~~ v0.34 ships
+  `IRemoteRuntimeTopology` in `Vais.Agents.Control.Abstractions`, `SimpleRemoteRuntimeTopology`
+  in `Vais.Agents.Control.Http.Client`, `GET /v1/runtimes` server endpoint (via
+  `MapRuntimeTopologyControlPlane()`), `GetRemoteRuntimesAsync()` on
+  `IAgentControlPlaneClient`, and `vais get-remote-runtimes` CLI command. Credentials are
+  intentionally excluded from all responses; sensitive-fields leak test added. Source: same
+  (2026-04-21). **SHIPPED v0.34**.
+- ~~**Orleans streaming passthrough (`OrleansAiAgentProxy.StreamAsync`).** The Orleans
+  streaming path returns 501 `urn:vais-agents:streaming-not-supported`.~~ **SHIPPED v0.35** —
+  `OrleansAiAgentProxy` now implements `IStreamingAiAgent`; `IAiAgentGrain.StreamAgentAsync`
+  uses Orleans 10.x native `IAsyncEnumerable<AgentEvent>` grain return; `AgentEventSurrogate`
+  extended with `CompletionDelta` (kind=9, fields `TextDelta`/`ToolCallsJson`);
+  state persisted on `TurnCompleted`/`TurnFailed`; proxy cache refreshed in `finally`.
+  Source: [v0.12 SSE findings](../../plans/actor-agents-oss-v0.12-sse-streaming-invoke-findings.md)
   + [milestone v0.10 entry](../../plans/actor-agents-oss-milestone-log.md) (2026-04-20).
-  Next step: future pillar once a consumer needs silo-spanning streaming.
 
 ### 3. Plugins & hosting
 
@@ -109,12 +132,15 @@ update the Appendix dates if the Phase 3 non-goals change state.
 
 ### 4. Orchestration & graph
 
-- **MAF `GraphNodeExecutor` durable resume parity.** The InProcess orchestrator resumes;
-  the MAF adapter does not (MAF's own `CheckpointManager` uses a different checkpoint
-  format). Source:
-  [v0.9 findings + milestone entry](../../plans/actor-agents-oss-milestone-log.md)
-  (2026-04-20). Next step: v0.10+ had it earmarked but it slid; revisit when graph resume
-  gains a partner use case.
+- ~~**MAF `GraphNodeExecutor` durable resume parity.**~~ v0.36 ships `IResumableAgentGraph<TState>`
+  on `MafGraphOrchestrator`: `IGraphCheckpointer` threaded to each `GraphNodeExecutor`,
+  checkpoints saved at interrupt / end / per-step, `ResumeAsync` / `ResumeStreamAsync`
+  rebuild the workflow from the interrupt node (bypassing MAF's `CheckpointManager`
+  format entirely via `startNodeId` on `MafGraphBuilder.Build`). `GraphMessage.ResumeFromNodeId`
+  flag skips the interrupt node's body on the first resume iteration — InProcess parity.
+  Cross-host test (InProcess → MAF) confirms checkpoint format compatibility.
+  Source: [milestone log v0.36](../../plans/actor-agents-oss-milestone-log.md)
+  (2026-04-25). **SHIPPED v0.36**.
 - **Custom declarable reducers in graph YAML.** v0.9 ships `LastWriteWins` + an
   `AppendMessages` reducer for the `messages` key. Custom reducers via YAML deferred.
   Source: milestone v0.9 (2026-04-20). Next step: future pillar when a partner brings a

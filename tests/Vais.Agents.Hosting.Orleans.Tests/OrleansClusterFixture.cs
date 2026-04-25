@@ -43,7 +43,8 @@ public sealed class OrleansClusterFixture : IAsyncLifetime
             siloBuilder.AddMemoryGrainStorage(AiAgentGrain.StorageName);
             siloBuilder.ConfigureServices(services =>
             {
-                services.AddSingleton<ICompletionProvider, HistorySizeProvider>();
+                services.AddSingleton<StreamingHistorySizeProvider>();
+                services.AddSingleton<ICompletionProvider>(sp => sp.GetRequiredService<StreamingHistorySizeProvider>());
                 services.ConfigureAgentGrains();
             });
         }

@@ -5,13 +5,17 @@ Graph shape mirrors the hermetic sibling (PluginAgentLangGraphResearcher):
                  \-> [summarize] --> END  (plan already exists)
 
 Prerequisites:
-  OPENAI_API_KEY must be set in the environment of the .NET runtime host
-  process — Python inherits it via Process.Start. Secret injection via
-  secretRefs is a v0.24 deferred item (§1 in docs/roadmap/deferred-backlog.md).
+  Declare the secret in plugin.yaml:
+    spec:
+      secrets:
+        OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"
+  The VAIS runtime resolves this at startup (v0.31) and injects
+  VAIS_SECRET_OPENAI_API_KEY into the subprocess environment.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -22,6 +26,7 @@ from langgraph_researcher_live.state import ResearchState
 
 _MODEL = "gpt-4o-mini"
 _MAX_TOKENS = 512
+_OPENAI_API_KEY = os.environ["VAIS_SECRET_OPENAI_API_KEY"]
 
 
 def _parse_json_array(text: str) -> list[str]:
@@ -40,7 +45,7 @@ def _parse_json_array(text: str) -> list[str]:
 
 def _node_plan(state: ResearchState) -> dict[str, Any]:
     """Ask Claude to decompose the topic into 3 research questions."""
-    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_TOKENS)
+    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_TOKENS, api_key=_OPENAI_API_KEY)
     response = llm.invoke(
         f"You are a research planner. Break down this topic into exactly 3 specific "
         f"research questions that would help a researcher understand it thoroughly:\n\n"
@@ -54,7 +59,7 @@ def _node_plan(state: ResearchState) -> dict[str, Any]:
 
 def _node_summarize(state: ResearchState) -> dict[str, Any]:
     """Ask Claude to write a concise summary covering the research plan."""
-    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_TOKENS)
+    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_TOKENS, api_key=_OPENAI_API_KEY)
     plan_text = "\n".join(f"- {q}" for q in (state.plan or []))
     response = llm.invoke(
         f"You are a research summarizer. The user wants to understand:\n\n"

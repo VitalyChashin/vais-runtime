@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Vais.Agents.Control;
 using Vais.Agents.Protocols.Mcp;
 
 namespace Vais.Agents.Runtime.Plugins.Python;
@@ -26,6 +27,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     private readonly ILogger<PythonPluginHostService> _logger;
     private readonly Func<PythonPluginDescriptor, PythonSubprocessSupervisor> _supervisorFactory;
     private readonly IPluginHandlerRegistry? _handlerRegistry;
+    private readonly ISecretResolver? _secretResolver;
 
     // Keyed by plugin name for O(1) lookup during hot-reload.
     private readonly Dictionary<string, PythonSubprocessSupervisor> _supervisors =
@@ -34,20 +36,23 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     internal PythonPluginHostService(
         PythonPluginLoaderOptions? options = null,
         ILoggerFactory? loggerFactory = null,
-        IPluginHandlerRegistry? handlerRegistry = null)
-        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry) { }
+        IPluginHandlerRegistry? handlerRegistry = null,
+        ISecretResolver? secretResolver = null)
+        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry, secretResolver) { }
 
     // Test constructor — inject a custom supervisor factory (handlerRegistry optional).
     internal PythonPluginHostService(
         PythonPluginLoaderOptions? options,
         ILoggerFactory? loggerFactory,
         Func<PythonPluginDescriptor, PythonSubprocessSupervisor>? supervisorFactory,
-        IPluginHandlerRegistry? handlerRegistry = null)
+        IPluginHandlerRegistry? handlerRegistry = null,
+        ISecretResolver? secretResolver = null)
     {
         _options = options ?? new PythonPluginLoaderOptions();
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<PythonPluginHostService>();
         _handlerRegistry = handlerRegistry;
+        _secretResolver = secretResolver;
         _supervisorFactory = supervisorFactory
             ?? (d => new PythonSubprocessSupervisor(d, _loggerFactory));
     }
@@ -128,13 +133,17 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var supervisor = _supervisorFactory(descriptor);
-                lock (_supervisors) _supervisors[descriptor.Name] = supervisor;
+                var resolved = await ResolveSecretsAsync(descriptor, cancellationToken).ConfigureAwait(false);
+                if (resolved is null)
+                    return; // Secret resolution failed; plugin skipped (logged inside helper).
+
+                var supervisor = _supervisorFactory(resolved);
+                lock (_supervisors) _supervisors[resolved.Name] = supervisor;
                 supervisor.Start();
                 await supervisor.InitialHandshakeTask.ConfigureAwait(false);
 
                 // Register agent-handler factory after successful handshake (v0.24).
-                if (descriptor.HandlerKind == PythonHandlerKind.AgentHandler &&
+                if (resolved.HandlerKind == PythonHandlerKind.AgentHandler &&
                     supervisor.Status == PythonPluginStatus.Ready &&
                     _handlerRegistry is { } registry)
                 {
@@ -144,10 +153,10 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
                             supervisor,
                             _options.MaxAgentStateSizeBytes,
                             _loggerFactory);
-                        registry.Register(factory, descriptor.Name);
+                        registry.Register(factory, resolved.Name);
                         _logger.LogInformation(
                             "Registered Python agent handler '{TypeName}' for plugin '{Name}'.",
-                            descriptor.HandlerTypeName, descriptor.Name);
+                            resolved.HandlerTypeName, resolved.Name);
                     }
                     catch (PluginLoadException ex)
                     {
@@ -155,8 +164,8 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
                             "[{Urn}] Python agent handler '{TypeName}' collides with an existing " +
                             "registration — plugin '{Name}' marked unavailable.",
                             PythonPluginUrns.AgentHandlerCollision,
-                            descriptor.HandlerTypeName,
-                            descriptor.Name);
+                            resolved.HandlerTypeName,
+                            resolved.Name);
                     }
                 }
             }
@@ -196,5 +205,63 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         await Task.WhenAll(stopTasks).ConfigureAwait(false);
 
         _logger.LogInformation("All Python plugin supervisors stopped.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Secret resolution (v0.31)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Resolves <paramref name="descriptor"/>.SecretDeclarations via <see cref="_secretResolver"/>
+    /// and returns a new descriptor with <c>SecretRefs</c> populated (env var name →
+    /// resolved value, keyed as <c>VAIS_SECRET_&lt;REF&gt;</c>).
+    /// Returns <see langword="null"/> and logs a warning when any declaration cannot be
+    /// resolved or when secrets are declared but no resolver is available.
+    /// </summary>
+    private async ValueTask<PythonPluginDescriptor?> ResolveSecretsAsync(
+        PythonPluginDescriptor descriptor,
+        CancellationToken cancellationToken)
+    {
+        if (descriptor.SecretDeclarations.Count == 0)
+            return descriptor;
+
+        if (_secretResolver is null)
+        {
+            _logger.LogWarning(
+                "[{Urn}] Python plugin '{Name}' declares {Count} secret(s) but no " +
+                "ISecretResolver is registered — plugin skipped.",
+                PythonPluginUrns.SecretResolutionFailed, descriptor.Name,
+                descriptor.SecretDeclarations.Count);
+            return null;
+        }
+
+        var secretRefs = new Dictionary<string, string>(
+            descriptor.SecretDeclarations.Count, StringComparer.Ordinal);
+
+        foreach (var (refName, secretUri) in descriptor.SecretDeclarations)
+        {
+            string value;
+            try
+            {
+                value = await _secretResolver.ResolveAsync(secretUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is SecretNotFoundException or NotSupportedException)
+            {
+                _logger.LogWarning(ex,
+                    "[{Urn}] Python plugin '{Name}' cannot resolve secret '{RefName}' " +
+                    "from '{Uri}' — plugin skipped.",
+                    PythonPluginUrns.SecretResolutionFailed, descriptor.Name, refName, secretUri);
+                return null;
+            }
+
+            secretRefs[$"VAIS_SECRET_{refName}"] = value;
+        }
+
+        _logger.LogDebug(
+            "Resolved {Count} secret(s) for Python plugin '{Name}'.",
+            secretRefs.Count, descriptor.Name);
+
+        return descriptor with { SecretRefs = secretRefs };
     }
 }

@@ -30,7 +30,16 @@ public sealed record GraphMessage(
     int SuperStep,
     string RunId,
     int MaxSteps,
-    string? SourceNodeId = null);
+    string? SourceNodeId = null)
+{
+    /// <summary>
+    /// When non-null, the executor for this node id skips its body on the first invocation and
+    /// jumps directly to outgoing-edge evaluation — the MAF equivalent of
+    /// <c>InProcessGraphOrchestrator</c>'s <c>skipNodeBody</c> resume flag. Cleared (set to
+    /// null) on every outgoing <see cref="GraphMessage"/> so only the targeted executor skips.
+    /// </summary>
+    public string? ResumeFromNodeId { get; init; }
+}
 
 /// <summary>MAF workflow event surfaced by a graph node executor when it traverses an outgoing edge.</summary>
 internal sealed class EdgeTraversedEvent : WorkflowEvent

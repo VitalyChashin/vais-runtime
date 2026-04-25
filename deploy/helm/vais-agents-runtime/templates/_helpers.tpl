@@ -96,3 +96,19 @@ reads whichever matches `VAIS_CLUSTERING_BACKEND`.
 {{- define "vais-agents-runtime.clusteringEnvName" -}}
 {{- if eq .Values.clustering.backend "postgres" -}}VAIS_POSTGRES_CONNECTION{{- else -}}VAIS_REDIS_CONNECTION{{- end -}}
 {{- end }}
+
+{{/*
+True when the chart should run the OPA sidecar in bundle-server polling mode.
+Requires sidecar mode (opa.enabled=true and opa.baseUrl empty) PLUS
+opa.bundle.enabled=true.
+*/}}
+{{- define "vais-agents-runtime.opaBundleMode" -}}
+{{- if and (eq (include "vais-agents-runtime.opaSidecar" .) "true") .Values.opa.bundle.enabled -}}true{{- else -}}false{{- end -}}
+{{- end }}
+
+{{/*
+Name of the ConfigMap that holds the OPA server config.yaml (bundle mode).
+*/}}
+{{- define "vais-agents-runtime.opaConfigMapName" -}}
+{{- printf "%s-opa-config" (include "vais-agents-runtime.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}

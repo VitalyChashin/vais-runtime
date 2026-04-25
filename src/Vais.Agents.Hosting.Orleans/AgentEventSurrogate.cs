@@ -28,6 +28,8 @@ public enum AgentEventKind
     HandoffRequested = 7,
     /// <summary><see cref="ToolCallReplayed"/>.</summary>
     ToolCallReplayed = 8,
+    /// <summary><see cref="CompletionDelta"/>.</summary>
+    CompletionDelta = 9,
 }
 
 /// <summary>
@@ -129,6 +131,18 @@ public struct AgentEventSurrogate
     /// <summary>Handoff message — populated for <see cref="AgentEventKind.HandoffRequested"/>.</summary>
     [Id(21)]
     public string? HandoffMessage;
+
+    /// <summary>Text fragment — populated for <see cref="AgentEventKind.CompletionDelta"/>.</summary>
+    [Id(22)]
+    public string? TextDelta;
+
+    /// <summary>
+    /// JSON-serialised tool calls — populated for <see cref="AgentEventKind.CompletionDelta"/> when
+    /// the provider emits tool-call slots. Round-trips through JSON because
+    /// <see cref="System.Text.Json.JsonElement"/> is not directly Orleans-serialisable.
+    /// </summary>
+    [Id(23)]
+    public string? ToolCallsJson;
 }
 
 /// <summary>
@@ -201,6 +215,14 @@ internal static class AgentEventSurrogateHelpers
                 context,
                 surrogate.CallId ?? string.Empty,
                 surrogate.ToolName ?? string.Empty),
+            AgentEventKind.CompletionDelta => new CompletionDelta(
+                surrogate.At,
+                context,
+                surrogate.TextDelta ?? string.Empty,
+                surrogate.ModelId,
+                surrogate.PromptTokens,
+                surrogate.CompletionTokens,
+                JournalEntrySurrogateHelpers.ParseToolCalls(surrogate.ToolCallsJson)),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -289,6 +311,17 @@ internal static class AgentEventSurrogateHelpers
                 Context = contextSurrogate,
                 CallId = r.CallId,
                 ToolName = r.ToolName,
+            },
+            CompletionDelta d => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.CompletionDelta,
+                At = d.At,
+                Context = contextSurrogate,
+                TextDelta = d.TextDelta,
+                ModelId = d.ModelId,
+                PromptTokens = d.PromptTokens,
+                CompletionTokens = d.CompletionTokens,
+                ToolCallsJson = JournalEntrySurrogateHelpers.SerializeToolCalls(d.ToolCalls),
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -431,5 +464,18 @@ public sealed class ToolCallReplayedSurrogateConverter : IConverter<ToolCallRepl
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in ToolCallReplayed value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="CompletionDelta"/>.</summary>
+[RegisterConverter]
+public sealed class CompletionDeltaSurrogateConverter : IConverter<CompletionDelta, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public CompletionDelta ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (CompletionDelta)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in CompletionDelta value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

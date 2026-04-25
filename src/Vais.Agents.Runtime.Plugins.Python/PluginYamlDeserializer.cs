@@ -56,6 +56,13 @@ internal sealed class PluginYamlSpec
 
     /// <summary>Present when <see cref="Kind"/> is <c>agent-handler</c>.</summary>
     public PluginYamlHandlerSpec? Handler { get; set; }
+
+    /// <summary>
+    /// Optional map of secret ref-names to secret URIs (e.g. <c>MY_KEY: secret://env/MY_KEY</c>).
+    /// Resolved by the runtime host before subprocess spawn and injected as
+    /// <c>VAIS_SECRET_&lt;REF&gt;</c> environment variables.
+    /// </summary>
+    public Dictionary<string, string> Secrets { get; set; } = new();
 }
 
 internal sealed class PluginYamlHandlerSpec

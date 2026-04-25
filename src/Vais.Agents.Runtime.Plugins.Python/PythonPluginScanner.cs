@@ -233,6 +233,25 @@ internal sealed class PythonPluginScanner
                 pluginName, folder);
         }
 
+        // Parse and validate spec.secrets (ref-name → secret URI map).
+        Dictionary<string, string>? secretDeclarations = null;
+        if (doc.Spec.Secrets is { Count: > 0 } rawSecrets)
+        {
+            secretDeclarations = new Dictionary<string, string>(rawSecrets.Count, StringComparer.Ordinal);
+            foreach (var (refName, secretUri) in rawSecrets)
+            {
+                if (!IsValidSecretRefName(refName))
+                {
+                    _logger.LogWarning(
+                        "[{Urn}] Python plugin '{Name}' in '{Folder}' has invalid secret ref name " +
+                        "'{RefName}' — must match [A-Za-z_][A-Za-z0-9_]* — skipping plugin.",
+                        PythonPluginUrns.LoadFailed, pluginName, folder, refName);
+                    return null;
+                }
+                secretDeclarations[refName] = secretUri;
+            }
+        }
+
         return new PythonPluginDescriptor(
             Name: pluginName,
             PluginDirectory: folder,
@@ -245,7 +264,17 @@ internal sealed class PythonPluginScanner
             SecretRefs: new Dictionary<string, string>(),
             HandlerKind: handlerKind,
             HandlerTypeName: handlerTypeName,
-            InvokeTimeoutSeconds: invokeTimeout);
+            InvokeTimeoutSeconds: invokeTimeout)
+        {
+            SecretDeclarations = secretDeclarations ?? new Dictionary<string, string>(),
+        };
+    }
+
+    private static bool IsValidSecretRefName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        if (!char.IsLetter(name[0]) && name[0] != '_') return false;
+        return name.All(c => char.IsLetterOrDigit(c) || c == '_');
     }
 
     private static bool IsPathInsideDirectory(string path, string directory)

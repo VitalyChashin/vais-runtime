@@ -16,7 +16,7 @@ CompositionRoot.ConfigureServices(builder.Services, options, builder.Configurati
 var app = builder.Build();
 
 app.Logger.LogInformation(
-    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} opa={Opa} otel={Otel} langfuse={Langfuse}",
+    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt}",
     options.Mode,
     options.Mode == "clustered" ? options.ClusteringBackend : "n/a",
     string.IsNullOrWhiteSpace(options.OpaBaseUrl) ? "disabled (AllowAll)" : $"enabled ({options.OpaFailMode})",
@@ -26,9 +26,20 @@ app.Logger.LogInformation(
         (null or "", true) => "console",
         _ => "otlp",
     },
-    string.IsNullOrWhiteSpace(options.LangfuseProject) ? "disabled" : "enabled");
+    string.IsNullOrWhiteSpace(options.LangfuseProject) ? "disabled" : "enabled",
+    string.IsNullOrWhiteSpace(options.JwtAuthority)
+        ? "disabled"
+        : options.UseSaPrincipalMapper ? $"enabled+sa-mapper ({options.JwtAuthority})" : $"enabled ({options.JwtAuthority})");
 
 app.UseAgentControlPlaneIdempotency();
+
+if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseAgentControlPlanePrincipalMapping();
+}
+
 app.MapAgentControlPlane();
 app.MapAgentControlPlaneOpenApi();
 

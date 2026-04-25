@@ -12,12 +12,12 @@ namespace Vais.Agents;
 /// <remarks>
 /// <para>
 /// <b>Why a capability interface rather than adding to <see cref="IAiAgent"/>.</b>
-/// Not every <see cref="IAiAgent"/> can stream — Orleans-grain-proxied agents in
-/// particular don't today (the Orleans runtime's return-value-only grain
-/// contract doesn't fit <see cref="IAsyncEnumerable{T}"/> without custom
-/// streaming hooks). Exposing streaming as an optional capability lets
-/// consumers check <c>agent is IStreamingAiAgent streamable</c> and fall back to
-/// <see cref="IAiAgent.AskAsync"/> or surface a 501 when unavailable.
+/// Not every <see cref="IAiAgent"/> can stream. Exposing streaming as an optional
+/// capability lets consumers check <c>agent is IStreamingAiAgent streamable</c>
+/// and fall back to <see cref="IAiAgent.AskAsync"/> or surface a 501 when
+/// unavailable. Orleans-hosted agents implement this interface from v0.35
+/// via native <see cref="IAsyncEnumerable{T}"/> grain method support
+/// (Orleans 10.x).
 /// </para>
 /// <para>
 /// <b>Event ordering contract.</b> <see cref="StreamAsync"/> yields, in order:

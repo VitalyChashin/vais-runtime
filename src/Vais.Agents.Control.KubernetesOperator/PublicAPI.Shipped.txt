@@ -191,9 +191,6 @@ Vais.Agents.Control.Kubernetes.SecretKeyReference.Key.init -> void
 Vais.Agents.Control.Kubernetes.SecretKeyReference.Name.get -> string!
 Vais.Agents.Control.Kubernetes.SecretKeyReference.Name.init -> void
 Vais.Agents.Control.Kubernetes.SecretKeyReference.SecretKeyReference(string! Name, string! Key) -> void
-Vais.Agents.Control.Kubernetes.ServiceAccountPrincipalMapper
-Vais.Agents.Control.Kubernetes.ServiceAccountPrincipalMapper.Map(System.Security.Claims.ClaimsPrincipal! user) -> Vais.Agents.AgentPrincipal?
-Vais.Agents.Control.Kubernetes.ServiceAccountPrincipalMapper.ServiceAccountPrincipalMapper() -> void
 Vais.Agents.Control.Kubernetes.ServiceAccountTokenHandler
 Vais.Agents.Control.Kubernetes.ServiceAccountTokenHandler.ServiceAccountTokenHandler(Microsoft.Extensions.Options.IOptionsMonitor<Vais.Agents.Control.Kubernetes.KubernetesOperatorOptions!>! options) -> void
 const Vais.Agents.Control.Kubernetes.AgentEntity.DeactivateFinalizer = "vais.io/agent-deactivate" -> string!

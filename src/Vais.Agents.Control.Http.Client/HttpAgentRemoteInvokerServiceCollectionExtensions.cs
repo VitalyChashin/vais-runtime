@@ -4,7 +4,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-
 namespace Vais.Agents.Control.Http;
 
 /// <summary>DI registration helpers for <see cref="IAgentRemoteInvoker"/>.</summary>
@@ -21,6 +20,8 @@ public static class HttpAgentRemoteInvokerServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<IAgentRemoteInvoker>(sp =>
             new HttpAgentRemoteInvoker(sp.GetService<IHttpClientFactory>()));
+        services.TryAddSingleton<IRemoteRuntimeTopology>(
+            new SimpleRemoteRuntimeTopology(Array.Empty<RemoteRuntimeEntry>()));
         return services;
     }
 
@@ -65,6 +66,11 @@ public static class HttpAgentRemoteInvokerServiceCollectionExtensions
                 sp.GetService<IHttpClientFactory>(),
                 identityProvider: composite,
                 optionsLookup: url => map.Runtimes.TryGetValue(url, out var o) ? o : null));
+
+        var topologyEntries = map.Runtimes
+            .Select(kv => new RemoteRuntimeEntry(kv.Key, kv.Value.IdentityMode.ToString()))
+            .ToList();
+        services.TryAddSingleton<IRemoteRuntimeTopology>(new SimpleRemoteRuntimeTopology(topologyEntries));
 
         return services;
     }

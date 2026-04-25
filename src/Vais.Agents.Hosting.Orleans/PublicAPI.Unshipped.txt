@@ -1,1 +1,10 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.AgentEventKind.CompletionDelta = 9 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TextDelta -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolCallsJson -> string?
+Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter
+Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.CompletionDeltaSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.CompletionDelta!
+Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.ConvertToSurrogate(in Vais.Agents.CompletionDelta! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.AiAgentGrain.StreamAgentAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
+Vais.Agents.Hosting.Orleans.IAiAgentGrain.StreamAgentAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!

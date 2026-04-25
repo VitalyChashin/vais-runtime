@@ -21,6 +21,20 @@ public interface IAiAgentGrain : IGrainWithStringKey
     /// <summary>Send a user message; returns the assistant reply.</summary>
     Task<string> AskAsync(string userMessage);
 
+    /// <summary>
+    /// Execute a streaming turn. Yields the full <see cref="AgentEvent"/> sequence in
+    /// ordering-contract order (see <see cref="IStreamingAiAgent"/> remarks).
+    /// </summary>
+    /// <remarks>
+    /// The grain turn is held open for the full duration of the stream — concurrent grain
+    /// calls (e.g. <see cref="GetHistoryAsync"/>) queue behind the active stream.
+    /// State is persisted to the configured grain-storage provider on the terminal
+    /// <see cref="TurnCompleted"/> or <see cref="TurnFailed"/> event, before it is
+    /// yielded to the caller. If the inner agent throws after <see cref="TurnFailed"/>,
+    /// the exception propagates through the enumerable to the caller.
+    /// </remarks>
+    IAsyncEnumerable<AgentEvent> StreamAgentAsync(string userMessage, AgentContext context, CancellationToken cancellationToken = default);
+
     /// <summary>Snapshot of conversation history from the grain's perspective.</summary>
     Task<IReadOnlyList<ChatTurn>> GetHistoryAsync();
 

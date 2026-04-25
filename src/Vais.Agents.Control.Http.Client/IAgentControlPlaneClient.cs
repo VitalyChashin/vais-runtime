@@ -179,4 +179,13 @@ public interface IAgentControlPlaneClient
 
     /// <summary>DELETE /v1/graphs/{id}/runs/{runId} — cancel a specific graph run.</summary>
     Task CancelGraphRunAsync(string graphId, string runId, string? version = null, CancellationToken cancellationToken = default);
+
+    // ── Runtime topology (v0.34) ────────────────────────────────────────────
+
+    /// <summary>
+    /// GET /v1/runtimes — list remote runtimes configured on this host. Returns an empty
+    /// response when the server has no remote runtimes registered (no error).
+    /// </summary>
+    Task<RuntimeListResponse> GetRemoteRuntimesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new RuntimeListResponse(Array.Empty<RuntimeInfo>()));
 }

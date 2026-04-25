@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
@@ -163,6 +164,48 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
         _logger.LogDebug("AskAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return reply;
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<AgentEvent> StreamAgentAsync(
+        string userMessage,
+        AgentContext context,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var agent = EnsureAgent();
+        using var scope = _logger.BeginScope("{AgentId}", _agentId);
+        using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.stream");
+        activity?.SetTag(AgenticTags.AgentName, _agentId);
+
+        if (agent is not IStreamingAiAgent streamingAgent)
+            throw new NotSupportedException(
+                $"Agent grain '{_agentId}' does not support streaming — the inner agent " +
+                $"({agent.GetType().Name}) does not implement IStreamingAiAgent.");
+
+        var sw = Stopwatch.StartNew();
+        await foreach (var evt in streamingAgent.StreamAsync(userMessage, context, cancellationToken))
+        {
+            if (evt is TurnCompleted or TurnFailed)
+            {
+                _state.State.History = agent.History.ToList();
+                _state.State.SystemPrompt = agent.SystemPrompt;
+                if (agent is IOpaqueStateCarrier carrier)
+                    _state.State.OpaqueState = carrier.OpaqueState;
+                try
+                {
+                    await _state.WriteStateAsync();
+                }
+                catch (Exception ex)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    _logger.LogError(ex, "Failed to persist agent state after streaming turn");
+                }
+                if (evt is TurnFailed)
+                    activity?.SetStatus(ActivityStatusCode.Error);
+            }
+            yield return evt;
+        }
+        _logger.LogDebug("StreamAgentAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
     }
 
     /// <inheritdoc />

@@ -120,7 +120,8 @@ public sealed class PythonPluginScannerTests : IDisposable
         d.HandshakeTimeoutSeconds.Should().Be(5);
         d.RestartPolicy.Should().Be(PythonRestartPolicy.ExponentialBackoff);
         d.DeclaredTools.Should().BeEquivalentTo(new[] { "tool_a", "tool_b" }, o => o.WithStrictOrdering());
-        d.SecretRefs.Should().BeEmpty("secrets are populated by the runtime host, not the scanner");
+        d.SecretRefs.Should().BeEmpty("resolved values are populated by the runtime host, not the scanner");
+        d.SecretDeclarations.Should().BeEmpty("no spec.secrets in the yaml");
     }
 
     [Fact]
@@ -319,5 +320,80 @@ public sealed class PythonPluginScannerTests : IDisposable
         var result = scanner.Scan();
 
         result.Should().ContainSingle().Which.HandshakeTimeoutSeconds.Should().Be(12);
+    }
+
+    // -----------------------------------------------------------------------
+    // v0.31 — spec.secrets parsing
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void Scan_PluginWithSecrets_PopulatesSecretDeclarations()
+    {
+        var folder = CreatePluginFolder("secrets-plugin");
+        WritePluginYaml(folder, $"""
+            {ValidPluginYaml("secrets-plugin")}
+              secrets:
+                MY_API_KEY: "secret://env/OPENAI_API_KEY"
+                DB_PASS: "secret://file//run/secrets/db"
+            """);
+        WritePyprojectToml(folder, ValidPyprojectToml);
+
+        var result = CreateScanner().Scan();
+
+        result.Should().ContainSingle();
+        var d = result[0];
+        d.SecretDeclarations.Should().HaveCount(2);
+        d.SecretDeclarations["MY_API_KEY"].Should().Be("secret://env/OPENAI_API_KEY");
+        d.SecretDeclarations["DB_PASS"].Should().Be("secret://file//run/secrets/db");
+        d.SecretRefs.Should().BeEmpty("resolution happens at host startup, not scan time");
+    }
+
+    [Fact]
+    public void Scan_PluginWithInvalidSecretRefName_IsSkipped()
+    {
+        var folder = CreatePluginFolder("bad-secret-name");
+        WritePluginYaml(folder, $"""
+            {ValidPluginYaml("bad-secret-name")}
+              secrets:
+                "invalid name with spaces": "secret://env/FOO"
+            """);
+        WritePyprojectToml(folder, ValidPyprojectToml);
+
+        var result = CreateScanner().Scan();
+
+        result.Should().BeEmpty("invalid ref name must cause the plugin to be skipped");
+    }
+
+    [Fact]
+    public void Scan_PluginWithRefNameStartingWithDigit_IsSkipped()
+    {
+        var folder = CreatePluginFolder("bad-digit-ref");
+        WritePluginYaml(folder, $"""
+            {ValidPluginYaml("bad-digit-ref")}
+              secrets:
+                123BAD: "secret://env/FOO"
+            """);
+        WritePyprojectToml(folder, ValidPyprojectToml);
+
+        var result = CreateScanner().Scan();
+
+        result.Should().BeEmpty("ref name starting with digit is invalid");
+    }
+
+    [Fact]
+    public void Scan_PluginWithUnderscoreLeadRefName_IsAccepted()
+    {
+        var folder = CreatePluginFolder("underscore-ref");
+        WritePluginYaml(folder, $"""
+            {ValidPluginYaml("underscore-ref")}
+              secrets:
+                _PRIVATE_KEY: "secret://env/PRIVATE_KEY"
+            """);
+        WritePyprojectToml(folder, ValidPyprojectToml);
+
+        var result = CreateScanner().Scan();
+
+        result.Should().ContainSingle();
+        result[0].SecretDeclarations.Should().ContainKey("_PRIVATE_KEY");
     }
 }

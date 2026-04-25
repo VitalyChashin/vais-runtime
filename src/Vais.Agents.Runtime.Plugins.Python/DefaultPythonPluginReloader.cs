@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Vais.Agents.Control;
 
 namespace Vais.Agents.Runtime.Plugins.Python;
 
@@ -19,18 +20,21 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
     private readonly PythonPluginLoaderOptions _options;
     private readonly TimeSpan _drainTimeout;
     private readonly ILogger<DefaultPythonPluginReloader> _logger;
+    private readonly ISecretResolver? _secretResolver;
 
     internal DefaultPythonPluginReloader(
         PythonPluginHostService host,
         PythonPluginLoaderOptions options,
         TimeSpan drainTimeout,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        ISecretResolver? secretResolver = null)
     {
         _host = host;
         _options = options;
         _drainTimeout = drainTimeout;
         _logger = (loggerFactory ?? NullLoggerFactory.Instance)
             .CreateLogger<DefaultPythonPluginReloader>();
+        _secretResolver = secretResolver;
     }
 
     /// <inheritdoc />
@@ -75,6 +79,14 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
                 PythonPluginUrns.ReloadScanFailed, null);
         }
 
+        // Resolve secrets declared in the updated plugin.yaml.
+        newDescriptor = await ResolveSecretsAsync(newDescriptor, ct).ConfigureAwait(false);
+        if (newDescriptor is null)
+        {
+            return Failure(pluginName, PythonPluginReloadStatus.ScanFailed,
+                PythonPluginUrns.SecretResolutionFailed, null);
+        }
+
         // Look up the running supervisor.
         if (!_host.TryGetSupervisor(newDescriptor.Name, out var supervisor))
         {
@@ -117,4 +129,51 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
         string urn,
         Exception? ex) =>
         new(name, status, urn, ex);
+
+    private async ValueTask<PythonPluginDescriptor?> ResolveSecretsAsync(
+        PythonPluginDescriptor descriptor,
+        CancellationToken cancellationToken)
+    {
+        if (descriptor.SecretDeclarations.Count == 0)
+            return descriptor;
+
+        if (_secretResolver is null)
+        {
+            _logger.LogWarning(
+                "[{Urn}] python-plugin-reload: plugin '{Name}' declares {Count} secret(s) " +
+                "but no ISecretResolver is registered — reload aborted.",
+                PythonPluginUrns.SecretResolutionFailed, descriptor.Name,
+                descriptor.SecretDeclarations.Count);
+            return null;
+        }
+
+        var secretRefs = new Dictionary<string, string>(
+            descriptor.SecretDeclarations.Count, StringComparer.Ordinal);
+
+        foreach (var (refName, secretUri) in descriptor.SecretDeclarations)
+        {
+            string value;
+            try
+            {
+                value = await _secretResolver.ResolveAsync(secretUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is SecretNotFoundException or NotSupportedException)
+            {
+                _logger.LogWarning(ex,
+                    "[{Urn}] python-plugin-reload: plugin '{Name}' cannot resolve secret " +
+                    "'{RefName}' from '{Uri}' — reload aborted.",
+                    PythonPluginUrns.SecretResolutionFailed, descriptor.Name, refName, secretUri);
+                return null;
+            }
+
+            secretRefs[$"VAIS_SECRET_{refName}"] = value;
+        }
+
+        _logger.LogDebug(
+            "python-plugin-reload: resolved {Count} secret(s) for plugin '{Name}'.",
+            secretRefs.Count, descriptor.Name);
+
+        return descriptor with { SecretRefs = secretRefs };
+    }
 }

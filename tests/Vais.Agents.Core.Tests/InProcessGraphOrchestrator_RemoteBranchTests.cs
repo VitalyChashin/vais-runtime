@@ -57,11 +57,29 @@ public sealed class InProcessGraphOrchestrator_RemoteBranchTests
             Calls.Add((runtimeUrl, handle, request, bearerToken));
             return ValueTask.FromResult(Response);
         }
+
+        public async IAsyncEnumerable<AgentEvent> StreamAsync(
+            string runtimeUrl, AgentHandle handle, AgentInvocationRequest request,
+            string? bearerToken, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            Calls.Add((runtimeUrl, handle, request, bearerToken));
+            var at = DateTimeOffset.UtcNow;
+            var ctx = new AgentContext();
+            yield return new TurnStarted(at, ctx, request.Text);
+            yield return new CompletionDelta(at, ctx, Response.Text);
+            yield return new TurnCompleted(at, ctx, Response.Text, null, null, null, TimeSpan.Zero);
+            await Task.CompletedTask;
+        }
     }
 
     private sealed class ThrowingRemoteInvoker : IAgentRemoteInvoker
     {
         public ValueTask<AgentInvocationResult> InvokeAsync(
+            string runtimeUrl, AgentHandle handle, AgentInvocationRequest request,
+            string? bearerToken, CancellationToken cancellationToken = default)
+            => throw new RemoteAgentInvocationException(runtimeUrl, HttpStatusCode.ServiceUnavailable);
+
+        public IAsyncEnumerable<AgentEvent> StreamAsync(
             string runtimeUrl, AgentHandle handle, AgentInvocationRequest request,
             string? bearerToken, CancellationToken cancellationToken = default)
             => throw new RemoteAgentInvocationException(runtimeUrl, HttpStatusCode.ServiceUnavailable);

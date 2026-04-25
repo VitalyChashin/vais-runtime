@@ -24,4 +24,24 @@ public interface IAgentRemoteInvoker
         AgentInvocationRequest request,
         string? bearerToken,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invokes an agent on a remote runtime and streams the <see cref="AgentEvent"/> taxonomy
+    /// via server-sent events. Yields events until the remote stream ends or the token fires.
+    /// </summary>
+    /// <remarks>
+    /// When the remote runtime does not support streaming (Orleans proxy agents), the call
+    /// throws <see cref="RemoteAgentInvocationException"/> with HTTP 501.
+    /// </remarks>
+    /// <param name="runtimeUrl">Absolute http/https base URL of the target runtime.</param>
+    /// <param name="handle">Agent identity (id + version). Null version passes through; the remote runtime resolves latest.</param>
+    /// <param name="request">Invocation request payload.</param>
+    /// <param name="bearerToken">Optional bearer token forwarded from the caller's inbound request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    IAsyncEnumerable<AgentEvent> StreamAsync(
+        string runtimeUrl,
+        AgentHandle handle,
+        AgentInvocationRequest request,
+        string? bearerToken,
+        CancellationToken cancellationToken = default);
 }

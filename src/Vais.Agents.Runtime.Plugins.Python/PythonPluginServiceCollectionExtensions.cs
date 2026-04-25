@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Control;
 
 namespace Vais.Agents.Runtime.Plugins.Python;
 
@@ -46,7 +47,9 @@ public static class PythonPluginServiceCollectionExtensions
         {
             var loggerFactory = sp.GetService<ILoggerFactory>();
             var handlerRegistry = sp.GetService<IPluginHandlerRegistry>();
-            return new PythonPluginHostService(opts, loggerFactory, handlerRegistry: handlerRegistry);
+            var secretResolver = sp.GetService<ISecretResolver>();
+            return new PythonPluginHostService(opts, loggerFactory, handlerRegistry: handlerRegistry,
+                secretResolver: secretResolver);
         });
 
         if (!alreadyRegistered)
@@ -65,7 +68,9 @@ public static class PythonPluginServiceCollectionExtensions
                 var host = (PythonPluginHostService)sp.GetRequiredService<IPythonPluginHost>();
                 var loggerFactory = sp.GetService<ILoggerFactory>();
                 var drainTimeout = TimeSpan.FromSeconds(opts.ReloadDrainTimeoutSeconds);
-                return new DefaultPythonPluginReloader(host, opts, drainTimeout, loggerFactory);
+                var secretResolver = sp.GetService<ISecretResolver>();
+                return new DefaultPythonPluginReloader(host, opts, drainTimeout, loggerFactory,
+                    secretResolver);
             });
 
             services.AddSingleton<IHostedService>(sp =>
