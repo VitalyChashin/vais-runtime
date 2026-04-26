@@ -67,6 +67,20 @@ override Vais.Agents.Control.Http.PluginListResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.PluginListResponse.ToString() -> string!
 static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapPluginControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapRuntimeTopologyControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Control.Http.GraphValidationResult
+Vais.Agents.Control.Http.GraphValidationResult.<Clone>$() -> Vais.Agents.Control.Http.GraphValidationResult!
+Vais.Agents.Control.Http.GraphValidationResult.Deconstruct(out bool Valid, out System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.GraphValidationResult.Equals(Vais.Agents.Control.Http.GraphValidationResult? other) -> bool
+Vais.Agents.Control.Http.GraphValidationResult.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.GraphValidationResult.Errors.init -> void
+Vais.Agents.Control.Http.GraphValidationResult.GraphValidationResult(bool Valid, System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.GraphValidationResult.Valid.get -> bool
+Vais.Agents.Control.Http.GraphValidationResult.Valid.init -> void
+override Vais.Agents.Control.Http.GraphValidationResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.GraphValidationResult.GetHashCode() -> int
+override Vais.Agents.Control.Http.GraphValidationResult.ToString() -> string!
+static Vais.Agents.Control.Http.GraphValidationResult.operator !=(Vais.Agents.Control.Http.GraphValidationResult? left, Vais.Agents.Control.Http.GraphValidationResult? right) -> bool
+static Vais.Agents.Control.Http.GraphValidationResult.operator ==(Vais.Agents.Control.Http.GraphValidationResult? left, Vais.Agents.Control.Http.GraphValidationResult? right) -> bool
 override Vais.Agents.Control.Http.RuntimeInfo.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.RuntimeInfo.GetHashCode() -> int
 override Vais.Agents.Control.Http.RuntimeInfo.ToString() -> string!

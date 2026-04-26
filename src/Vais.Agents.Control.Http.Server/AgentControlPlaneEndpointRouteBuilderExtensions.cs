@@ -232,6 +232,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         var graphs = builder.MapGroup(prefix).WithTags("Graphs");
 
+        // POST /graphs/validate — Validate (dry-run, v0.38)
+        graphs.MapPost("/graphs/validate", GraphValidateAsync)
+            .WithName("Graphs.Validate")
+            .WithSummary("Dry-run validation: structural checks + runtime-context handler resolution. Always 200; inspect Valid/Errors.")
+            .Accepts<AgentGraphManifest>("application/json", "application/yaml")
+            .Produces<GraphValidationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         // POST /graphs — Create
         graphs.MapPost("/graphs", GraphCreateAsync)
             .WithName("Graphs.Create")
@@ -807,6 +815,69 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     }
 
     // ── Graph handlers (v0.19) ─────────────────────────────────────────────
+
+    private static async Task<IResult> GraphValidateAsync(
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var graphLoader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+        {
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+        }
+
+        IReadOnlyList<AgentGraphManifest> parsed;
+        try
+        {
+            parsed = await graphLoader.LoadFromStringAsync(body, ct).ConfigureAwait(false);
+        }
+        catch (JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.GraphCreate);
+        }
+        catch (AgentManifestValidationException ex)
+        {
+            return Results.Ok(new GraphValidationResult(Valid: false, ex.Errors.ToArray()));
+        }
+
+        if (parsed.Count != 1)
+        {
+            return Results.BadRequest(new { error = $"POST /graphs/validate accepts exactly one AgentGraph manifest; got {parsed.Count}." });
+        }
+
+        var manifest = parsed[0];
+        var errors = new List<string>();
+
+        var pluginRegistry = http.RequestServices.GetService<IPluginHandlerRegistry>();
+        var agentRegistry = http.RequestServices.GetService<IAgentRegistry>();
+
+        foreach (var node in manifest.Nodes)
+        {
+            if (string.Equals(node.Kind, "Code", StringComparison.Ordinal) && node.HandlerRef is not null)
+            {
+                if (pluginRegistry is not null &&
+                    !pluginRegistry.HandlerTypeNames.Contains(node.HandlerRef.TypeName))
+                {
+                    errors.Add($"Code-kind node '{node.Id}': handler '{node.HandlerRef.TypeName}' is not registered in any loaded plugin");
+                }
+            }
+            else if (string.Equals(node.Kind, "Agent", StringComparison.Ordinal) && node.Ref is not null)
+            {
+                if (agentRegistry is not null)
+                {
+                    var found = await agentRegistry.GetAsync(node.Ref.Id, node.Ref.Version, ct).ConfigureAwait(false);
+                    if (found is null)
+                    {
+                        var versionHint = node.Ref.Version is null ? string.Empty : $" v{node.Ref.Version}";
+                        errors.Add($"Agent-kind node '{node.Id}': agent '{node.Ref.Id}'{versionHint} is not registered on this runtime");
+                    }
+                }
+            }
+        }
+
+        return Results.Ok(new GraphValidationResult(Valid: errors.Count == 0, errors));
+    }
 
     private static async Task<IResult> GraphCreateAsync(
         HttpContext http,

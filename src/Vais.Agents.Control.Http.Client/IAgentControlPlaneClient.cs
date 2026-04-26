@@ -180,6 +180,17 @@ public interface IAgentControlPlaneClient
     /// <summary>DELETE /v1/graphs/{id}/runs/{runId} — cancel a specific graph run.</summary>
     Task CancelGraphRunAsync(string graphId, string runId, string? version = null, CancellationToken cancellationToken = default);
 
+    // ── Graph validation (v0.38) ───────────────────────────────────────────
+
+    /// <summary>
+    /// POST /v1/graphs/validate — dry-run structural and runtime-context validation
+    /// of a graph manifest without registering it. Always returns a result; inspect
+    /// <see cref="GraphValidationResult.Valid"/> for the outcome.
+    /// Default implementation returns a passing result so mock clients don't need to override.
+    /// </summary>
+    Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(new GraphValidationResult(Valid: true, Array.Empty<string>()));
+
     // ── Runtime topology (v0.34) ────────────────────────────────────────────
 
     /// <summary>

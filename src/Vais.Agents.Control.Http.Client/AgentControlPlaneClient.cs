@@ -491,6 +491,20 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new PluginListResponse(Array.Empty<PluginInfo>());
     }
 
+    /// <inheritdoc />
+    public async Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/graphs/validate")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<GraphValidationResult>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new GraphValidationResult(Valid: true, Array.Empty<string>());
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

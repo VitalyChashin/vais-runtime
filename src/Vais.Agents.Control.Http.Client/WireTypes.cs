@@ -110,3 +110,12 @@ public sealed record PluginInfo(
 
 /// <summary>Client-side wire type for <c>GET /v1/plugins</c>.</summary>
 public sealed record PluginListResponse(IReadOnlyList<PluginInfo> Items);
+
+/// <summary>
+/// Client-side wire type for <c>POST /v1/graphs/validate</c> (v0.38).
+/// Returned for all syntactically-valid requests; inspect <see cref="Valid"/> to
+/// decide exit behaviour.
+/// </summary>
+/// <param name="Valid"><c>true</c> when no errors were found.</param>
+/// <param name="Errors">Human-readable error strings, one per violation. Empty when <see cref="Valid"/> is <c>true</c>.</param>
+public sealed record GraphValidationResult(bool Valid, IReadOnlyList<string> Errors);

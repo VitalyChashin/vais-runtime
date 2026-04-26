@@ -41,6 +41,9 @@ app.Configure(config =>
     config.AddCommand<InvokeGraphCommand>("invoke-graph")
         .WithDescription("Invoke a graph run. --stream routes via SSE. --resume-from resumes an interrupted run.");
 
+    config.AddCommand<GraphValidateCommand>("graph-validate")
+        .WithDescription("Validate a graph manifest against the runtime without registering it.");
+
     config.AddCommand<LogsCommand>("logs")
         .WithDescription("Attach to an agent's live run via SSE; print events until Ctrl-C or turn.completed.");
 
