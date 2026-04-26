@@ -10,6 +10,9 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 ## [Unreleased]
 
 ### Added
+- `AssemblyPluginLoader.ResolvePrimaryAssembly` now resolves the primary DLL when the folder contains multiple assemblies (e.g. `CopyLocalLockFileAssemblies=true`) by trying a suffix match (`<Something>.<PluginName>.dll`) after the exact-name match fails. Previously returned null for all multi-DLL folders.
+- `AssemblyPluginLoader.TryRegisterHandler` now falls back to a simple-name scan when `assembly.GetType(fullName)` returns null, so `[VaisPlugin(..., "WeatherAgent")]` resolves to `MyApp.WeatherAgent.WeatherAgent` and logs the full CLR name as a hint. Previously the plugin was silently skipped.
+- `PythonSubprocessSupervisor` now buffers the last 20 stderr lines per subprocess spawn cycle and includes them in the MCP handshake-timeout log warning, so the Python traceback is visible without separately streaming subprocess logs.
 - `services.AddHttpClient()` registered in `CompositionRoot.ConfigureServices` so `IHttpClientFactory` is available to plugin handler constructors without any extra registration. Previously documented as available but never wired.
 - `FallbackUvSync = true` in `PythonPluginLoaderOptions` when `VAIS_MODE=localhost` — automatically runs `uv sync --frozen` inside the plugin directory when `.venv/` is absent, removing the manual setup step for new contributors.
 - Startup warning emitted to stderr when `VAIS_LANGFUSE_PROJECT` is set but neither `VAIS_OTEL_ENDPOINT` nor `VAIS_OTEL_CONSOLE` is configured, so the "Langfuse traces are silently dropped" footgun is surfaced at boot time.

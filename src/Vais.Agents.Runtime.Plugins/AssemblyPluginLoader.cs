@@ -127,21 +127,35 @@ public sealed class AssemblyPluginLoader
         }
     }
 
-    private static string? ResolvePrimaryAssembly(string folder, string pluginName)
+    private string? ResolvePrimaryAssembly(string folder, string pluginName)
     {
-        // Prefer <folder>.dll when it exists; fall back to any non-deps DLL in the folder
-        // whose name matches a VaisPlugin-attributed assembly (checked after load).
+        // 1. Exact match: <folder>/<pluginName>.dll
         var nameMatch = Path.Combine(folder, pluginName + ".dll");
-        if (File.Exists(nameMatch))
-        {
-            return nameMatch;
-        }
+        if (File.Exists(nameMatch)) return nameMatch;
 
+        // Filter to runtime assemblies only; exclude satellite (.resources.dll) and native.
         var candidates = Directory.GetFiles(folder, "*.dll", SearchOption.TopDirectoryOnly)
-            .Where(p => !p.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase))
+            .Where(p => !p.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        return candidates.Length == 1 ? candidates[0] : null;
+        // 2. Single DLL remaining — no ambiguity.
+        if (candidates.Length == 1) return candidates[0];
+
+        // 3. Suffix match: <Something>.<pluginName>.dll — handles namespaced output names
+        //    (e.g. folder "WeatherAgent", primary DLL "MyApp.WeatherAgent.dll").
+        var suffixMatch = candidates.Where(p =>
+            Path.GetFileNameWithoutExtension(p)
+                .EndsWith("." + pluginName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (suffixMatch.Length == 1) return suffixMatch[0];
+
+        _logger.LogWarning(
+            "[{Urn}] Plugin '{Name}': cannot determine primary assembly in '{Folder}' " +
+            "({Count} candidate(s): {Files}). Add a DLL named '{Name}.dll' or rename the folder to match the assembly.",
+            PluginUrns.PluginLoadFailed, pluginName, folder, candidates.Length,
+            string.Join(", ", candidates.Select(Path.GetFileName)), pluginName);
+        return null;
     }
 
     private void LoadViaAttribute(
@@ -268,10 +282,28 @@ public sealed class AssemblyPluginLoader
         var type = assembly.GetType(handlerTypeName);
         if (type is null)
         {
-            _logger.LogWarning(
-                "Plugin '{Plugin}': declared handler '{Handler}' is not a type in the loaded assembly — skipped.",
-                pluginName, handlerTypeName);
-            return false;
+            // Retry with a simple-name scan so authors can use the class name alone.
+            // If exactly one exported type matches, resolve it and hint at the full name.
+            var bySimpleName = assembly.GetExportedTypes()
+                .Where(t => t.Name.Equals(handlerTypeName, StringComparison.Ordinal))
+                .ToArray();
+
+            if (bySimpleName.Length == 1)
+            {
+                _logger.LogInformation(
+                    "Plugin '{Plugin}': resolved handler '{Simple}' to '{Full}' by simple name. " +
+                    "Update [VaisPlugin] to use the full CLR name to silence this message.",
+                    pluginName, handlerTypeName, bySimpleName[0].FullName);
+                type = bySimpleName[0];
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Plugin '{Plugin}': declared handler '{Handler}' was not found in the loaded assembly. " +
+                    "Use the full CLR name (e.g. '{Namespace}.{Handler}'). Skipped.",
+                    pluginName, handlerTypeName, assembly.GetName().Name);
+                return false;
+            }
         }
 
         // Factory path wins over IAiAgent auto-wrap.

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,6 +60,10 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     private int? _processId;
     private McpClient? _mcpClient;
     private Task _lifecycleTask = Task.CompletedTask;
+
+    // Rolling buffer of the last 20 stderr lines from the subprocess.
+    // Reset on each spawn so timeout messages reflect the current process only.
+    private ConcurrentQueue<string> _stderrTail = new();
 
     /// <summary>Current supervisor status (snapshot; may change immediately after read).</summary>
     internal PythonPluginStatus Status { get { lock (_stateLock) return _status; } }
@@ -545,6 +550,10 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             return (false, null, null);
         }
 
+        // Reset the stderr tail for this spawn cycle so timeout messages don't include
+        // output from a prior crashed process.
+        _stderrTail = new ConcurrentQueue<string>();
+
         // Fire-and-forget stderr reader — completes when the process's stderr stream closes.
         _ = ForwardStderrAsync(handle.StandardError, desc.Name, stopToken);
 
@@ -581,9 +590,13 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         }
         catch (OperationCanceledException) when (!stopToken.IsCancellationRequested)
         {
+            var tail = _stderrTail.ToArray();
+            var stderrSnippet = tail.Length > 0
+                ? "\nLast subprocess output:\n" + string.Join("\n", tail)
+                : " (no subprocess output captured)";
             _logger.LogWarning(
-                "[{Urn}] MCP handshake timed out ({Seconds}s) for Python plugin '{Name}'.",
-                PythonPluginUrns.HandshakeTimeout, desc.HandshakeTimeoutSeconds, desc.Name);
+                "[{Urn}] MCP handshake timed out ({Seconds}s) for Python plugin '{Name}'.{Stderr}",
+                PythonPluginUrns.HandshakeTimeout, desc.HandshakeTimeoutSeconds, desc.Name, stderrSnippet);
             if (client is not null)
                 try { await client.DisposeAsync().ConfigureAwait(false); } catch { }
             handle.Kill();
@@ -645,6 +658,10 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             {
                 using (_logger.BeginScope(new Dictionary<string, object?> { ["plugin"] = pluginName }))
                     _logger.LogInformation("{Line}", line);
+
+                _stderrTail.Enqueue(line);
+                while (_stderrTail.Count > 20)
+                    _stderrTail.TryDequeue(out _);
             }
         }
         catch (OperationCanceledException) { }
