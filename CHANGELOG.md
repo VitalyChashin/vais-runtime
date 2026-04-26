@@ -10,6 +10,10 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 ## [Unreleased]
 
 ### Added
+- `services.AddHttpClient()` registered in `CompositionRoot.ConfigureServices` so `IHttpClientFactory` is available to plugin handler constructors without any extra registration. Previously documented as available but never wired.
+- `FallbackUvSync = true` in `PythonPluginLoaderOptions` when `VAIS_MODE=localhost` — automatically runs `uv sync --frozen` inside the plugin directory when `.venv/` is absent, removing the manual setup step for new contributors.
+- Startup warning emitted to stderr when `VAIS_LANGFUSE_PROJECT` is set but neither `VAIS_OTEL_ENDPOINT` nor `VAIS_OTEL_CONSOLE` is configured, so the "Langfuse traces are silently dropped" footgun is surfaced at boot time.
+- `GraphEventRenderer` default case now applies `EscapeMarkup` to the event type name, preventing a potential Spectre.Console crash if an unknown `AgentGraphEvent` subtype with brackets in its name is received.
 - `OpenAIModelProviderFactory` now honours `ModelSpec.BaseUrlRef`: when set, the resolved value is used as the API endpoint, enabling any OpenAI-compatible service (local models, proxies, SGR Agent, etc.) to be consumed without additional code. Behaviour is unchanged when `BaseUrlRef` is absent.
 - `PythonAgentShim` — `IAiAgent` backed by a Python subprocess via the new `vais/agent.*` JSON-RPC MCP extension (v0.24). Supports opaque state round-trips so Python agents maintain their own internal state across turns without the .NET side parsing it.
 - `IOpaqueStateCarrier` interface wired through `AiAgentGrain` — the grain persists the opaque blob alongside history so Python agent state survives silo restarts.

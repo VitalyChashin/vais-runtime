@@ -121,6 +121,11 @@ internal static class CompositionRoot
         services.AddOrleansGraphCheckpointer();
         services.AddOrleansIdempotencyStore();
 
+        // IHttpClientFactory — required by plugin handlers that take IHttpClientFactory in
+        // their constructor. AddHttpClient is idempotent; calling it here makes it available
+        // in the plugin DI container without the plugin author having to register it manually.
+        services.AddHttpClient();
+
         // 2. Orleans-backed agent runtime (client-side) + stream-backed event bus. These
         //    bind IAgentRuntime + IAgentContextAccessor + IAgentEventBus against IGrainFactory,
         //    which the co-hosted silo exposes into the same DI container.
@@ -161,6 +166,9 @@ internal static class CompositionRoot
             services.AddPythonPlugins(new PythonPluginLoaderOptions
             {
                 PluginsDirectory = options.PythonPluginsDirectory,
+                // In localhost mode, run `uv sync --frozen` automatically when .venv/ is absent
+                // so contributors don't need a manual setup step after cloning.
+                FallbackUvSync = options.Mode == "localhost",
             });
         }
 
@@ -331,6 +339,14 @@ internal static class CompositionRoot
                     ["project"] = options.LangfuseProject,
                 },
             });
+
+            if (string.IsNullOrWhiteSpace(options.OtelEndpoint) && !options.OtelConsole)
+            {
+                Console.Error.WriteLine(
+                    "[vais] WARNING: VAIS_LANGFUSE_PROJECT is set but neither VAIS_OTEL_ENDPOINT " +
+                    "nor VAIS_OTEL_CONSOLE is configured. Langfuse traces will NOT be emitted. " +
+                    "Set VAIS_OTEL_ENDPOINT to your OTLP collector endpoint.");
+            }
         }
     }
 }
