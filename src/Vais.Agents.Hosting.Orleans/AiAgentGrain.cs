@@ -76,7 +76,11 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     {
         _agentId = this.GetPrimaryKeyString();
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
-        using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.activate");
+        // OnActivateAsync runs on the Orleans grain scheduler with no ambient Activity.Current.
+        // Skip the span when there's no parent — an orphan root trace adds no observability value.
+        using var activity = Activity.Current != null
+            ? OrleansDiagnostics.ActivitySource.StartActivity("grain.activate")
+            : null;
         activity?.SetTag(AgenticTags.AgentName, _agentId);
 
         _logger.LogDebug("Grain activating");
