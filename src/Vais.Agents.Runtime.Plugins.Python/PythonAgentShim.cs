@@ -79,19 +79,22 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         await Session.AppendAsync(new ChatTurn(AgentChatRole.User, userMessage), cancellationToken)
             .ConfigureAwait(false);
 
+        var graphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
+        using var activity = _activitySource.StartActivity("python.agent.ask", ActivityKind.Internal);
+        activity?.SetTag("vais.agent.name", Session.AgentId);
+        activity?.SetTag("gen_ai.prompt",   userMessage);
+        if (graphRunId != null) activity?.SetTag("graph.run_id", graphRunId);
+
+        var context = activity?.Id is { } traceparent
+            ? new Dictionary<string, string> { ["traceparent"] = traceparent }
+            : null;
         var request = new AgentInvokeRequest(
             AgentId: Session.AgentId,
             SessionId: Session.SessionId,
             UserMessage: userMessage,
             State: _opaqueState,
             TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
-            Context: null);
-
-        var graphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
-        using var activity = _activitySource.StartActivity("python.agent.ask", ActivityKind.Internal);
-        activity?.SetTag("vais.agent.name", Session.AgentId);
-        activity?.SetTag("gen_ai.prompt",   userMessage);
-        if (graphRunId != null) activity?.SetTag("graph.run_id", graphRunId);
+            Context: context);
 
         var response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -136,13 +139,17 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         var start = DateTimeOffset.UtcNow;
         yield return new TurnStarted(start, context, userMessage);
 
+        var streamTraceparent = Activity.Current?.Id;
+        var requestContext = streamTraceparent is not null
+            ? new Dictionary<string, string> { ["traceparent"] = streamTraceparent }
+            : null;
         var request = new AgentInvokeRequest(
             AgentId: Session.AgentId,
             SessionId: Session.SessionId,
             UserMessage: userMessage,
             State: _opaqueState,
             TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
-            Context: null);
+            Context: requestContext);
 
         AgentInvokeResponse? finalResponse = null;
         Exception? streamError = null;

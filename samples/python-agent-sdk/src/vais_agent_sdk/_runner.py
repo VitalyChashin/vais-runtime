@@ -18,6 +18,7 @@ import traceback
 from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from vais_agent_sdk._models import AgentRequest, AgentResponse
+from vais_agent_sdk._otel import attach_context, detach_context, extract_context, setup_otel
 
 _PROTOCOL_VERSION = "2024-11-05"
 _SERVER_INFO = {"name": "vais-agent-sdk", "version": "0.26.0"}
@@ -76,7 +77,12 @@ async def _dispatch(
     elif method == "vais/agent.invoke":
         try:
             request = AgentRequest.model_validate(params)
-            response = await invoke_fn(request)
+            ctx = extract_context(request.context.get("traceparent") if request.context else None)
+            token = attach_context(ctx)
+            try:
+                response = await invoke_fn(request)
+            finally:
+                detach_context(token)
             _send(_result(id_, response.model_dump(by_alias=True, exclude_none=True)))
         except Exception as exc:  # noqa: BLE001
             print(f"[vais-agent-sdk] invoke error:\n{traceback.format_exc()}", file=sys.stderr)
@@ -88,7 +94,12 @@ async def _dispatch(
             # Fall back: run invoke and bundle the single text chunk in the response.
             try:
                 request = AgentRequest.model_validate(params)
-                response = await invoke_fn(request)
+                ctx = extract_context(request.context.get("traceparent") if request.context else None)
+                token = attach_context(ctx)
+                try:
+                    response = await invoke_fn(request)
+                finally:
+                    detach_context(token)
                 result_dict = response.model_dump(by_alias=True, exclude_none=True)
                 result_dict["deltas"] = [response.assistant_message]
                 _send(_result(id_, result_dict))
@@ -99,9 +110,14 @@ async def _dispatch(
         else:
             try:
                 request = AgentRequest.model_validate(params)
-                chunks: list[str] = []
-                async for chunk in stream_fn(request):
-                    chunks.append(chunk)
+                ctx = extract_context(request.context.get("traceparent") if request.context else None)
+                token = attach_context(ctx)
+                try:
+                    chunks: list[str] = []
+                    async for chunk in stream_fn(request):
+                        chunks.append(chunk)
+                finally:
+                    detach_context(token)
                 assistant_message = "".join(chunks)
                 response = AgentResponse(
                     assistant_message=assistant_message,
@@ -160,6 +176,8 @@ def run(
                    When omitted, ``vais/agent.stream`` falls back to ``invoke``
                    and emits a single delta.
     """
+    setup_otel()
+
     # Ensure stdout is in text mode (may be binary on some platforms).
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
