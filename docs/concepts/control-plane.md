@@ -165,7 +165,7 @@ Unary `POST /v1/agents/{id}/invoke` returns a single `AgentInvocationResult`. St
 | Idempotency middleware | Applies | Bypassed via `[StreamingEndpoint]` |
 | Cancellation | Request-bounded | `HttpContext.RequestAborted` propagates into `StreamAsync` |
 
-The route probes the resolved agent for `IStreamingAiAgent`; missing capability returns `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements it out of the box. Orleans-silo streaming passthrough is deferred — grain-hosted agents without a direct `IStreamingAiAgent` implementation return 501.
+The route probes the resolved agent for `IStreamingAiAgent`; missing capability returns `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements it out of the box. `OrleansAiAgentProxy` also implements `IStreamingAiAgent` as of v0.35 — Orleans-hosted agents stream natively without falling back to 501.
 
 Clients call either `InvokeStreamAsync` (text-only projection) or `InvokeStreamEventsAsync` (full events). See [stream invocations over HTTP](../guides/stream-invocations-over-http.md) + [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md).
 
@@ -186,11 +186,30 @@ See [OPA policy engine concept](opa-policy-engine.md) for the full wire contract
 - `AgentStatus` transitions should emit events (design pending). For now consumers emit their own from any lifecycle-manager implementation.
 - `AgentHandle` is the correlation primitive — thread it through every downstream log / trace / metric.
 
+## Plugin introspection (v0.27)
+
+`GET /v1/plugins` returns the list of loaded plugins and their current status. No dedicated CLI command wraps this endpoint; call it directly via `curl` or an HTTP client.
+
+Response shape (JSON array):
+
+```json
+[
+  { "name": "research-planner", "status": "Ready", "kind": "mcp-tool-server" },
+  { "name": "langgraph-researcher", "status": "Ready", "kind": "agent-handler" }
+]
+```
+
+Status values: `Loading`, `Ready`, `Error`, `Reloading`.
+
+## Runtime topology discovery (v0.34)
+
+`GET /v1/runtimes` returns the remote runtimes configured on this host. Credentials are excluded. Clients call this to enumerate available runtimes before constructing cross-runtime graph manifests.
+
+CLI surface: `vais get-remote-runtimes`. See [CLI subcommands reference](../reference/cli-subcommands.md#vais-get-remote-runtimes).
+
 ## Limitations / known gaps
 
 - **No multi-region** — manifest carries no region field. Phase 3 adds regionalisation.
-- **No identity-provider impl.** `IAgentIdentityProvider` ships contract-only; Keycloak-backed impl lands with the multi-tenant auth pillar.
-- **Orleans-silo streaming passthrough deferred** — v0.12 returns `501 urn:vais-agents:streaming-not-supported` for grain-only agents. The grain surface gains an `IAsyncEnumerable<AgentEvent>` method in a later pillar.
 
 ## See also
 

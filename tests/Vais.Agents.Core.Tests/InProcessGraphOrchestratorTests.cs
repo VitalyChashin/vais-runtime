@@ -394,6 +394,136 @@ public sealed class InProcessGraphOrchestratorTests
         checkpoint.NextNodeId.Should().Be("wait");
     }
 
+    // ---- v0.37 custom reducer tests ----
+
+    [Fact]
+    public async Task CustomAppend_Reducer_On_NonMessages_Key_Accumulates_Across_Nodes()
+    {
+        int callCount = 0;
+        var (registry, lifecycle) = BuildHarness(_ =>
+        {
+            var n = System.Threading.Interlocked.Increment(ref callCount);
+            return new CompletionResponse(n == 1 ? """{"tags":["red"]}""" : """{"tags":["blue"]}""");
+        });
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+        await lifecycle.CreateAsync(ManifestFor("node-b"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "tag-graph", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "tags" })),
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("node-b"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "tags" })),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("a", "b"),
+                new GraphEdge("b", "end"),
+            })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer>
+            {
+                ["tags"] = new GraphStateReducer.Append(),
+            },
+        };
+
+        var orchestrator = new InProcessGraphOrchestrator(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+        var final = await orchestrator.InvokeAsync(new Dictionary<string, JsonElement>(), new AgentContext());
+
+        final.Should().ContainKey("tags");
+        final["tags"].GetArrayLength().Should().Be(2);
+        var items = final["tags"].EnumerateArray().Select(e => e.GetString()).ToList();
+        items.Should().Contain("red").And.Contain("blue");
+    }
+
+    [Fact]
+    public async Task CustomHandlerRef_Reducer_Is_Invoked_For_Declared_Key()
+    {
+        bool reducerCalled = false;
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("""{"score":99}"""));
+        await lifecycle.CreateAsync(ManifestFor("scorer"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "handlerref-reducer", Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("scorer", "end") })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer>
+            {
+                ["score"] = new GraphStateReducer.HandlerRef(new GraphHandlerRef("SentinelReducer")),
+            },
+        };
+
+        IGraphStateReducer reducerFactory(GraphHandlerRef _)
+        {
+            reducerCalled = true;
+            return new FixedValueReducer(JsonSerializer.SerializeToElement(-1));
+        }
+
+        var orchestrator = new InProcessGraphOrchestrator(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            reducerResolver: reducerFactory);
+        var initial = new Dictionary<string, JsonElement>
+        {
+            ["score"] = JsonSerializer.SerializeToElement(0),
+        };
+        var final = await orchestrator.InvokeAsync(initial, new AgentContext());
+
+        reducerCalled.Should().BeTrue("the manifest-declared handlerRef reducer should have been invoked");
+        final["score"].GetInt32().Should().Be(-1, "the custom reducer returned -1 regardless of incoming");
+    }
+
+    [Fact]
+    public async Task Explicit_Messages_LastWriteWins_Overrides_Builtin_Append()
+    {
+        int callCount = 0;
+        var (registry, lifecycle) = BuildHarness(_ =>
+        {
+            var n = System.Threading.Interlocked.Increment(ref callCount);
+            return new CompletionResponse(n == 1 ? "first" : "second");
+        });
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+        await lifecycle.CreateAsync(ManifestFor("node-b"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "lww-messages", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a")),
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("node-b")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("a", "b"),
+                new GraphEdge("b", "end"),
+            })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer>
+            {
+                [GraphStateReducers.WellKnownKey.Messages] = new GraphStateReducer.LastWriteWins(),
+            },
+        };
+
+        var orchestrator = new InProcessGraphOrchestrator(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+        var final = await orchestrator.InvokeAsync(new Dictionary<string, JsonElement>(), new AgentContext());
+
+        // Without LWW override each node would append — array would hold 2 turns.
+        // With LWW, only the last node's output survives.
+        final[GraphStateReducers.WellKnownKey.Messages].GetArrayLength().Should().Be(1,
+            "last-write-wins on messages means only the final node's turn survives");
+    }
+
     // ---- helpers ----
 
     private static (InMemoryAgentRegistry registry, AgentLifecycleManager lifecycle) BuildHarness(
@@ -465,6 +595,50 @@ public sealed class InProcessGraphOrchestratorTests
         })
     { MaxSteps = 50 };
 
+    [Fact]
+    public async Task GraphEventBus_Receives_Exactly_The_Same_Events_As_The_Enumerator()
+    {
+        int callCount = 0;
+        var (registry, lifecycle) = BuildHarness(_ =>
+        {
+            System.Threading.Interlocked.Increment(ref callCount);
+            return new CompletionResponse("done");
+        });
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "bus-test", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("a", "end") });
+
+        var bus = new InMemoryAgentGraphEventBus();
+        var busEvents = new List<AgentGraphEvent>();
+        using var _ = bus.Subscribe((e, ct) => { busEvents.Add(e); return ValueTask.CompletedTask; });
+
+        var orchestrator = new InProcessGraphOrchestrator(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            graphEventBus: bus);
+
+        var streamEvents = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            streamEvents.Add(e);
+        }
+
+        busEvents.Should().HaveSameCount(streamEvents, "bus must receive every event yielded by the stream");
+        for (var i = 0; i < streamEvents.Count; i++)
+        {
+            busEvents[i].Should().BeSameAs(streamEvents[i],
+                $"bus event [{i}] should be the same object as stream event [{i}]");
+        }
+        streamEvents.Should().ContainSingle(e => e is GraphStarted);
+        streamEvents.Should().ContainSingle(e => e is GraphCompleted);
+    }
+
     private static async Task<List<AgentGraphEvent>> StreamEventsAsync(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -479,5 +653,215 @@ public sealed class InProcessGraphOrchestratorTests
             events.Add(e);
         }
         return events;
+    }
+
+    // ---- v0.42 HITL tests ----
+
+    [Fact]
+    public async Task Hitl_SingleInterrupt_Handler_Returns_State_Graph_Continues()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("pre"));
+        await lifecycle.CreateAsync(ManifestFor("post"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-single", Version: "1.0", Entry: "pre",
+            Nodes: new[]
+            {
+                new GraphNode("pre", "Agent", Ref: new GraphAgentRef("pre")),
+                new GraphNode("wait", "Interrupt", InterruptReason: "awaiting approval"),
+                new GraphNode("post", "Agent", Ref: new GraphAgentRef("post")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("pre", "wait"),
+                new GraphEdge("wait", "post"),
+                new GraphEdge("post", "end"),
+            });
+
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+
+        GraphInterrupted? capturedInterrupt = null;
+        var events = new List<AgentGraphEvent>();
+        IDictionary<string, JsonElement>? finalState = null;
+
+        finalState = await orchestrator.InvokeWithHitlAsync(
+            initial: new Dictionary<string, JsonElement>(),
+            context: new AgentContext(),
+            handleInterrupt: (evt, ct) =>
+            {
+                capturedInterrupt = evt;
+                return ValueTask.FromResult<IDictionary<string, JsonElement>?>(
+                    new Dictionary<string, JsonElement>
+                    {
+                        ["approved"] = JsonSerializer.SerializeToElement(true),
+                    });
+            });
+
+        capturedInterrupt.Should().NotBeNull();
+        capturedInterrupt!.NodeId.Should().Be("wait");
+        capturedInterrupt.Reason.Should().Be("awaiting approval");
+
+        finalState.Should().ContainKey("hitl.response");
+        var hitlResponse = finalState!["hitl.response"];
+        hitlResponse.TryGetProperty("approved", out var approved).Should().BeTrue();
+        approved.GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Hitl_MultipleSequentialInterrupts_BothHandlersCalled()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+        await lifecycle.CreateAsync(ManifestFor("node-b"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-multi", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a")),
+                new GraphNode("pause1", "Interrupt", InterruptReason: "first pause"),
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("node-b")),
+                new GraphNode("pause2", "Interrupt", InterruptReason: "second pause"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("a", "pause1"),
+                new GraphEdge("pause1", "b"),
+                new GraphEdge("b", "pause2"),
+                new GraphEdge("pause2", "end"),
+            });
+
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+
+        var handlerCallOrder = new List<string>();
+        int callCount = 0;
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamWithHitlAsync(
+            initial: new Dictionary<string, JsonElement>(),
+            context: new AgentContext(),
+            handleInterrupt: (evt, ct) =>
+            {
+                handlerCallOrder.Add(evt.NodeId);
+                var n = System.Threading.Interlocked.Increment(ref callCount);
+                return ValueTask.FromResult<IDictionary<string, JsonElement>?>(
+                    new Dictionary<string, JsonElement>
+                    {
+                        [$"response{n}"] = JsonSerializer.SerializeToElement($"value{n}"),
+                    });
+            }))
+        {
+            events.Add(e);
+        }
+
+        handlerCallOrder.Should().Equal("pause1", "pause2");
+        events.OfType<GraphInterrupted>().Should().HaveCount(2);
+        events.OfType<GraphCompleted>().Should().ContainSingle();
+        events.OfType<GraphFailed>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Hitl_HandlerReturnsNull_EmitsGraphFailed_ThrowsAbortedException()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("pre"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-abort", Version: "1.0", Entry: "pre",
+            Nodes: new[]
+            {
+                new GraphNode("pre", "Agent", Ref: new GraphAgentRef("pre")),
+                new GraphNode("wait", "Interrupt", InterruptReason: "needs review"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("pre", "wait"),
+                new GraphEdge("wait", "end"),
+            });
+
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+
+        var events = new List<AgentGraphEvent>();
+        GraphHitlAbortedException? thrownEx = null;
+        try
+        {
+            await foreach (var e in orchestrator.StreamWithHitlAsync(
+                initial: new Dictionary<string, JsonElement>(),
+                context: new AgentContext(),
+                handleInterrupt: (_, _) => ValueTask.FromResult<IDictionary<string, JsonElement>?>(null)))
+            {
+                events.Add(e);
+            }
+        }
+        catch (GraphHitlAbortedException ex)
+        {
+            thrownEx = ex;
+        }
+
+        thrownEx.Should().NotBeNull();
+        thrownEx!.NodeId.Should().Be("wait");
+        events.OfType<GraphInterrupted>().Should().ContainSingle();
+        events.OfType<GraphFailed>().Should().ContainSingle()
+            .Which.ErrorType.Should().Be(nameof(GraphHitlAbortedException));
+        events.OfType<GraphCompleted>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task InvokeWithHitlAsync_Returns_Final_State_After_Single_Interrupt()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("""{"score":42}"""));
+        await lifecycle.CreateAsync(ManifestFor("scorer",
+            outputSchema: "{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\"}}}"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-invoke", Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("review", "Interrupt", InterruptReason: "review the score"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("scorer", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer());
+
+        var final = await orchestrator.InvokeWithHitlAsync(
+            initial: new Dictionary<string, JsonElement>(),
+            context: new AgentContext(),
+            handleInterrupt: (evt, ct) =>
+            {
+                return ValueTask.FromResult<IDictionary<string, JsonElement>?>(
+                    new Dictionary<string, JsonElement>
+                    {
+                        ["verdict"] = JsonSerializer.SerializeToElement("approved"),
+                    });
+            });
+
+        final.Should().ContainKey("score");
+        final["score"].GetDouble().Should().BeApproximately(42, 0.001);
+        final.Should().ContainKey("hitl.response");
+        final["hitl.response"].TryGetProperty("verdict", out var verdict).Should().BeTrue();
+        verdict.GetString().Should().Be("approved");
+    }
+
+    private sealed class FixedValueReducer : IGraphStateReducer
+    {
+        private readonly JsonElement _value;
+        public FixedValueReducer(JsonElement value) => _value = value;
+        public ValueTask<JsonElement> ReduceAsync(JsonElement existing, JsonElement incoming, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(_value);
     }
 }

@@ -34,11 +34,14 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     private readonly Func<GraphHandlerRef, IGraphEdgePredicate>? _predicateResolver;
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
+    private readonly Func<GraphHandlerRef, IGraphStateReducer>? _reducerResolver;
     private readonly AgentContext _context;
     private readonly IAgentRemoteInvoker? _remoteInvoker;
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
     private readonly IGraphCheckpointer? _checkpointer;
+
+    private readonly string? _hitlPortId;
 
     public GraphNodeExecutor(
         GraphNode node,
@@ -48,12 +51,15 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver,
+        Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver,
         AgentContext context,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
-        IGraphCheckpointer? checkpointer = null)
-        : base(id: node.Id)
+        IGraphCheckpointer? checkpointer = null,
+        string? executorId = null,
+        string? hitlPortId = null)
+        : base(id: executorId ?? node.Id)
     {
         _node = node;
         _manifest = manifest;
@@ -62,11 +68,13 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         _predicateResolver = predicateResolver;
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
+        _reducerResolver = reducerResolver;
         _context = context;
         _remoteInvoker = remoteInvoker;
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
         _checkpointer = checkpointer;
+        _hitlPortId = hitlPortId;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -109,13 +117,20 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
             return;
         }
 
-        // Interrupt — emit event + yield + halt. Durable checkpoint saved before halting.
-        // On resume (skipBody), skip the halt and fall through to outgoing-edge evaluation.
+        // Interrupt — save checkpoint, emit event, then either:
+        //   HITL live-session mode (_hitlPortId set): stamp ResumeFromNodeId and forward to the
+        //     RequestPort — the MAF workflow stays open; MafGraphOrchestrator.RunWithHitlAsync
+        //     handles the RequestInfoEvent and feeds back the handler's response.
+        //   Halt mode (_hitlPortId null): yield final message and RequestHaltAsync (existing behaviour).
+        // On resume (skipBody), skip this block entirely and fall through to outgoing-edge evaluation.
         if (string.Equals(_node.Kind, "Interrupt", StringComparison.Ordinal) && !skipBody)
         {
             var interruptId = Guid.NewGuid().ToString("N");
             if (_checkpointer is not null)
             {
+                // NextNodeId = _node.Id so crash-recovery via IResumableAgentGraph.ResumeAsync
+                // re-enters the interrupt node; skipBody fires because ResumeFromNodeId == _node.Id,
+                // which routes outgoing edges without re-running the interrupt body.
                 await _checkpointer.SaveAsync(new GraphCheckpoint(
                     message.RunId, _manifest.Id, _manifest.Version,
                     new Dictionary<string, JsonElement>(state),
@@ -124,9 +139,17 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
                     CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
             }
             await context.AddEventAsync(new GraphInterruptedEvent(_node.Id, interruptId, _node.InterruptReason)).ConfigureAwait(false);
-            var interruptedMessage = message with { SourceNodeId = _node.Id };
-            await context.YieldOutputAsync(interruptedMessage).ConfigureAwait(false);
-            await context.RequestHaltAsync().ConfigureAwait(false);
+            if (_hitlPortId is not null)
+            {
+                var hitlMessage = message with { SourceNodeId = _node.Id, ResumeFromNodeId = _node.Id };
+                await context.SendMessageAsync(hitlMessage, _hitlPortId, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                var interruptedMessage = message with { SourceNodeId = _node.Id };
+                await context.YieldOutputAsync(interruptedMessage).ConfigureAwait(false);
+                await context.RequestHaltAsync().ConfigureAwait(false);
+            }
             return;
         }
 
@@ -159,7 +182,8 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
             if (nodeOutput.Count > 0)
             {
                 var filtered = FilterByOutputBinding(nodeOutput, _node.StateBindings);
-                var changed = GraphStateReducers.Merge(state, filtered);
+                var changed = await GraphStateReducers.MergeAsync(
+                    state, filtered, _manifest.StateReducers, _reducerResolver, cancellationToken).ConfigureAwait(false);
                 if (changed.Count > 0)
                 {
                     await context.AddEventAsync(new StateUpdatedEvent(changed)).ConfigureAwait(false);

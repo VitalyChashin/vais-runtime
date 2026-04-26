@@ -22,7 +22,10 @@ namespace Vais.Agents.Control.Manifests;
 ///   <item><description>No self-loop on <c>End</c>-kind (doesn't make sense semantically).</description></item>
 ///   <item><description>Agent-kind nodes require <see cref="GraphNode.Ref"/>.</description></item>
 ///   <item><description>Code-kind nodes require <see cref="GraphNode.HandlerRef"/>.</description></item>
+///   <item><description><see cref="GraphHandlerRef.TypeName"/> must be non-empty and free of whitespace wherever it appears.</description></item>
 ///   <item><description>Cycles are permitted only when a <see cref="AgentGraphManifest.MaxSteps"/> guard is set.</description></item>
+///   <item><description><see cref="GraphStateBindings"/> input/output keys must be declared in <c>spec.state.schema.properties</c> when a schema is present (well-known runtime keys <c>messages</c> and <c>lastAssistantText</c> are always exempt).</description></item>
+///   <item><description><see cref="AgentGraphManifest.StateReducers"/> keys must be declared in <c>spec.state.schema.properties</c> when a schema is present.</description></item>
 /// </list>
 /// </remarks>
 public static class AgentGraphManifestValidator
@@ -31,6 +34,13 @@ public static class AgentGraphManifestValidator
     private const string AgentKind = "Agent";
     private const string CodeKind = "Code";
     private const string InterruptKind = "Interrupt";
+
+    // Well-known keys the runtime writes unconditionally — exempt from stateBindings schema cross-check.
+    private static readonly HashSet<string> WellKnownStateKeys = new(StringComparer.Ordinal)
+    {
+        "messages",
+        "lastAssistantText",
+    };
 
     /// <summary>Validate <paramref name="manifest"/>, appending any issues to <paramref name="errors"/>.</summary>
     /// <param name="manifest">Manifest to validate.</param>
@@ -76,11 +86,161 @@ public static class AgentGraphManifestValidator
             {
                 errors.Add($"{prefix}edge references unknown 'to' node '{edge.To}'");
             }
+
+            if (edge.When is not null)
+            {
+                ValidateEdgePredicate(edge.When, $"edge '{edge.From}'→'{edge.To}'", errors, prefix);
+            }
+
+            if (edge.OnTraverse is GraphEdgeEffect.HandlerRef effectHr)
+            {
+                ValidateHandlerRef(effectHr.Handler, $"edge '{edge.From}'→'{edge.To}' effect handlerRef", errors, prefix);
+            }
         }
 
         if (HasCycle(manifest, nodeById) && manifest.MaxSteps is null)
         {
             errors.Add($"{prefix}graph contains a cycle but spec.maxSteps is unset — add a ceiling or remove the back-edge");
+        }
+
+        ValidateStateBindings(manifest, errors, prefix);
+        ValidateStateReducers(manifest, errors, prefix);
+    }
+
+    /// <summary>
+    /// Cross-checks <c>stateBindings.output</c> keys on Agent-kind nodes against the referenced
+    /// agent's <see cref="AgentManifest.OutputSchema"/>. Agents not in <paramref name="resolveAgent"/>,
+    /// remote refs, and agents without an <c>OutputSchema</c> are silently skipped.
+    /// </summary>
+    /// <param name="manifest">Graph manifest to check.</param>
+    /// <param name="resolveAgent">Resolver: given (agentId, version?) returns the manifest or null if unknown.</param>
+    /// <param name="errors">Error sink.</param>
+    /// <param name="prefix">Optional prefix for every error line.</param>
+    public static void ValidateAgentOutputSchemaBindings(
+        AgentGraphManifest manifest,
+        Func<string, string?, AgentManifest?> resolveAgent,
+        List<string> errors,
+        string prefix = "")
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(resolveAgent);
+        ArgumentNullException.ThrowIfNull(errors);
+
+        foreach (var node in manifest.Nodes)
+        {
+            if (!string.Equals(node.Kind, AgentKind, StringComparison.Ordinal)) continue;
+            if (node.Ref is null) continue;
+            if (node.StateBindings?.Output is not { Count: > 0 } outputs) continue;
+
+            // Remote agents run outside this runtime — their OutputSchema is not available at load time.
+            if (node.Ref.RuntimeUrl is not null || node.Ref.A2AUrl is not null) continue;
+
+            var agentManifest = resolveAgent(node.Ref.Id, node.Ref.Version);
+            if (agentManifest is null) continue;
+
+            if (agentManifest.OutputSchema is not { } schemaEl ||
+                schemaEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+                continue;
+            if (!schemaEl.TryGetProperty("properties", out var propsEl) ||
+                propsEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+                continue;
+
+            foreach (var key in outputs)
+            {
+                if (!WellKnownStateKeys.Contains(key) && !propsEl.TryGetProperty(key, out _))
+                {
+                    errors.Add($"{prefix}node '{node.Id}' stateBindings.output key '{key}' not found in agent '{node.Ref.Id}' OutputSchema.properties");
+                }
+            }
+        }
+    }
+
+    private static void ValidateHandlerRef(GraphHandlerRef handlerRef, string context, List<string> errors, string prefix)
+    {
+        if (string.IsNullOrEmpty(handlerRef.TypeName) || handlerRef.TypeName.Any(char.IsWhiteSpace))
+        {
+            errors.Add($"{prefix}{context} typeName '{handlerRef.TypeName}' is invalid — must be a non-empty fully-qualified .NET type name with no whitespace");
+        }
+    }
+
+    private static void ValidateEdgePredicate(GraphEdgePredicate predicate, string context, List<string> errors, string prefix)
+    {
+        switch (predicate)
+        {
+            case GraphEdgePredicate.HandlerRef hr:
+                ValidateHandlerRef(hr.Handler, $"{context} predicate handlerRef", errors, prefix);
+                break;
+            case GraphEdgePredicate.AllOf allOf:
+                foreach (var p in allOf.Predicates)
+                    ValidateEdgePredicate(p, context, errors, prefix);
+                break;
+            case GraphEdgePredicate.AnyOf anyOf:
+                foreach (var p in anyOf.Predicates)
+                    ValidateEdgePredicate(p, context, errors, prefix);
+                break;
+            case GraphEdgePredicate.Not not:
+                ValidateEdgePredicate(not.Predicate, context, errors, prefix);
+                break;
+        }
+    }
+
+    private static void ValidateStateBindings(AgentGraphManifest manifest, List<string> errors, string prefix)
+    {
+        if (manifest.StateSchema is not { } schemaEl || schemaEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+            return;
+        if (!schemaEl.TryGetProperty("properties", out var propsEl) || propsEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+            return;
+
+        foreach (var node in manifest.Nodes)
+        {
+            if (node.StateBindings is not { } bindings) continue;
+
+            if (bindings.Input is { } inputs)
+            {
+                foreach (var key in inputs)
+                {
+                    if (!WellKnownStateKeys.Contains(key) && !propsEl.TryGetProperty(key, out _))
+                        errors.Add($"{prefix}node '{node.Id}' stateBindings.input key '{key}' is not declared in spec.state.schema.properties");
+                }
+            }
+
+            if (bindings.Output is { } outputs)
+            {
+                foreach (var key in outputs)
+                {
+                    if (!WellKnownStateKeys.Contains(key) && !propsEl.TryGetProperty(key, out _))
+                        errors.Add($"{prefix}node '{node.Id}' stateBindings.output key '{key}' is not declared in spec.state.schema.properties");
+                }
+            }
+        }
+    }
+
+    private static void ValidateStateReducers(AgentGraphManifest manifest, List<string> errors, string prefix)
+    {
+        if (manifest.StateReducers is not { Count: > 0 } reducers)
+            return;
+
+        // HandlerRef TypeName check runs regardless of whether a StateSchema is present.
+        foreach (var (key, reducer) in reducers)
+        {
+            if (reducer is GraphStateReducer.HandlerRef hrReducer)
+            {
+                ValidateHandlerRef(hrReducer.Handler, $"stateReducers['{key}'] handlerRef", errors, prefix);
+            }
+        }
+
+        // Key ↔ schema cross-check only runs when a schema is declared.
+        if (manifest.StateSchema is not { } schemaEl || schemaEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+            return;
+        if (!schemaEl.TryGetProperty("properties", out var propsEl) || propsEl.ValueKind != System.Text.Json.JsonValueKind.Object)
+            return;
+
+        foreach (var key in reducers.Keys)
+        {
+            if (!propsEl.TryGetProperty(key, out _))
+            {
+                errors.Add($"{prefix}stateReducers key '{key}' is not declared in spec.state.schema.properties");
+            }
         }
     }
 
@@ -98,6 +258,10 @@ public static class AgentGraphManifestValidator
                 if (node.HandlerRef is null)
                 {
                     errors.Add($"{prefix}Code-kind node '{node.Id}' has no handlerRef");
+                }
+                else
+                {
+                    ValidateHandlerRef(node.HandlerRef, $"Code-kind node '{node.Id}' handlerRef", errors, prefix);
                 }
                 break;
             case InterruptKind:

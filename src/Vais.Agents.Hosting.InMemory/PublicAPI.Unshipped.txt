@@ -1,1 +1,5 @@
 #nullable enable
+Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus
+Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus.InMemoryAgentGraphEventBus(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus!>? logger = null) -> void
+Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus.PublishAsync(Vais.Agents.AgentGraphEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus.Subscribe(System.Func<Vais.Agents.AgentGraphEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!

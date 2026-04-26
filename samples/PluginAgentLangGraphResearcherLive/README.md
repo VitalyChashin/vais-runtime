@@ -1,8 +1,8 @@
 # PluginAgentLangGraphResearcherLive
 
-A live-LLM Python agent-handler packaged as a v0.24 Vais plugin. The handler uses a real `langgraph.StateGraph` with two nodes — `plan` and `summarize` — backed by `langchain-openai.ChatOpenAI` (model: `gpt-4o-mini`). Topology mirrors the hermetic sibling (`PluginAgentLangGraphResearcher`) but makes actual OpenAI API calls.
+A live-LLM Python agent-handler packaged as a v0.24 Vais plugin. The handler uses a real `langgraph.StateGraph` with two nodes — `plan` and `summarize` — backed by `langchain-openai.ChatOpenAI` (model: `gpt-4o-mini`). Topology mirrors the hermetic sibling (`PluginAgentLangGraphResearcher`) but makes actual OpenAI API calls. Supports streaming via `vais/agent.stream` (v0.26).
 
-**Concepts:** [polyglot plugins](../../docs/concepts/polyglot-plugins.md), [agent-handler kind](../../docs/concepts/polyglot-plugins.md#agent-handler-kind).  
+**Concepts:** [polyglot agents](../../docs/concepts/polyglot-agents.md), [polyglot plugins](../../docs/concepts/polyglot-plugins.md), [agent-handler kind](../../docs/concepts/polyglot-plugins.md#agent-handler-kind).  
 **Needs API key:** `OPENAI_API_KEY` (must be present in the runtime host environment).  
 **Code:** Python + YAML only — no C# required.
 
@@ -68,6 +68,22 @@ vais invoke research-agent-live --text "What is quantum computing?"
 
 The runtime invokes the Python subprocess, which runs the LangGraph plan→summarize pipeline and returns the GPT-4o-mini response.
 
+**Streaming (v0.26):** The Python agent supports `vais/agent.stream` — chunks are yielded as the LLM generates and surfaced as `delta` events:
+
+```bash
+vais invoke research-agent-live --text "What is quantum computing?" --stream
+```
+
+```
+turn.started
+delta  "Quantum computing harnesses the principles of quantum mechanics..."
+delta  " Unlike classical bits, qubits can exist in superposition..."
+delta  " This allows quantum computers to explore many solutions simultaneously..."
+turn.completed
+```
+
+The `.stream` handler in `agent.py` yields tokens from `ChatOpenAI`'s streaming response; the SDK runner collects them and bundles them as `deltas` in the `vais/agent.stream` response. The .NET shim emits `CompletionDelta` events then a terminal `TurnCompleted`.
+
 Multi-turn (state is persisted across calls):
 
 ```bash
@@ -130,5 +146,7 @@ START
 ## See also
 
 - [PluginAgentLangGraphResearcher](../PluginAgentLangGraphResearcher) — hermetic sibling (no API key, CI-safe)
+- [Polyglot agents concept](../../docs/concepts/polyglot-agents.md) — architecture, streaming (v0.26), hot-reload (v0.25)
 - [Polyglot plugins concept](../../docs/concepts/polyglot-plugins.md)
+- [Package a Python agent guide](../../docs/guides/package-a-python-agent.md) — streaming handler pattern
 - [Package a Python plugin guide](../../docs/guides/package-a-python-plugin.md)

@@ -56,6 +56,10 @@ public static class AgentGraphManifestEnvelope
         {
             spec["maxSteps"] = maxSteps;
         }
+        if (manifest.StateReducers is { Count: > 0 } reducers)
+        {
+            spec["stateReducers"] = SerializeStateReducers(reducers);
+        }
 
         var envelope = new JsonObject
         {
@@ -176,6 +180,27 @@ public static class AgentGraphManifestEnvelope
             },
             GraphEdgeEffect.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeHandlerRef(h.Handler) },
             _ => throw new NotSupportedException($"Unknown effect subtype '{effect.GetType().Name}'."),
+        };
+    }
+
+    private static JsonObject SerializeStateReducers(IReadOnlyDictionary<string, GraphStateReducer> reducers)
+    {
+        var obj = new JsonObject();
+        foreach (var (key, reducer) in reducers)
+        {
+            obj[key] = SerializeReducer(reducer);
+        }
+        return obj;
+    }
+
+    private static JsonNode SerializeReducer(GraphStateReducer reducer)
+    {
+        return reducer switch
+        {
+            GraphStateReducer.LastWriteWins => (JsonNode)"lastWriteWins",
+            GraphStateReducer.Append => (JsonNode)"append",
+            GraphStateReducer.HandlerRef hr => new JsonObject { ["handlerRef"] = SerializeHandlerRef(hr.Handler) },
+            _ => throw new NotSupportedException($"Unknown reducer subtype '{reducer.GetType().Name}'."),
         };
     }
 

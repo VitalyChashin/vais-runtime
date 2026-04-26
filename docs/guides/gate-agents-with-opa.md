@@ -290,6 +290,16 @@ docker rm -f opa
 - **OPA's `--watch` flag hot-reloads policies from disk** but not from the HTTP API. If you pushed the policy via `PUT /v1/policies/...`, restart OPA to pick up file changes.
 - **`decisionCache.TtlSeconds: 0` disables the cache** — useful for audit / debugging environments where every call must hit OPA. 1–5 ms per call instead of sub-microsecond cache hit. Tune per environment.
 
+## Production: signed bundle server (v0.32)
+
+The sidecar-with-ConfigMap pattern used in this guide is the local/cluster-dev pattern. For production — where you want the policy lifecycle decoupled from the operator lifecycle, RS256-signed bundles, and GitOps-style rollouts — switch to bundle-server mode:
+
+1. Run a signed nginx bundle server (see `samples/opa-bundle-server/` — includes `sign-bundle.sh`, `docker-compose.yaml`, and a full `README.md`).
+2. Enable bundle mode in Helm: set `opa.bundle.enabled: true` + `opa.bundle.url` + `opa.bundle.signing.*` in `values.yaml`.
+3. OPA switches to `--config-file` startup and polls the bundle URL on the configured interval. Policy updates deploy without touching the operator or runtime.
+
+See [OPA policy engine — Bundle-server mode](../concepts/opa-policy-engine.md#bundle-server-mode-v032) for the full Helm values reference.
+
 ## See also
 
 - [OPA policy engine concept](../concepts/opa-policy-engine.md) — adapter internals, wire contract, FailMode semantics.
@@ -297,4 +307,5 @@ docker rm -f opa
 - [Wire a sidecar OPA against the operator](wire-a-sidecar-opa-against-the-operator.md) — K8s sidecar deployment.
 - `contracts/opa-input-schema.md` — the v1 input shape Rego reads.
 - `samples/opa-policies/tenant-scoped-allow.rego` — the source of this guide's policy.
+- `samples/opa-bundle-server/` — nginx bundle server + signing scripts (v0.32).
 - [Problem-details URNs](../reference/problem-details-urns.md) — the `urn:vais-agents:policy-denied` URN.

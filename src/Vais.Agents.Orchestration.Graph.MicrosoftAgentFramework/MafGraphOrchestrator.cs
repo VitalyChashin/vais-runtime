@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
@@ -46,7 +47,7 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 /// and use <c>InProcessExecution</c> themselves — the adapter is thin by design.
 /// </para>
 /// </remarks>
-public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>
+public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>, IHitlAgentGraph<TState>
 {
     private readonly AgentGraphManifest _manifest;
     private readonly IAgentRegistry _registry;
@@ -54,8 +55,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly Func<GraphHandlerRef, IGraphEdgePredicate>? _predicateResolver;
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
+    private readonly Func<GraphHandlerRef, IGraphStateReducer>? _reducerResolver;
     private readonly Func<string>? _runIdFactory;
     private readonly IGraphCheckpointer? _checkpointer;
+    private readonly IAgentGraphEventBus _graphEventBus;
 
     /// <summary>Default max-step ceiling matching the in-process orchestrator.</summary>
     public const int DefaultMaxSteps = 1000;
@@ -67,12 +70,14 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="predicateResolver">Resolver for <see cref="GraphHandlerRef"/> edge predicates. Null means handler-ref predicates throw.</param>
     /// <param name="effectResolver">Resolver for <see cref="GraphHandlerRef"/> edge effects.</param>
     /// <param name="codeNodeResolver">Resolver for Code-kind nodes. Null means code-kind nodes throw.</param>
+    /// <param name="reducerResolver">Resolver for <see cref="GraphStateReducer.HandlerRef"/> reducer declarations in <see cref="AgentGraphManifest.StateReducers"/>. Null means handler-ref reducers throw.</param>
     /// <param name="runIdFactory">Factory for run ids stamped on events and checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
     /// <param name="checkpointer">
     /// Checkpoint store used by <see cref="ResumeAsync"/> / <see cref="ResumeStreamAsync"/>.
     /// Pass an <c>InMemoryCheckpointer</c> for tests. Null skips all checkpoint saves
     /// (compatible with v0.9 callers that do not need durable resume).
     /// </param>
+    /// <param name="graphEventBus">Bus to fan out graph lifecycle events to. Null uses <see cref="NullAgentGraphEventBus"/>.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -80,8 +85,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
-        IGraphCheckpointer? checkpointer = null)
+        IGraphCheckpointer? checkpointer = null,
+        IAgentGraphEventBus? graphEventBus = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -92,8 +99,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _predicateResolver = predicateResolver;
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
+        _reducerResolver = reducerResolver;
         _runIdFactory = runIdFactory;
         _checkpointer = checkpointer;
+        _graphEventBus = graphEventBus ?? NullAgentGraphEventBus.Instance;
     }
 
     /// <inheritdoc />
@@ -186,6 +195,160 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         return RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<AgentGraphEvent> StreamWithHitlAsync(
+        TState initial,
+        AgentContext context,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>> handleInterrupt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(handleInterrupt);
+        var bag = StateBagConverter.ToBag(initial);
+        return RunWithHitlAsync(bag, context, handleInterrupt, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<TState> InvokeWithHitlAsync(
+        TState initial,
+        AgentContext context,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>> handleInterrupt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(handleInterrupt);
+        IDictionary<string, JsonElement> bag = StateBagConverter.ToBag(initial);
+        await foreach (var _ in RunWithHitlAsync(bag, context, handleInterrupt, cancellationToken).ConfigureAwait(false))
+        {
+        }
+        return StateBagConverter.FromBag<TState>(bag);
+    }
+
+    private async IAsyncEnumerable<AgentGraphEvent> RunWithHitlAsync(
+        IDictionary<string, JsonElement> state,
+        AgentContext context,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>> handleInterrupt,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var runId = _runIdFactory?.Invoke() ?? Guid.NewGuid().ToString("N");
+        var maxSteps = _manifest.MaxSteps ?? DefaultMaxSteps;
+
+        var buildResult = MafGraphBuilder.BuildForHitl(
+            _manifest, _registry, _lifecycle,
+            _predicateResolver, _effectResolver, _codeNodeResolver,
+            reducerResolver: _reducerResolver,
+            checkpointer: _checkpointer);
+        var workflow = buildResult.Workflow;
+        var portIdToNodeId = buildResult.PortIdToNodeId;
+
+        var watch = Stopwatch.StartNew();
+
+        var startedEvt = new GraphStarted(
+            DateTimeOffset.UtcNow, context, runId, 0,
+            _manifest.Id, _manifest.Version, _manifest.Entry);
+        await _graphEventBus.PublishAsync(startedEvt, cancellationToken).ConfigureAwait(false);
+        yield return startedEvt;
+
+        var initialMessage = new GraphMessage(
+            State: new Dictionary<string, JsonElement>(state, StringComparer.Ordinal),
+            SuperStep: 0,
+            RunId: runId,
+            MaxSteps: maxSteps);
+
+        // OffThread prevents deadlock: the RequestPortBinding executor blocks its superstep thread
+        // while WatchStreamAsync needs to advance on the outer loop to emit RequestInfoEvent.
+        await using var run = await InProcessExecution.OffThread
+            .OpenStreamingAsync(workflow, sessionId: runId, cancellationToken)
+            .ConfigureAwait(false);
+        await run.TrySendMessageAsync(initialMessage).ConfigureAwait(false);
+
+        GraphMessage? finalMessage = null;
+        int superStep = 0;
+        GraphRecursionException? recursionFailure = null;
+        // Buffered GraphInterrupted from the emitter; matched to RequestInfoEvent by node-id.
+        GraphInterrupted? pendingInterrupted = null;
+
+        await foreach (var wfEvent in run.WatchStreamAsync(cancellationToken).ConfigureAwait(false))
+        {
+            // Buffer the translated GraphInterrupted so we can pass it to the handler
+            // when the matching RequestInfoEvent fires (emitter fires AddEventAsync before
+            // SendMessageAsync, so GraphInterruptedEvent always precedes RequestInfoEvent).
+            if (wfEvent is GraphInterruptedEvent intEvt)
+            {
+                pendingInterrupted = new GraphInterrupted(
+                    DateTimeOffset.UtcNow, context, runId, superStep,
+                    intEvt.NodeId, intEvt.InterruptId, intEvt.Reason);
+                await _graphEventBus.PublishAsync(pendingInterrupted, cancellationToken).ConfigureAwait(false);
+                yield return pendingInterrupted;
+                continue;
+            }
+
+            // RequestPort blocked — call HITL handler inline and feed response back.
+            if (wfEvent is RequestInfoEvent reqInfo &&
+                portIdToNodeId.TryGetValue(reqInfo.Request.PortInfo.PortId, out var hitlNodeId))
+            {
+                var interruptedEvt = pendingInterrupted
+                    ?? new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
+                        hitlNodeId, Guid.NewGuid().ToString("N"), Reason: null);
+                pendingInterrupted = null;
+
+                var handlerResult = await handleInterrupt(interruptedEvt, cancellationToken).ConfigureAwait(false);
+                if (handlerResult is null)
+                {
+                    await run.CancelRunAsync().ConfigureAwait(false);
+                    var abortExc = new GraphHitlAbortedException(hitlNodeId);
+                    var failEvt = new GraphFailed(
+                        DateTimeOffset.UtcNow, context, runId, superStep,
+                        nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed);
+                    await _graphEventBus.PublishAsync(failEvt, cancellationToken).ConfigureAwait(false);
+                    yield return failEvt;
+                    throw abortExc;
+                }
+
+                // Merge handler result under "hitl.response" and emit StateUpdated.
+                reqInfo.Request.TryGetDataAs<GraphMessage>(out var blockedMsg);
+                var mergedState = new Dictionary<string, JsonElement>(
+                    blockedMsg?.State ?? state, StringComparer.Ordinal);
+                mergedState["hitl.response"] = JsonSerializer.SerializeToElement(handlerResult);
+                var stateEvt = new StateUpdated(
+                    DateTimeOffset.UtcNow, context, runId, superStep,
+                    new[] { "hitl.response" });
+                await _graphEventBus.PublishAsync(stateEvt, cancellationToken).ConfigureAwait(false);
+                yield return stateEvt;
+
+                var responseMsg = (blockedMsg ?? initialMessage) with { State = mergedState };
+                await run.SendResponseAsync(reqInfo.Request.CreateResponse(responseMsg)).ConfigureAwait(false);
+                continue;
+            }
+
+            foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
+            {
+                await _graphEventBus.PublishAsync(translated, cancellationToken).ConfigureAwait(false);
+                yield return translated;
+            }
+        }
+
+        if (recursionFailure is not null)
+        {
+            throw recursionFailure;
+        }
+
+        if (finalMessage is not null)
+        {
+            state.Clear();
+            foreach (var (k, v) in finalMessage.State)
+            {
+                state[k] = v;
+            }
+
+            var completedEvt = new GraphCompleted(
+                DateTimeOffset.UtcNow, context, runId, superStep,
+                finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed);
+            await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
+            yield return completedEvt;
+        }
+    }
+
     private async IAsyncEnumerable<AgentGraphEvent> RunAsync(
         IDictionary<string, JsonElement> state,
         AgentContext context,
@@ -207,6 +370,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             _predicateResolver,
             _effectResolver,
             _codeNodeResolver,
+            reducerResolver: _reducerResolver,
             startNodeId: resumeFromNodeId,
             checkpointer: _checkpointer);
 
@@ -218,15 +382,19 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             var resumedInterruptId = state.TryGetValue("resume.interruptId", out var ii) && ii.ValueKind == JsonValueKind.String
                 ? ii.GetString() ?? string.Empty
                 : string.Empty;
-            yield return new GraphResumed(
+            var resumedEvt = new GraphResumed(
                 DateTimeOffset.UtcNow, context, runId, 0,
                 resumeFromNodeId!, resumedInterruptId);
+            await _graphEventBus.PublishAsync(resumedEvt, cancellationToken).ConfigureAwait(false);
+            yield return resumedEvt;
         }
         else
         {
-            yield return new GraphStarted(
+            var startedEvt = new GraphStarted(
                 DateTimeOffset.UtcNow, context, runId, 0,
                 _manifest.Id, _manifest.Version, _manifest.Entry);
+            await _graphEventBus.PublishAsync(startedEvt, cancellationToken).ConfigureAwait(false);
+            yield return startedEvt;
         }
 
         var initialMessage = new GraphMessage(
@@ -257,6 +425,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             }
             foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
             {
+                await _graphEventBus.PublishAsync(translated, cancellationToken).ConfigureAwait(false);
                 yield return translated;
             }
         }
@@ -278,8 +447,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             // Interrupted runs already emitted GraphInterrupted — don't also mark them Completed.
             if (!interrupted)
             {
-                yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                var completedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed);
+                await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
+                yield return completedEvt;
             }
         }
     }
@@ -376,9 +547,11 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
-        IGraphCheckpointer? checkpointer = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, checkpointer)
+        IGraphCheckpointer? checkpointer = null,
+        IAgentGraphEventBus? graphEventBus = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus)
     {
     }
 }

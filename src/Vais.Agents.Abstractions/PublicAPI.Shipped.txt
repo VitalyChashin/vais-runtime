@@ -1832,3 +1832,63 @@ Vais.Agents.IA2AGraphNodeInvoker.InvokeAsync(string! a2aUrl, string! message, st
 Vais.Agents.ReplayMode
 Vais.Agents.ReplayMode.Full = 1 -> Vais.Agents.ReplayMode
 Vais.Agents.ReplayMode.ToolOnly = 0 -> Vais.Agents.ReplayMode
+Vais.Agents.AgentInvocationMetadataKeys
+const Vais.Agents.AgentInvocationMetadataKeys.Authorization = "authorization" -> string!
+Vais.Agents.IAgentRemoteInvoker.StreamAsync(string! runtimeUrl, Vais.Agents.AgentHandle! handle, Vais.Agents.AgentInvocationRequest! request, string? bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
+Vais.Agents.AgentGraphManifest.StateReducers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.GraphStateReducer!>?
+Vais.Agents.AgentGraphManifest.StateReducers.init -> void
+Vais.Agents.GraphStateReducer
+abstract Vais.Agents.GraphStateReducer.<Clone>$() -> Vais.Agents.GraphStateReducer!
+override Vais.Agents.GraphStateReducer.Equals(object? obj) -> bool
+override Vais.Agents.GraphStateReducer.GetHashCode() -> int
+override Vais.Agents.GraphStateReducer.ToString() -> string!
+static Vais.Agents.GraphStateReducer.operator !=(Vais.Agents.GraphStateReducer? left, Vais.Agents.GraphStateReducer? right) -> bool
+static Vais.Agents.GraphStateReducer.operator ==(Vais.Agents.GraphStateReducer? left, Vais.Agents.GraphStateReducer? right) -> bool
+virtual Vais.Agents.GraphStateReducer.EqualityContract.get -> System.Type!
+virtual Vais.Agents.GraphStateReducer.Equals(Vais.Agents.GraphStateReducer? other) -> bool
+virtual Vais.Agents.GraphStateReducer.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Vais.Agents.GraphStateReducer.Append
+Vais.Agents.GraphStateReducer.Append.Append() -> void
+Vais.Agents.GraphStateReducer.Append.Equals(Vais.Agents.GraphStateReducer.Append? other) -> bool
+override Vais.Agents.GraphStateReducer.Append.<Clone>$() -> Vais.Agents.GraphStateReducer.Append!
+override Vais.Agents.GraphStateReducer.Append.Equals(object? obj) -> bool
+override Vais.Agents.GraphStateReducer.Append.GetHashCode() -> int
+override Vais.Agents.GraphStateReducer.Append.ToString() -> string!
+override sealed Vais.Agents.GraphStateReducer.Append.Equals(Vais.Agents.GraphStateReducer? other) -> bool
+static Vais.Agents.GraphStateReducer.Append.operator !=(Vais.Agents.GraphStateReducer.Append? left, Vais.Agents.GraphStateReducer.Append? right) -> bool
+static Vais.Agents.GraphStateReducer.Append.operator ==(Vais.Agents.GraphStateReducer.Append? left, Vais.Agents.GraphStateReducer.Append? right) -> bool
+Vais.Agents.GraphStateReducer.GraphStateReducer(Vais.Agents.GraphStateReducer! original) -> void
+Vais.Agents.GraphStateReducer.HandlerRef
+Vais.Agents.GraphStateReducer.HandlerRef.Deconstruct(out Vais.Agents.GraphHandlerRef! Handler) -> void
+Vais.Agents.GraphStateReducer.HandlerRef.Equals(Vais.Agents.GraphStateReducer.HandlerRef? other) -> bool
+Vais.Agents.GraphStateReducer.HandlerRef.Handler.get -> Vais.Agents.GraphHandlerRef!
+Vais.Agents.GraphStateReducer.HandlerRef.Handler.init -> void
+Vais.Agents.GraphStateReducer.HandlerRef.HandlerRef(Vais.Agents.GraphHandlerRef! Handler) -> void
+override Vais.Agents.GraphStateReducer.HandlerRef.<Clone>$() -> Vais.Agents.GraphStateReducer.HandlerRef!
+override Vais.Agents.GraphStateReducer.HandlerRef.Equals(object? obj) -> bool
+override Vais.Agents.GraphStateReducer.HandlerRef.GetHashCode() -> int
+override Vais.Agents.GraphStateReducer.HandlerRef.ToString() -> string!
+override sealed Vais.Agents.GraphStateReducer.HandlerRef.Equals(Vais.Agents.GraphStateReducer? other) -> bool
+static Vais.Agents.GraphStateReducer.HandlerRef.operator !=(Vais.Agents.GraphStateReducer.HandlerRef? left, Vais.Agents.GraphStateReducer.HandlerRef? right) -> bool
+static Vais.Agents.GraphStateReducer.HandlerRef.operator ==(Vais.Agents.GraphStateReducer.HandlerRef? left, Vais.Agents.GraphStateReducer.HandlerRef? right) -> bool
+Vais.Agents.GraphStateReducer.LastWriteWins
+Vais.Agents.GraphStateReducer.LastWriteWins.Equals(Vais.Agents.GraphStateReducer.LastWriteWins? other) -> bool
+Vais.Agents.GraphStateReducer.LastWriteWins.LastWriteWins() -> void
+override Vais.Agents.GraphStateReducer.LastWriteWins.<Clone>$() -> Vais.Agents.GraphStateReducer.LastWriteWins!
+override Vais.Agents.GraphStateReducer.LastWriteWins.Equals(object? obj) -> bool
+override Vais.Agents.GraphStateReducer.LastWriteWins.GetHashCode() -> int
+override Vais.Agents.GraphStateReducer.LastWriteWins.ToString() -> string!
+override sealed Vais.Agents.GraphStateReducer.LastWriteWins.Equals(Vais.Agents.GraphStateReducer? other) -> bool
+static Vais.Agents.GraphStateReducer.LastWriteWins.operator !=(Vais.Agents.GraphStateReducer.LastWriteWins? left, Vais.Agents.GraphStateReducer.LastWriteWins? right) -> bool
+static Vais.Agents.GraphStateReducer.LastWriteWins.operator ==(Vais.Agents.GraphStateReducer.LastWriteWins? left, Vais.Agents.GraphStateReducer.LastWriteWins? right) -> bool
+Vais.Agents.IGraphStateReducer
+Vais.Agents.IGraphStateReducer.ReduceAsync(System.Text.Json.JsonElement existing, System.Text.Json.JsonElement incoming, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Text.Json.JsonElement>
+Vais.Agents.IAgentGraphEventBus
+Vais.Agents.IAgentGraphEventBus.PublishAsync(Vais.Agents.AgentGraphEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IAgentGraphEventBus.Subscribe(System.Func<Vais.Agents.AgentGraphEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+Vais.Agents.IHitlAgentGraph<TState>
+Vais.Agents.IHitlAgentGraph<TState>.InvokeWithHitlAsync(TState initial, Vais.Agents.AgentContext! context, System.Func<Vais.Agents.GraphInterrupted!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TState?>>! handleInterrupt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<TState>
+Vais.Agents.IHitlAgentGraph<TState>.StreamWithHitlAsync(TState initial, Vais.Agents.AgentContext! context, System.Func<Vais.Agents.GraphInterrupted!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TState?>>! handleInterrupt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.GraphHitlAbortedException
+Vais.Agents.GraphHitlAbortedException.GraphHitlAbortedException(string! nodeId) -> void
+Vais.Agents.GraphHitlAbortedException.NodeId.get -> string!

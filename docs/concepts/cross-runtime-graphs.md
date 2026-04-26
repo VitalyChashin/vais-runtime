@@ -46,8 +46,9 @@ spec:
 ```
 ExecuteNodeAsync(node, ...)
   if node.Ref?.RuntimeUrl != null
-    → IAgentRemoteInvoker.InvokeAsync(runtimeUrl, handle, request, bearerToken)
-    → merge result.Text into state["lastAssistantText"]
+    → IAgentRemoteInvoker.InvokeAsync(runtimeUrl, handle, request, bearerToken)   // unary
+    → IAgentRemoteInvoker.StreamAsync(runtimeUrl, handle, request, bearerToken)    // streaming (v0.33)
+    → merge result into state["lastAssistantText"]
   else
     → IAgentRegistry.GetAsync(node.Ref.Id)
     → IAgentLifecycleManager.InvokeAsync(...)
@@ -65,7 +66,7 @@ The calling runtime forwards the inbound `Authorization: Bearer …` header verb
 
 **Security considerations:**
 
-- Both runtimes must trust the same identity provider (or the same API key scheme) for the bearer to be accepted. No token exchange or OIDC delegation is performed in v0.20 — that is deferred to v0.21 security hardening.
+- Both runtimes must trust the same identity provider (or the same API key scheme) for the bearer to be accepted. For service-to-service identity hardening — OAuth 2.0 token exchange, workload identity, or outbound `client_credentials` grants — see [Configure OIDC identity](../guides/configure-oidc-identity.md) (v0.29 `Vais.Agents.Identity.Oidc`).
 - If the calling runtime has no inbound HTTP context (e.g. a background job), `bearerTokenProvider` returns null and no `Authorization` header is sent. The remote runtime's policy engine governs whether anonymous invocations are allowed.
 - Do not use `runtimeUrl` with untrusted hosts. The invoker sends the caller's bearer token to whatever URL is in the manifest. Validate manifests before applying.
 
@@ -87,12 +88,16 @@ The exception propagates from `ExecuteNodeAsync` and is treated the same as any 
 
 `HttpAgentRemoteInvoker` maintains one `HttpClient` per unique normalised `runtimeUrl` (scheme + host + port + base path, trailing slashes stripped). Clients are created on first use and reused for the lifetime of the invoker singleton. There is no eviction; add a restart if you need to cycle the pool (e.g. after a certificate rotation that requires a new TLS session).
 
-## Limitations in v0.20
+## Streaming cross-remote (v0.33)
+
+`IAgentRemoteInvoker.StreamAsync` ships in v0.33. When a graph node has `runtimeUrl` set and the orchestrator is invoked via a streaming path, `StreamAsync` POSTs to `/v1/agents/{id}/invoke/stream` on the remote runtime, parses the SSE response with `AgentSseParser`, and yields `AgentEvent` frames to the local graph run. Delta events flow through from the remote runtime to the caller — no buffering.
+
+Bearer token and identity-provider forwarding behaviour is identical to `InvokeAsync`. A 501 response from the remote runtime surfaces as `RemoteAgentInvocationException` with `IsRetryable = false`.
+
+## Limitations
 
 - **No A2A `runtimeUrl`.** Cross-protocol invocation via A2A is not yet wired on `GraphAgentRef`. Use the A2A-as-tool pattern.
-- **No per-remote Polly config.** Retry + circuit-breaker options apply globally, not per `runtimeUrl`. Per-remote configuration is deferred to v0.21.
-- **No OIDC token exchange.** Bearer forwarding only. Service-to-service identity hardening (e.g. OAuth 2.0 token exchange, workload identity) is deferred to v0.21.
-- **No streaming cross-remote.** `InvokeAsync` is the only cross-runtime verb in v0.20. `StreamAsync` on `IAgentRemoteInvoker` is not implemented; graph-level SSE streaming of remote nodes follows in a subsequent release.
+- **No per-remote Polly config.** Retry + circuit-breaker options apply globally, not per `runtimeUrl`. Per-remote configuration is deferred to a future release.
 
 ## See also
 
@@ -100,3 +105,4 @@ The exception propagates from `ExecuteNodeAsync` and is treated the same as any 
 - [Graph orchestration concept](graph-orchestration.md) — node kinds, edge predicates, state bindings.
 - [Compose a graph across runtimes](../guides/compose-a-graph-across-runtimes.md) — step-by-step walkthrough.
 - [Deploy a graph to the runtime](../guides/deploy-a-graph-to-the-runtime.md) — basic graph deployment walkthrough.
+- [Configure OIDC identity](../guides/configure-oidc-identity.md) — service-to-service identity for cross-runtime calls.

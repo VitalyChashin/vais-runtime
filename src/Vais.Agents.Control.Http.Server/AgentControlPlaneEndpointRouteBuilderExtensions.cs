@@ -236,7 +236,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithName("Graphs.Create")
             .WithSummary("Register a graph manifest, making it available for invocation.")
             .Accepts<AgentGraphManifest>("application/json", "application/yaml")
-            .Produces<AgentGraphHandle>(StatusCodes.Status201Created)
+            .Produces<AgentGraphApplyResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
@@ -261,7 +261,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithName("Graphs.Update")
             .WithSummary("Publish a new manifest version for an existing graph.")
             .Accepts<AgentGraphManifest>("application/json", "application/yaml")
-            .Produces<AgentGraphHandle>(StatusCodes.Status200OK)
+            .Produces<AgentGraphApplyResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -797,8 +797,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         try
         {
+            var agentRegistry = http.RequestServices.GetService<IAgentRegistry>();
+            var warnings = await RunRegistryOutputSchemaCheckAsync(manifest, agentRegistry, ct).ConfigureAwait(false);
             var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
-            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}", handle);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}", new AgentGraphApplyResponse(handle, warnings));
         }
         catch (Exception ex)
         {
@@ -892,14 +894,47 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             {
                 return Results.NotFound(new { error = $"graph '{id}' not found" });
             }
+            var agentRegistry = http.RequestServices.GetService<IAgentRegistry>();
+            var warnings = await RunRegistryOutputSchemaCheckAsync(newManifest, agentRegistry, ct).ConfigureAwait(false);
             var currentHandle = new AgentGraphHandle(id, existingVersion);
             var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
-            return Results.Ok(newHandle);
+            return Results.Ok(new AgentGraphApplyResponse(newHandle, warnings));
         }
         catch (Exception ex)
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.GraphUpdate);
         }
+    }
+
+    private static async Task<IReadOnlyList<ApplyDiagnostic>> RunRegistryOutputSchemaCheckAsync(
+        AgentGraphManifest manifest,
+        IAgentRegistry? agentRegistry,
+        CancellationToken ct)
+    {
+        if (agentRegistry is null) return Array.Empty<ApplyDiagnostic>();
+        var agentRefs = manifest.Nodes
+            .Where(n => string.Equals(n.Kind, "Agent", StringComparison.Ordinal)
+                     && n.Ref is not null
+                     && n.Ref.RuntimeUrl is null
+                     && n.Ref.A2AUrl is null
+                     && n.StateBindings?.Output is { Count: > 0 })
+            .Select(n => (n.Ref!.Id, n.Ref.Version))
+            .Distinct()
+            .ToList();
+        if (agentRefs.Count == 0) return Array.Empty<ApplyDiagnostic>();
+        var resolved = new Dictionary<(string, string?), AgentManifest?>(agentRefs.Count);
+        foreach (var (agentId, agentVersion) in agentRefs)
+        {
+            resolved[(agentId, agentVersion)] = await agentRegistry.GetAsync(agentId, agentVersion, ct).ConfigureAwait(false);
+        }
+        var errors = new List<string>();
+        AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(
+            manifest,
+            (id, version) => resolved.TryGetValue((id, version), out var m) ? m : null,
+            errors);
+        return errors.Count == 0
+            ? Array.Empty<ApplyDiagnostic>()
+            : errors.Select(e => new ApplyDiagnostic("urn:vais-agents:graph:output-schema-mismatch", e)).ToArray();
     }
 
     private static async Task<IResult> GraphEvictAsync(

@@ -157,8 +157,8 @@ docker run -d \
   -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
   vais-agents-runtime:local
 
-# Confirm the plugin is ready
-vais plugins list   # → my-planner  Ready
+# Confirm the plugin is ready (REST endpoint — no dedicated CLI command)
+curl http://localhost:8080/v1/plugins   # → [{"name":"my-planner","status":"Ready"}]
 
 # Deploy the agent
 vais apply -f planner-agent.yaml
@@ -186,6 +186,63 @@ The overlay image includes the plugin (with `.venv/`) baked in. No volume mount 
 
 ---
 
+## Hot-reload (v0.25)
+
+The runtime watches the plugin directory for changes and restarts the subprocess automatically — no silo restart required.
+
+**What triggers a reload:** any change to `plugin.yaml`, `*.py` files, or `pyproject.toml` in the plugin directory. Changes are debounced for 200 ms so a sequence of saves fires one reload.
+
+**Reload sequence:**
+1. In-flight tool calls are drained (the subprocess handles the current batch).
+2. The subprocess is terminated.
+3. A fresh subprocess is spawned with the same MCP handshake + `tools/list` flow as startup.
+4. The manifest-translator cache is invalidated so the next `TranslateAsync` picks up any changed tool declarations.
+
+If a reload fails (e.g. a broken import), the plugin stays in the `Error` state until the next file change triggers another attempt.
+
+**Development tip:** `touch plugin.yaml` forces a reload without changing any code — useful when iterating on environment or config.
+
+**Reload abort conditions:** if any `spec.secrets` ref cannot be resolved at reload time, the reload is aborted and logged with `urn:vais-agents:python-plugin-secret-resolution-failed`. Fix the secret first, then re-save a source file to retry.
+
+---
+
+## Secrets (v0.31)
+
+Declare secrets that the runtime should inject into the subprocess environment:
+
+```yaml
+# plugin.yaml
+apiVersion: vais.agents/v1
+kind: Plugin
+metadata:
+  name: my-planner
+spec:
+  runtime: python
+  entrypoint: src/my_planner/server.py
+  python:
+    version: "3.13"
+    interpreter: .venv/bin/python
+  secrets:
+    - MY_API_KEY
+    - INTERNAL_DB_PASSWORD
+  health:
+    handshakeTimeoutSeconds: 5
+    restartPolicy: exponentialBackoff
+```
+
+Each name in `spec.secrets` must match the pattern `[A-Za-z_][A-Za-z0-9_]*`. At startup (and on hot-reload) `ISecretResolver` resolves each ref — typically from Kubernetes `Secret` objects or environment variables on the silo. The resolved value is injected as `VAIS_SECRET_<REF>=<value>` in the subprocess environment.
+
+Inside the Python plugin, read the secret with:
+
+```python
+import os
+api_key = os.environ["VAIS_SECRET_MY_API_KEY"]
+```
+
+If any declared secret cannot be resolved, the plugin is skipped at startup (or the hot-reload is aborted). The failure is logged with URN `urn:vais-agents:python-plugin-secret-resolution-failed`.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
@@ -194,6 +251,8 @@ The overlay image includes the plugin (with `.venv/`) baked in. No volume mount 
 | `abi-mismatch` in logs | `targetApiVersion` doesn't match runtime | Set `targetApiVersion = "0.23"` in `[tool.vais.plugin]` |
 | `handshake-timeout` in logs | Server crashes on startup | Run `.venv/bin/python server.py` manually; look for import errors |
 | Tool calls return errors | Tool not in `tools/list` response | Ensure `@mcp.tool()` name matches `[tool.vais.plugin].tools` |
+| Plugin skipped at startup | `spec.secrets` ref unresolvable | Check `urn:vais-agents:python-plugin-secret-resolution-failed` in logs; ensure the secret exists in the silo's `ISecretResolver` source |
+| Hot-reload not triggering | File watcher not watching that path | Only changes inside the plugin directory are watched; changes to files outside (e.g. shared libraries) require a silo restart |
 
 ## See also
 

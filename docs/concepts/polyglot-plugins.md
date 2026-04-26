@@ -105,6 +105,23 @@ tools:
     source: mcp:research-planner
 ```
 
+## Hot-reload (v0.25)
+
+`PythonPluginWatcherService` watches each plugin directory for changes to `plugin.yaml`, `*.py`, and `pyproject.toml` using `FileSystemWatcher` with a 200 ms debounce. On a detected change:
+
+1. `DefaultPythonPluginReloader.DrainAndRestartAsync` drains in-flight calls.
+2. The old subprocess is terminated.
+3. A new subprocess is spawned and the MCP handshake + `tools/list` flow repeats.
+4. `TranslatorInvalidationHook` clears the manifest-translator cache for any agents using this plugin's tools.
+
+Plugins implement `IPluginReloadHook` to receive a notification before and after each reload cycle (useful for metrics or audit). The runtime host wires `PythonPluginWatcherService` automatically when `AddPythonPlugins(...)` is called with a directory.
+
+If a reload fails (subprocess crash, handshake timeout, unresolvable secret), the plugin enters `Error` state. The next file-system change triggers another reload attempt automatically.
+
+## Secrets (v0.31)
+
+Declare secrets in `plugin.yaml` under `spec.secrets` as a list of ref names. `ISecretResolver` resolves each name at startup and on hot-reload; unresolvable refs abort the load/reload with URN `urn:vais-agents:python-plugin-secret-resolution-failed`. Resolved values are injected as `VAIS_SECRET_<REF>=<value>` in the subprocess environment — the Python side reads them from `os.environ`.
+
 ## Error URNs
 
 | URN | Meaning |
@@ -115,6 +132,7 @@ tools:
 | `urn:vais-agents:python-plugin-exited` | Subprocess exited unexpectedly |
 | `urn:vais-agents:python-plugin-unavailable` | All restart attempts exhausted; tool calls fail |
 | `urn:vais-agents:python-plugin-ambiguous-folder` | Multiple `plugin.yaml` files found in a single folder |
+| `urn:vais-agents:python-plugin-secret-resolution-failed` | A `spec.secrets` ref could not be resolved; plugin skipped / hot-reload aborted |
 
 ## Shipping in production
 

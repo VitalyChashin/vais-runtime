@@ -52,6 +52,14 @@ public sealed record AgentGraphManifest(
     /// Exceeding this throws <see cref="GraphRecursionException"/>.
     /// </summary>
     public int? MaxSteps { get; init; }
+
+    /// <summary>
+    /// Per-key reducer overrides. Keys not listed here use the runtime defaults:
+    /// <c>messages</c> appends, every other key last-write-wins. An explicit
+    /// <see cref="GraphStateReducer.LastWriteWins"/> entry overrides even the
+    /// built-in <c>messages</c> append rule.
+    /// </summary>
+    public IReadOnlyDictionary<string, GraphStateReducer>? StateReducers { get; init; }
 }
 
 /// <summary>

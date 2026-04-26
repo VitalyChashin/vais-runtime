@@ -143,6 +143,35 @@ Singleton is deliberate: the decision cache is per-engine, so a new engine insta
 
 These flow through the existing Langfuse enricher (`Vais.Agents.Observability.Langfuse`) and any OTel collector wired via `AddAgenticInstrumentation`. A deny is a span-status `Error` with the deny-reason as the description.
 
+## Bundle-server mode (v0.32)
+
+The Helm chart's `opa.bundle.*` sub-values block switches OPA from sidecar-with-ConfigMap to production bundle-server mode. The `configmap-opa-config.yaml` template renders OPA's native `config.yaml` with env-substitution placeholders so secrets are never baked into the ConfigMap:
+
+```yaml
+# values.yaml (relevant excerpt)
+opa:
+  enabled: true
+  bundle:
+    enabled: true
+    url: "https://bundles.internal/vais-agents.tar.gz"
+    polling:
+      minDelaySeconds: 60
+      maxDelaySeconds: 120
+    signing:
+      algorithm: RS256       # RS256 | ES256 | HS256
+      keyId: vais-bundle-key
+      keySecretRef: opa-bundle-signing-key   # K8s Secret name
+    authToken:
+      secretRef: opa-bundle-auth-token       # K8s Secret name, key "token"
+```
+
+When `opa.bundle.enabled: true`:
+- The OPA sidecar is started with `--config-file /etc/opa/config.yaml` instead of individual `--policy` flags.
+- `configmap-opa-config.yaml` injects `OPA_BUNDLE_TOKEN` and `OPA_BUNDLE_SIGNING_KEY` from the referenced K8s Secrets as environment variables; OPA's native `${ENV_VAR}` substitution resolves them at runtime — the values never appear in any ConfigMap.
+- Policy hot-reloads flow through OPA's bundle polling interval without a runtime restart.
+
+For a working end-to-end example (nginx bundle server + `sign-bundle.sh` + `docker-compose.yaml`), see `samples/opa-bundle-server/`.
+
 ## When OPA is the right choice
 
 - You run K8s and OPA is already deployed for other admission tasks → the sidecar is free.

@@ -226,6 +226,45 @@ docker build -f Dockerfile.overlay -t my-registry/runtime-researcher:latest .
 docker push my-registry/runtime-researcher:latest
 ```
 
+## Streaming (v0.26)
+
+Python agent plugins support streaming via the `vais/agent.stream` JSON-RPC method. The SDK runner exposes streaming when the `invoke` function accepts `stream=True` and yields chunks:
+
+```python
+# src/langgraph_researcher/agent.py
+from typing import AsyncIterator
+from vais_agent_sdk import AgentRequest, AgentResponse, run
+
+async def invoke(request: AgentRequest, stream: bool = False) -> AgentResponse | AsyncIterator[str]:
+    state = ResearchState.from_json(request.state) if request.state else ResearchState()
+    state = state.model_copy(update={"user_input": request.user_message})
+
+    if stream:
+        # Yield text chunks; the SDK collects them and sends as bundled deltas
+        async def _stream():
+            async for chunk in my_graph.astream_events(state, version="v2"):
+                if chunk["event"] == "on_chat_model_stream":
+                    yield chunk["data"]["chunk"].content
+        return _stream()
+
+    result = await compiled.ainvoke(state)
+    return AgentResponse(
+        assistantMessage=result["output"],
+        newState=result.model_dump_json(),
+    )
+
+if __name__ == "__main__":
+    run(invoke)
+```
+
+The .NET shim calls `vais/agent.stream` instead of `vais/agent.invoke` when the consuming graph or HTTP route requests streaming. Chunks are bundled as `deltas` in the response (not as MCP notifications, to avoid a dispatch-race condition) and the shim emits `CompletionDelta` events followed by a `TurnCompleted` event.
+
+From the CLI:
+
+```bash
+vais invoke research-agent --text "What is quantum entanglement?" --stream
+```
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
@@ -250,7 +289,7 @@ State does **not** survive:
 
 ## Security
 
-Python agents run as the same UID as the runtime process. The plugin directory is trusted — do not mount untrusted code into the plugins directory. Secret injection (env var passthrough from Kubernetes secrets to the subprocess) is planned for v0.24.x.
+Python agents run as the same UID as the runtime process. The plugin directory is trusted — do not mount untrusted code into the plugins directory. Declare secrets via `spec.secrets` in `plugin.yaml`; the runtime resolves them via `ISecretResolver` and injects them as `VAIS_SECRET_<REF>=<value>` environment variables (v0.31). See [Package a Python plugin — Secrets](package-a-python-plugin.md#secrets-v031).
 
 ## See also
 

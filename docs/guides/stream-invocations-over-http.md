@@ -37,6 +37,8 @@ app.Run();
 
 The streaming route probes the resolved agent for the capability interface. If the agent doesn't implement it, the server returns `501 Not Implemented` with `urn:vais-agents:streaming-not-supported`.
 
+> **Orleans (v0.35).** `OrleansAiAgentProxy` implements `IStreamingAiAgent` as of v0.35. Grain-hosted agents no longer return `501` — `IAiAgentGrain.StreamAgentAsync` uses an `IAsyncEnumerable<AgentEvent>` Orleans 10.x native return and `AgentEventSurrogate` carries `CompletionDelta` frames (kind=9). No consumer changes are required; the `POST /invoke/stream` route routes through the proxy transparently.
+
 ```csharp
 public sealed class WeatherAgent : IAiAgent, IStreamingAiAgent
 {

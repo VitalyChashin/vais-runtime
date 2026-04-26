@@ -280,8 +280,8 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         AttachIdempotencyKey(request, idempotencyKey);
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        var handle = await response.Content.ReadFromJsonAsync<AgentGraphHandle>(JsonOptions, cancellationToken).ConfigureAwait(false);
-        return handle ?? throw new InvalidOperationException("Server returned empty body on CreateGraph.");
+        var applyResponse = await response.Content.ReadFromJsonAsync<AgentGraphApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateGraph.");
     }
 
     /// <inheritdoc />
@@ -326,8 +326,8 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         AttachIdempotencyKey(request, idempotencyKey);
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        var handle = await response.Content.ReadFromJsonAsync<AgentGraphHandle>(JsonOptions, cancellationToken).ConfigureAwait(false);
-        return handle ?? throw new InvalidOperationException("Server returned empty body on UpdateGraph.");
+        var applyResponse = await response.Content.ReadFromJsonAsync<AgentGraphApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateGraph.");
     }
 
     /// <inheritdoc />

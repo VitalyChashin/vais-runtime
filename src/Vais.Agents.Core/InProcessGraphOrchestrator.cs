@@ -25,7 +25,7 @@ namespace Vais.Agents.Core;
 /// directly, so the trips are no-ops.
 /// </para>
 /// </remarks>
-public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>
+public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgentGraph<TState>, IHitlAgentGraph<TState>
 {
     /// <summary>Default max-step ceiling matching LangGraph's <c>recursion_limit</c>.</summary>
     public const int DefaultMaxSteps = 1000;
@@ -37,10 +37,12 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     private readonly Func<GraphHandlerRef, IGraphEdgePredicate>? _predicateResolver;
     private readonly Func<GraphHandlerRef, IGraphEdgeEffect>? _effectResolver;
     private readonly Func<GraphHandlerRef, IGraphCodeNode>? _codeNodeResolver;
+    private readonly Func<GraphHandlerRef, IGraphStateReducer>? _reducerResolver;
     private readonly Func<string>? _runIdFactory;
     private readonly IAgentRemoteInvoker? _remoteInvoker;
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
+    private readonly IAgentGraphEventBus _graphEventBus;
 
     /// <summary>Construct the orchestrator.</summary>
     /// <param name="manifest">Graph to run. Validated eagerly on first invocation.</param>
@@ -50,10 +52,12 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <param name="predicateResolver">Resolver for <see cref="GraphEdgePredicate.HandlerRef"/> nodes. Null means handler-ref predicates throw.</param>
     /// <param name="effectResolver">Resolver for <see cref="GraphEdgeEffect.HandlerRef"/> nodes. Null means handler-ref effects throw.</param>
     /// <param name="codeNodeResolver">Resolver for <c>Code</c>-kind <see cref="GraphNode"/>s. Null means code-kind nodes throw.</param>
+    /// <param name="reducerResolver">Resolver for <see cref="GraphStateReducer.HandlerRef"/> reducer declarations in <see cref="AgentGraphManifest.StateReducers"/>. Null means handler-ref reducers throw.</param>
     /// <param name="runIdFactory">Factory for the run id stamped on events + checkpoints. Null uses <c>Guid.NewGuid().ToString("N")</c>.</param>
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation. Typically extracted from the inbound HTTP request by the caller.</param>
+    /// <param name="graphEventBus">Bus to fan out graph lifecycle events to. Null uses <see cref="NullAgentGraphEventBus"/>.</param>
     public InProcessGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -62,10 +66,12 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
+        string? bearerToken = null,
+        IAgentGraphEventBus? graphEventBus = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -78,10 +84,12 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         _predicateResolver = predicateResolver;
         _effectResolver = effectResolver;
         _codeNodeResolver = codeNodeResolver;
+        _reducerResolver = reducerResolver;
         _runIdFactory = runIdFactory;
         _remoteInvoker = remoteInvoker;
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
+        _graphEventBus = graphEventBus ?? NullAgentGraphEventBus.Instance;
     }
 
     /// <inheritdoc />
@@ -90,7 +98,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         ArgumentNullException.ThrowIfNull(context);
         IDictionary<string, JsonElement> bag = ToBag(initial);
 
-        await foreach (var _ in RunAsync(bag, context, startingNodeId: null, resumedRunId: null, cancellationToken).ConfigureAwait(false))
+        await foreach (var _ in RunAsync(bag, context, startingNodeId: null, resumedRunId: null, hitlHandler: null, cancellationToken).ConfigureAwait(false))
         {
             // Drain the event stream; state is mutated in-place via `bag`.
         }
@@ -103,7 +111,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     {
         ArgumentNullException.ThrowIfNull(context);
         var bag = ToBag(initial);
-        return RunAsync(bag, context, startingNodeId: null, resumedRunId: null, cancellationToken);
+        return RunAsync(bag, context, startingNodeId: null, resumedRunId: null, hitlHandler: null, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -134,7 +142,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
         }
 
-        await foreach (var _ in RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken).ConfigureAwait(false))
+        await foreach (var _ in RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, hitlHandler: null, cancellationToken).ConfigureAwait(false))
         {
             // Drain.
         }
@@ -164,7 +172,37 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         {
             bag["resume.payload"] = JsonSerializer.SerializeToElement(resumePayload);
         }
-        return RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, cancellationToken);
+        return RunAsync(bag, context, checkpoint.NextNodeId, checkpoint.RunId, hitlHandler: null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<AgentGraphEvent> StreamWithHitlAsync(
+        TState initial,
+        AgentContext context,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>> handleInterrupt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(handleInterrupt);
+        var bag = ToBag(initial);
+        return RunAsync(bag, context, startingNodeId: null, resumedRunId: null, hitlHandler: handleInterrupt, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<TState> InvokeWithHitlAsync(
+        TState initial,
+        AgentContext context,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>> handleInterrupt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(handleInterrupt);
+        IDictionary<string, JsonElement> bag = ToBag(initial);
+        await foreach (var _ in RunAsync(bag, context, startingNodeId: null, resumedRunId: null, hitlHandler: handleInterrupt, cancellationToken).ConfigureAwait(false))
+        {
+            // Drain; GraphHitlAbortedException propagates naturally from the iterator.
+        }
+        return FromBag(bag);
     }
 
     private static IDictionary<string, JsonElement> ToBag(TState initial)
@@ -205,6 +243,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         AgentContext context,
         string? startingNodeId,
         string? resumedRunId,
+        Func<GraphInterrupted, CancellationToken, ValueTask<TState?>>? hitlHandler,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var runId = resumedRunId ?? _runIdFactory?.Invoke() ?? Guid.NewGuid().ToString("N");
@@ -228,15 +267,19 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             var resumedInterruptId = state.TryGetValue("resume.interruptId", out var ii) && ii.ValueKind == JsonValueKind.String
                 ? ii.GetString() ?? string.Empty
                 : string.Empty;
-            yield return new GraphResumed(
+            var resumedEvt = new GraphResumed(
                 DateTimeOffset.UtcNow, context, runId, superStep,
                 startingNodeId!, resumedInterruptId);
+            await _graphEventBus.PublishAsync(resumedEvt, cancellationToken).ConfigureAwait(false);
+            yield return resumedEvt;
         }
         else
         {
-            yield return new GraphStarted(
+            var startedEvt = new GraphStarted(
                 DateTimeOffset.UtcNow, context, runId, superStep,
                 _manifest.Id, _manifest.Version, _manifest.Entry);
+            await _graphEventBus.PublishAsync(startedEvt, cancellationToken).ConfigureAwait(false);
+            yield return startedEvt;
         }
 
         while (true)
@@ -245,16 +288,20 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (superStep >= maxSteps)
             {
                 var ex = new GraphRecursionException(_manifest.Id, maxSteps);
-                yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                var recursionEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                     ex.GetType().Name, ex.Message, watch.Elapsed);
+                await _graphEventBus.PublishAsync(recursionEvt, cancellationToken).ConfigureAwait(false);
+                yield return recursionEvt;
                 throw ex;
             }
 
             if (!nodesById.TryGetValue(currentNodeId, out var node))
             {
                 var err = new InvalidOperationException($"Graph references unknown node '{currentNodeId}'.");
-                yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                var unknownNodeEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                     err.GetType().Name, err.Message, watch.Elapsed);
+                await _graphEventBus.PublishAsync(unknownNodeEvt, cancellationToken).ConfigureAwait(false);
+                yield return unknownNodeEvt;
                 throw err;
             }
 
@@ -265,15 +312,17 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
                     NextNodeId: null, SuperStepIndex: superStep, PendingInterruptId: null,
                     IsComplete: true, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
-                yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                var endCompletedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, watch.Elapsed);
+                await _graphEventBus.PublishAsync(endCompletedEvt, cancellationToken).ConfigureAwait(false);
+                yield return endCompletedEvt;
                 yield break;
             }
 
-            // Interrupt kind — emit event, checkpoint, pause.
-            // On resume (isResume && first iteration), we intentionally SKIP re-firing
-            // the interrupt so the graph continues past it via the outgoing-edge evaluation
-            // below. Any subsequent interrupt hit in this run is a fresh pause.
+            // Interrupt kind — emit event, checkpoint, then either pause (halt-mode) or
+            // invoke the HITL handler inline and continue (live-mode).
+            // On resume (isResume && first iteration), skip re-firing so the graph continues
+            // past this node via outgoing-edge evaluation below.
             if (string.Equals(node.Kind, "Interrupt", StringComparison.Ordinal) && !isResume)
             {
                 var interruptId = Guid.NewGuid().ToString("N");
@@ -281,9 +330,44 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
                     NextNodeId: currentNodeId, SuperStepIndex: superStep, PendingInterruptId: interruptId,
                     IsComplete: false, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
-                yield return new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
+                var interruptedEvt = new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, interruptId, node.InterruptReason);
-                yield break;
+                await _graphEventBus.PublishAsync(interruptedEvt, cancellationToken).ConfigureAwait(false);
+                yield return interruptedEvt;
+
+                if (hitlHandler is not null)
+                {
+                    // Live HITL mode: call the handler and continue the graph.
+                    var response = await hitlHandler(interruptedEvt, cancellationToken).ConfigureAwait(false);
+                    if (response is null)
+                    {
+                        var abortEx = new GraphHitlAbortedException(currentNodeId);
+                        var failedEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                            abortEx.GetType().Name, abortEx.Message, watch.Elapsed);
+                        await _graphEventBus.PublishAsync(failedEvt, cancellationToken).ConfigureAwait(false);
+                        yield return failedEvt;
+                        throw abortEx;
+                    }
+                    var hitlPayload = new Dictionary<string, JsonElement>
+                    {
+                        ["hitl.response"] = JsonSerializer.SerializeToElement(response),
+                    };
+                    var hitlChanged = await GraphStateReducers.MergeAsync(
+                        state, hitlPayload, _manifest.StateReducers, _reducerResolver, cancellationToken).ConfigureAwait(false);
+                    if (hitlChanged.Count > 0)
+                    {
+                        var hitlStateEvt = new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, hitlChanged);
+                        await _graphEventBus.PublishAsync(hitlStateEvt, cancellationToken).ConfigureAwait(false);
+                        yield return hitlStateEvt;
+                    }
+                    // Signal the loop to skip re-executing the interrupt node's body
+                    // and jump straight to outgoing-edge evaluation.
+                    isResume = true;
+                }
+                else
+                {
+                    yield break;
+                }
             }
 
             // Resume path on the first iteration: skip the interrupt node's body execution
@@ -298,7 +382,9 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (!skipNodeBody)
             {
                 // Node execution.
-                yield return new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
+                var nodeStartedEvt = new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
+                await _graphEventBus.PublishAsync(nodeStartedEvt, cancellationToken).ConfigureAwait(false);
+                yield return nodeStartedEvt;
                 var nodeWatch = Stopwatch.StartNew();
                 IReadOnlyDictionary<string, JsonElement>? nodeOutput = null;
                 Exception? nodeFailure = null;
@@ -312,22 +398,29 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 }
                 if (nodeFailure is not null)
                 {
-                    yield return new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
+                    var nodeFailEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                         nodeFailure.GetType().Name, nodeFailure.Message, watch.Elapsed);
+                    await _graphEventBus.PublishAsync(nodeFailEvt, cancellationToken).ConfigureAwait(false);
+                    yield return nodeFailEvt;
                     throw nodeFailure;
                 }
                 nodeWatch.Stop();
-                yield return new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                var nodeCompletedEvt = new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, node.Kind, nodeWatch.Elapsed);
+                await _graphEventBus.PublishAsync(nodeCompletedEvt, cancellationToken).ConfigureAwait(false);
+                yield return nodeCompletedEvt;
 
                 // Merge node output into state (honouring the node's StateBindings.Output filter if any).
                 if (nodeOutput is { Count: > 0 })
                 {
                     var filtered = FilterByOutputBinding(nodeOutput, node.StateBindings);
-                    var changed = GraphStateReducers.Merge(state, filtered);
+                    var changed = await GraphStateReducers.MergeAsync(
+                        state, filtered, _manifest.StateReducers, _reducerResolver, cancellationToken).ConfigureAwait(false);
                     if (changed.Count > 0)
                     {
-                        yield return new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, changed);
+                        var stateUpdatedEvt = new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, changed);
+                        await _graphEventBus.PublishAsync(stateUpdatedEvt, cancellationToken).ConfigureAwait(false);
+                        yield return stateUpdatedEvt;
                     }
                 }
 
@@ -354,10 +447,14 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     edge.OnTraverse, state, _effectResolver, cancellationToken).ConfigureAwait(false);
                 if (effectChanges.Count > 0)
                 {
-                    yield return new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, effectChanges);
+                    var effectStateEvt = new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, effectChanges);
+                    await _graphEventBus.PublishAsync(effectStateEvt, cancellationToken).ConfigureAwait(false);
+                    yield return effectStateEvt;
                 }
 
-                yield return new EdgeTraversed(DateTimeOffset.UtcNow, context, runId, superStep, edge.From, edge.To);
+                var edgeTraversedEvt = new EdgeTraversed(DateTimeOffset.UtcNow, context, runId, superStep, edge.From, edge.To);
+                await _graphEventBus.PublishAsync(edgeTraversedEvt, cancellationToken).ConfigureAwait(false);
+                yield return edgeTraversedEvt;
                 nextNodeId = edge.To;
                 break;
             }
@@ -365,8 +462,10 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (nextNodeId is null)
             {
                 // No matching outgoing edge — treat as implicit completion.
-                yield return new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                var implicitCompletedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, watch.Elapsed);
+                await _graphEventBus.PublishAsync(implicitCompletedEvt, cancellationToken).ConfigureAwait(false);
+                yield return implicitCompletedEvt;
                 yield break;
             }
 
@@ -624,11 +723,13 @@ public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDic
         Func<GraphHandlerRef, IGraphEdgePredicate>? predicateResolver = null,
         Func<GraphHandlerRef, IGraphEdgeEffect>? effectResolver = null,
         Func<GraphHandlerRef, IGraphCodeNode>? codeNodeResolver = null,
+        Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
-        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken)
+        string? bearerToken = null,
+        IAgentGraphEventBus? graphEventBus = null)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken, graphEventBus)
     {
     }
 }

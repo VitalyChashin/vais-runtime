@@ -141,21 +141,43 @@ update the Appendix dates if the Phase 3 non-goals change state.
   Cross-host test (InProcess → MAF) confirms checkpoint format compatibility.
   Source: [milestone log v0.36](../../plans/actor-agents-oss-milestone-log.md)
   (2026-04-25). **SHIPPED v0.36**.
-- **Custom declarable reducers in graph YAML.** v0.9 ships `LastWriteWins` + an
-  `AppendMessages` reducer for the `messages` key. Custom reducers via YAML deferred.
-  Source: milestone v0.9 (2026-04-20). Next step: future pillar when a partner brings a
-  concrete non-default reducer.
-- **Graph-level event-bus emission (`IAgentEventBus` inside orchestrators).** Consumers
-  subscribe to `AgentEvent` via per-agent filters; the orchestrator itself does not
-  publish. Source: milestone v0.9 (2026-04-20). Next step: design a concrete
-  "orchestration step" event schema first.
-- **Structural validator cross-checks on graph manifests.** `handlerRef.TypeName` +
-  `stateBindings` ↔ `OutputSchema` cross-checks not run at apply time; runtime surfaces
-  extraction mismatches. Source: milestone v0.9 (2026-04-20). Next step: loader-level
-  validator sweep, probably alongside `manifest-schema.md` reference (see Docs).
-- **HITL / `RequestPort`-backed MAF graph interrupts.** MAF graph adapter uses a simpler
+- ~~**Custom declarable reducers in graph YAML.**~~ v0.37 ships `GraphStateReducer`
+  closed hierarchy (`LastWriteWins` / `Append` / `HandlerRef`), `IGraphStateReducer` interface,
+  `AgentGraphManifest.StateReducers`, `GraphStateReducers.MergeAsync`, and full
+  loader/envelope/validator/orchestrator wiring. **SHIPPED v0.37**.
+- ~~**Graph-level event-bus emission (`IAgentEventBus` inside orchestrators).**~~ v0.38
+  ships `IAgentGraphEventBus` (parallel interface accepting `AgentGraphEvent`),
+  `NullAgentGraphEventBus` (no-op singleton default), `InMemoryAgentGraphEventBus`
+  (ImmutableArray-snapshot fan-out, exception-suppression, thread-safe subscribe/unsubscribe),
+  and both `InProcessGraphOrchestrator` + `MafGraphOrchestrator` wired to publish-then-yield
+  every lifecycle event (`GraphStarted`, `NodeStarted`, `NodeCompleted`, `EdgeTraversed`,
+  `StateUpdated`, `GraphInterrupted`, `GraphResumed`, `GraphCompleted`, `GraphFailed`).
+  7 new tests: 5 `InMemoryAgentGraphEventBus` unit tests + 1 completeness test per orchestrator.
+  **SHIPPED v0.38**.
+- ~~**Structural validator cross-checks — loader-level sweep.**~~ v0.39 ships the
+  structural half: `AgentGraphManifestValidator` now (a) rejects `GraphHandlerRef.TypeName`
+  values that are empty or contain whitespace anywhere they appear (Code-kind nodes,
+  edge predicates including nested `AllOf`/`AnyOf`/`Not`, edge effects, state-reducer
+  `HandlerRef` entries); (b) cross-checks `stateBindings.input` / `stateBindings.output`
+  keys against `spec.state.schema.properties` when a schema is declared (well-known
+  runtime keys `messages` and `lastAssistantText` are always exempt). +12 tests.
+  **SHIPPED v0.39**.
+- ~~**Structural validator cross-checks — agent `OutputSchema` cross-check.**~~
+  **SHIPPED v0.40 + v0.41** — In-stream half (v0.40): `AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings`
+  (sync, resolver callback) wired into `JsonAgentGraphManifestLoader.ParseAndValidate` as a
+  second pass; remote refs, missing agents, and agents without OutputSchema are silently
+  skipped. +6 tests. Registry-aware half (v0.41): `RunRegistryOutputSchemaCheckAsync` in the
+  `POST /v1/graphs` and `PATCH /v1/graphs/{id}` handlers pre-resolves agent manifests from
+  `IAgentRegistry`, calls the same validator, and surfaces mismatches as non-blocking
+  `ApplyDiagnostic` warnings in the new `AgentGraphApplyResponse` wrapper (mirrored in the
+  client package). +3 tests. Source: milestone v0.9 (2026-04-20) + v0.39–v0.41 (2026-04-25).
+- ~~**HITL / `RequestPort`-backed MAF graph interrupts.** MAF graph adapter uses a simpler
   yield+halt pattern. Source: milestone v0.9 (2026-04-20). Next step: v0.10+ once MAF's
-  checkpoint format stabilises.
+  checkpoint format stabilises.~~
+  **SHIPPED v0.42** — `IHitlAgentGraph<TState>` on `MafGraphOrchestrator<TState>` via MAF 1.1.0
+  `RequestPort` + `OffThread` streaming. 3-executor split per interrupt node; live handler
+  callback inline; crash-recovery compatible (`NextNodeId = node.Id`). Source: pillar plan
+  `actor-agents-oss-v0.42-hitl-requestport-pillar.md` (2026-04-26).
 
 ### 5. Runtime container & operational polish
 

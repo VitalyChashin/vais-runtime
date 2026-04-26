@@ -1,5 +1,19 @@
 #nullable enable
 override Vais.Agents.Control.Http.AgentApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentGraphApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentGraphApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentGraphApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.AgentGraphApplyResponse.operator !=(Vais.Agents.Control.Http.AgentGraphApplyResponse? left, Vais.Agents.Control.Http.AgentGraphApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentGraphApplyResponse.operator ==(Vais.Agents.Control.Http.AgentGraphApplyResponse? left, Vais.Agents.Control.Http.AgentGraphApplyResponse? right) -> bool
+Vais.Agents.Control.Http.AgentGraphApplyResponse
+Vais.Agents.Control.Http.AgentGraphApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentGraphApplyResponse!
+Vais.Agents.Control.Http.AgentGraphApplyResponse.AgentGraphApplyResponse(Vais.Agents.AgentGraphHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Deconstruct(out Vais.Agents.AgentGraphHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Equals(Vais.Agents.Control.Http.AgentGraphApplyResponse? other) -> bool
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Handle.get -> Vais.Agents.AgentGraphHandle!
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.AgentGraphApplyResponse.Warnings.init -> void
 override Vais.Agents.Control.Http.AgentApplyResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.AgentApplyResponse.ToString() -> string!
 override Vais.Agents.Control.Http.ApplyDiagnostic.Equals(object? obj) -> bool

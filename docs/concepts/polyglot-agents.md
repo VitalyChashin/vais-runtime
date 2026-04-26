@@ -12,7 +12,7 @@
 | **`vais agent apply`** | Yes, via A2A manifest | Yes, declarative | Yes, declarative |
 | **Policy / audit / journal** | Partial (invocation boundary only) | Full | Full |
 | **Graph nodes** | Yes, via A2A node type | Yes, as tool-calling agent | Yes, as agent node |
-| **Streaming** | If the external agent supports it | Yes | Not in v0.24 (request/response only) |
+| **Streaming** | If the external agent supports it | Yes | Yes (v0.26 — `vais/agent.stream` bundled deltas) |
 | **Best for** | Federating with third-party or team-owned agents that live outside the runtime | Python domain logic / numeric code called as tools from .NET agents | LangGraph, LangChain, or custom Python agent loops that must be managed identically to .NET agents |
 
 ## Why A2A is not enough for managed Python agents
@@ -193,12 +193,20 @@ One subprocess is spawned per plugin per silo at startup — not per session. Mu
 
 See [Problem details URNs — Python agent](../reference/problem-details-urns.md#python-agent-v024-pillar-f).
 
-## Limitations in v0.24
+## Streaming (v0.26)
 
-- **No streaming.** `IStreamingAiAgent` is not implemented. Consumers asking for streaming get a single-event fallback (the non-streaming response wrapped in a stream event). v0.24.x will add streaming support.
-- **No hot-reload.** Python agent plugins are loaded at startup. Changing the subprocess binary requires a silo restart. v0.24.x will extend v0.22's hot-reload machinery.
+`PythonAgentShim` implements `IStreamingAiAgent` when the plugin's `invoke` function accepts `stream=True`. The .NET side calls `vais/agent.stream` over the stdio channel; the SDK runner collects yielded chunks and bundles them as `deltas` in the response. The shim emits `CompletionDelta` events then a terminal `TurnCompleted` event — identical to the event shape produced by `StatefulAiAgent`.
+
+Deltas are bundled in the response object (not as JSON-RPC notifications) to avoid the MCP SDK notification-dispatch race condition. No special configuration is required; the runtime detects `IStreamingAiAgent` on the shim and routes streaming invocations automatically.
+
+## Hot-reload (v0.25)
+
+Python agent plugins support hot-reload via the same `PythonPluginWatcherService` machinery as tool plugins. Changes to `plugin.yaml`, `*.py`, or `pyproject.toml` trigger a drain-and-swap restart. See [polyglot-plugins — Hot-reload](polyglot-plugins.md#hot-reload-v025) for the full lifecycle.
+
+## Limitations
+
 - **Single subprocess per plugin per silo.** Multiple sessions share one process. High-concurrency plugins should design their `invoke` function to be re-entrant or use asyncio concurrency internally.
-- **Python-side tool calls are opaque.** Tool calls made inside the Python agent loop are internal; only aggregate `usage` and optional `journal_entries` cross the boundary. Per-tool-call events are v0.24.x.
+- **Python-side tool calls are opaque.** Tool calls made inside the Python agent loop are internal; only aggregate `usage` and optional `journal_entries` cross the boundary. Per-tool-call events are deferred.
 
 ## See also
 

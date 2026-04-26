@@ -1,6 +1,6 @@
 # graph-cross-runtime
 
-Deploy a graph where one node executes on a remote runtime via `ref.runtimeUrl` (v0.20 cross-runtime refs). Runtime A orchestrates the graph; a node annotated with `runtimeUrl` is dispatched to Runtime B over HTTP.
+Deploy a graph where one node executes on a remote runtime via `ref.runtimeUrl` (v0.20 cross-runtime refs, streaming in v0.33). Runtime A orchestrates the graph; a node annotated with `runtimeUrl` is dispatched to Runtime B over HTTP — with full delta passthrough when the graph is invoked via `--stream`.
 
 **Concepts:** [cross-runtime graphs](../../docs/concepts/cross-runtime-graphs.md), [graph orchestration](../../docs/concepts/graph-orchestration.md).
 **Needs API key:** yes — `OPENAI_API_KEY` on both runtimes.
@@ -10,11 +10,12 @@ Deploy a graph where one node executes on a remote runtime via `ref.runtimeUrl` 
 
 ## What this shows
 
-- `ref.runtimeUrl` on a `kind: Agent` node — instructs the orchestrator to invoke that agent via `IAgentRemoteInvoker` (HTTP POST) instead of the local registry.
+- `ref.runtimeUrl` on a `kind: Agent` node — instructs the orchestrator to invoke that agent via `IAgentRemoteInvoker` (HTTP POST for unary, SSE for streaming) instead of the local registry.
 - Two independent runtime containers on different ports (8080 = runtime A, 8081 = runtime B).
 - The `enricher` agent lives exclusively on Runtime B; the `summarizer` lives on Runtime A.
 - The `enrich-then-summarize` graph is applied to Runtime A only; it transparently fans out one node.
 - Observing `node.completed` events that include `payload.sourceRuntime` to distinguish local vs remote execution.
+- **v0.33:** delta events from the remote agent flow through to the graph SSE stream — remote nodes stream just like local ones.
 
 ---
 
@@ -85,7 +86,7 @@ The graph:
 3. Runtime A continues to the `summarize` node → local `summarizer` agent condenses the result.
 4. Returns the final summary.
 
-### 6. Streaming — observe cross-runtime events
+### 6. Streaming — graph events and remote agent deltas
 
 ```bash
 vais invoke-graph enrich-then-summarize \
@@ -93,16 +94,23 @@ vais invoke-graph enrich-then-summarize \
   --stream
 ```
 
+Since v0.33, `IAgentRemoteInvoker.StreamAsync` is used for remote nodes during a streaming graph invocation. Delta events from the remote agent on Runtime B flow through the graph SSE stream to the caller — no buffering:
+
 ```
 graph.started   enrich-then-summarize
 node.started    enrich   (runtime=http://localhost:8081)
+delta           "Tokyo is Japan's capital and the most populous metropolitan..."
+delta           " The city blends ultra-modern infrastructure with traditional..."
 node.completed  enrich   (runtime=http://localhost:8081)
 edge.traversed  enrich → summarize
 node.started    summarize
+delta           "Tokyo: a city where ancient temples share skylines with neon..."
 node.completed  summarize
 edge.traversed  summarize → end
 graph.completed enrich-then-summarize
 ```
+
+The `delta` frames between `node.started` and `node.completed` on the remote `enrich` node are new in v0.33. Prior to v0.33, the remote call was always unary — no deltas, and `node.completed` fired only after the full response was received.
 
 ### 7. Clean up
 
@@ -224,6 +232,7 @@ In this sample both runtimes are anonymous (no bearer token). For production, se
 
 ## See also
 
-- [docs/concepts/cross-runtime-graphs.md](../../docs/concepts/cross-runtime-graphs.md)
+- [docs/concepts/cross-runtime-graphs.md](../../docs/concepts/cross-runtime-graphs.md) — `runtimeUrl`, streaming cross-remote (v0.33), limitations
 - [docs/guides/compose-a-graph-across-runtimes.md](../../docs/guides/compose-a-graph-across-runtimes.md)
+- [docs/guides/configure-oidc-identity.md](../../docs/guides/configure-oidc-identity.md) — secure the cross-runtime call with OIDC
 - [samples/graph-yaml-authored](../graph-yaml-authored) — single-runtime version of this pattern

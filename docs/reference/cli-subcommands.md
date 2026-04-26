@@ -181,6 +181,18 @@ Stream graph run events via SSE (v0.19). Renders each event with ANSI colors. Pa
 
 Graph event kinds: `graph.started`, `node.started`, `node.completed`, `edge.traversed`, `state.updated`, `graph.interrupted`, `graph.resumed`, `graph.completed`, `graph.failed`.
 
+### `vais get-remote-runtimes`
+
+List the remote runtimes configured on the target runtime host (v0.34). Queries `GET /v1/runtimes`; credentials are intentionally excluded from all responses.
+
+| Field | Value |
+|---|---|
+| Arguments | — |
+| `-o, --output <format>` | `table` / `json`. Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `3`, `4` |
+
+Table columns: `NAME`, `URL`, `IDENTITY-MODE`.
+
 ## `config` subcommands
 
 Local only — mutate / read `~/.vais/config.yaml`. No HTTP.

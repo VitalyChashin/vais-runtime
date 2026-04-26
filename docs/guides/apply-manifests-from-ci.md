@@ -184,6 +184,35 @@ Precedence: flag > env > config. CI secret manager → env var is the cleanest p
   envsubst < agent-template.yaml | vais apply -f -
   ```
 
+## Reading apply-time warnings (v0.28)
+
+`vais apply` may succeed (exit `0`) while the server records non-fatal warnings about the manifest. These are surfaced via `IManifestApplyDiagnosticsSink` and returned in the HTTP response body as a `diagnostics` array.
+
+Example warning — manifest sets both `handler.typeName` and `model`, which is ambiguous:
+
+```json
+{
+  "id": "planner-agent",
+  "version": "1.0",
+  "diagnostics": [
+    {
+      "severity": "Warning",
+      "urn": "urn:vais-agents:handler-and-declarative-fields-both-set",
+      "message": "Both handler.typeName and model are set. The plugin handler wins; model/systemPromptSpec/tools/guardrails are ignored."
+    }
+  ]
+}
+```
+
+The CLI prints warnings to stderr when they are present; the exit code is still `0`. In CI, capture stderr to a log file so these do not go unnoticed:
+
+```bash
+vais apply -f agent.yaml 2>apply-warnings.log
+cat apply-warnings.log | grep -i warning && echo "Review apply warnings above"
+```
+
+To inspect the raw JSON response with full `diagnostics` detail, use `--output json` (if supported) or call the HTTP endpoint directly and inspect the response body.
+
 ## See also
 
 - [Install the CLI](../getting-started/install-the-cli.md) — bootstrap + config-file first-run.

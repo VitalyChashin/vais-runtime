@@ -403,6 +403,63 @@ public sealed class MafGraphOrchestratorTests
     }
 
     [Fact]
+    public async Task CustomReducer_Produces_Same_Final_State_As_InProcess()
+    {
+        int inprocCount = 0, mafCount = 0;
+
+        var manifest = new AgentGraphManifest(
+            Id: "custom-reducer-parity", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "tags" })),
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("node-b"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "tags" })),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("a", "b"),
+                new GraphEdge("b", "end"),
+            })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer>
+            {
+                ["tags"] = new GraphStateReducer.Append(),
+            },
+        };
+
+        // InProcess run
+        var (inprocRegistry, inprocLifecycle) = BuildHarness(_ =>
+        {
+            var n = System.Threading.Interlocked.Increment(ref inprocCount);
+            return new CompletionResponse(n == 1 ? """{"tags":["alpha"]}""" : """{"tags":["beta"]}""");
+        });
+        await inprocLifecycle.CreateAsync(ManifestFor("node-a"));
+        await inprocLifecycle.CreateAsync(ManifestFor("node-b"));
+        var inprocOrchestrator = new InProcessGraphOrchestrator(manifest, inprocRegistry, inprocLifecycle, new InMemoryCheckpointer());
+        var inprocFinal = await inprocOrchestrator.InvokeAsync(new Dictionary<string, JsonElement>(), new AgentContext());
+
+        // MAF run — same manifest, same reducer
+        var (mafRegistry, mafLifecycle) = BuildHarness(_ =>
+        {
+            var n = System.Threading.Interlocked.Increment(ref mafCount);
+            return new CompletionResponse(n == 1 ? """{"tags":["alpha"]}""" : """{"tags":["beta"]}""");
+        });
+        await mafLifecycle.CreateAsync(ManifestFor("node-a"));
+        await mafLifecycle.CreateAsync(ManifestFor("node-b"));
+        var mafOrchestrator = new MafGraphOrchestrator(manifest, mafRegistry, mafLifecycle);
+        var mafFinal = await mafOrchestrator.InvokeAsync(new Dictionary<string, JsonElement>(), new AgentContext());
+
+        inprocFinal["tags"].GetArrayLength().Should().Be(2, "InProcess: Append reducer accumulates both nodes");
+        mafFinal["tags"].GetArrayLength().Should().Be(2, "MAF: Append reducer accumulates both nodes");
+
+        var inprocItems = inprocFinal["tags"].EnumerateArray().Select(e => e.GetString()).OrderBy(x => x).ToList();
+        var mafItems = mafFinal["tags"].EnumerateArray().Select(e => e.GetString()).OrderBy(x => x).ToList();
+        mafItems.Should().BeEquivalentTo(inprocItems, "MAF and InProcess produce same tags with custom Append reducer");
+    }
+
+    [Fact]
     public async Task ResumeAsync_Preserves_State_Through_Interrupt()
     {
         var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"score\":7}"));
@@ -446,6 +503,333 @@ public sealed class MafGraphOrchestratorTests
 
         finalState.Should().ContainKey("score");
         finalState["score"].GetInt32().Should().Be(7);
+    }
+
+    [Fact]
+    public async Task GraphEventBus_Receives_Exactly_The_Same_Events_As_The_Enumerator()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-bus-test", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("a", "end") });
+
+        var bus = new InMemoryAgentGraphEventBus();
+        var busEvents = new List<AgentGraphEvent>();
+        using var _ = bus.Subscribe((e, ct) => { busEvents.Add(e); return ValueTask.CompletedTask; });
+
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle, graphEventBus: bus);
+
+        var streamEvents = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            streamEvents.Add(e);
+        }
+
+        busEvents.Should().HaveSameCount(streamEvents, "bus must receive every event yielded by the MAF stream");
+        for (var i = 0; i < streamEvents.Count; i++)
+        {
+            busEvents[i].Should().BeSameAs(streamEvents[i],
+                $"MAF bus event [{i}] should be the same object as stream event [{i}]");
+        }
+        streamEvents.Should().ContainSingle(e => e is GraphStarted);
+        streamEvents.Should().ContainSingle(e => e is GraphCompleted);
+    }
+
+    // ---- HITL tests (v0.42) ----
+
+    [Fact]
+    public async Task Hitl_SingleInterrupt_Handler_Returns_State_Graph_Continues()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"score\":42}"));
+        await lifecycle.CreateAsync(ManifestFor("scorer"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-single", Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("review", "Interrupt", InterruptReason: "human review"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("scorer", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        GraphInterrupted? capturedInterrupt = null;
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (interrupted, _) =>
+            {
+                capturedInterrupt = interrupted;
+                var response = new Dictionary<string, JsonElement>
+                {
+                    ["approved"] = JsonSerializer.SerializeToElement(true),
+                };
+                return ValueTask.FromResult<IDictionary<string, JsonElement>?>(response);
+            }))
+        {
+            events.Add(e);
+        }
+
+        capturedInterrupt.Should().NotBeNull("handler must be called with GraphInterrupted");
+        capturedInterrupt!.NodeId.Should().Be("review");
+        capturedInterrupt.Reason.Should().Be("human review");
+
+        events.Should().ContainSingle(e => e is GraphInterrupted, "exactly one interrupt emitted");
+        events.Should().ContainSingle(e => e is GraphCompleted, "graph must complete after handler responds");
+        events.Should().NotContain(e => e is GraphFailed, "no failure when handler returns a value");
+
+        var finalState = await orchestrator.InvokeWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (_, _) =>
+                ValueTask.FromResult<IDictionary<string, JsonElement>?>(
+                    new Dictionary<string, JsonElement> { ["approved"] = JsonSerializer.SerializeToElement(true) }));
+
+        finalState.Should().ContainKey("score", "scorer output must survive through interrupt");
+        finalState["score"].GetInt32().Should().Be(42);
+        finalState.Should().ContainKey("hitl.response", "handler payload merged under hitl.response");
+    }
+
+    [Fact]
+    public async Task Hitl_MultipleSequentialInterrupts_AllHandlersCalled()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{}"));
+        await lifecycle.CreateAsync(ManifestFor("start"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-multi", Version: "1.0", Entry: "start",
+            Nodes: new[]
+            {
+                new GraphNode("start", "Agent", Ref: new GraphAgentRef("start")),
+                new GraphNode("review1", "Interrupt", InterruptReason: "first review"),
+                new GraphNode("review2", "Interrupt", InterruptReason: "second review"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("start", "review1"),
+                new GraphEdge("review1", "review2"),
+                new GraphEdge("review2", "end"),
+            });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        var capturedInterrupts = new List<GraphInterrupted>();
+        int callCount = 0;
+        var finalState = await orchestrator.InvokeWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (interrupted, _) =>
+            {
+                capturedInterrupts.Add(interrupted);
+                var response = new Dictionary<string, JsonElement>
+                {
+                    [$"approved{System.Threading.Interlocked.Increment(ref callCount)}"] = JsonSerializer.SerializeToElement(true),
+                };
+                return ValueTask.FromResult<IDictionary<string, JsonElement>?>(response);
+            });
+
+        capturedInterrupts.Should().HaveCount(2, "handler called once per interrupt node");
+        capturedInterrupts[0].NodeId.Should().Be("review1");
+        capturedInterrupts[0].Reason.Should().Be("first review");
+        capturedInterrupts[1].NodeId.Should().Be("review2");
+        capturedInterrupts[1].Reason.Should().Be("second review");
+        finalState.Should().ContainKey("hitl.response", "last handler payload in final state");
+    }
+
+    [Fact]
+    public async Task Hitl_HandlerReturnsNull_GraphFailedEmittedAndExceptionThrown()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("start"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-abort", Version: "1.0", Entry: "start",
+            Nodes: new[]
+            {
+                new GraphNode("start", "Agent", Ref: new GraphAgentRef("start")),
+                new GraphNode("review", "Interrupt"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("start", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        var events = new List<AgentGraphEvent>();
+        var act = async () =>
+        {
+            await foreach (var e in orchestrator.StreamWithHitlAsync(
+                new Dictionary<string, JsonElement>(),
+                new AgentContext(),
+                handleInterrupt: (_, _) => ValueTask.FromResult<IDictionary<string, JsonElement>?>(null)))
+            {
+                events.Add(e);
+            }
+        };
+
+        await act.Should().ThrowAsync<GraphHitlAbortedException>()
+            .WithMessage("*review*");
+        events.Should().ContainSingle(e => e is GraphFailed, "GraphFailed emitted before exception");
+        events.Should().NotContain(e => e is GraphCompleted);
+        var failed = events.OfType<GraphFailed>().Single();
+        failed.ErrorType.Should().Be(nameof(GraphHitlAbortedException));
+    }
+
+    [Fact]
+    public async Task Hitl_Parity_With_InProcess_Same_FinalState_And_Interrupt_Sequence()
+    {
+        const string graphId = "hitl-parity";
+        var manifest = new AgentGraphManifest(
+            Id: graphId, Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("review", "Interrupt", InterruptReason: "parity check"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("scorer", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        IDictionary<string, JsonElement> MakeResponse() =>
+            new Dictionary<string, JsonElement> { ["approved"] = JsonSerializer.SerializeToElement(true) };
+
+        // InProcess run
+        var (inprocReg, inprocLc) = BuildHarness(_ => new CompletionResponse("{\"score\":7}"));
+        await inprocLc.CreateAsync(ManifestFor("scorer"));
+        var inprocOrchestrator = new InProcessGraphOrchestrator(manifest, inprocReg, inprocLc, new InMemoryCheckpointer());
+        var inprocFinal = await inprocOrchestrator.InvokeWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (_, _) => ValueTask.FromResult<IDictionary<string, JsonElement>?>(MakeResponse()));
+
+        // MAF run
+        var (mafReg, mafLc) = BuildHarness(_ => new CompletionResponse("{\"score\":7}"));
+        await mafLc.CreateAsync(ManifestFor("scorer"));
+        var mafOrchestrator = new MafGraphOrchestrator(manifest, mafReg, mafLc);
+        var mafFinal = await mafOrchestrator.InvokeWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (_, _) => ValueTask.FromResult<IDictionary<string, JsonElement>?>(MakeResponse()));
+
+        inprocFinal.Should().ContainKey("score");
+        mafFinal.Should().ContainKey("score");
+        inprocFinal["score"].GetInt32().Should().Be(mafFinal["score"].GetInt32(),
+            "both orchestrators must produce the same final score");
+        inprocFinal.Should().ContainKey("hitl.response");
+        mafFinal.Should().ContainKey("hitl.response");
+    }
+
+    [Fact]
+    public async Task Hitl_WithCheckpointer_CheckpointWrittenAtInterruptWithCorrectNextNodeId()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"score\":99}"));
+        await lifecycle.CreateAsync(ManifestFor("scorer"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-checkpoint", Version: "1.0", Entry: "scorer",
+            Nodes: new[]
+            {
+                new GraphNode("scorer", "Agent", Ref: new GraphAgentRef("scorer"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "score" })),
+                new GraphNode("review", "Interrupt", InterruptReason: "checkpoint test"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("scorer", "review"),
+                new GraphEdge("review", "end"),
+            });
+
+        var checkpointer = new InMemoryCheckpointer();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, checkpointer: checkpointer);
+
+        // Capture the interrupt checkpoint inside the handler — at this point the End node
+        // has not yet run, so LoadAsync returns the interrupt-time checkpoint, not the
+        // IsComplete one that will overwrite it once the graph finishes.
+        GraphCheckpoint? interruptCheckpoint = null;
+        string? capturedRunId = null;
+        await foreach (var e in orchestrator.StreamWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: async (interrupted, ct) =>
+            {
+                capturedRunId = interrupted.RunId;
+                interruptCheckpoint = await checkpointer.LoadAsync(interrupted.RunId, ct);
+                return new Dictionary<string, JsonElement> { ["approved"] = JsonSerializer.SerializeToElement(true) };
+            }))
+        {
+        }
+
+        capturedRunId.Should().NotBeNull();
+        interruptCheckpoint.Should().NotBeNull("checkpoint must be saved at interrupt");
+        // NextNodeId = interrupt node id (supports crash-recovery via IResumableAgentGraph)
+        interruptCheckpoint!.NextNodeId.Should().Be("review");
+        interruptCheckpoint.State.Should().ContainKey("score");
+        interruptCheckpoint.State["score"].GetInt32().Should().Be(99);
+
+        // After the run completes, the final (IsComplete) checkpoint should exist.
+        var finalCp = await checkpointer.LoadAsync(capturedRunId!);
+        finalCp.Should().NotBeNull();
+        finalCp!.IsComplete.Should().BeTrue("IsComplete checkpoint written when End node fires");
+    }
+
+    [Fact]
+    public async Task Hitl_InvokeWithHitlAsync_ReturnsCorrectFinalState()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("{\"result\":\"done\"}"));
+        await lifecycle.CreateAsync(ManifestFor("worker"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "hitl-invoke", Version: "1.0", Entry: "worker",
+            Nodes: new[]
+            {
+                new GraphNode("worker", "Agent", Ref: new GraphAgentRef("worker"),
+                    StateBindings: new GraphStateBindings(Output: new[] { "result" })),
+                new GraphNode("gate", "Interrupt"),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("worker", "gate"),
+                new GraphEdge("gate", "end"),
+            });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        var finalState = await orchestrator.InvokeWithHitlAsync(
+            new Dictionary<string, JsonElement>(),
+            new AgentContext(),
+            handleInterrupt: (_, _) =>
+                ValueTask.FromResult<IDictionary<string, JsonElement>?>(
+                    new Dictionary<string, JsonElement> { ["gateDecision"] = JsonSerializer.SerializeToElement("approved") }));
+
+        finalState.Should().ContainKey("result");
+        finalState["result"].GetString().Should().Be("done");
+        finalState.Should().ContainKey("hitl.response");
     }
 
     // ---- helpers ----

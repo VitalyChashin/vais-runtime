@@ -75,16 +75,20 @@ public sealed class JsonAgentGraphManifestLoader
 
         using var doc = JsonDocument.Parse(content, new JsonDocumentOptions { AllowTrailingCommas = true });
         var resources = new List<ManifestResource>();
+        var graphsForSecondPass = new List<(AgentGraphManifest Graph, string Prefix)>();
 
         if (doc.RootElement.ValueKind == JsonValueKind.Array)
         {
             var index = 0;
             foreach (var item in doc.RootElement.EnumerateArray())
             {
-                var parsed = ParseSingle(item, errors, $"{prefix}[{index}] ");
+                var itemPrefix = $"{prefix}[{index}] ";
+                var parsed = ParseSingle(item, errors, itemPrefix);
                 if (parsed is not null)
                 {
                     resources.Add(parsed);
+                    if (parsed is ManifestResource.AgentGraphCase gc)
+                        graphsForSecondPass.Add((gc.Graph, itemPrefix));
                 }
                 index++;
             }
@@ -95,11 +99,48 @@ public sealed class JsonAgentGraphManifestLoader
             if (parsed is not null)
             {
                 resources.Add(parsed);
+                if (parsed is ManifestResource.AgentGraphCase gc)
+                    graphsForSecondPass.Add((gc.Graph, prefix));
             }
         }
 
         CheckDuplicateIds(resources, errors);
+        RunAgentOutputSchemaSecondPass(resources, graphsForSecondPass, errors);
         return resources;
+    }
+
+    private static void RunAgentOutputSchemaSecondPass(
+        List<ManifestResource> resources,
+        List<(AgentGraphManifest Graph, string Prefix)> graphs,
+        List<string> errors)
+    {
+        if (graphs.Count == 0) return;
+
+        var inStreamAgents = resources.OfType<ManifestResource.AgentCase>()
+            .Select(a => a.Manifest).ToList();
+        if (inStreamAgents.Count == 0) return;
+
+        var byIdVersion = new Dictionary<(string, string), AgentManifest>(capacity: inStreamAgents.Count);
+        var byId = new Dictionary<string, AgentManifest>(StringComparer.Ordinal);
+        foreach (var agent in inStreamAgents)
+        {
+            byIdVersion.TryAdd((agent.Id, agent.Version), agent);
+            if (!byId.TryGetValue(agent.Id, out var existing) ||
+                string.Compare(agent.Version, existing.Version, StringComparison.Ordinal) > 0)
+            {
+                byId[agent.Id] = agent;
+            }
+        }
+
+        AgentManifest? Resolver(string id, string? version)
+        {
+            if (version is not null)
+                return byIdVersion.TryGetValue((id, version), out var m) ? m : null;
+            return byId.TryGetValue(id, out var latest) ? latest : null;
+        }
+
+        foreach (var (graph, graphPrefix) in graphs)
+            AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(graph, Resolver, errors, graphPrefix);
     }
 
     private static ManifestResource? ParseSingle(JsonElement root, List<string> errors, string prefix)
@@ -186,6 +227,8 @@ public sealed class JsonAgentGraphManifestLoader
         int? maxSteps = spec.TryGetProperty("maxSteps", out var msEl) && msEl.ValueKind == JsonValueKind.Number
             ? msEl.GetInt32() : null;
 
+        var stateReducers = ParseStateReducers(spec, errors, prefix);
+
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(version) || string.IsNullOrEmpty(entry))
         {
             return null;
@@ -200,6 +243,7 @@ public sealed class JsonAgentGraphManifestLoader
         {
             StateSchema = stateSchema,
             MaxSteps = maxSteps,
+            StateReducers = stateReducers,
         };
 
         AgentGraphManifestValidator.Validate(manifest, errors, prefix);
@@ -344,6 +388,63 @@ public sealed class JsonAgentGraphManifestLoader
             index++;
         }
         return list;
+    }
+
+    private static IReadOnlyDictionary<string, GraphStateReducer>? ParseStateReducers(JsonElement spec, List<string> errors, string prefix)
+    {
+        if (!spec.TryGetProperty("stateReducers", out var el) || el.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        var map = new Dictionary<string, GraphStateReducer>(StringComparer.Ordinal);
+        foreach (var prop in el.EnumerateObject())
+        {
+            var key = prop.Name;
+            var reducerEl = prop.Value;
+            var reducer = ParseReducer(reducerEl, errors, $"{prefix}spec.stateReducers.{key} ");
+            if (reducer is not null)
+            {
+                map[key] = reducer;
+            }
+        }
+        return map.Count == 0 ? null : map;
+    }
+
+    private static GraphStateReducer? ParseReducer(JsonElement el, List<string> errors, string prefix)
+    {
+        if (el.ValueKind == JsonValueKind.String)
+        {
+            return el.GetString() switch
+            {
+                "lastWriteWins" => new GraphStateReducer.LastWriteWins(),
+                "append" => new GraphStateReducer.Append(),
+                _ => ReportUnknown(el.GetString()!, errors, prefix),
+            };
+        }
+        if (el.ValueKind == JsonValueKind.Object)
+        {
+            if (el.TryGetProperty("handlerRef", out var hrEl) && hrEl.ValueKind == JsonValueKind.Object)
+            {
+                var typeName = hrEl.TryGetProperty("typeName", out var tnEl) ? tnEl.GetString() : null;
+                var asmName = hrEl.TryGetProperty("assemblyName", out var anEl) ? anEl.GetString() : null;
+                if (string.IsNullOrEmpty(typeName))
+                {
+                    errors.Add($"{prefix}handlerRef.typeName is required");
+                    return null;
+                }
+                return new GraphStateReducer.HandlerRef(new GraphHandlerRef(typeName, asmName));
+            }
+            errors.Add($"{prefix}must be the string 'lastWriteWins' or 'append', or an object with handlerRef");
+            return null;
+        }
+        errors.Add($"{prefix}must be a string ('lastWriteWins' | 'append') or an object with handlerRef");
+        return null;
+
+        static GraphStateReducer? ReportUnknown(string name, List<string> errors, string prefix)
+        {
+            errors.Add($"{prefix}unknown reducer '{name}' — expected 'lastWriteWins' or 'append'");
+            return null;
+        }
     }
 
     private static GraphEdgePredicate? ParsePredicate(JsonElement el, List<string> errors, string prefix)

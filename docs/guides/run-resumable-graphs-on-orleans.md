@@ -242,6 +242,50 @@ Checkpoints live forever unless you delete them. Call `IGraphCheckpointer.Delete
 
 `InMemoryCheckpointer` in `Vais.Agents.Core` has the same contract — swap `AddOrleansGraphCheckpointer()` for `services.AddSingleton<IGraphCheckpointer>(new InMemoryCheckpointer())` in integration tests, then invoke → break → resume in-process without spinning up Orleans. The orchestrator behaviour is identical.
 
+## MAF orchestrator durable resume (v0.36)
+
+`MafGraphOrchestrator` (in `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework`) now implements `IResumableAgentGraph<TState>` — identical `ResumeAsync` / `ResumeStreamAsync` contract to `InProcessGraphOrchestrator`.
+
+**Build a resumable MAF graph:**
+
+```csharp
+var checkpointer = serviceProvider.GetRequiredService<IGraphCheckpointer>();
+
+IResumableAgentGraph<MyState> graph = MafGraphBuilder.Build(
+    manifest: graphManifest,
+    agentRegistry: agentRegistry,
+    startNodeId: "wait-for-approval",   // rebuild workflow from this interrupt node on resume
+    checkpointer: checkpointer);
+```
+
+`startNodeId` is the interrupt node id. On resume, `MafGraphBuilder.Build` reconstructs the Microsoft Agent Framework workflow starting from that node so `InProcessExecution` delivers the resume payload there directly — no MAF `CheckpointManager` bridging required.
+
+**Resume:**
+
+```csharp
+GraphResult<MyState> result = await graph.ResumeAsync(
+    runId: existingRunId,
+    interruptId: interruptId,
+    resumePayload: approvalPayload,
+    cancellationToken: ct);
+```
+
+The `ResumeAsync` signature and checkpoint validation logic are identical to `InProcessGraphOrchestrator`. Cross-host resume is supported: checkpoint on one silo with `InProcessGraphOrchestrator`, resume on a different silo (or a different host) with `MafGraphOrchestrator`, using the same `IGraphCheckpointer` backend (e.g. `OrleansCheckpointer`).
+
+**Testing MAF resume:**
+
+Swap the concrete graph implementation in tests without changing the resume logic:
+
+```csharp
+// In tests — InProcess (fast, no MAF dependency):
+IResumableAgentGraph<MyState> graph = new InProcessGraphOrchestrator<MyState>(manifest, registry, checkpointer);
+
+// In production — MAF:
+IResumableAgentGraph<MyState> graph = MafGraphBuilder.Build(manifest, registry, startNodeId, checkpointer);
+```
+
+Both share the same `InMemoryCheckpointer` swap for unit tests as described in "Testing the resume path" above.
+
 ## See also
 
 - [Compose an agent graph (YAML)](compose-an-agent-graph-yaml.md) — the baseline graph-in-YAML flow this guide builds on.

@@ -97,6 +97,7 @@ public sealed class AgentGraphManifestLoaderTests
                     query: { type: string }
                     quality: { type: number, minimum: 0, maximum: 1 }
                     retryCount: { type: integer }
+                    docs: { type: array }
               nodes:
                 - id: retrieve
                   kind: Agent
@@ -605,5 +606,748 @@ public sealed class AgentGraphManifestLoaderTests
         var graphs = await loader.LoadFromStringAsync(yaml);
 
         graphs[0].Nodes.Single(n => n.Id == "step").Ref!.A2AUrl.Should().BeNull();
+    }
+
+    // ── v0.37 custom declarable reducers ─────────────────────────────────────
+
+    [Fact]
+    public async Task StateReducers_LastWriteWins_And_Append_Parse_From_Yaml()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: reducer-graph, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+              stateReducers:
+                score: lastWriteWins
+                tags: append
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs.Should().ContainSingle();
+        var g = graphs[0];
+        g.StateReducers.Should().NotBeNull();
+        g.StateReducers!["score"].Should().BeOfType<GraphStateReducer.LastWriteWins>();
+        g.StateReducers["tags"].Should().BeOfType<GraphStateReducer.Append>();
+    }
+
+    [Fact]
+    public async Task StateReducers_HandlerRef_Parses_From_Json()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "custom-reducer", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }],
+                "stateReducers": {
+                  "score": { "handlerRef": { "typeName": "MyApp.ScoreReducer", "assemblyName": "MyApp" } }
+                }
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle();
+        var reducer = graphs[0].StateReducers!["score"].Should().BeOfType<GraphStateReducer.HandlerRef>().Subject;
+        reducer.Handler.TypeName.Should().Be("MyApp.ScoreReducer");
+        reducer.Handler.AssemblyName.Should().Be("MyApp");
+    }
+
+    [Fact]
+    public async Task Envelope_StateReducers_Round_Trips()
+    {
+        var original = new AgentGraphManifest(
+            Id: "reducer-rt", Version: "1.0", Entry: "step",
+            Nodes: new[]
+            {
+                new GraphNode("step", "Agent", Ref: new GraphAgentRef("agent-x")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("step", "end") })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer>
+            {
+                ["tags"] = new GraphStateReducer.Append(),
+                ["score"] = new GraphStateReducer.LastWriteWins(),
+                ["custom"] = new GraphStateReducer.HandlerRef(new GraphHandlerRef("My.Reducer", "My.Assembly")),
+            },
+        };
+
+        var envelope = AgentGraphManifestEnvelope.Serialize(original);
+        var loader = new JsonAgentGraphManifestLoader();
+        var roundTripped = await loader.LoadFromStringAsync(envelope);
+
+        roundTripped.Should().ContainSingle();
+        var rt = roundTripped[0];
+        rt.StateReducers.Should().NotBeNull();
+        rt.StateReducers!["tags"].Should().BeOfType<GraphStateReducer.Append>();
+        rt.StateReducers["score"].Should().BeOfType<GraphStateReducer.LastWriteWins>();
+        var hrReducer = rt.StateReducers["custom"].Should().BeOfType<GraphStateReducer.HandlerRef>().Subject;
+        hrReducer.Handler.TypeName.Should().Be("My.Reducer");
+        hrReducer.Handler.AssemblyName.Should().Be("My.Assembly");
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Reducer_Key_Not_In_StateSchema()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: bad-reducer, version: "1.0" }
+            spec:
+              entry: step
+              state:
+                schema:
+                  type: object
+                  properties:
+                    score: { type: number }
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+              maxSteps: 10
+              stateReducers:
+                tags: append
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(yaml))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("tags") && e.Contains("stateReducers"));
+    }
+
+    // ── v0.39 structural validator cross-checks ───────────────────────────────
+
+    [Fact]
+    public async Task Validator_Rejects_Code_Node_With_Empty_HandlerRef_TypeName()
+    {
+        // Empty typeName is caught by the loader's parse path (reports "required").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-handler", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Code", "handlerRef": { "typeName": "" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("required"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Code_Node_With_Whitespace_In_HandlerRef_TypeName()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "spaced-handler", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Code", "handlerRef": { "typeName": "My Handler" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("invalid"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Edge_Predicate_HandlerRef_With_Empty_TypeName()
+    {
+        // Empty typeName is caught by the loader's parse path (reports "required").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-pred", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [
+                  { "from": "step", "to": "end",
+                    "when": { "handlerRef": { "typeName": "" } } }
+                ]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("required"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Nested_Predicate_HandlerRef_With_Empty_TypeName()
+    {
+        // HandlerRef inside an allOf combinator — tests recursive predicate walker.
+        // Empty typeName caught by the loader's parse path (reports "required").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "nested-pred", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [
+                  { "from": "step", "to": "end",
+                    "when": {
+                      "allOf": [
+                        { "property": "score", "operator": "Gt", "value": 0.5 },
+                        { "handlerRef": { "typeName": "" } }
+                      ]
+                    } }
+                ],
+                "maxSteps": 5
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("required"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Nested_Predicate_HandlerRef_With_Embedded_Whitespace_TypeName()
+    {
+        // HandlerRef inside an allOf combinator with whitespace-containing TypeName.
+        // The loader's IsNullOrEmpty check passes for "My Bad Handler" so the validator
+        // catches it after parsing (reports "invalid").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "nested-pred-ws", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [
+                  { "from": "step", "to": "end",
+                    "when": {
+                      "allOf": [
+                        { "property": "score", "operator": "Gt", "value": 0.5 },
+                        { "handlerRef": { "typeName": "My Bad Handler" } }
+                      ]
+                    } }
+                ],
+                "maxSteps": 5
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("invalid"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_Edge_Effect_HandlerRef_With_Empty_TypeName()
+    {
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-effect", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [
+                  { "from": "step", "to": "end",
+                    "onTraverse": { "handlerRef": { "typeName": "  " } } }
+                ]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("invalid"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_StateReducer_HandlerRef_With_Empty_TypeName()
+    {
+        // Empty typeName is caught by the loader's parse path (reports "required").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "bad-reducer-hr", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }],
+                "stateReducers": {
+                  "score": { "handlerRef": { "typeName": "" } }
+                }
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("required"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_StateReducer_HandlerRef_With_Whitespace_TypeName()
+    {
+        // Whitespace-only typeName passes the loader's IsNullOrEmpty check but is
+        // caught by the validator (reports "invalid").
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "ws-reducer-hr", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent", "ref": { "id": "agent-x" } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }],
+                "stateReducers": {
+                  "score": { "handlerRef": { "typeName": "   " } }
+                }
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("typeName") && e.Contains("invalid"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_StateBindings_Input_Key_Not_In_StateSchema()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: bad-input-binding, version: "1.0" }
+            spec:
+              entry: step
+              state:
+                schema:
+                  type: object
+                  properties:
+                    query: { type: string }
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                  stateBindings:
+                    input: [query, undeclaredKey]
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(yaml))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("undeclaredKey") && e.Contains("stateBindings.input"));
+    }
+
+    [Fact]
+    public async Task Validator_Rejects_StateBindings_Output_Key_Not_In_StateSchema()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: bad-output-binding, version: "1.0" }
+            spec:
+              entry: step
+              state:
+                schema:
+                  type: object
+                  properties:
+                    result: { type: string }
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                  stateBindings:
+                    output: [result, ghostField]
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(yaml))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e => e.Contains("ghostField") && e.Contains("stateBindings.output"));
+    }
+
+    [Fact]
+    public async Task Validator_Allows_WellKnown_Keys_In_StateBindings_Without_Schema_Declaration()
+    {
+        // 'messages' and 'lastAssistantText' are well-known runtime keys — exempt even
+        // when they are not listed in spec.state.schema.properties.
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: well-known-ok, version: "1.0" }
+            spec:
+              entry: step
+              state:
+                schema:
+                  type: object
+                  properties:
+                    query: { type: string }
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                  stateBindings:
+                    input: [query, messages]
+                    output: [lastAssistantText]
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs.Should().ContainSingle("well-known keys must not trigger a validation error");
+    }
+
+    [Fact]
+    public async Task Validator_Allows_StateBindings_When_No_StateSchema_Declared()
+    {
+        // Without a StateSchema the cross-check is skipped entirely — any key is valid.
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: no-schema, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                  stateBindings:
+                    input: [anyKey]
+                    output: [anotherKey]
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        graphs.Should().ContainSingle("stateBindings cross-check is skipped when no StateSchema is declared");
+    }
+
+    // ── v0.40 agent OutputSchema cross-check ─────────────────────────────────
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_OutputKeyPresent_Passes()
+    {
+        // Polymorphic stream: agent "enricher" declares outputSchema with "summary"; graph
+        // binds stateBindings.output to "summary" — second-pass cross-check must pass.
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "Agent",
+                "metadata": { "id": "enricher", "version": "1.0" },
+                "spec": {
+                  "outputSchema": {
+                    "type": "object",
+                    "properties": { "summary": { "type": "string" } }
+                  }
+                }
+              },
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "enrich-graph", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent",
+                      "ref": { "id": "enricher", "version": "1.0" },
+                      "stateBindings": { "output": ["summary"] } },
+                    { "id": "end", "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle("output key 'summary' is present in agent OutputSchema.properties — no error");
+    }
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_OutputKeyMissing_Reports_Error()
+    {
+        // stateBindings.output key "ghostField" is not declared in agent's OutputSchema.properties.
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "Agent",
+                "metadata": { "id": "enricher", "version": "1.0" },
+                "spec": {
+                  "outputSchema": {
+                    "type": "object",
+                    "properties": { "summary": { "type": "string" } }
+                  }
+                }
+              },
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "bad-binding-graph", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent",
+                      "ref": { "id": "enricher", "version": "1.0" },
+                      "stateBindings": { "output": ["ghostField"] } },
+                    { "id": "end", "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var ex = await FluentActions.Invoking(async () => await loader.LoadFromStringAsync(json))
+            .Should().ThrowAsync<AgentManifestValidationException>();
+        ex.Which.Errors.Should().Contain(e =>
+            e.Contains("ghostField") && e.Contains("enricher") && e.Contains("OutputSchema"));
+    }
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_RemoteRef_SkipsCheck()
+    {
+        // Even though agent "enricher" is in stream and has no "ghostField", the node's
+        // ref.runtimeUrl means the agent runs remotely — OutputSchema check is skipped.
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "Agent",
+                "metadata": { "id": "enricher", "version": "1.0" },
+                "spec": {
+                  "outputSchema": {
+                    "type": "object",
+                    "properties": { "summary": { "type": "string" } }
+                  }
+                }
+              },
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "remote-graph", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent",
+                      "ref": { "id": "enricher", "version": "1.0", "runtimeUrl": "https://remote.svc" },
+                      "stateBindings": { "output": ["ghostField"] } },
+                    { "id": "end", "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle("remote ref — OutputSchema check must be skipped");
+    }
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_AgentHasNoOutputSchema_SkipsCheck()
+    {
+        // Agent in same stream has no outputSchema field — check is silently skipped.
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "Agent",
+                "metadata": { "id": "plain-agent", "version": "1.0" },
+                "spec": {}
+              },
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "plain-graph", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent",
+                      "ref": { "id": "plain-agent", "version": "1.0" },
+                      "stateBindings": { "output": ["anyKey"] } },
+                    { "id": "end", "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle("no OutputSchema declared — check must be skipped entirely");
+    }
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_AgentNotInStream_SkipsCheck()
+    {
+        // Graph references "external-agent" which is not in this stream — resolver returns
+        // null, so no false-positive OutputSchema error is raised.
+        var json = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "AgentGraph",
+              "metadata": { "id": "ext-ref-graph", "version": "1.0" },
+              "spec": {
+                "entry": "step",
+                "nodes": [
+                  { "id": "step", "kind": "Agent",
+                    "ref": { "id": "external-agent", "version": "1.0" },
+                    "stateBindings": { "output": ["someKey"] } },
+                  { "id": "end", "kind": "End" }
+                ],
+                "edges": [{ "from": "step", "to": "end" }]
+              }
+            }
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle("agent not in stream — no false-positive OutputSchema error");
+    }
+
+    [Fact]
+    public async Task ValidateAgentOutputSchemaBindings_WellKnownKeys_Exempt()
+    {
+        // "messages" and "lastAssistantText" are runtime-written — exempt from OutputSchema
+        // cross-check even when the agent's OutputSchema doesn't list them.
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "Agent",
+                "metadata": { "id": "chat-agent", "version": "1.0" },
+                "spec": {
+                  "outputSchema": {
+                    "type": "object",
+                    "properties": { "answer": { "type": "string" } }
+                  }
+                }
+              },
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "chat-graph", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent",
+                      "ref": { "id": "chat-agent", "version": "1.0" },
+                      "stateBindings": { "output": ["messages", "lastAssistantText"] } },
+                    { "id": "end", "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        graphs.Should().ContainSingle("well-known keys 'messages' and 'lastAssistantText' are always exempt");
     }
 }

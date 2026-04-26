@@ -47,6 +47,14 @@ public sealed record AgentGraphListResponse(
     IReadOnlyList<AgentGraphManifest> Items,
     string? NextCursor = null);
 
+/// <summary>
+/// Client-side wire type for <c>POST /v1/graphs</c> and <c>PATCH /v1/graphs/{id}</c>.
+/// Mirrors the server's <c>AgentGraphApplyResponse</c> without depending on the server package.
+/// </summary>
+public sealed record AgentGraphApplyResponse(
+    AgentGraphHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
+
 /// <summary>Client-side wire type for a single entry in <c>GET /v1/runtimes</c>.</summary>
 public sealed record RuntimeInfo(string Url, string IdentityMode);
 

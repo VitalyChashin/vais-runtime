@@ -100,8 +100,9 @@ public sealed class GraphControlPlaneEndpointTests : IAsyncLifetime
         using var resp = await _http.PostAsync("/v1/graphs", content);
 
         resp.StatusCode.Should().Be(HttpStatusCode.Created);
-        var handle = await resp.Content.ReadFromJsonAsync<AgentGraphHandle>(JsonOpts);
-        handle!.GraphId.Should().Be("test-graph");
+        var applyResp = await resp.Content.ReadFromJsonAsync<GraphApplyResponseDto>(JsonOpts);
+        applyResp!.Handle.GraphId.Should().Be("test-graph");
+        applyResp.Warnings.Should().BeEmpty();
     }
 
     [Fact]
@@ -176,8 +177,9 @@ public sealed class GraphControlPlaneEndpointTests : IAsyncLifetime
         var content = new StringContent(MinimalEnvelope("test-graph", "2.0"), Encoding.UTF8, "application/json");
         using var resp = await _http.PatchAsync("/v1/graphs/test-graph", content);
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var handle = await resp.Content.ReadFromJsonAsync<AgentGraphHandle>(JsonOpts);
-        handle!.Version.Should().Be("2.0");
+        var applyResp = await resp.Content.ReadFromJsonAsync<GraphApplyResponseDto>(JsonOpts);
+        applyResp!.Handle.Version.Should().Be("2.0");
+        applyResp.Warnings.Should().BeEmpty();
     }
 
     // ── DELETE /v1/graphs/{id} ───────────────────────────────────────────────
@@ -271,6 +273,168 @@ public sealed class GraphControlPlaneEndpointTests : IAsyncLifetime
         resp.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var pd = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOpts);
         pd.GetProperty("type").GetString().Should().Contain("graph-run-conflict");
+    }
+
+    // Local DTOs avoid CS0433: AgentGraphApplyResponse is declared in both the server and client
+    // packages (same namespace). Using a local mirror type lets ReadFromJsonAsync resolve
+    // unambiguously while keeping identical JSON deserialization semantics.
+    private sealed record GraphApplyResponseDto(AgentGraphHandle Handle, List<GraphDiagnosticDto> Warnings);
+    private sealed record GraphDiagnosticDto(string Urn, string Detail);
+
+    // ── v0.41 post-apply registry OutputSchema check ─────────────────────────
+
+    private static string AgentEnvelope(string agentId, string schemaPropertiesJson) => $$"""
+        {
+          "apiVersion": "vais.agents/v1",
+          "kind": "Agent",
+          "metadata": { "id": "{{agentId}}", "version": "1.0" },
+          "spec": {
+            "outputSchema": { "type": "object", "properties": {{schemaPropertiesJson}} }
+          }
+        }
+        """;
+
+    private static string GraphEnvelopeWithAgentOutput(string graphId, string agentId, params string[] outputKeys) => $$"""
+        {
+          "apiVersion": "vais.agents/v1",
+          "kind": "AgentGraph",
+          "metadata": { "id": "{{graphId}}", "version": "1.0" },
+          "spec": {
+            "entry": "step",
+            "nodes": [{
+              "id": "step", "kind": "Agent",
+              "ref": { "id": "{{agentId}}", "version": "1.0" },
+              "stateBindings": { "output": [{{string.Join(", ", outputKeys.Select(k => $"\"{k}\""))}}] }
+            }],
+            "edges": []
+          }
+        }
+        """;
+
+    private static Task<IHost> BuildHostWithAgentRegistryAsync(
+        FakeGraphLifecycleManager manager,
+        InMemoryAgentGraphRegistry graphRegistry,
+        InMemoryAgentRegistry agentRegistry)
+        => new HostBuilder()
+            .ConfigureWebHost(web =>
+            {
+                web.UseTestServer();
+                web.ConfigureServices(services =>
+                {
+                    services.AddSingleton<IAgentGraphRegistry>(graphRegistry);
+                    services.AddSingleton<IAgentGraphLifecycleManager>(manager);
+                    services.AddSingleton<IAgentRegistry>(agentRegistry);
+                    services.AddAgentControlPlane();
+                    services.AddRouting();
+                });
+                web.Configure(app =>
+                {
+                    app.UseRouting();
+                    app.UseEndpoints(e => e.MapGraphControlPlane());
+                });
+            })
+            .StartAsync();
+
+    [Fact]
+    public async Task CreateGraph_AgentInRegistry_OutputKeyMissing_Returns201WithWarning()
+    {
+        var agentRegistry = new InMemoryAgentRegistry();
+        agentRegistry.Register(new AgentManifest(
+            "reg-agent", "1.0",
+            new AgentHandlerRef("handler"),
+            Array.Empty<ProtocolBinding>(),
+            Array.Empty<ToolRef>())
+        {
+            OutputSchema = System.Text.Json.JsonDocument.Parse(
+                """{"type":"object","properties":{"result":{}}}""").RootElement,
+        });
+
+        using var host = await BuildHostWithAgentRegistryAsync(
+            new FakeGraphLifecycleManager(),
+            new InMemoryAgentGraphRegistry(),
+            agentRegistry);
+        using var http = host.GetTestClient();
+        http.BaseAddress ??= new Uri("http://localhost");
+
+        var content = new StringContent(
+            GraphEnvelopeWithAgentOutput("check-graph", "reg-agent", "missing-key"),
+            Encoding.UTF8, "application/json");
+        using var resp = await http.PostAsync("/v1/graphs", content);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        var applyResp = await resp.Content.ReadFromJsonAsync<GraphApplyResponseDto>(JsonOpts);
+        applyResp!.Handle.GraphId.Should().Be("check-graph");
+        applyResp.Warnings.Should().ContainSingle(w =>
+            w.Urn == "urn:vais-agents:graph:output-schema-mismatch" &&
+            w.Detail.Contains("missing-key") &&
+            w.Detail.Contains("reg-agent"));
+    }
+
+    [Fact]
+    public async Task CreateGraph_AgentInRegistry_OutputKeyPresent_Returns201NoWarnings()
+    {
+        var agentRegistry = new InMemoryAgentRegistry();
+        agentRegistry.Register(new AgentManifest(
+            "reg-agent", "1.0",
+            new AgentHandlerRef("handler"),
+            Array.Empty<ProtocolBinding>(),
+            Array.Empty<ToolRef>())
+        {
+            OutputSchema = System.Text.Json.JsonDocument.Parse(
+                """{"type":"object","properties":{"result":{}}}""").RootElement,
+        });
+
+        using var host = await BuildHostWithAgentRegistryAsync(
+            new FakeGraphLifecycleManager(),
+            new InMemoryAgentGraphRegistry(),
+            agentRegistry);
+        using var http = host.GetTestClient();
+        http.BaseAddress ??= new Uri("http://localhost");
+
+        var content = new StringContent(
+            GraphEnvelopeWithAgentOutput("clean-graph", "reg-agent", "result"),
+            Encoding.UTF8, "application/json");
+        using var resp = await http.PostAsync("/v1/graphs", content);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        var applyResp = await resp.Content.ReadFromJsonAsync<GraphApplyResponseDto>(JsonOpts);
+        applyResp!.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateGraph_AgentInRegistry_OutputKeyMissing_Returns200WithWarning()
+    {
+        var agentRegistry = new InMemoryAgentRegistry();
+        agentRegistry.Register(new AgentManifest(
+            "reg-agent", "1.0",
+            new AgentHandlerRef("handler"),
+            Array.Empty<ProtocolBinding>(),
+            Array.Empty<ToolRef>())
+        {
+            OutputSchema = System.Text.Json.JsonDocument.Parse(
+                """{"type":"object","properties":{"result":{}}}""").RootElement,
+        });
+
+        var graphRegistry = new InMemoryAgentGraphRegistry();
+        graphRegistry.Register(MinimalManifest("upd-graph"));
+        var fakeManager = new FakeGraphLifecycleManager();
+        fakeManager.UpdateResponse = new AgentGraphHandle("upd-graph", "2.0");
+
+        using var host = await BuildHostWithAgentRegistryAsync(fakeManager, graphRegistry, agentRegistry);
+        using var http = host.GetTestClient();
+        http.BaseAddress ??= new Uri("http://localhost");
+
+        var content = new StringContent(
+            GraphEnvelopeWithAgentOutput("upd-graph", "reg-agent", "missing-key"),
+            Encoding.UTF8, "application/json");
+        using var resp = await http.PatchAsync("/v1/graphs/upd-graph", content);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var applyResp = await resp.Content.ReadFromJsonAsync<GraphApplyResponseDto>(JsonOpts);
+        applyResp!.Handle.GraphId.Should().Be("upd-graph");
+        applyResp.Warnings.Should().ContainSingle(w =>
+            w.Urn == "urn:vais-agents:graph:output-schema-mismatch" &&
+            w.Detail.Contains("missing-key"));
     }
 
     // ── Fake infrastructure ───────────────────────────────────────────────────

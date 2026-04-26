@@ -39,3 +39,13 @@ public sealed record AgentQueryResponse(
 public sealed record AgentListResponse(
     IReadOnlyList<AgentManifest> Items,
     string? NextCursor = null);
+
+/// <summary>
+/// Response body for <c>POST /v1/graphs</c> (Create) and <c>PATCH /v1/graphs/{id}</c> (Update).
+/// Pairs the <see cref="AgentGraphHandle"/> with any non-fatal diagnostics emitted during
+/// the apply flow. <see cref="Warnings"/> is always present (never null) — an empty list
+/// means the apply was clean.
+/// </summary>
+public sealed record AgentGraphApplyResponse(
+    AgentGraphHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
