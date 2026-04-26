@@ -36,7 +36,14 @@ public sealed record LoadedPythonPlugin(
     PythonPluginDescriptor Descriptor,
     PythonPluginStatus Status,
     int? ProcessId,
-    McpClient? McpClient);
+    McpClient? McpClient)
+{
+    /// <summary>
+    /// Last few stderr lines from the most recent subprocess spawn, or <see langword="null"/>
+    /// when no output was captured. Surfaced in <c>GET /v1/plugins</c> and <c>vais plugin-status</c>.
+    /// </summary>
+    public string? LastErrorSnippet { get; init; }
+}
 
 /// <summary>Lifecycle states for a supervised Python plugin subprocess.</summary>
 public enum PythonPluginStatus

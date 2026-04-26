@@ -188,4 +188,13 @@ public interface IAgentControlPlaneClient
     /// </summary>
     Task<RuntimeListResponse> GetRemoteRuntimesAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new RuntimeListResponse(Array.Empty<RuntimeInfo>()));
+
+    // ── Plugin introspection (v0.35) ────────────────────────────────────────
+
+    /// <summary>
+    /// GET /v1/plugins — list all loaded plugins (both .NET assembly and Python subprocess).
+    /// Returns an empty response when no plugins are loaded (no error).
+    /// </summary>
+    Task<PluginListResponse> ListPluginsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new PluginListResponse(Array.Empty<PluginInfo>()));
 }

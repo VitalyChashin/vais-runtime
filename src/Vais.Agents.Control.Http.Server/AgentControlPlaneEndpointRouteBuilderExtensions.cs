@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;
 using Vais.Agents.Runtime.Plugins;
+using Vais.Agents.Runtime.Plugins.Python;
 
 namespace Vais.Agents.Control.Http;
 
@@ -353,13 +354,52 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static IResult PluginListAsync(HttpContext http)
     {
-        var registry = http.RequestServices.GetService<IPluginHandlerRegistry>();
-        if (registry is null)
-            return Results.Ok(new PluginListResponse(Array.Empty<PluginInfo>()));
+        var items = new List<PluginInfo>();
 
-        var items = registry.Plugins
-            .Select(d => new PluginInfo(d.Name, d.AssemblyPath, d.TargetApiVersion, d.Handlers, d.LoadedViaAttribute))
-            .ToArray();
+        var registry = http.RequestServices.GetService<IPluginHandlerRegistry>();
+        if (registry is not null)
+        {
+            foreach (var d in registry.Plugins)
+            {
+                items.Add(new PluginInfo(d.Name, d.AssemblyPath, d.TargetApiVersion, d.Handlers, d.LoadedViaAttribute)
+                {
+                    Kind = PluginKind.Assembly,
+                    State = PluginState.Ready,
+                });
+            }
+        }
+
+        var pythonHost = http.RequestServices.GetService<IPythonPluginHost>();
+        if (pythonHost is not null)
+        {
+            foreach (var p in pythonHost.LoadedPlugins)
+            {
+                items.Add(new PluginInfo(
+                    Name: p.Descriptor.Name,
+                    AssemblyPath: string.Empty,
+                    TargetApiVersion: p.Descriptor.TargetApiVersion,
+                    Handlers: p.Descriptor.HandlerTypeName is not null
+                        ? [p.Descriptor.HandlerTypeName]
+                        : [],
+                    LoadedViaAttribute: false)
+                {
+                    Kind = PluginKind.Python,
+                    State = p.Status switch
+                    {
+                        PythonPluginStatus.Loading => PluginState.Loading,
+                        PythonPluginStatus.Ready => PluginState.Ready,
+                        PythonPluginStatus.Restarting => PluginState.Restarting,
+                        _ => PluginState.Unavailable,
+                    },
+                    ProcessId = p.ProcessId,
+                    ToolNames = p.Descriptor.DeclaredTools.Count > 0
+                        ? p.Descriptor.DeclaredTools
+                        : null,
+                    LastErrorSnippet = p.LastErrorSnippet,
+                });
+            }
+        }
+
         return Results.Ok(new PluginListResponse(items));
     }
 

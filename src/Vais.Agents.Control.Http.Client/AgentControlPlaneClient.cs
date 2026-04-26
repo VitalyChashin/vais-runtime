@@ -482,6 +482,15 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new RuntimeListResponse(Array.Empty<RuntimeInfo>());
     }
 
+    /// <inheritdoc />
+    public async Task<PluginListResponse> ListPluginsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/v1/plugins", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PluginListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new PluginListResponse(Array.Empty<PluginInfo>());
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

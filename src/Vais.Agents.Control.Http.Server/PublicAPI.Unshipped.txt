@@ -44,6 +44,24 @@ Vais.Agents.Control.Http.ApplyDiagnostic.Urn.init -> void
 override Vais.Agents.Control.Http.PluginInfo.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.PluginInfo.GetHashCode() -> int
 override Vais.Agents.Control.Http.PluginInfo.ToString() -> string!
+Vais.Agents.Control.Http.PluginInfo.Kind.get -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginInfo.Kind.init -> void
+Vais.Agents.Control.Http.PluginInfo.State.get -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginInfo.State.init -> void
+Vais.Agents.Control.Http.PluginInfo.ProcessId.get -> int?
+Vais.Agents.Control.Http.PluginInfo.ProcessId.init -> void
+Vais.Agents.Control.Http.PluginInfo.ToolNames.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Http.PluginInfo.ToolNames.init -> void
+Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.get -> string?
+Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.init -> void
+Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginKind.Assembly = 0 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginKind.Python = 1 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Loading = 0 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Ready = 1 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Restarting = 2 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Unavailable = 3 -> Vais.Agents.Control.Http.PluginState
 override Vais.Agents.Control.Http.PluginListResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.PluginListResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.PluginListResponse.ToString() -> string!

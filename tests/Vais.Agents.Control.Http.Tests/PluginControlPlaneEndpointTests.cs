@@ -1,8 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Net;
-using System.Net.Http.Json;
 using System.Runtime.Loader;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -108,13 +106,10 @@ public sealed class PluginControlPlaneEndpointTests : IAsyncLifetime
     [Fact]
     public async Task List_Returns_200_With_Registered_Plugins()
     {
-        using var response = await _httpWithPlugins.GetAsync("/v1/plugins");
+        var client = new AgentControlPlaneClient(_httpWithPlugins);
+        var body = await client.ListPluginsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<PluginListResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().HaveCount(2);
+        body.Items.Should().HaveCount(2);
 
         var alpha = body.Items.Single(p => p.Name == "alpha");
         alpha.AssemblyPath.Should().Be("/plugins/alpha/alpha.dll");
@@ -129,13 +124,10 @@ public sealed class PluginControlPlaneEndpointTests : IAsyncLifetime
     [Fact]
     public async Task List_Returns_200_With_Empty_Items_When_No_Registry_In_DI()
     {
-        using var response = await _httpWithoutPlugins.GetAsync("/v1/plugins");
+        var client = new AgentControlPlaneClient(_httpWithoutPlugins);
+        var body = await client.ListPluginsAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadFromJsonAsync<PluginListResponse>();
-        body.Should().NotBeNull();
-        body!.Items.Should().BeEmpty();
+        body.Items.Should().BeEmpty();
     }
 
 

@@ -122,3 +122,55 @@ Vais.Agents.Control.Http.RuntimeListResponse.Items.init -> void
 Vais.Agents.Control.Http.RuntimeListResponse.RuntimeListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RuntimeInfo!>! Items) -> void
 Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRemoteRuntimesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RuntimeListResponse!>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.GetRemoteRuntimesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RuntimeListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListPluginsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListPluginsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginListResponse!>!
+Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginKind.Assembly = 0 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginKind.Python = 1 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Loading = 0 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Ready = 1 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Restarting = 2 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginState.Unavailable = 3 -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginInfo
+Vais.Agents.Control.Http.PluginInfo.<Clone>$() -> Vais.Agents.Control.Http.PluginInfo!
+Vais.Agents.Control.Http.PluginInfo.AssemblyPath.get -> string!
+Vais.Agents.Control.Http.PluginInfo.AssemblyPath.init -> void
+Vais.Agents.Control.Http.PluginInfo.Deconstruct(out string! Name, out string! AssemblyPath, out string! TargetApiVersion, out System.Collections.Generic.IReadOnlyList<string!>! Handlers, out bool LoadedViaAttribute) -> void
+Vais.Agents.Control.Http.PluginInfo.Equals(Vais.Agents.Control.Http.PluginInfo? other) -> bool
+Vais.Agents.Control.Http.PluginInfo.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.PluginInfo.Handlers.init -> void
+Vais.Agents.Control.Http.PluginInfo.Kind.get -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginInfo.Kind.init -> void
+Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.get -> string?
+Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.init -> void
+Vais.Agents.Control.Http.PluginInfo.LoadedViaAttribute.get -> bool
+Vais.Agents.Control.Http.PluginInfo.LoadedViaAttribute.init -> void
+Vais.Agents.Control.Http.PluginInfo.Name.get -> string!
+Vais.Agents.Control.Http.PluginInfo.Name.init -> void
+Vais.Agents.Control.Http.PluginInfo.PluginInfo(string! Name, string! AssemblyPath, string! TargetApiVersion, System.Collections.Generic.IReadOnlyList<string!>! Handlers, bool LoadedViaAttribute) -> void
+Vais.Agents.Control.Http.PluginInfo.ProcessId.get -> int?
+Vais.Agents.Control.Http.PluginInfo.ProcessId.init -> void
+Vais.Agents.Control.Http.PluginInfo.State.get -> Vais.Agents.Control.Http.PluginState
+Vais.Agents.Control.Http.PluginInfo.State.init -> void
+Vais.Agents.Control.Http.PluginInfo.TargetApiVersion.get -> string!
+Vais.Agents.Control.Http.PluginInfo.TargetApiVersion.init -> void
+Vais.Agents.Control.Http.PluginInfo.ToolNames.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Http.PluginInfo.ToolNames.init -> void
+override Vais.Agents.Control.Http.PluginInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginInfo.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginInfo.ToString() -> string!
+static Vais.Agents.Control.Http.PluginInfo.operator !=(Vais.Agents.Control.Http.PluginInfo? left, Vais.Agents.Control.Http.PluginInfo? right) -> bool
+static Vais.Agents.Control.Http.PluginInfo.operator ==(Vais.Agents.Control.Http.PluginInfo? left, Vais.Agents.Control.Http.PluginInfo? right) -> bool
+Vais.Agents.Control.Http.PluginListResponse
+Vais.Agents.Control.Http.PluginListResponse.<Clone>$() -> Vais.Agents.Control.Http.PluginListResponse!
+Vais.Agents.Control.Http.PluginListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PluginInfo!>! Items) -> void
+Vais.Agents.Control.Http.PluginListResponse.Equals(Vais.Agents.Control.Http.PluginListResponse? other) -> bool
+Vais.Agents.Control.Http.PluginListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PluginInfo!>!
+Vais.Agents.Control.Http.PluginListResponse.Items.init -> void
+Vais.Agents.Control.Http.PluginListResponse.PluginListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PluginInfo!>! Items) -> void
+override Vais.Agents.Control.Http.PluginListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.PluginListResponse.operator !=(Vais.Agents.Control.Http.PluginListResponse? left, Vais.Agents.Control.Http.PluginListResponse? right) -> bool
+static Vais.Agents.Control.Http.PluginListResponse.operator ==(Vais.Agents.Control.Http.PluginListResponse? left, Vais.Agents.Control.Http.PluginListResponse? right) -> bool

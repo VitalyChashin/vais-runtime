@@ -68,7 +68,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         {
             lock (_supervisors)
                 return _supervisors.Values
-                    .Select(s => new LoadedPythonPlugin(s.Descriptor, s.Status, s.ProcessId, s.McpClient))
+                    .Select(s => new LoadedPythonPlugin(s.Descriptor, s.Status, s.ProcessId, s.McpClient) { LastErrorSnippet = s.LastErrorSnippet })
                     .ToList();
         }
     }

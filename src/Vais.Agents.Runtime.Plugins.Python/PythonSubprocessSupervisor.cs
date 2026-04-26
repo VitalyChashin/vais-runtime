@@ -77,6 +77,16 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     /// <summary>Live MCP client when <see cref="Status"/> is <see cref="PythonPluginStatus.Ready"/>.</summary>
     internal McpClient? McpClient { get { lock (_stateLock) return _mcpClient; } }
 
+    /// <summary>Last few stderr lines from the most recent spawn cycle, or <see langword="null"/> when no output was captured.</summary>
+    internal string? LastErrorSnippet
+    {
+        get
+        {
+            var tail = _stderrTail.ToArray();
+            return tail.Length > 0 ? string.Join("\n", tail[^Math.Min(3, tail.Length)..]) : null;
+        }
+    }
+
     /// <summary>
     /// Completes (with <see langword="true"/> on success) when the current MCP handshake
     /// finishes — regardless of whether it succeeded or failed. Awaited by
