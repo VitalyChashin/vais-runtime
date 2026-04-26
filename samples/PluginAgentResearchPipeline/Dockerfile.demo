@@ -38,7 +38,8 @@ COPY samples/PluginAgentLangGraphResearcherLive/langgraph-researcher-live/src sr
 RUN uv venv .venv \
     && uv pip install --python .venv/bin/python /sdk \
     && uv pip install --python .venv/bin/python \
-       "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3"
+       "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3" \
+       "opentelemetry-instrumentation-openai"
 
 # ── Stage 3: Build SGR analyst Python venv ───────────────────────────────────
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS sgr-builder
@@ -50,7 +51,8 @@ COPY samples/PluginAgentResearchPipeline/sgr-analyst/src src
 
 RUN uv venv .venv \
     && uv pip install --python .venv/bin/python /sdk \
-    && uv pip install --python .venv/bin/python "sgr-agent-core>=0.7.0,<1"
+    && uv pip install --python .venv/bin/python \
+       "sgr-agent-core>=0.7.0,<1" "opentelemetry-instrumentation-openai"
 
 # ── Stage 4: Final image ──────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}

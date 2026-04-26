@@ -99,6 +99,12 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         var response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
 
         activity?.SetTag("gen_ai.completion", response.AssistantMessage);
+        if (response.Usage is { Count: > 0 } usageList)
+        {
+            activity?.SetTag(AgenticTags.GenAiResponseModel, usageList[0].Model);
+            activity?.SetTag(AgenticTags.GenAiUsageInputTokens, usageList.Sum(u => u.InputTokens));
+            activity?.SetTag(AgenticTags.GenAiUsageOutputTokens, usageList.Sum(u => u.OutputTokens));
+        }
 
         // Guard against oversized state blobs before accepting the turn.
         if (response.NewState is { } ns &&
