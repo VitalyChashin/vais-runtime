@@ -106,6 +106,16 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             new ToolCallStarted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName),
             cancellationToken).ConfigureAwait(false);
 
+        using var activity = AgenticDiagnostics.ActivitySource.StartActivity(
+            $"tool.call/{request.ToolName}", ActivityKind.Internal);
+        activity?.SetTag(AgenticTags.ToolName, request.ToolName);
+        activity?.SetTag(AgenticTags.ToolCallId, request.CallId);
+        var argsText = request.Arguments.ToString();
+        if (argsText.Length > 0)
+        {
+            activity?.SetTag("gen_ai.prompt", argsText);
+        }
+
         var sw = Stopwatch.StartNew();
         string result;
         string? toolError = null;
@@ -122,6 +132,8 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
         {
             sw.Stop();
             toolError = ex.GetType().Name;
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.SetTag(AgenticTags.ErrorType, toolError);
             await _eventBus.PublishAsync(
                 new ToolCallCompleted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName, Succeeded: false, Error: toolError, sw.Elapsed),
                 cancellationToken).ConfigureAwait(false);
@@ -147,6 +159,9 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
                 await HandleToolGuardrailOutcomeAsync(outcome, context, cancellationToken).ConfigureAwait(false);
             }
         }
+
+        activity?.SetTag("gen_ai.completion", result);
+        activity?.SetStatus(ActivityStatusCode.Ok);
 
         await _eventBus.PublishAsync(
             new ToolCallCompleted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName, Succeeded: true, Error: null, sw.Elapsed),

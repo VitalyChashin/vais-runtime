@@ -40,6 +40,10 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 - **Breaking:** `AiAgentGrain` constructor parameter `optionsFactory` type changed from `Func<string, StatefulAgentOptions>?` to `Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>?`.
 - `AiAgentGrain.OnActivateAsync` is now truly `async` — it awaits the options factory directly instead of blocking via `GetAwaiter().GetResult()`. This eliminates the Orleans grain activation deadlock that caused 2-minute `ResponseTimeout` failures on first invocation.
 
+### Added (observability, continued)
+- **`tool.call/{name}` spans for every tool invocation.** `DefaultToolCallDispatcher` now wraps `tool.InvokeAsync` in a child span of the ambient `chat` span, tagged with `vais.tool.name`, `vais.tool.call_id`, `gen_ai.prompt` (JSON arguments), and `gen_ai.completion` (result text). Error path sets `ActivityStatusCode.Error` and `error.type`. Reuses the existing `"Vais.Agents"` ActivitySource — no new source registration needed. Full tree in Langfuse: `graph.run → graph.node → grain.ask → chat → tool.call/SearchWeb → …`
+- `AgenticTags.ToolName` (`"vais.tool.name"`) and `AgenticTags.ToolCallId` (`"vais.tool.call_id"`) — new tag constants for tool-call spans.
+
 ### Fixed
 - **`grain.activate` orphan traces in Langfuse.** `AiAgentGrain.OnActivateAsync` now only starts the `grain.activate` span when `Activity.Current != null`. Previously, Orleans always fired `OnActivateAsync` on the grain scheduler with no ambient trace context, producing a disconnected root trace per grain activation (four per pipeline run). Span is silently skipped when there is no parent.
 - **Test spans polluting the demo Langfuse project.** Added `vais.runsettings` (repo root) that sets `OTEL_TRACES_EXPORTER=none`, `OTEL_METRICS_EXPORTER=none`, and `OTEL_LOGS_EXPORTER=none`. `Directory.Build.props` auto-wires this file for all `IsTestProject` projects via `<RunSettingsFilePath>`, so host-level `OTEL_EXPORTER_OTLP_ENDPOINT` env vars no longer leak into test runner processes.

@@ -1,1 +1,3 @@
 #nullable enable
+const Vais.Agents.Core.AgenticTags.ToolCallId = "vais.tool.call_id" -> string!
+const Vais.Agents.Core.AgenticTags.ToolName = "vais.tool.name" -> string!

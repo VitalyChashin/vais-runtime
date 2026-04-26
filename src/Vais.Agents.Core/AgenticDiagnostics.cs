@@ -95,6 +95,12 @@ public static class AgenticTags
 
     /// <summary>Phase identifier for streaming attempts (always "retry_boundary" for v0.21).</summary>
     public const string StreamAttemptPhase = "vais.stream.attempt.phase";
+
+    /// <summary>Tool name for <c>tool.call</c> spans emitted by <see cref="DefaultToolCallDispatcher"/>.</summary>
+    public const string ToolName = "vais.tool.name";
+
+    /// <summary>Tool call identifier correlating a <c>tool.call</c> span to its LLM-side call ID.</summary>
+    public const string ToolCallId = "vais.tool.call_id";
 }
 
 /// <summary>
