@@ -19,10 +19,27 @@ import os
 import re
 from typing import Any
 
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
 from langgraph_researcher_live.state import ResearchState
+
+
+class _TokenUsageCallback(BaseCallbackHandler):
+    """Accumulates token usage across all LLM calls in a graph invocation."""
+
+    def __init__(self) -> None:
+        self.input_tokens = 0
+        self.output_tokens = 0
+
+    def on_llm_end(self, response: LLMResult, **kwargs) -> None:
+        for gen_list in response.generations:
+            for gen in gen_list:
+                um = getattr(getattr(gen, "message", None), "usage_metadata", None) or {}
+                self.input_tokens += um.get("input_tokens", 0)
+                self.output_tokens += um.get("output_tokens", 0)
 
 _MODEL = "gpt-4o-mini"
 _MAX_TOKENS = 512
@@ -89,10 +106,13 @@ def _build_graph() -> Any:
 _compiled = _build_graph()
 
 
-def run_graph(state: ResearchState, new_user_input: str) -> ResearchState:
-    """Execute the graph for one turn and return the updated state."""
+def run_graph(
+    state: ResearchState, new_user_input: str
+) -> tuple[ResearchState, "_TokenUsageCallback"]:
+    """Execute the graph for one turn; return updated state and token usage."""
+    tracker = _TokenUsageCallback()
     updated = state.model_copy(update={"user_input": new_user_input})
-    result = _compiled.invoke(updated)
-    if isinstance(result, ResearchState):
-        return result
-    return ResearchState.model_validate(result)
+    result = _compiled.invoke(updated, config={"callbacks": [tracker]})
+    if not isinstance(result, ResearchState):
+        result = ResearchState.model_validate(result)
+    return result, tracker

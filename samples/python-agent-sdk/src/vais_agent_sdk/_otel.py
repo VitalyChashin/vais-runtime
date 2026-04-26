@@ -32,18 +32,14 @@ def setup_otel() -> None:
     _provider_initialised = True
 
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-    if endpoint:
-        provider = TracerProvider()
-        provider.add_span_processor(
-            BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
-        )
-        trace.set_tracer_provider(provider)
+    if not endpoint:
+        return
 
-    try:
-        from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-        OpenAIInstrumentor().instrument()
-    except ImportError:
-        pass
+    provider = TracerProvider()
+    provider.add_span_processor(
+        BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
+    )
+    trace.set_tracer_provider(provider)
 
 
 def extract_context(traceparent: Optional[str]) -> object:
