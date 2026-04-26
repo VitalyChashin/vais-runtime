@@ -256,6 +256,13 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             throw new InvalidOperationException($"Entry node '{_manifest.Entry}' not found in graph '{_manifest.Id}'.");
         }
 
+        // Detach from the ambient ASP.NET HttpRequestIn Activity before starting graph.run.
+        // HttpRequestIn is created by ASP.NET with TraceFlags=None (unsampled) because the
+        // Microsoft.AspNetCore source is not registered in our TracerProvider. The OTel
+        // ParentBased sampler propagates that decision to every child, suppressing graph.run
+        // and all descendants. Setting Current=null here forces graph.run to start as a
+        // trace root, which the AlwaysOn leg of ParentBased(AlwaysOn) always samples.
+        Activity.Current = null;
         using var graphActivity = _activitySource.StartActivity("graph.run", ActivityKind.Internal);
         graphActivity?.SetTag("graph.id",      _manifest.Id);
         graphActivity?.SetTag("graph.version", _manifest.Version);
@@ -266,6 +273,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             graphActivity?.SetTag("langfuse.session.id", context.CorrelationId);
         else if (!string.IsNullOrEmpty(context.UserId))
             graphActivity?.SetTag("langfuse.session.id", context.UserId);
+        if (graphActivity != null && state.Count > 0)
+            graphActivity.SetTag("langfuse.observation.input", JsonSerializer.Serialize(state));
 
         var watch = Stopwatch.StartNew();
         var superStep = 0;
@@ -327,6 +336,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     runId, _manifest.Id, _manifest.Version, new Dictionary<string, JsonElement>(state),
                     NextNodeId: null, SuperStepIndex: superStep, PendingInterruptId: null,
                     IsComplete: true, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+                graphActivity?.SetTag("langfuse.observation.output", JsonSerializer.Serialize(state));
                 var endCompletedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, watch.Elapsed, new Dictionary<string, JsonElement>(state));
                 await _graphEventBus.PublishAsync(endCompletedEvt, cancellationToken).ConfigureAwait(false);
@@ -397,16 +407,25 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (!skipNodeBody)
             {
                 // Node execution.
+                // Async-iterator yields return to the caller's ExecutionContext (where
+                // HttpRequestIn is Activity.Current). Restore graphActivity before starting
+                // the graph.node child span so the parent is correct, not the HTTP request.
+                if (graphActivity != null) Activity.Current = graphActivity;
                 using var nodeActivity = _activitySource.StartActivity("graph.node", ActivityKind.Internal);
                 nodeActivity?.SetTag("graph.run_id",    runId);
                 nodeActivity?.SetTag("graph.node.id",   currentNodeId);
                 nodeActivity?.SetTag("graph.node.kind", node.Kind);
                 if (node.Ref?.Id is { } agentRefId)
                     nodeActivity?.SetTag("vais.agent.name", agentRefId);
+                // Set gen_ai.prompt to the text the agent will receive — same attribute grain.ask uses,
+                // proven to map to Langfuse's Input column for non-generation spans.
+                nodeActivity?.SetTag("gen_ai.prompt", BuildAgentInputText(state, node.StateBindings));
 
                 var nodeStartedEvt = new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
                 await _graphEventBus.PublishAsync(nodeStartedEvt, cancellationToken).ConfigureAwait(false);
                 yield return nodeStartedEvt;
+                // Re-anchor after yield — same EC loss applies here.
+                if (nodeActivity != null) Activity.Current = nodeActivity;
                 var nodeWatch = Stopwatch.StartNew();
                 IReadOnlyDictionary<string, JsonElement>? nodeOutput = null;
                 Exception? nodeFailure = null;
@@ -430,6 +449,13 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 }
                 nodeWatch.Stop();
                 nodeActivity?.SetStatus(ActivityStatusCode.Ok);
+                if (nodeActivity != null &&
+                    nodeOutput is { Count: > 0 } &&
+                    nodeOutput.TryGetValue("lastAssistantText", out var lastText) &&
+                    lastText.ValueKind == JsonValueKind.String)
+                {
+                    nodeActivity.SetTag("gen_ai.completion", lastText.GetString()!);
+                }
                 var nodeCompletedEvt = new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, node.Kind, nodeWatch.Elapsed);
                 await _graphEventBus.PublishAsync(nodeCompletedEvt, cancellationToken).ConfigureAwait(false);

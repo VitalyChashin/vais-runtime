@@ -1,0 +1,113 @@
+# syntax=docker/dockerfile:1
+# Full research-pipeline demo image.
+# Combines: .NET runtime + LangGraph researcher Python plugin + SGR analyst Python plugin
+#           + C# planner .NET plugin.
+#
+# Build context: repo root (so both src/ and samples/ are in scope).
+#
+#   docker build -f samples/PluginAgentResearchPipeline/Dockerfile.demo \
+#       -t vais-research-pipeline:local .
+
+ARG DOTNET_VERSION=9.0
+
+# ── Stage 1: Build the .NET runtime ──────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS dotnet-build
+WORKDIR /src
+
+COPY Directory.Build.props Directory.Packages.props ./
+COPY NuGet.config* ./
+COPY src/ src/
+COPY samples/PluginAgentResearchPipeline/planner/ samples/PluginAgentResearchPipeline/planner/
+
+RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
+RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj \
+    -c Release --no-restore -o /app/publish
+
+RUN dotnet restore samples/PluginAgentResearchPipeline/planner/Planner.csproj
+RUN dotnet publish samples/PluginAgentResearchPipeline/planner/Planner.csproj \
+    -c Release --no-restore -o /plugins/research-planner \
+    /p:TreatWarningsAsErrors=false
+
+# ── Stage 2: Build LangGraph researcher Python venv ──────────────────────────
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS langgraph-builder
+WORKDIR /plugin
+
+COPY samples/python-agent-sdk /sdk
+COPY samples/PluginAgentLangGraphResearcherLive/langgraph-researcher-live/src src
+
+RUN uv venv .venv \
+    && uv pip install --python .venv/bin/python /sdk \
+    && uv pip install --python .venv/bin/python \
+       "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3"
+
+# ── Stage 3: Build SGR analyst Python venv ───────────────────────────────────
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS sgr-builder
+WORKDIR /plugin
+
+COPY samples/python-agent-sdk /sdk
+COPY samples/PluginAgentResearchPipeline/sgr-analyst/pyproject.toml pyproject.toml
+COPY samples/PluginAgentResearchPipeline/sgr-analyst/src src
+
+RUN uv venv .venv \
+    && uv pip install --python .venv/bin/python /sdk \
+    && uv pip install --python .venv/bin/python "sgr-agent-core>=0.7.0,<1"
+
+# ── Stage 4: Final image ──────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3.11 \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3.11 \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r -g 65532 vais \
+    && useradd -r -u 65532 -g vais vais \
+    && mkdir -p /var/lib/vais/plugins \
+    && mkdir -p /var/lib/vais/python-plugins \
+    && chown -R vais:vais /var/lib/vais
+
+# .NET runtime
+COPY --from=dotnet-build  --chown=vais:vais /app/publish ./
+
+# C# planner plugin
+COPY --from=dotnet-build  --chown=vais:vais /plugins/research-planner \
+    /var/lib/vais/plugins/research-planner
+
+# LangGraph researcher Python plugin
+COPY --from=langgraph-builder --chown=vais:vais /plugin/.venv \
+    /var/lib/vais/python-plugins/langgraph-researcher-live/.venv
+COPY --from=langgraph-builder --chown=vais:vais /plugin/src \
+    /var/lib/vais/python-plugins/langgraph-researcher-live/src
+COPY --chown=vais:vais \
+    samples/PluginAgentLangGraphResearcherLive/langgraph-researcher-live/plugin.yaml \
+    /var/lib/vais/python-plugins/langgraph-researcher-live/plugin.yaml
+COPY --chown=vais:vais \
+    samples/PluginAgentLangGraphResearcherLive/langgraph-researcher-live/pyproject.toml \
+    /var/lib/vais/python-plugins/langgraph-researcher-live/pyproject.toml
+
+# SGR analyst Python plugin
+COPY --from=sgr-builder --chown=vais:vais /plugin/.venv \
+    /var/lib/vais/python-plugins/sgr-analyst/.venv
+COPY --from=sgr-builder --chown=vais:vais /plugin/src \
+    /var/lib/vais/python-plugins/sgr-analyst/src
+COPY --chown=vais:vais \
+    samples/PluginAgentResearchPipeline/sgr-analyst/plugin.yaml \
+    /var/lib/vais/python-plugins/sgr-analyst/plugin.yaml
+COPY --chown=vais:vais \
+    samples/PluginAgentResearchPipeline/sgr-analyst/pyproject.toml \
+    /var/lib/vais/python-plugins/sgr-analyst/pyproject.toml
+
+ENV VAIS_PYTHON_PLUGINS_DIRECTORY=/var/lib/vais/python-plugins
+ENV VAIS_PLUGINS_DIRECTORY=/var/lib/vais/plugins
+
+VOLUME ["/var/lib/vais/plugins"]
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD wget -q -O- http://localhost:8080/healthz || exit 1
+
+USER vais:vais
+ENTRYPOINT ["dotnet", "Vais.Agents.Runtime.Host.dll"]

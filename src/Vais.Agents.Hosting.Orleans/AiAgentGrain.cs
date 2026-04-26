@@ -154,9 +154,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         using var activity = OrleansDiagnostics.ActivitySource.StartActivity(
             "grain.ask", ActivityKind.Internal, parentCtx);
         activity?.SetTag(AgenticTags.AgentName, _agentId);
+        if (ActivityPropagation.ReadGraphRunId() is { } runId)
+            activity?.SetTag("graph.run_id", runId);
+        activity?.SetTag("gen_ai.prompt", userMessage);
 
         var sw = Stopwatch.StartNew();
         var reply = await agent.AskAsync(userMessage);
+        activity?.SetTag("gen_ai.completion", reply);
 
         _state.State.History = agent.History.ToList();
         _state.State.SystemPrompt = agent.SystemPrompt;

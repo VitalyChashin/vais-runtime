@@ -25,6 +25,8 @@ internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
             RequestContext.Set(ActivityPropagation.TraceParentKey, traceParent);
             if (!string.IsNullOrEmpty(current.TraceStateString))
                 RequestContext.Set(ActivityPropagation.TraceStateKey, current.TraceStateString);
+            if (current.GetTagItem("graph.run_id") is string runId)
+                RequestContext.Set(ActivityPropagation.GraphRunIdKey, runId);
         }
         await context.Invoke();
     }
@@ -53,6 +55,7 @@ internal static class ActivityPropagation
 {
     internal const string TraceParentKey = "vais.traceparent";
     internal const string TraceStateKey  = "vais.tracestate";
+    internal const string GraphRunIdKey  = "vais.graph.run_id";
 
     /// <summary>
     /// Reads the W3C traceparent from <see cref="RequestContext"/> and returns the
@@ -67,4 +70,11 @@ internal static class ActivityPropagation
         var traceState = RequestContext.Get(TraceStateKey) as string;
         return ActivityContext.TryParse(traceParent, traceState, out var ctx) ? ctx : default;
     }
+
+    /// <summary>
+    /// Reads the <c>graph.run_id</c> propagated from the caller's span tags via
+    /// <see cref="RequestContext"/>, or <see langword="null"/> if absent.
+    /// </summary>
+    internal static string? ReadGraphRunId() =>
+        RequestContext.Get(GraphRunIdKey) as string;
 }

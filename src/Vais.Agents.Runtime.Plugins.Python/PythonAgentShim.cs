@@ -87,9 +87,11 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
             Context: null);
 
+        var graphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
         using var activity = _activitySource.StartActivity("python.agent.ask", ActivityKind.Internal);
         activity?.SetTag("vais.agent.name", Session.AgentId);
         activity?.SetTag("gen_ai.prompt",   userMessage);
+        if (graphRunId != null) activity?.SetTag("graph.run_id", graphRunId);
 
         var response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
 
