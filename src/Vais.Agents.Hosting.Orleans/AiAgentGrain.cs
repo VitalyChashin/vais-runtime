@@ -150,7 +150,9 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     {
         var agent = EnsureAgent();
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
-        using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.ask");
+        var parentCtx = ActivityPropagation.ReadContext();
+        using var activity = OrleansDiagnostics.ActivitySource.StartActivity(
+            "grain.ask", ActivityKind.Internal, parentCtx);
         activity?.SetTag(AgenticTags.AgentName, _agentId);
 
         var sw = Stopwatch.StartNew();

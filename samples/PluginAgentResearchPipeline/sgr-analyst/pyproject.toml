@@ -1,0 +1,23 @@
+[project]
+name = "sgr-analyst"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "sgr-agent-core >=0.7.0,<1",
+  # vais-agent-sdk is installed from the local monorepo path below.
+  # Replace with "vais-agent-sdk>=0.26" once published to PyPI.
+]
+
+[tool.vais.plugin]
+targetApiVersion = "0.24"
+kind = "agent-handler"
+handlerTypeName = "sgr_analyst.agent.invoke"
+
+[project.entry-points."vais.plugins"]
+server = "sgr_analyst.server:main"
+
+[tool.uv]
+dev-dependencies = ["pytest >=8", "pytest-asyncio >=0.23"]
+
+[tool.uv.sources]
+vais-agent-sdk = { path = "../../../python-agent-sdk", editable = true }

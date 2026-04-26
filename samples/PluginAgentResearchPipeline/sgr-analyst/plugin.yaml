@@ -1,0 +1,19 @@
+apiVersion: vais.agents/v1
+kind: Plugin
+metadata:
+  name: sgr-analyst
+spec:
+  runtime: python
+  kind: agent-handler
+  handler:
+    typeName: sgr_analyst.agent.invoke
+  entrypoint: src/sgr_analyst/server.py
+  python:
+    version: "3.11"
+    interpreter: .venv/bin/python
+  health:
+    handshakeTimeoutSeconds: 15
+    restartPolicy: exponentialBackoff
+    invokeTimeoutSeconds: 120
+  secrets:
+    OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"

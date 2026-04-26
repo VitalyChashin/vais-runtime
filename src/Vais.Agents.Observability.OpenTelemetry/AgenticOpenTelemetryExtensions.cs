@@ -26,7 +26,9 @@ public static class AgenticOpenTelemetryExtensions
         ArgumentNullException.ThrowIfNull(builder);
         return builder
             .AddSource(AgenticDiagnostics.ActivitySourceName)
-            .AddSource("Vais.Agents.Hosting.Orleans");
+            .AddSource("Vais.Agents.Hosting.Orleans")
+            .AddSource("Vais.Agents.Core.Graph")
+            .AddSource("Vais.Agents.Runtime.Plugins.Python");
     }
 
     /// <summary>

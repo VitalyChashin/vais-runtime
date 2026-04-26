@@ -180,7 +180,7 @@ new EdgeTraversed(DateTimeOffset.UtcNow, context, runId, superStep, from, to);
 new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, changedKeys);
 new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep, nodeId, interruptId, reason);
 new GraphResumed(DateTimeOffset.UtcNow, context, runId, superStep, resumedFromNodeId, interruptId);
-new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep, finalNodeId, duration);
+new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep, finalNodeId, duration, finalState);
 new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep, errorType, errorMessage, duration);
 ```
 

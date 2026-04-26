@@ -30,6 +30,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <summary>Default max-step ceiling matching LangGraph's <c>recursion_limit</c>.</summary>
     public const int DefaultMaxSteps = 1000;
 
+    private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
+
     private readonly AgentGraphManifest _manifest;
     private readonly IAgentRegistry _registry;
     private readonly IAgentLifecycleManager _lifecycle;
@@ -254,6 +256,17 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             throw new InvalidOperationException($"Entry node '{_manifest.Entry}' not found in graph '{_manifest.Id}'.");
         }
 
+        using var graphActivity = _activitySource.StartActivity("graph.run", ActivityKind.Internal);
+        graphActivity?.SetTag("graph.id",      _manifest.Id);
+        graphActivity?.SetTag("graph.version", _manifest.Version);
+        graphActivity?.SetTag("graph.run_id",  runId);
+        graphActivity?.SetTag("graph.entry",   _manifest.Entry);
+        graphActivity?.SetTag("langfuse.trace.name", _manifest.Id);
+        if (!string.IsNullOrEmpty(context.CorrelationId))
+            graphActivity?.SetTag("langfuse.session.id", context.CorrelationId);
+        else if (!string.IsNullOrEmpty(context.UserId))
+            graphActivity?.SetTag("langfuse.session.id", context.UserId);
+
         var watch = Stopwatch.StartNew();
         var superStep = 0;
         var currentNodeId = startingNodeId ?? _manifest.Entry;
@@ -288,6 +301,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (superStep >= maxSteps)
             {
                 var ex = new GraphRecursionException(_manifest.Id, maxSteps);
+                graphActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 var recursionEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                     ex.GetType().Name, ex.Message, watch.Elapsed);
                 await _graphEventBus.PublishAsync(recursionEvt, cancellationToken).ConfigureAwait(false);
@@ -298,6 +312,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (!nodesById.TryGetValue(currentNodeId, out var node))
             {
                 var err = new InvalidOperationException($"Graph references unknown node '{currentNodeId}'.");
+                graphActivity?.SetStatus(ActivityStatusCode.Error, err.Message);
                 var unknownNodeEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                     err.GetType().Name, err.Message, watch.Elapsed);
                 await _graphEventBus.PublishAsync(unknownNodeEvt, cancellationToken).ConfigureAwait(false);
@@ -313,7 +328,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     NextNodeId: null, SuperStepIndex: superStep, PendingInterruptId: null,
                     IsComplete: true, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
                 var endCompletedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
-                    currentNodeId, watch.Elapsed);
+                    currentNodeId, watch.Elapsed, new Dictionary<string, JsonElement>(state));
                 await _graphEventBus.PublishAsync(endCompletedEvt, cancellationToken).ConfigureAwait(false);
                 yield return endCompletedEvt;
                 yield break;
@@ -382,6 +397,13 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (!skipNodeBody)
             {
                 // Node execution.
+                using var nodeActivity = _activitySource.StartActivity("graph.node", ActivityKind.Internal);
+                nodeActivity?.SetTag("graph.run_id",    runId);
+                nodeActivity?.SetTag("graph.node.id",   currentNodeId);
+                nodeActivity?.SetTag("graph.node.kind", node.Kind);
+                if (node.Ref?.Id is { } agentRefId)
+                    nodeActivity?.SetTag("vais.agent.name", agentRefId);
+
                 var nodeStartedEvt = new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
                 await _graphEventBus.PublishAsync(nodeStartedEvt, cancellationToken).ConfigureAwait(false);
                 yield return nodeStartedEvt;
@@ -398,6 +420,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 }
                 if (nodeFailure is not null)
                 {
+                    nodeActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
+                    graphActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
                     var nodeFailEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                         nodeFailure.GetType().Name, nodeFailure.Message, watch.Elapsed);
                     await _graphEventBus.PublishAsync(nodeFailEvt, cancellationToken).ConfigureAwait(false);
@@ -405,6 +429,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     throw nodeFailure;
                 }
                 nodeWatch.Stop();
+                nodeActivity?.SetStatus(ActivityStatusCode.Ok);
                 var nodeCompletedEvt = new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     currentNodeId, node.Kind, nodeWatch.Elapsed);
                 await _graphEventBus.PublishAsync(nodeCompletedEvt, cancellationToken).ConfigureAwait(false);
@@ -463,7 +488,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             {
                 // No matching outgoing edge — treat as implicit completion.
                 var implicitCompletedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
-                    currentNodeId, watch.Elapsed);
+                    currentNodeId, watch.Elapsed, new Dictionary<string, JsonElement>(state));
                 await _graphEventBus.PublishAsync(implicitCompletedEvt, cancellationToken).ConfigureAwait(false);
                 yield return implicitCompletedEvt;
                 yield break;

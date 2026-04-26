@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1.7
+# Overlay Dockerfile: layers the research-planner plugin onto a published runtime image.
+#
+# Build from samples/PluginAgentResearchPipeline/planner/ after publishing:
+#   dotnet publish Planner.csproj -c Release -o ./publish
+#   docker build -f Dockerfile.overlay -t my-registry/vais-research-planner:0.24.0 .
+#
+# The runtime scans /var/lib/vais/plugins at startup and activates every declared handler.
+# Each plugin folder gets its own AssemblyLoadContext and dependency resolver.
+
+FROM vais-agents-runtime:local
+COPY ./publish /var/lib/vais/plugins/research-planner
+# Pass OPENAI_API_KEY at runtime:
+#   docker run -e OPENAI_API_KEY=$OPENAI_API_KEY ...

@@ -422,13 +422,13 @@ Vais.Agents.GraphCheckpoint.State.init -> void
 Vais.Agents.GraphCheckpoint.SuperStepIndex.get -> int
 Vais.Agents.GraphCheckpoint.SuperStepIndex.init -> void
 Vais.Agents.GraphCompleted
-Vais.Agents.GraphCompleted.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! FinalNodeId, out System.TimeSpan Duration) -> void
+Vais.Agents.GraphCompleted.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! FinalNodeId, out System.TimeSpan Duration, out System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? FinalState) -> void
 Vais.Agents.GraphCompleted.Duration.get -> System.TimeSpan
 Vais.Agents.GraphCompleted.Duration.init -> void
 Vais.Agents.GraphCompleted.Equals(Vais.Agents.GraphCompleted? other) -> bool
 Vais.Agents.GraphCompleted.FinalNodeId.get -> string!
 Vais.Agents.GraphCompleted.FinalNodeId.init -> void
-Vais.Agents.GraphCompleted.GraphCompleted(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! FinalNodeId, System.TimeSpan Duration) -> void
+Vais.Agents.GraphCompleted.GraphCompleted(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! FinalNodeId, System.TimeSpan Duration, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? FinalState = null) -> void
 Vais.Agents.GraphEdge
 Vais.Agents.GraphEdge.<Clone>$() -> Vais.Agents.GraphEdge!
 Vais.Agents.GraphEdge.Deconstruct(out string! From, out string! To, out Vais.Agents.GraphEdgePredicate? When, out Vais.Agents.GraphEdgeEffect? OnTraverse) -> void

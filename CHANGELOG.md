@@ -10,6 +10,7 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 ## [Unreleased]
 
 ### Added
+- `OpenAIModelProviderFactory` now honours `ModelSpec.BaseUrlRef`: when set, the resolved value is used as the API endpoint, enabling any OpenAI-compatible service (local models, proxies, SGR Agent, etc.) to be consumed without additional code. Behaviour is unchanged when `BaseUrlRef` is absent.
 - `PythonAgentShim` — `IAiAgent` backed by a Python subprocess via the new `vais/agent.*` JSON-RPC MCP extension (v0.24). Supports opaque state round-trips so Python agents maintain their own internal state across turns without the .NET side parsing it.
 - `IOpaqueStateCarrier` interface wired through `AiAgentGrain` — the grain persists the opaque blob alongside history so Python agent state survives silo restarts.
 - `AgentInvokeRequest` / `AgentInvokeResponse` JSON-RPC protocol types and `IPythonAgentChannel` abstraction for the Python subprocess channel.
@@ -21,6 +22,9 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 - `AiAgentGrain.OnActivateAsync` is now truly `async` — it awaits the options factory directly instead of blocking via `GetAwaiter().GetResult()`. This eliminates the Orleans grain activation deadlock that caused 2-minute `ResponseTimeout` failures on first invocation.
 
 ### Fixed
+- **`invoke-graph --stream` crashes on `StateUpdated` events.** `GraphEventRenderer` rendered changed-key names as `[key1, key2]` — Spectre.Console interpreted the brackets as a markup style tag and threw "Could not find color or style". Escaped to `[[key1, key2]]` so the keys render as plain text.
+- **`finalState: null` in graph invoke response.** `InProcessGraphOrchestrator.StreamAsync` accumulates state in an internal copy that was never surfaced back to the caller. Added `IReadOnlyDictionary<string, JsonElement>? FinalState` to `GraphCompleted`; the orchestrator now snapshots the terminal state bag into the event. `DrainInvokeAsync` and `DrainResumeAsync` in `AgentGraphLifecycleManager` now capture `FinalState` from the event instead of returning the original (unchanged) initial state.
+- **OTLP traces not sent to Langfuse.** Two root causes: (1) `CompositionRoot.ConfigureObservability` set `o.Endpoint` programmatically — when the endpoint is set in code the .NET OTEL SDK does NOT append the signal-specific path suffix (`/v1/traces`) and all export requests hit the base path which returns 404; (2) `OTEL_EXPORTER_OTLP_HEADERS` was not read explicitly, relying on the SDK's env-var auto-read which was blocked by the code-level configure action. Fix: removed `o.Endpoint` from the configure action (letting the SDK read `OTEL_EXPORTER_OTLP_ENDPOINT` and correctly append `/v1/traces`); added `OtelHeaders` to `RuntimeOptions` and explicitly set `o.Headers` in the configure action. Also added `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` to `docker-compose.demo.yml` for clarity.
 - **Orleans grain activation deadlock.** `OnActivateAsync` → `TranslateForGrain` → `GetAwaiter().GetResult()` blocked the Orleans single-threaded scheduler while waiting for an inner grain RPC whose continuation was posted back to that same blocked scheduler — deadlock held for exactly `SiloMessagingOptions.ResponseTimeout` (2 minutes). Root cause: `OrleansAgentRegistry` methods lacked `ConfigureAwait(false)` and `TranslateForGrain` used a sync-over-async bridge. Both issues resolved.
 - Added `ConfigureAwait(false)` to four grain-to-grain calls in `OrleansAgentRegistry` (`ListAsync`, `GetAsync`, `RegisterAsync`) — independent fix that unblocks the deadlock even with the old sync bridge.
 
@@ -29,6 +33,12 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 - `AiAgentGrain` now emits `grain.activate` and `grain.ask` OTel spans tagged with `vais.agent.name`. Both spans are automatically picked up by `AddAgenticInstrumentation` — no consumer changes required.
 - `AiAgentGrain` now logs structured events at `Debug`/`Information`/`Error` level (category `Vais.Agents.Hosting.Orleans.AiAgentGrain`): grain activating, options factory elapsed time, activation mode (`plugin`/`declarative`), and per-ask elapsed time. Factory exceptions are logged at `Error` with elapsed milliseconds — enough to distinguish an Orleans deadlock (factory blocked for ~120 000 ms) from a slow but successful cold-start. Enable `Debug` in appsettings to see per-method timing; `Information` is on by default.
 - `AddAgenticInstrumentation(TracerProviderBuilder)` now also registers the `"Vais.Agents.Hosting.Orleans"` source in addition to `"Vais.Agents"`.
+- **Langfuse observability enrichment.** Graph executions, agent I/O, and trace hierarchy are now visible in Langfuse:
+  - `InProcessGraphOrchestrator` emits `graph.run` (root per invocation) and `graph.node` (one per node) OTel spans via a new `"Vais.Agents.Core.Graph"` `ActivitySource`. Tags: `graph.id`, `graph.version`, `graph.run_id`, `graph.entry`, `graph.node.id`, `graph.node.kind`, `vais.agent.name` (on Agent-kind nodes), `langfuse.trace.name`, `langfuse.session.id` (from `AgentContext.CorrelationId` / `UserId`).
+  - `OrleansOutgoingActivityFilter` — new `IOutgoingGrainCallFilter` that writes the current W3C traceparent into `Orleans.RequestContext` before each grain call. `AiAgentGrain.AskAsync` reads it back and parents its `grain.ask` span to the caller's `graph.node` span. Result: Langfuse renders the full tree `graph.run → graph.node → grain.ask → chat`.
+  - `StatefulAiAgent` `chat` span now carries `gen_ai.prompt` (user message) and `gen_ai.completion` (final assistant text), and `langfuse.observation.type=generation` so Langfuse renders it in its generation view with model, tokens, and cost.
+  - `PythonAgentShim.AskAsync` now emits a `python.agent.ask` span (source `"Vais.Agents.Runtime.Plugins.Python"`) with `gen_ai.prompt` and `gen_ai.completion`. Registered via `AddAgenticInstrumentation`.
+  - `OTEL_SERVICE_NAME=vais-oss-runtime` added to `docker-compose.demo.yml` — fixes `service.name: unknown_service:dotnet` in Langfuse resource attributes.
 
 ---
 

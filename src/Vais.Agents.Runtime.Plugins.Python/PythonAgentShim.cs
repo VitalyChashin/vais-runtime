@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,9 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// </remarks>
 internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStateCarrier
 {
+    private static readonly ActivitySource _activitySource =
+        new("Vais.Agents.Runtime.Plugins.Python", "1.0.0");
+
     private readonly IPythonAgentChannel _supervisor;
     private readonly int _maxStateSizeBytes;
     private readonly ILogger _logger;
@@ -83,7 +87,13 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
             Context: null);
 
+        using var activity = _activitySource.StartActivity("python.agent.ask", ActivityKind.Internal);
+        activity?.SetTag("vais.agent.name", Session.AgentId);
+        activity?.SetTag("gen_ai.prompt",   userMessage);
+
         var response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
+
+        activity?.SetTag("gen_ai.completion", response.AssistantMessage);
 
         // Guard against oversized state blobs before accepting the turn.
         if (response.NewState is { } ns &&

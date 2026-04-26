@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Research-pipeline demo — planner plugin (Task 4).
+    Decomposes a user query into 3-5 focused research sub-questions via OpenAI.
+    Consumed by the Vais Agents runtime at /var/lib/vais/plugins via AssemblyPluginLoader.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>research-planner</AssemblyName>
+    <!--
+      CopyLocalLockFileAssemblies + SelfContained=false ensure `dotnet publish` emits
+      the plugin's transitive dependencies alongside the primary DLL. The loader's
+      AssemblyDependencyResolver picks them up per plugin without mixing runtimes.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <!--
+    ProjectReferences to source keep the plugin compatible with whatever runtime
+    version is built locally. Switch to PackageReferences once the target version
+    is published to the local NuGet feed (artifacts/packages/).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Vais.Agents.Abstractions/Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="../../../src/Vais.Agents.Core/Vais.Agents.Core.csproj" />
+  </ItemGroup>
+
+
+</Project>

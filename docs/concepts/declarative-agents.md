@@ -53,7 +53,7 @@ Every `AgentManifest` field the translator consumes is documented in [manifest-s
 - **`provider`** — case-insensitive match against a registered `IModelProviderFactory`. Ships with `openai`, `anthropic`, `azure-openai`. Register custom factories for Bedrock / Gemini / Ollama / etc. — see [ship-a-custom-model-provider](../guides/ship-a-custom-model-provider.md).
 - **`id`** — model id (e.g. `gpt-4o`) or Azure deployment name.
 - **`apiKeyRef`** — `secret://` URI resolved by the registered `ISecretResolver` composite (env + file by default). K8s projected Secrets work via `secret://file/var/run/secrets/vais/openai-key`.
-- **`baseUrlRef`** — only used by Azure-OpenAI (endpoint URL). Optional for OpenAI/Anthropic.
+- **`baseUrlRef`** — `secret://` URI resolving to a custom API endpoint. Works with any `openai`-provider agent to point at proxies, self-hosted models, or compatible sidecars (e.g. SGR Agent). Required for `azure-openai`. Optional and unused by default for OpenAI/Anthropic.
 
 Unknown `provider` ⇒ `400 urn:vais-agents:model-provider-unsupported` at apply-validation time.
 

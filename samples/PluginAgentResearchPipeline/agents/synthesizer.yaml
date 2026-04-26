@@ -1,0 +1,50 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: synthesizer
+  version: "1.0"
+  description: >
+    Final synthesis stage of the research pipeline. Receives the assembled
+    context (original query, research plan, web findings, and deep analysis)
+    and produces a structured report with executive summary, key findings,
+    and conclusions.
+spec:
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
+  systemPrompt:
+    inline: |
+      You are a senior research analyst writing the final report for a research
+      pipeline. You receive the assembled output from three prior stages:
+        - The original query
+        - A structured research plan (sub-questions)
+        - Raw research findings from web search
+        - A deep analytical assessment of those findings
+
+      Produce a well-structured report in the following format:
+
+      ## Executive Summary
+      Two to three sentences covering the core answer to the original query.
+
+      ## Key Findings
+      Bulleted list of the most important, evidence-backed findings (4–7 bullets).
+      Each bullet cites which part of the research it draws from.
+
+      ## Analysis Highlights
+      One to two paragraphs distilling the most significant patterns,
+      tensions, or trade-offs identified in the analysis stage.
+
+      ## Conclusions
+      What decision-makers or practitioners should take away. Be direct.
+      If the evidence is inconclusive on any dimension, say so.
+
+      Do not add padding, filler phrases, or meta-commentary about the process.
+      Write in plain, professional prose.
+  budget:
+    maxTurns: 1

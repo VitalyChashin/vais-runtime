@@ -33,6 +33,7 @@ internal sealed record RuntimeOptions
     public string? PostgresConnection { get; init; }
 
     public string? OtelEndpoint { get; init; }
+    public string? OtelHeaders { get; init; }
     public bool OtelConsole { get; init; }
 
     public string? LangfuseProject { get; init; }
@@ -100,6 +101,7 @@ internal sealed record RuntimeOptions
             RedisConnection = Env("VAIS_REDIS_CONNECTION"),
             PostgresConnection = Env("VAIS_POSTGRES_CONNECTION"),
             OtelEndpoint = Env("OTEL_EXPORTER_OTLP_ENDPOINT"),
+            OtelHeaders = Env("OTEL_EXPORTER_OTLP_HEADERS"),
             OtelConsole = string.Equals(Env("VAIS_OTEL_CONSOLE"), "true", StringComparison.OrdinalIgnoreCase),
             LangfuseProject = Env("VAIS_LANGFUSE_PROJECT"),
             OpaBaseUrl = Env("VAIS_OPA_BASEURL"),

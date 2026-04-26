@@ -1,0 +1,15 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: research-planner
+  version: "1.0"
+  description: >
+    Decomposes a research topic into 3–5 focused sub-questions via OpenAI.
+    Output is plain text, one question per line — feeds into the LangGraph
+    researcher node in the research pipeline.
+spec:
+  handler:
+    typeName: MyApp.ResearchPlannerAgent.ResearchPlannerAgent
+  protocols:
+    - kind: Http
+  tools: []

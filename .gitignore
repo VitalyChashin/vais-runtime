@@ -24,6 +24,9 @@ Thumbs.db
 # docker-compose bind-mount data (Redis dump, Langfuse Postgres, etc.)
 deploy/compose/data/
 
+# Local environment file with real API keys (template committed as .env.example)
+deploy/compose/.env
+
 # AI assistant local config (vendor-specific, never committed)
 .claude/
 .mcp.json

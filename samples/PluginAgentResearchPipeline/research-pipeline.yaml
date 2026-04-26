@@ -1,0 +1,67 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: research-pipeline
+  version: "1.0"
+  description: >
+    Four-agent research pipeline showcasing the full breadth of the Vais.Agents
+    runtime: a C# plugin planner, a LangGraph Python researcher, an SGR Python
+    analyst, and a declarative YAML synthesizer — all wired together as a single
+    graph with shared state.
+
+spec:
+  entry: planner
+  maxSteps: 10
+
+  nodes:
+    - id: planner
+      kind: Agent
+      ref:
+        id: research-planner
+        version: "1.0"
+      stateBindings:
+        input:  [query]
+        output: [research_plan]
+
+    - id: researcher
+      kind: Agent
+      ref:
+        id: research-agent-live
+        version: "1.0"
+      stateBindings:
+        input:  [query, research_plan]
+        output: [research_findings]
+
+    - id: analyst
+      kind: Agent
+      ref:
+        id: sgr-analyst
+        version: "1.0"
+      stateBindings:
+        input:  [research_findings]
+        output: [analysis]
+
+    - id: synthesizer
+      kind: Agent
+      ref:
+        id: synthesizer
+        version: "1.0"
+      stateBindings:
+        input:  [query, research_plan, research_findings, analysis]
+        output: [report]
+
+    - id: end
+      kind: End
+
+  edges:
+    - from: planner
+      to: researcher
+
+    - from: researcher
+      to: analyst
+
+    - from: analyst
+      to: synthesizer
+
+    - from: synthesizer
+      to: end

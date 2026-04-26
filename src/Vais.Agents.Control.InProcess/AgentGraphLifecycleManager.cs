@@ -496,17 +496,17 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         await foreach (var evt in orchestrator.StreamAsync(initialState, context, ct).ConfigureAwait(false))
         {
-            if (evt is GraphCompleted)
+            if (evt is GraphCompleted gc)
             {
                 isComplete = true;
-                finalState = initialState;
+                if (gc.FinalState is not null)
+                    finalState = new Dictionary<string, JsonElement>(gc.FinalState);
             }
             else if (evt is GraphInterrupted gi)
             {
                 pendingInterruptId = gi.InterruptId;
                 pendingInterruptNodeId = gi.NodeId;
                 pendingInterruptReason = gi.Reason;
-                finalState = initialState;
             }
         }
 
@@ -549,9 +549,11 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         await foreach (var evt in orchestrator.ResumeStreamAsync(mergedCheckpoint, resumePayload: null, context, ct).ConfigureAwait(false))
         {
-            if (evt is GraphCompleted)
+            if (evt is GraphCompleted gc)
             {
                 isComplete = true;
+                if (gc.FinalState is not null)
+                    finalState = new Dictionary<string, JsonElement>(gc.FinalState);
             }
             else if (evt is GraphInterrupted gi)
             {

@@ -141,6 +141,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         var runStopwatch = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
+        activity?.SetTag("gen_ai.prompt", userMessage);
 
         await PublishEventAsync(new TurnStarted(runStartedAt, eventContext, userMessage), cancellationToken).ConfigureAwait(false);
 
@@ -1124,6 +1125,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
 
         activity.SetTag(AgenticTags.GenAiSystem, _provider.ProviderName);
         activity.SetTag(AgenticTags.GenAiOperationName, "chat");
+        activity.SetTag("langfuse.observation.type", "generation");
 
         var agentName = _agentName ?? context.AgentName;
         if (!string.IsNullOrEmpty(agentName))
@@ -1191,6 +1193,11 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             if (response.CompletionTokens is int completion)
             {
                 activity.SetTag(AgenticTags.GenAiUsageOutputTokens, completion);
+            }
+
+            if (!string.IsNullOrEmpty(response.Text))
+            {
+                activity.SetTag("gen_ai.completion", response.Text);
             }
         }
 

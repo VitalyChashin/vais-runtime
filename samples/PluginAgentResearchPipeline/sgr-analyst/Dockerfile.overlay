@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+# Overlay Dockerfile: layers the SGR analyst plugin onto a published runtime image.
+# Build context: samples/ (parent of PluginAgentResearchPipeline/)
+#
+# Usage (from samples/):
+#   docker build \
+#     -f PluginAgentResearchPipeline/sgr-analyst/Dockerfile.overlay \
+#     -t my-registry/vais-sgr-analyst:0.26.0 .
+
+# ── Stage 1: Build the Python plugin venv on Linux ───────────────────────────
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS python-builder
+WORKDIR /plugin
+
+# vais-agent-sdk — replace with `uv pip install vais-agent-sdk>=0.26` once published to PyPI.
+COPY python-agent-sdk /sdk
+COPY PluginAgentResearchPipeline/sgr-analyst/pyproject.toml pyproject.toml
+COPY PluginAgentResearchPipeline/sgr-analyst/src src
+
+RUN uv venv .venv \
+    && uv pip install --python .venv/bin/python /sdk \
+    && uv pip install --python .venv/bin/python "sgr-agent-core>=0.7.0,<1"
+
+# ── Stage 2: Overlay onto the published Vais runtime image ───────────────────
+FROM ghcr.io/vais-agents/runtime:0.26.0-preview
+WORKDIR /var/lib/vais/python-plugins/sgr-analyst
+
+COPY --from=python-builder /plugin/.venv .venv
+COPY --from=python-builder /plugin/src src
+COPY PluginAgentResearchPipeline/sgr-analyst/plugin.yaml plugin.yaml
+COPY PluginAgentResearchPipeline/sgr-analyst/pyproject.toml pyproject.toml
+
+ENV VAIS_PYTHON_PLUGINS_DIRECTORY=/var/lib/vais/python-plugins
+# Pass secrets at runtime:
+#   docker run -e OPENAI_API_KEY=$OPENAI_API_KEY -e TAVILY_API_KEY=$TAVILY_API_KEY ...

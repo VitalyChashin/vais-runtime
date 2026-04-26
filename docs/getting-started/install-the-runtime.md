@@ -24,7 +24,7 @@ This takes ~2 minutes on first build (restores NuGet packages); subsequent build
 
 ```bash
 docker compose \
-  -f deploy/compose/docker-compose.base.localhost.yaml \
+  -f deploy/compose/docker-compose.localhost.yml \
   up -d
 ```
 
@@ -55,7 +55,7 @@ vais get
 ## Stop
 
 ```bash
-docker compose -f deploy/compose/docker-compose.base.localhost.yaml down
+docker compose -f deploy/compose/docker-compose.localhost.yml down
 ```
 
 ## Next steps

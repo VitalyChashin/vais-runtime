@@ -244,16 +244,20 @@ Deferred to v0.17.1 / Pillar B polish (the declarative-agents tier):
 
 - `docs/guides/ship-a-guardrail.md` — partner authoring reference for `IGuardrailFactory`.
 - `docs/guides/ship-a-custom-model-provider.md` — partner authoring reference for
-  `IModelProviderFactory`.
-- `docs/reference/manifest-schema.md` — hand-written reference for the `AgentManifest` wire
-  format; XML docs + `GET /openapi/v1.json` cover the gap today.
+  `IModelProviderFactory`. → **In progress** — demo task 1 (2026-04-26); guide being written
+  alongside the `OpenAIModelProviderFactory` custom-endpoint patch.
+- ~~`docs/reference/manifest-schema.md` — hand-written reference for the `AgentManifest` wire
+  format; XML docs + `GET /openapi/v1.json` cover the gap today.~~ → **SHIPPED demo task 3
+  (2026-04-26)**; stub reference published at `docs/reference/manifest-schema.md` covering
+  `spec.model` (all fields) and the `baseUrlRef` custom-endpoint pattern.
 
 Source: [milestone v0.17 wrap-up](../../plans/actor-agents-oss-milestone-log.md)
 (2026-04-21). Next step: v0.17.1 polish pillar or fold into Phase 4 docs pass.
 
 - **Newcomer walkthrough (internal review).** Pillar F closed without an external reviewer
-  running the 20-minute tutorial. Source:
-  [Phase 3 plan Pillar F checklist](../../plans/actor-agents-oss-phase-3-runtime-productisation.md)
+  running the 20-minute tutorial. → **In progress** — demo task 9 (2026-04-26); the full
+  end-to-end validation run serves as this review; friction points captured as issues.
+  Source: [Phase 3 plan Pillar F checklist](../../plans/actor-agents-oss-phase-3-runtime-productisation.md)
   (2026-04-21). Next step: first external design partner runs the tutorial; capture friction
   points as issues.
 - **Rego authoring guide / style-guide doc.** Source:

@@ -1,0 +1,13 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: sgr-analyst
+  version: "1.0"
+  description: >
+    Deep-reasoning research analyst powered by SGR (Schema-Guided Reasoning).
+    Uses web search (Tavily) and content extraction to produce structured analysis.
+spec:
+  handler:
+    typeName: sgr_analyst.agent.invoke
+  protocols:
+    - kind: Http

@@ -38,7 +38,7 @@ internal sealed class GraphEventRenderer
                 break;
             case StateUpdated su:
                 var keys = string.Join(", ", su.ChangedKeys.Select(EscapeMarkup));
-                _console.MarkupLine($"[dim]~ state.updated[/] [grey]{su.At:HH:mm:ss.fff}[/] step={su.SuperStep} [{keys}]");
+                _console.MarkupLine($"[dim]~ state.updated[/] [grey]{su.At:HH:mm:ss.fff}[/] step={su.SuperStep} [[{keys}]]");
                 break;
             case GraphInterrupted gi:
                 _console.MarkupLine($"[yellow]! graph.interrupted[/] [grey]{gi.At:HH:mm:ss.fff}[/] step={gi.SuperStep} node={EscapeMarkup(gi.NodeId)} interruptId={EscapeMarkup(gi.InterruptId)} {(gi.Reason is null ? string.Empty : EscapeMarkup(gi.Reason))}");
@@ -53,7 +53,7 @@ internal sealed class GraphEventRenderer
                 _console.MarkupLine($"[red]■ graph.failed[/] [grey]{gf.At:HH:mm:ss.fff}[/] step={gf.SuperStep} {EscapeMarkup(gf.ErrorType)}: {EscapeMarkup(gf.ErrorMessage)}");
                 break;
             default:
-                _console.MarkupLine($"[grey]?[/] {evt.GetType().Name}");
+                _console.MarkupLine($"[grey]?[/] {EscapeMarkup(evt.GetType().Name)}");
                 break;
         }
     }

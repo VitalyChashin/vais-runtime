@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
+
 namespace Vais.Agents;
 
 /// <summary>
@@ -112,7 +114,8 @@ public sealed record GraphCompleted(
     string RunId,
     int SuperStep,
     string FinalNodeId,
-    TimeSpan Duration)
+    TimeSpan Duration,
+    IReadOnlyDictionary<string, JsonElement>? FinalState = null)
     : AgentGraphEvent(At, Context, RunId, SuperStep);
 
 /// <summary>Emitted when the graph fails — unhandled exception, max-steps hit, manifest error.</summary>

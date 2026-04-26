@@ -1,0 +1,40 @@
+# docker-compose.demo.yml
+#
+# Demo environment overlay — wires the runtime to a locally-running Langfuse
+# instance and injects all API keys from a populated .env file.
+#
+# Prerequisites:
+#   1. Langfuse already running (e.g. `docker run langfuse/langfuse:2` on port 3000).
+#      Create a project there and copy the public/secret keys into your .env.
+#   2. Copy deploy/compose/.env.example → deploy/compose/.env and fill in values.
+#
+# Usage:
+#   docker compose \
+#       -f docker-compose.localhost.yml \
+#       -f docker-compose.demo.yml \
+#       up -d
+#
+# Meant to be layered on top of docker-compose.localhost.yml. Add further overlays
+# (e.g. docker-compose.opa.yml) with additional -f flags as needed.
+
+services:
+  runtime:
+    environment:
+      # LLM providers
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+
+      # Langfuse — points at the Langfuse instance already running on the host.
+      # host.docker.internal resolves to the Docker host on Docker Desktop (Windows/Mac).
+      # On Linux replace with the host's bridge IP (e.g. 172.17.0.1) or use --add-host.
+      VAIS_LANGFUSE_HOST: ${LANGFUSE_HOST:-http://host.docker.internal:3000}
+      VAIS_LANGFUSE_PROJECT: ${LANGFUSE_PROJECT:-vais-agents-demo}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+
+      # OTLP export to Langfuse — sends spans to the Langfuse OTLP ingestion endpoint.
+      # Basic auth: Base64(public_key:secret_key). Recompute if keys rotate.
+      OTEL_SERVICE_NAME: vais-oss-runtime
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${LANGFUSE_HOST:-http://host.docker.internal:3000}/api/public/otel
+      OTEL_EXPORTER_OTLP_HEADERS: Authorization=Basic ${LANGFUSE_OTEL_AUTH}
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf

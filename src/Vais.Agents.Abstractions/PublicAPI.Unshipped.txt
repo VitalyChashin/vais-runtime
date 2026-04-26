@@ -1,1 +1,3 @@
 #nullable enable
+Vais.Agents.GraphCompleted.FinalState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
+Vais.Agents.GraphCompleted.FinalState.init -> void

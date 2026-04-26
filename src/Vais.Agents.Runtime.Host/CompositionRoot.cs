@@ -65,6 +65,10 @@ internal static class CompositionRoot
         ArgumentNullException.ThrowIfNull(options);
         options.EnsureValid();
 
+        // Propagate Activity trace context into grain calls so grain.ask spans are
+        // parented to the caller's graph.node span in Langfuse.
+        silo.AddOrleansActivityPropagation();
+
         if (options.Mode == "localhost")
         {
             silo.UseLocalhostClustering();
@@ -284,7 +288,14 @@ internal static class CompositionRoot
                     t.AddAgenticInstrumentation();
                     if (!string.IsNullOrWhiteSpace(options.OtelEndpoint))
                     {
-                        t.AddOtlpExporter(o => o.Endpoint = new Uri(options.OtelEndpoint));
+                        // Do NOT set o.Endpoint in code — the SDK will NOT append /v1/traces
+                        // when the endpoint is set programmatically, but it WILL when it reads
+                        // OTEL_EXPORTER_OTLP_ENDPOINT from the environment. Let the SDK own it.
+                        t.AddOtlpExporter(o =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(options.OtelHeaders))
+                                o.Headers = options.OtelHeaders;
+                        });
                     }
                     if (options.OtelConsole)
                     {
@@ -296,7 +307,11 @@ internal static class CompositionRoot
                     m.AddAgenticInstrumentation();
                     if (!string.IsNullOrWhiteSpace(options.OtelEndpoint))
                     {
-                        m.AddOtlpExporter(o => o.Endpoint = new Uri(options.OtelEndpoint));
+                        m.AddOtlpExporter(o =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(options.OtelHeaders))
+                                o.Headers = options.OtelHeaders;
+                        });
                     }
                     if (options.OtelConsole)
                     {
