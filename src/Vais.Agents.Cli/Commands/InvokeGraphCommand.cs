@@ -52,7 +52,7 @@ internal sealed class InvokeGraphCommand : AsyncCommand<InvokeGraphCommand.Setti
         [CommandOption("--idempotency-key")]
         public string? IdempotencyKey { get; init; }
 
-        [Description("Output format: text | json. Default: text.")]
+        [Description("Output format: text | json | state. 'state' serialises the final state bag as indented JSON. Default: text.")]
         [CommandOption("-o|--output")]
         public string? Output { get; init; }
 
@@ -175,6 +175,13 @@ internal sealed class InvokeGraphCommand : AsyncCommand<InvokeGraphCommand.Setti
 
     private static int PrintResult(GraphInvocationResult result, string? output)
     {
+        if (string.Equals(output, "state", StringComparison.OrdinalIgnoreCase))
+        {
+            var json = JsonSerializer.Serialize(result.FinalState, new JsonSerializerOptions { WriteIndented = true });
+            AnsiConsole.Console.WriteLine(json);
+            return ProblemDetailsParser.ExitSuccess;
+        }
+
         var format = OutputFormatter.Parse(output, OutputFormat.Json);
         if (format == OutputFormat.Json)
         {

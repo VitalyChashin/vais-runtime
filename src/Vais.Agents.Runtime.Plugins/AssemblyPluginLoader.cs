@@ -301,8 +301,8 @@ public sealed class AssemblyPluginLoader
             else
             {
                 _logger.LogWarning(
-                    "Plugin '{Plugin}': declared handler '{Handler}' was not found in the loaded assembly. " +
-                    "Use the full CLR name (e.g. '{Namespace}.{Handler}'). Skipped.",
+                    "Plugin '{Plugin}': declared handler '{Handler}' was not found in assembly '{Assembly}'. " +
+                    "Use the full CLR name (namespace + class name). Skipped.",
                     pluginName, handlerTypeName, assembly.GetName().Name);
                 return false;
             }

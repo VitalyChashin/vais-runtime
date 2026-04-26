@@ -170,6 +170,8 @@ internal static class CompositionRoot
                 // so contributors don't need a manual setup step after cloning.
                 FallbackUvSync = options.Mode == "localhost",
             });
+            services.AddHealthChecks()
+                .AddCheck<PythonPluginsReadyCheck>("python-plugins", tags: ["ready"]);
         }
 
         services.AddAgentManifestInstantiator();
