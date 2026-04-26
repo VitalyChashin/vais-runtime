@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <!-- Prevent test runs from exporting spans to the shared Langfuse demo project.
+           Without this, host-level OTEL env vars (OTEL_EXPORTER_OTLP_ENDPOINT) cause
+           test spans to pollute the demo trace view. -->
+      <OTEL_TRACES_EXPORTER>none</OTEL_TRACES_EXPORTER>
+      <OTEL_METRICS_EXPORTER>none</OTEL_METRICS_EXPORTER>
+      <OTEL_LOGS_EXPORTER>none</OTEL_LOGS_EXPORTER>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

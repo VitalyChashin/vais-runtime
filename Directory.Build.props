@@ -38,6 +38,12 @@
     <VersionSuffix>alpha</VersionSuffix>
   </PropertyGroup>
 
+  <!-- Suppress OTLP export during test runs so test spans don't pollute the demo Langfuse project.
+       The runsettings file sets OTEL_*_EXPORTER=none, overriding any host-level OTEL env vars. -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)vais.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
   <!--
     By default every project in this repo is packable (a NuGet library) unless it
     opts out. Tests and samples opt out individually.
