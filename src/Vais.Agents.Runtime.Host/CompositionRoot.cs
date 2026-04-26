@@ -283,6 +283,11 @@ internal static class CompositionRoot
         //    SiloStatus.Active. Probe tuning lives in the Helm chart (60s failure threshold).
         services.AddHealthChecks()
             .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"]);
+
+        // 8. Startup consistency check — walks every registered agent manifest and verifies
+        //    that Handler.TypeName entries resolve to a loaded plugin. Logs LogError (no throw)
+        //    for misses so mis-deployed plugins surface at host start, not at first invocation.
+        services.AddHostedService<PluginManifestConsistencyCheck>();
     }
 
     private static void ConfigureObservability(IServiceCollection services, RuntimeOptions options)

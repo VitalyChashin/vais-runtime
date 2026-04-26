@@ -169,11 +169,13 @@ public sealed class AssemblyPluginLoader
         if (!AbiMatches(attribute.TargetApiVersion, _options.RuntimeAbiVersion))
         {
             _logger.LogWarning(
-                "Plugin '{Plugin}' targets ABI {Target}; runtime ABI {Runtime} — {Urn}",
+                "[{Urn}] Plugin '{Plugin}' targets ABI '{Target}'; runtime expects '{Runtime}'. " +
+                "Update [assembly: VaisPlugin(targetApiVersion: \"{Runtime}\")] and rebuild the plugin to load it.",
+                PluginUrns.PluginAbiMismatch,
                 pluginName,
                 attribute.TargetApiVersion,
                 _options.RuntimeAbiVersion,
-                PluginUrns.PluginAbiMismatch);
+                _options.RuntimeAbiVersion);
             return;
         }
 

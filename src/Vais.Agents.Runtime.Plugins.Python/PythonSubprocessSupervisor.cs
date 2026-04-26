@@ -614,8 +614,21 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[{Urn}] MCP handshake failed for Python plugin '{Name}'.",
-                PythonPluginUrns.LoadFailed, desc.Name);
+            var tail = _stderrTail.ToArray();
+            var stderrSnippet = tail.Length > 0
+                ? "\nLast subprocess output:\n" + string.Join("\n", tail)
+                : " (no subprocess output captured)";
+            _logger.LogWarning(ex, "[{Urn}] MCP handshake failed for Python plugin '{Name}'.{Stderr}",
+                PythonPluginUrns.LoadFailed, desc.Name, stderrSnippet);
+            if (tail.Any(l => l.Contains("ImportError", StringComparison.Ordinal)
+                           || l.Contains("AttributeError", StringComparison.Ordinal)))
+            {
+                _logger.LogError(
+                    "[{Urn}] Python plugin '{Name}' crashed on import. " +
+                    "If AgentDefinition or similar is constructed at module level, " +
+                    "move it inside a function or guard with 'if __name__ == \"__main__\"'.",
+                    PythonPluginUrns.LoadFailed, desc.Name);
+            }
             if (client is not null)
                 try { await client.DisposeAsync().ConfigureAwait(false); } catch { }
             handle.Kill();
