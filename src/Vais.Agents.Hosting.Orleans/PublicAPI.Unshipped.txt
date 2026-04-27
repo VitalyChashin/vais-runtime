@@ -10,3 +10,8 @@ Vais.Agents.Hosting.Orleans.AiAgentGrain.StreamAgentAsync(string! userMessage, V
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.StreamAgentAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!
 Vais.Agents.Hosting.Orleans.OrleansActivityPropagationExtensions
 static Vais.Agents.Hosting.Orleans.OrleansActivityPropagationExtensions.AddOrleansActivityPropagation(this Orleans.Hosting.ISiloBuilder! silo) -> Orleans.Hosting.ISiloBuilder!
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.WorkspaceId -> string?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.PrivilegeLevel -> int?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AutonomyLevel -> int?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AllowedTools -> System.Collections.Immutable.ImmutableHashSet<string!>?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.MaxChainDepth -> int?

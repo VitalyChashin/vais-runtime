@@ -1,24 +1,35 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Collections.Immutable;
 using System.Diagnostics;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Hosting.Orleans;
 
 /// <summary>
 /// Outgoing grain call filter that propagates the current <see cref="Activity"/> trace context
-/// into <see cref="RequestContext"/> so that grain-side spans (grain.ask, grain.activate)
-/// can be parented to the caller's span (e.g. graph.node from InProcessGraphOrchestrator).
+/// and RCB fields from <see cref="IAgentContextAccessor"/> into <see cref="RequestContext"/>
+/// so that grain-side spans are parented correctly and RCB enforcement is available in callee grains.
 /// </summary>
 /// <remarks>
 /// Registered via <c>silo.AddOutgoingGrainCallFilter&lt;OrleansOutgoingActivityFilter&gt;()</c>
-/// in <c>CompositionRoot.ConfigureSilo</c>. The grain reads the keys via
-/// <see cref="ActivityPropagation.ReadContext"/>.
+/// in <c>CompositionRoot.ConfigureSilo</c>. Trace context is read via <see cref="ActivityPropagation.ReadContext"/>;
+/// RCB fields are read via <see cref="OrleansAgentContextAccessor"/> (or the in-process
+/// <c>AsyncLocalAgentContextAccessor</c> when registered by the HTTP host).
 /// </remarks>
 internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
 {
+    private readonly IAgentContextAccessor _contextAccessor;
+
+    public OrleansOutgoingActivityFilter(IAgentContextAccessor contextAccessor)
+    {
+        _contextAccessor = contextAccessor;
+    }
+
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
+        // OTel trace propagation (existing behaviour).
         var current = Activity.Current;
         if (current?.Id is { } traceParent)
         {
@@ -28,6 +39,22 @@ internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
             if (current.GetTagItem("graph.run_id") is string runId)
                 RequestContext.Set(ActivityPropagation.GraphRunIdKey, runId);
         }
+
+        // RCB propagation — write non-null RCB fields to RequestContext so that
+        // OrleansAgentContextAccessor on the callee side can reconstruct them.
+        var ctx = _contextAccessor.Current;
+        if (ctx.WorkspaceId is not null)
+            RequestContext.Set(AgenticTags.WorkspaceId, ctx.WorkspaceId);
+        if (ctx.PrivilegeLevel is { } pl)
+            RequestContext.Set(AgenticTags.PrivilegeLevel, (int)pl);
+        if (ctx.AutonomyLevel is { } al)
+            RequestContext.Set(AgenticTags.AutonomyLevel, (int)al);
+        if (ctx.AllowedTools is not null)
+            RequestContext.Set(AgenticTags.AllowedTools,
+                ctx.AllowedTools is ImmutableHashSet<string> hs ? hs : ctx.AllowedTools.ToImmutableHashSet());
+        if (ctx.MaxChainDepth is not null)
+            RequestContext.Set(AgenticTags.MaxChainDepth, ctx.MaxChainDepth);
+
         await context.Invoke();
     }
 }

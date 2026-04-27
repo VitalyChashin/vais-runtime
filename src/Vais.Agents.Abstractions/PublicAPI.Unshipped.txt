@@ -1,3 +1,21 @@
 #nullable enable
 Vais.Agents.GraphCompleted.FinalState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
 Vais.Agents.GraphCompleted.FinalState.init -> void
+Vais.Agents.PrivilegeLevel
+Vais.Agents.PrivilegeLevel.Platform = 0 -> Vais.Agents.PrivilegeLevel
+Vais.Agents.PrivilegeLevel.Workspace = 1 -> Vais.Agents.PrivilegeLevel
+Vais.Agents.PrivilegeLevel.Agent = 2 -> Vais.Agents.PrivilegeLevel
+Vais.Agents.AutonomyLevel
+Vais.Agents.AutonomyLevel.FullyAutonomous = 0 -> Vais.Agents.AutonomyLevel
+Vais.Agents.AutonomyLevel.Supervised = 1 -> Vais.Agents.AutonomyLevel
+Vais.Agents.AutonomyLevel.RequiresApproval = 2 -> Vais.Agents.AutonomyLevel
+Vais.Agents.AgentContext.WorkspaceId.get -> string?
+Vais.Agents.AgentContext.WorkspaceId.init -> void
+Vais.Agents.AgentContext.PrivilegeLevel.get -> Vais.Agents.PrivilegeLevel?
+Vais.Agents.AgentContext.PrivilegeLevel.init -> void
+Vais.Agents.AgentContext.AutonomyLevel.get -> Vais.Agents.AutonomyLevel?
+Vais.Agents.AgentContext.AutonomyLevel.init -> void
+Vais.Agents.AgentContext.AllowedTools.get -> System.Collections.Generic.IReadOnlySet<string!>?
+Vais.Agents.AgentContext.AllowedTools.init -> void
+Vais.Agents.AgentContext.MaxChainDepth.get -> int?
+Vais.Agents.AgentContext.MaxChainDepth.init -> void

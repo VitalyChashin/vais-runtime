@@ -101,6 +101,23 @@ public static class AgenticTags
 
     /// <summary>Tool call identifier correlating a <c>tool.call</c> span to its LLM-side call ID.</summary>
     public const string ToolCallId = "vais.tool.call_id";
+
+    // RCB (Reasoning Control Block) tags — used by RequestContext propagation and gateway middleware.
+
+    /// <summary>Workspace identifier from <see cref="AgentContext.WorkspaceId"/>.</summary>
+    public const string WorkspaceId = "vais.workspace.id";
+
+    /// <summary>Privilege level from <see cref="AgentContext.PrivilegeLevel"/>, stored as <see cref="int"/> in RequestContext.</summary>
+    public const string PrivilegeLevel = "vais.privilege.level";
+
+    /// <summary>Autonomy level from <see cref="AgentContext.AutonomyLevel"/>, stored as <see cref="int"/> in RequestContext.</summary>
+    public const string AutonomyLevel = "vais.autonomy.level";
+
+    /// <summary>Tool allow-list from <see cref="AgentContext.AllowedTools"/>, stored as <c>ImmutableHashSet&lt;string&gt;</c> in RequestContext.</summary>
+    public const string AllowedTools = "vais.allowed_tools";
+
+    /// <summary>Maximum agent-as-tool chain depth from <see cref="AgentContext.MaxChainDepth"/>.</summary>
+    public const string MaxChainDepth = "vais.max_chain_depth";
 }
 
 /// <summary>

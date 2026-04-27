@@ -1,3 +1,8 @@
 #nullable enable
 const Vais.Agents.Core.AgenticTags.ToolCallId = "vais.tool.call_id" -> string!
 const Vais.Agents.Core.AgenticTags.ToolName = "vais.tool.name" -> string!
+const Vais.Agents.Core.AgenticTags.WorkspaceId = "vais.workspace.id" -> string!
+const Vais.Agents.Core.AgenticTags.PrivilegeLevel = "vais.privilege.level" -> string!
+const Vais.Agents.Core.AgenticTags.AutonomyLevel = "vais.autonomy.level" -> string!
+const Vais.Agents.Core.AgenticTags.AllowedTools = "vais.allowed_tools" -> string!
+const Vais.Agents.Core.AgenticTags.MaxChainDepth = "vais.max_chain_depth" -> string!

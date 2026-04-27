@@ -85,6 +85,18 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             }
         }
 
+        // AllowedTools enforcement: when the context carries an explicit tool allow-list,
+        // reject any tool not on it before hitting the registry or guardrails.
+        // null AllowedTools = no restriction (default for all pre-RCB deployments).
+        if (context.AllowedTools is { } allowedTools && !allowedTools.Contains(request.ToolName))
+        {
+            var denied = new ToolCallOutcome(
+                request.CallId,
+                Result: $"Tool '{request.ToolName}' is not in the allowed-tools list for this context.",
+                Error: nameof(UnauthorizedAccessException));
+            return denied;
+        }
+
         var tool = _toolRegistry?.GetByName(request.ToolName);
         if (tool is null)
         {

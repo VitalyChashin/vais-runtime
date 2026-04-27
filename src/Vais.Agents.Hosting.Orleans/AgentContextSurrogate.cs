@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Collections.Immutable;
+
 namespace Vais.Agents.Hosting.Orleans;
 
 /// <summary>
@@ -28,6 +30,29 @@ public struct AgentContextSurrogate
     /// <summary>Optional run id stamped by <c>StatefulAiAgent</c> for durable execution (v0.5+).</summary>
     [Id(4)]
     public string? RunId;
+
+    // RCB fields (v0.next). New [Id] ordinals are safe — old messages missing these fields
+    // deserialise with null values, which means "no enforcement" per the RCB convention.
+
+    /// <summary>Workspace id from <see cref="AgentContext.WorkspaceId"/>.</summary>
+    [Id(5)]
+    public string? WorkspaceId;
+
+    /// <summary>Privilege level stored as int for enum-rename stability.</summary>
+    [Id(6)]
+    public int? PrivilegeLevel;
+
+    /// <summary>Autonomy level stored as int for enum-rename stability.</summary>
+    [Id(7)]
+    public int? AutonomyLevel;
+
+    /// <summary>Tool allow-list. <see cref="ImmutableHashSet{T}"/> is Orleans-serialisable and implements <see cref="IReadOnlySet{T}"/>.</summary>
+    [Id(8)]
+    public ImmutableHashSet<string>? AllowedTools;
+
+    /// <summary>Maximum agent-as-tool chain depth.</summary>
+    [Id(9)]
+    public int? MaxChainDepth;
 }
 
 /// <summary>
@@ -44,17 +69,29 @@ public sealed class AgentContextSurrogateConverter : IConverter<AgentContext, Ag
             CorrelationId: surrogate.CorrelationId,
             AgentName: surrogate.AgentName)
         {
-            RunId = surrogate.RunId,
+            RunId         = surrogate.RunId,
+            WorkspaceId   = surrogate.WorkspaceId,
+            PrivilegeLevel = surrogate.PrivilegeLevel is int p ? (Vais.Agents.PrivilegeLevel)p : null,
+            AutonomyLevel  = surrogate.AutonomyLevel  is int a ? (Vais.Agents.AutonomyLevel)a  : null,
+            AllowedTools  = surrogate.AllowedTools,
+            MaxChainDepth = surrogate.MaxChainDepth,
         };
 
     /// <inheritdoc />
     public AgentContextSurrogate ConvertToSurrogate(in AgentContext value) =>
         new()
         {
-            UserId = value.UserId,
-            TenantId = value.TenantId,
-            CorrelationId = value.CorrelationId,
-            AgentName = value.AgentName,
-            RunId = value.RunId,
+            UserId         = value.UserId,
+            TenantId       = value.TenantId,
+            CorrelationId  = value.CorrelationId,
+            AgentName      = value.AgentName,
+            RunId          = value.RunId,
+            WorkspaceId    = value.WorkspaceId,
+            PrivilegeLevel = value.PrivilegeLevel is { } p ? (int)p : null,
+            AutonomyLevel  = value.AutonomyLevel  is { } a ? (int)a : null,
+            AllowedTools   = value.AllowedTools is ImmutableHashSet<string> hs
+                ? hs
+                : value.AllowedTools?.ToImmutableHashSet(),
+            MaxChainDepth  = value.MaxChainDepth,
         };
 }
