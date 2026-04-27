@@ -1226,7 +1226,6 @@ Vais.Agents.UsageRecord.CompletionTokens.get -> int?
 Vais.Agents.UsageRecord.CompletionTokens.init -> void
 Vais.Agents.UsageRecord.CorrelationId.get -> string?
 Vais.Agents.UsageRecord.CorrelationId.init -> void
-Vais.Agents.UsageRecord.Deconstruct(out string! ProviderName, out string! ModelId, out int? PromptTokens, out int? CompletionTokens, out System.TimeSpan Duration, out System.DateTimeOffset StartedAt, out bool Succeeded, out string? AgentName, out string? UserId, out string? TenantId, out string? CorrelationId, out string? ErrorType) -> void
 Vais.Agents.UsageRecord.Duration.get -> System.TimeSpan
 Vais.Agents.UsageRecord.Duration.init -> void
 Vais.Agents.UsageRecord.Equals(Vais.Agents.UsageRecord? other) -> bool
@@ -1245,7 +1244,6 @@ Vais.Agents.UsageRecord.Succeeded.init -> void
 Vais.Agents.UsageRecord.TenantId.get -> string?
 Vais.Agents.UsageRecord.TenantId.init -> void
 Vais.Agents.UsageRecord.TotalTokens.get -> int?
-Vais.Agents.UsageRecord.UsageRecord(string! ProviderName, string! ModelId, int? PromptTokens, int? CompletionTokens, System.TimeSpan Duration, System.DateTimeOffset StartedAt, bool Succeeded, string? AgentName = null, string? UserId = null, string? TenantId = null, string? CorrelationId = null, string? ErrorType = null) -> void
 Vais.Agents.UsageRecord.UserId.get -> string?
 Vais.Agents.UsageRecord.UserId.init -> void
 Vais.Agents.VaisPluginAttribute

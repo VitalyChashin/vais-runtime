@@ -1,4 +1,19 @@
 #nullable enable
+Vais.Agents.Core.LlmGatewayServiceCollectionExtensions
+Vais.Agents.Core.StatefulAgentOptions.GatewayMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayMiddleware!>!
+Vais.Agents.Core.StatefulAgentOptions.GatewayMiddleware.init -> void
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddLlmGatewayMiddleware<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.LlmLoggingMiddleware
+Vais.Agents.Core.LlmLoggingMiddleware.LlmLoggingMiddleware(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.LlmLoggingMiddleware!>! logger) -> void
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddLlmLoggingMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.LlmUsageMiddleware
+Vais.Agents.Core.LlmUsageMiddleware.LlmUsageMiddleware(Vais.Agents.IUsageSink! sink, Vais.Agents.IAgentContextAccessor! contextAccessor) -> void
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddLlmUsageMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.LlmOtelMiddleware
+Vais.Agents.Core.LlmOtelMiddleware.LlmOtelMiddleware(Vais.Agents.IAgentContextAccessor! contextAccessor) -> void
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddLlmOtelMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.LlmPromptEnrichmentMiddleware
+Vais.Agents.Core.LlmPromptEnrichmentMiddleware.LlmPromptEnrichmentMiddleware(string! prefix = "", string! suffix = "") -> void
 const Vais.Agents.Core.AgenticTags.ToolCallId = "vais.tool.call_id" -> string!
 const Vais.Agents.Core.AgenticTags.ToolName = "vais.tool.name" -> string!
 const Vais.Agents.Core.AgenticTags.WorkspaceId = "vais.workspace.id" -> string!

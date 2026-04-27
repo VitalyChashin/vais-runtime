@@ -1,0 +1,18 @@
+#nullable enable
+Vais.Agents.Gateways.Governance.IRateLimitStore
+Vais.Agents.Gateways.Governance.IRateLimitStore.RecordAndGetAsync(string! key, int tokens, System.TimeSpan window, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<(int Requests, int Tokens)>
+Vais.Agents.Gateways.Governance.RateLimitOptions
+Vais.Agents.Gateways.Governance.RateLimitOptions.MaxRequestsPerWindow.get -> int?
+Vais.Agents.Gateways.Governance.RateLimitOptions.MaxRequestsPerWindow.init -> void
+Vais.Agents.Gateways.Governance.RateLimitOptions.MaxTokensPerWindow.get -> int?
+Vais.Agents.Gateways.Governance.RateLimitOptions.MaxTokensPerWindow.init -> void
+Vais.Agents.Gateways.Governance.RateLimitOptions.RateLimitOptions() -> void
+Vais.Agents.Gateways.Governance.RateLimitOptions.Window.get -> System.TimeSpan
+Vais.Agents.Gateways.Governance.RateLimitOptions.Window.init -> void
+Vais.Agents.Gateways.Governance.InMemorySlidingWindowRateLimitStore
+Vais.Agents.Gateways.Governance.InMemorySlidingWindowRateLimitStore.InMemorySlidingWindowRateLimitStore(System.TimeProvider? timeProvider = null) -> void
+Vais.Agents.Gateways.Governance.InMemorySlidingWindowRateLimitStore.RecordAndGetAsync(string! key, int tokens, System.TimeSpan window, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<(int Requests, int Tokens)>
+Vais.Agents.Gateways.Governance.LlmRateLimitMiddleware
+Vais.Agents.Gateways.Governance.LlmRateLimitMiddleware.LlmRateLimitMiddleware(Vais.Agents.Gateways.Governance.IRateLimitStore! store, Vais.Agents.Gateways.Governance.RateLimitOptions! options, Vais.Agents.IAgentContextAccessor! contextAccessor) -> void
+Vais.Agents.Gateways.Governance.LlmGovernanceServiceCollectionExtensions
+static Vais.Agents.Gateways.Governance.LlmGovernanceServiceCollectionExtensions.AddLlmRateLimitMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Governance.RateLimitOptions! options) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

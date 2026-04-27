@@ -1,4 +1,14 @@
 #nullable enable
+Vais.Agents.UsageRecord.Deconstruct(out string! ProviderName, out string! ModelId, out int? PromptTokens, out int? CompletionTokens, out System.TimeSpan Duration, out System.DateTimeOffset StartedAt, out bool Succeeded, out string? AgentName, out string? UserId, out string? TenantId, out string? CorrelationId, out string? ErrorType, out string? WorkspaceId) -> void
+Vais.Agents.UsageRecord.UsageRecord(string! ProviderName, string! ModelId, int? PromptTokens, int? CompletionTokens, System.TimeSpan Duration, System.DateTimeOffset StartedAt, bool Succeeded, string? AgentName = null, string? UserId = null, string? TenantId = null, string? CorrelationId = null, string? ErrorType = null, string? WorkspaceId = null) -> void
+Vais.Agents.UsageRecord.WorkspaceId.get -> string?
+Vais.Agents.UsageRecord.WorkspaceId.init -> void
+Vais.Agents.LlmGatewayMiddleware
+Vais.Agents.LlmGatewayMiddleware.LlmGatewayMiddleware() -> void
+virtual Vais.Agents.LlmGatewayMiddleware.InvokeAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!
+virtual Vais.Agents.LlmGatewayMiddleware.InvokeStreamAsync(Vais.Agents.CompletionRequest! request, System.Func<Vais.Agents.CompletionRequest!, System.Threading.CancellationToken, System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
+virtual Vais.Agents.LlmGatewayMiddleware.OnDeltaAsync(Vais.Agents.CompletionUpdate! update, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionUpdate!>
+virtual Vais.Agents.LlmGatewayMiddleware.OnStreamCompleteAsync(Vais.Agents.CompletionResponse! final, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.GraphCompleted.FinalState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
 Vais.Agents.GraphCompleted.FinalState.init -> void
 Vais.Agents.PrivilegeLevel

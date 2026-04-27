@@ -218,6 +218,17 @@ public sealed class StatefulAgentOptions
     public IReadOnlyList<IStreamingAgentFilter> StreamingFilters { get; init; } = Array.Empty<IStreamingAgentFilter>();
 
     /// <summary>
+    /// Ordered gateway middleware applied as the outermost layer of both the
+    /// non-streaming filter chain and the streaming filter chain. Each
+    /// <see cref="LlmGatewayMiddleware"/> instance covers both paths; register via
+    /// <c>services.AddLlmGatewayMiddleware&lt;T&gt;()</c> for DI-driven injection,
+    /// or set here directly for manual construction. Gateway middleware runs before
+    /// any <see cref="Filters"/> / <see cref="StreamingFilters"/>. Default: empty.
+    /// </summary>
+    public IReadOnlyList<LlmGatewayMiddleware> GatewayMiddleware { get; init; }
+        = Array.Empty<LlmGatewayMiddleware>();
+
+    /// <summary>
     /// Dispatcher for tool calls surfaced by the provider. When null, <c>StatefulAiAgent</c>
     /// constructs a <see cref="DefaultToolCallDispatcher"/> from <see cref="ToolRegistry"/> +
     /// <see cref="ToolGuardrails"/> automatically. Supply your own to override — e.g., a

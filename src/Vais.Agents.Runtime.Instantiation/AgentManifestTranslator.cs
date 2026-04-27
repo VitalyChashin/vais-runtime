@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents.Control;
 using Vais.Agents.Core;
 using Vais.Agents.Runtime.Plugins;
@@ -144,6 +145,10 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         var toolRegistry = await ResolveToolsAsync(manifest, cancellationToken).ConfigureAwait(false);
         var (inputGuardrails, outputGuardrails, toolGuardrails) = ResolveGuardrails(manifest.Guardrails);
 
+        var gatewayMiddleware = _serviceProvider
+            .GetServices<LlmGatewayMiddleware>()
+            .ToArray();
+
         var options = new StatefulAgentOptions
         {
             AgentName = manifest.Id,
@@ -154,6 +159,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             OutputGuardrails = outputGuardrails,
             ToolGuardrails = toolGuardrails,
             Budget = manifest.Budget,
+            GatewayMiddleware = gatewayMiddleware,
         };
 
         // First-writer-wins: concurrent TranslateAsync calls for the same id

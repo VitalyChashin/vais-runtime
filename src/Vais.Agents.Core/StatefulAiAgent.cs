@@ -84,7 +84,10 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 nameof(options));
         }
 
-        _filters = options.Filters;
+        var gw = options.GatewayMiddleware;
+        _filters = gw.Count == 0
+            ? options.Filters
+            : [.. gw, .. options.Filters];
         _usageSink = options.UsageSink ?? NullUsageSink.Instance;
         _eventBus = options.EventBus ?? NullAgentEventBus.Instance;
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
@@ -97,7 +100,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _systemPromptComposer = options.SystemPromptComposer;
         _inputGuardrails = options.InputGuardrails;
         _outputGuardrails = options.OutputGuardrails;
-        _streamingFilters = options.StreamingFilters;
+        _streamingFilters = gw.Count == 0
+            ? options.StreamingFilters
+            : [.. gw, .. options.StreamingFilters];
         _budget = options.Budget ?? RunBudget.Unlimited;
         _toolCallDispatcher = options.ToolCallDispatcher
             ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus, options.Journal);

@@ -23,6 +23,7 @@ namespace Vais.Agents;
 /// <param name="TenantId">Tenant identity from <see cref="IAgentContextAccessor"/>, when present.</param>
 /// <param name="CorrelationId">Correlation id for tying the turn to a broader operation, when present.</param>
 /// <param name="ErrorType">Short exception type name on failure; null on success.</param>
+/// <param name="WorkspaceId">Workspace scope from <see cref="IAgentContextAccessor"/>, when present.</param>
 public sealed record UsageRecord(
     string ProviderName,
     string ModelId,
@@ -35,7 +36,8 @@ public sealed record UsageRecord(
     string? UserId = null,
     string? TenantId = null,
     string? CorrelationId = null,
-    string? ErrorType = null)
+    string? ErrorType = null,
+    string? WorkspaceId = null)
 {
     /// <summary>Total tokens, summing <see cref="PromptTokens"/> and <see cref="CompletionTokens"/>; null if both are null.</summary>
     public int? TotalTokens =>

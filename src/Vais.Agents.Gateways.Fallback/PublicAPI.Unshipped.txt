@@ -1,0 +1,14 @@
+#nullable enable
+Vais.Agents.Gateways.Fallback.IFallbackProviderPool
+Vais.Agents.Gateways.Fallback.IFallbackProviderPool.GetProviders() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ICompletionProvider!>!
+Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool
+Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool.GetProviders() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ICompletionProvider!>!
+Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool.InMemoryFallbackProviderPool(params Vais.Agents.ICompletionProvider![]! providers) -> void
+Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware
+Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware.LlmFallbackMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> void
+Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions
+static Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions.AddLlmFallbackMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Gateways.Fallback.LlmLoadBalancingMiddleware
+Vais.Agents.Gateways.Fallback.LlmLoadBalancingMiddleware.LlmLoadBalancingMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> void
+Vais.Agents.Gateways.Fallback.LlmLoadBalancingServiceCollectionExtensions
+static Vais.Agents.Gateways.Fallback.LlmLoadBalancingServiceCollectionExtensions.AddLlmLoadBalancingMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

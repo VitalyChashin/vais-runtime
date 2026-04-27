@@ -1,0 +1,12 @@
+#nullable enable
+Vais.Agents.Gateways.SemanticCache.ISemanticCacheStore
+Vais.Agents.Gateways.SemanticCache.ISemanticCacheStore.GetAsync(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionResponse?>
+Vais.Agents.Gateways.SemanticCache.ISemanticCacheStore.SetAsync(string! key, Vais.Agents.CompletionResponse! response, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Gateways.SemanticCache.InMemorySemanticCacheStore
+Vais.Agents.Gateways.SemanticCache.InMemorySemanticCacheStore.GetAsync(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.CompletionResponse?>
+Vais.Agents.Gateways.SemanticCache.InMemorySemanticCacheStore.InMemorySemanticCacheStore() -> void
+Vais.Agents.Gateways.SemanticCache.InMemorySemanticCacheStore.SetAsync(string! key, Vais.Agents.CompletionResponse! response, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheMiddleware
+Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheMiddleware.LlmSemanticCacheMiddleware(Vais.Agents.Gateways.SemanticCache.ISemanticCacheStore! store) -> void
+Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheServiceCollectionExtensions
+static Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheServiceCollectionExtensions.AddLlmSemanticCacheMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

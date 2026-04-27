@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Vais.Agents</RootNamespace>
-    <AssemblyName>Vais.Agents.Core</AssemblyName>
-    <Description>Default stateful agent and state primitives for Vais.Agents. Stack-neutral: does not reference Semantic Kernel or Microsoft Agent Framework.</Description>
-    <PackageTags>agents;ai;llm;core</PackageTags>
+    <RootNamespace>Vais.Agents.Gateways.Fallback</RootNamespace>
+    <AssemblyName>Vais.Agents.Gateways.Fallback</AssemblyName>
+    <Description>Provider fallback and load-balancing gateway middleware for Vais.Agents. Retries failed LLM calls across a pool of providers.</Description>
+    <PackageTags>agents;ai;llm;fallback;load-balancing;resilience</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,8 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Resilience" />
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -24,8 +22,6 @@
   <ItemGroup>
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
-    <InternalsVisibleTo Include="Vais.Agents.Core.Tests" />
-    <InternalsVisibleTo Include="Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework" />
   </ItemGroup>
 
 </Project>

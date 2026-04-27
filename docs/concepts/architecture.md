@@ -1,6 +1,6 @@
 # Architecture
 
-Vais.Agents ships **27 packages** — 26 libraries plus the `Vais.Agents.Cli` dotnet tool. Each has one job. Consumers pick the subset that matches their scenario; dependencies between packages are strict — lower layers never reference higher ones.
+Vais.Agents ships **32 packages** — 31 libraries plus the `Vais.Agents.Cli` dotnet tool. Each has one job. Consumers pick the subset that matches their scenario; dependencies between packages are strict — lower layers never reference higher ones.
 
 ## Package layering
 
@@ -210,7 +210,7 @@ Later pillars added their own activity sources + tag families — `Vais.Agents.P
 
 ## Runtime tier (v0.16 Pillar A)
 
-The 26 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
+The 31 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
 
 ```
 ┌─ Runtime tier (deployable) ───────────────────────────────────┐
@@ -388,7 +388,7 @@ Key additions:
 
 See [graph as a first-class deployable concept](graph-as-deployable.md) and [deploy a graph to the runtime guide](../guides/deploy-a-graph-to-the-runtime.md).
 
-## The 27 packages at a glance
+## The 32 packages at a glance
 
 See the [packages reference](../reference/packages.md) for the per-package description table with install guidance.
 

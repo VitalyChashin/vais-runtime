@@ -1,6 +1,6 @@
 # Reference: packages
 
-All **27 packages** under the `Vais.Agents.*` prefix — 26 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
+All **32 packages** under the `Vais.Agents.*` prefix — 31 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
 
 Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that builds the `vais-agents-runtime` container image (v0.16 Pillar A). Not a NuGet; ships as the Dockerfile + docker-compose recipes + Helm chart under [`deploy/`](../../deploy/). See the [Runtime container](#runtime-container-v016) row at the bottom of this page.
 
@@ -16,6 +16,18 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 | Package | Purpose | Key entry points | Install when… |
 |---|---|---|---|
 | `Vais.Agents.Core` | Default `StatefulAiAgent` + execution loop + in-process defaults + diagnostics constants + `InProcessGraphOrchestrator` (zero-MAF-dep) + `InMemoryCheckpointer`. | `StatefulAiAgent`, `StatefulAgentOptions`, `DefaultToolCallDispatcher`, `InProcessGraphOrchestrator<TState>`, `AgenticDiagnostics`, `AgenticTags` | Any scenario that builds or runs an agent. |
+
+## Gateway plugins
+
+Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulAgentOptions.GatewayMiddleware`. Each package depends only on `Vais.Agents.Abstractions` and can be used standalone or in combination. Middleware is applied outermost-first (index 0 = first to intercept).
+
+| Package | Purpose | Key entry points | Install when… |
+|---|---|---|---|
+| `Vais.Agents.Gateways.Fallback` | Provider fallback and load balancing. `LlmFallbackMiddleware` tries providers in sequence, skipping failed ones. `LlmLoadBalancingMiddleware` distributes calls round-robin. Streaming fallback commits on the first successful delta. | `LlmFallbackMiddleware`, `LlmLoadBalancingMiddleware`, `IFallbackProviderPool`, `InMemoryFallbackProviderPool`, `AddLlmFallbackMiddleware`, `AddLlmLoadBalancingMiddleware` | You run multiple LLM providers and want automatic failover or load distribution. |
+| `Vais.Agents.Gateways.SemanticCache` | Response caching. Short-circuits the LLM call when a matching entry is found; populates the cache on miss. Streaming path drains and caches on miss; hit yields a single synthetic delta. Default key: last user turn text. | `LlmSemanticCacheMiddleware`, `ISemanticCacheStore`, `InMemorySemanticCacheStore`, `AddLlmSemanticCacheMiddleware` | You have repeated or near-identical prompts and want to reduce latency and cost. Swap `InMemorySemanticCacheStore` for a vector-similarity store to extend beyond exact-match. |
+| `Vais.Agents.Gateways.Governance` | Sliding-window rate limiting. Enforces per-key request-count and token-count budgets; throws `AgentBudgetExceededException` on breach. `InMemorySlidingWindowRateLimitStore` accepts `TimeProvider` for testability. | `LlmRateLimitMiddleware`, `RateLimitOptions`, `IRateLimitStore`, `InMemorySlidingWindowRateLimitStore`, `AddLlmRateLimitMiddleware` | You need per-user / per-workspace / per-tenant call budgets enforced in-process. Implement `IRateLimitStore` over Redis for distributed enforcement. |
+| `Vais.Agents.Gateways.StructuredOutput` | JSON output validation. Deserializes each response as `T` via `System.Text.Json`; throws `AgentGuardrailDeniedException(GuardrailLayer.Output)` on failure. Covers both the non-streaming turn and the streaming completion via `OnStreamCompleteAsync`. | `LlmJsonOutputMiddleware<T>` | Your agent must produce machine-readable JSON and you want a hard guardrail that surfaces parse failures before the response reaches the caller. |
+| `Vais.Agents.Gateways.Testing` | Test-double middleware. `LlmMockMiddleware` queues `CompletionResponse` objects and dequeues one per call (both paths), bypassing the real provider entirely. Throws `InvalidOperationException` when the queue is exhausted. | `LlmMockMiddleware` | Unit-testing agent logic — tool routing, multi-turn history, budget enforcement — without a real LLM. |
 
 ## Adapters
 
@@ -121,6 +133,10 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 
 ## Typical scenario bundles
 
+- **Provider fallback** — `Gateways.Fallback` + any provider adapter. Construct an `InMemoryFallbackProviderPool`, wrap it in `LlmFallbackMiddleware`, add to `GatewayMiddleware`.
+- **Rate-limited multi-tenant API** — `Gateways.Governance`. One `LlmRateLimitMiddleware` per agent; key resolves from `AgentContext.UserId` / `TenantId`.
+- **Structured JSON output** — `Gateways.StructuredOutput`. `new LlmJsonOutputMiddleware<MyDto>()` added first in `GatewayMiddleware`; the mock middleware (or real provider) sits behind it.
+- **Agent unit tests without LLM** — `Gateways.Testing`. Replace provider calls with `LlmMockMiddleware(response1, response2, …)` in `GatewayMiddleware`; the real provider is never called.
 - **Single-process agent on SK** — `Abstractions` + `Core` + `Ai.SemanticKernel`.
 - **Single-process agent on MAF** — `Abstractions` + `Core` + `Ai.MicrosoftAgentFramework`.
 - **Clustered agent on Orleans + Redis** — above + `Hosting.Orleans` + `Persistence.Redis`.
@@ -139,7 +155,7 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 - **Plugin-authored agent shipped as a DLL** *(v0.18 Pillar C)* — runtime container + `Vais.Agents.Abstractions` + `Vais.Agents.Core` in a separate `classlib` publish + `[assembly: VaisPlugin(...)]`. Ship as an overlay image (`FROM vais-agents-runtime` + `COPY ./publish /var/lib/vais/plugins/...`). Walk-through: [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md).
 - **Graph as a first-class deployable** *(v0.19 Pillar D)* — apply `kind: AgentGraph` manifests via `vais apply`, invoke via `vais invoke-graph`, stream via `vais invoke-graph --stream`. Graph manifests persist in `OrleansAgentGraphRegistry` + project into the K8s CRD. No extra NuGet — wired in the runtime host's `CompositionRoot`.
 - **Cross-runtime graph refs** *(v0.20 Pillar E)* — set `ref.runtimeUrl` on any `kind: Agent` node to dispatch it to a remote runtime. `IAgentRemoteInvoker` (`Control.Http.Client`) handles the HTTP forwarding + bearer-token propagation. Walk-through: [compose-a-graph-across-runtimes guide](../guides/compose-a-graph-across-runtimes.md).
-- **Everything** — 26 packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
+- **Everything** — 31 packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
 
 ## Version pins (in `Directory.Packages.props`)
 

@@ -1,0 +1,3 @@
+#nullable enable
+Vais.Agents.Gateways.Testing.LlmMockMiddleware
+Vais.Agents.Gateways.Testing.LlmMockMiddleware.LlmMockMiddleware(params Vais.Agents.CompletionResponse![]! responses) -> void

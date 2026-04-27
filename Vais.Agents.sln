@@ -117,6 +117,26 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Identity.Oidc",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Identity.Oidc.Tests", "tests\Vais.Agents.Identity.Oidc.Tests\Vais.Agents.Identity.Oidc.Tests.csproj", "{C2C0036D-7674-4309-A2A2-373688C71939}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Testing", "src\Vais.Agents.Gateways.Testing\Vais.Agents.Gateways.Testing.csproj", "{EFB86F30-8F18-44F7-824D-895D87A191E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Testing.Tests", "tests\Vais.Agents.Gateways.Testing.Tests\Vais.Agents.Gateways.Testing.Tests.csproj", "{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.StructuredOutput", "src\Vais.Agents.Gateways.StructuredOutput\Vais.Agents.Gateways.StructuredOutput.csproj", "{86E90DC6-69B8-4903-A129-64F217DF5BC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.StructuredOutput.Tests", "tests\Vais.Agents.Gateways.StructuredOutput.Tests\Vais.Agents.Gateways.StructuredOutput.Tests.csproj", "{76C5EEC3-F93A-41E7-B029-792726E77E26}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.SemanticCache", "src\Vais.Agents.Gateways.SemanticCache\Vais.Agents.Gateways.SemanticCache.csproj", "{21CC270E-1F44-4C97-B43A-7341CDEDFE84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.SemanticCache.Tests", "tests\Vais.Agents.Gateways.SemanticCache.Tests\Vais.Agents.Gateways.SemanticCache.Tests.csproj", "{C1E70223-C3BB-4418-9FA7-1B0B19965E64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Governance", "src\Vais.Agents.Gateways.Governance\Vais.Agents.Gateways.Governance.csproj", "{1890EE3E-E468-4DDE-95E3-EA731542D2AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Governance.Tests", "tests\Vais.Agents.Gateways.Governance.Tests\Vais.Agents.Gateways.Governance.Tests.csproj", "{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Fallback", "src\Vais.Agents.Gateways.Fallback\Vais.Agents.Gateways.Fallback.csproj", "{D78AA6B3-FD40-41C5-BDC4-EC81805EB624}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Fallback.Tests", "tests\Vais.Agents.Gateways.Fallback.Tests\Vais.Agents.Gateways.Fallback.Tests.csproj", "{FEF247DC-693E-4517-AD74-485C9677822C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -346,6 +366,46 @@ Global
 		{C2C0036D-7674-4309-A2A2-373688C71939}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2C0036D-7674-4309-A2A2-373688C71939}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2C0036D-7674-4309-A2A2-373688C71939}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFB86F30-8F18-44F7-824D-895D87A191E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFB86F30-8F18-44F7-824D-895D87A191E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFB86F30-8F18-44F7-824D-895D87A191E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFB86F30-8F18-44F7-824D-895D87A191E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86E90DC6-69B8-4903-A129-64F217DF5BC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86E90DC6-69B8-4903-A129-64F217DF5BC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86E90DC6-69B8-4903-A129-64F217DF5BC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86E90DC6-69B8-4903-A129-64F217DF5BC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76C5EEC3-F93A-41E7-B029-792726E77E26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76C5EEC3-F93A-41E7-B029-792726E77E26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76C5EEC3-F93A-41E7-B029-792726E77E26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76C5EEC3-F93A-41E7-B029-792726E77E26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21CC270E-1F44-4C97-B43A-7341CDEDFE84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21CC270E-1F44-4C97-B43A-7341CDEDFE84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21CC270E-1F44-4C97-B43A-7341CDEDFE84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21CC270E-1F44-4C97-B43A-7341CDEDFE84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1E70223-C3BB-4418-9FA7-1B0B19965E64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1E70223-C3BB-4418-9FA7-1B0B19965E64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1E70223-C3BB-4418-9FA7-1B0B19965E64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1E70223-C3BB-4418-9FA7-1B0B19965E64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1890EE3E-E468-4DDE-95E3-EA731542D2AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1890EE3E-E468-4DDE-95E3-EA731542D2AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1890EE3E-E468-4DDE-95E3-EA731542D2AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1890EE3E-E468-4DDE-95E3-EA731542D2AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEF247DC-693E-4517-AD74-485C9677822C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEF247DC-693E-4517-AD74-485C9677822C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEF247DC-693E-4517-AD74-485C9677822C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEF247DC-693E-4517-AD74-485C9677822C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -403,5 +463,15 @@ Global
 		{90931024-EE36-4242-B7A6-425C2D6CA705} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{6A9CBBD5-7117-4FBA-A60C-CA5C37750847} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{C2C0036D-7674-4309-A2A2-373688C71939} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{EFB86F30-8F18-44F7-824D-895D87A191E1} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{E25768DA-DEC4-49AE-A0F0-25F2CC0EECCB} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{86E90DC6-69B8-4903-A129-64F217DF5BC3} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{76C5EEC3-F93A-41E7-B029-792726E77E26} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{21CC270E-1F44-4C97-B43A-7341CDEDFE84} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{C1E70223-C3BB-4418-9FA7-1B0B19965E64} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{1890EE3E-E468-4DDE-95E3-EA731542D2AA} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{FEF247DC-693E-4517-AD74-485C9677822C} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal

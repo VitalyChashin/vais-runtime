@@ -1,6 +1,6 @@
 # Installation
 
-Vais.Agents ships as **27 packages** under the `Vais.Agents.*` prefix — 26 libraries plus the `Vais.Agents.Cli` dotnet tool. Install only what you use — every package is self-describing via its dependency graph.
+Vais.Agents ships as **32 packages** under the `Vais.Agents.*` prefix — 31 libraries plus the `Vais.Agents.Cli` dotnet tool. Install only what you use — every package is self-describing via its dependency graph.
 
 ## Prerequisites
 
@@ -125,4 +125,4 @@ vais version
 - [Hello agent](hello-agent.md) — end-to-end walkthrough against a real model.
 - [Install the CLI](install-the-cli.md) — `vais` bootstrap + first-run config.
 - [Choosing a stack: SK vs MAF](choosing-a-stack.md) — which adapter for which case.
-- [Architecture](../concepts/architecture.md) — how the 27 packages fit together.
+- [Architecture](../concepts/architecture.md) — how the 32 packages fit together.

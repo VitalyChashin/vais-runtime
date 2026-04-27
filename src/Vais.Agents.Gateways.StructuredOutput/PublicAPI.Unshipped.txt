@@ -1,0 +1,3 @@
+#nullable enable
+Vais.Agents.Gateways.StructuredOutput.LlmJsonOutputMiddleware<T>
+Vais.Agents.Gateways.StructuredOutput.LlmJsonOutputMiddleware<T>.LlmJsonOutputMiddleware(System.Text.Json.JsonSerializerOptions? options = null) -> void
