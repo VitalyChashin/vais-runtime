@@ -29,3 +29,27 @@ Vais.Agents.AgentContext.AllowedTools.get -> System.Collections.Generic.IReadOnl
 Vais.Agents.AgentContext.AllowedTools.init -> void
 Vais.Agents.AgentContext.MaxChainDepth.get -> int?
 Vais.Agents.AgentContext.MaxChainDepth.init -> void
+Vais.Agents.IInboundIdentityResolver
+Vais.Agents.IInboundIdentityResolver.ResolveAsync(string! bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentContext!>
+Vais.Agents.IModelRouter
+Vais.Agents.IModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.IModelRouter.ResolveAsync(string! modelAlias, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ModelRoute!>
+Vais.Agents.ModelNotFoundException
+Vais.Agents.ModelNotFoundException.ModelAlias.get -> string!
+Vais.Agents.ModelNotFoundException.ModelNotFoundException(string! modelAlias) -> void
+Vais.Agents.ModelRoute
+Vais.Agents.ModelRoute.<Clone>$() -> Vais.Agents.ModelRoute!
+Vais.Agents.ModelRoute.Deconstruct(out Vais.Agents.ICompletionProvider! Provider, out Vais.Agents.ModelSpec! ModelSpec) -> void
+Vais.Agents.ModelRoute.Equals(Vais.Agents.ModelRoute? other) -> bool
+Vais.Agents.ModelRoute.ModelRoute(Vais.Agents.ICompletionProvider! Provider, Vais.Agents.ModelSpec! ModelSpec) -> void
+Vais.Agents.ModelRoute.ModelSpec.get -> Vais.Agents.ModelSpec!
+Vais.Agents.ModelRoute.ModelSpec.init -> void
+Vais.Agents.ModelRoute.Provider.get -> Vais.Agents.ICompletionProvider!
+Vais.Agents.ModelRoute.Provider.init -> void
+override Vais.Agents.ModelRoute.Equals(object? obj) -> bool
+override Vais.Agents.ModelRoute.GetHashCode() -> int
+override Vais.Agents.ModelRoute.ToString() -> string!
+static Vais.Agents.ModelRoute.operator !=(Vais.Agents.ModelRoute? left, Vais.Agents.ModelRoute? right) -> bool
+static Vais.Agents.ModelRoute.operator ==(Vais.Agents.ModelRoute? left, Vais.Agents.ModelRoute? right) -> bool
+Vais.Agents.IAgentContextSetter
+Vais.Agents.IAgentContextSetter.Push(Vais.Agents.AgentContext! context) -> System.IDisposable!

@@ -14,7 +14,7 @@ namespace Vais.Agents.Core;
 /// </code>
 /// The disposed token restores the previous value.
 /// </remarks>
-public sealed class AsyncLocalAgentContextAccessor : IAgentContextAccessor
+public sealed class AsyncLocalAgentContextAccessor : IAgentContextAccessor, IAgentContextSetter
 {
     private static readonly AsyncLocal<AgentContext?> _current = new();
 

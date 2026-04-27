@@ -1,0 +1,5 @@
+#nullable enable
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatEndpoints
+static Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatEndpoints.MapOpenAiCompat(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! app) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatServiceCollectionExtensions
+static Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatServiceCollectionExtensions.AddOpenAiCompatGateway(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -1,6 +1,6 @@
 # Reference: packages
 
-All **32 packages** under the `Vais.Agents.*` prefix — 31 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
+All **34 packages** under the `Vais.Agents.*` prefix — 33 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
 
 Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that builds the `vais-agents-runtime` container image (v0.16 Pillar A). Not a NuGet; ships as the Dockerfile + docker-compose recipes + Helm chart under [`deploy/`](../../deploy/). See the [Runtime container](#runtime-container-v016) row at the bottom of this page.
 
@@ -28,6 +28,8 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 | `Vais.Agents.Gateways.Governance` | Sliding-window rate limiting. Enforces per-key request-count and token-count budgets; throws `AgentBudgetExceededException` on breach. `InMemorySlidingWindowRateLimitStore` accepts `TimeProvider` for testability. | `LlmRateLimitMiddleware`, `RateLimitOptions`, `IRateLimitStore`, `InMemorySlidingWindowRateLimitStore`, `AddLlmRateLimitMiddleware` | You need per-user / per-workspace / per-tenant call budgets enforced in-process. Implement `IRateLimitStore` over Redis for distributed enforcement. |
 | `Vais.Agents.Gateways.StructuredOutput` | JSON output validation. Deserializes each response as `T` via `System.Text.Json`; throws `AgentGuardrailDeniedException(GuardrailLayer.Output)` on failure. Covers both the non-streaming turn and the streaming completion via `OnStreamCompleteAsync`. | `LlmJsonOutputMiddleware<T>` | Your agent must produce machine-readable JSON and you want a hard guardrail that surfaces parse failures before the response reaches the caller. |
 | `Vais.Agents.Gateways.Testing` | Test-double middleware. `LlmMockMiddleware` queues `CompletionResponse` objects and dequeues one per call (both paths), bypassing the real provider entirely. Throws `InvalidOperationException` when the queue is exhausted. | `LlmMockMiddleware` | Unit-testing agent logic — tool routing, multi-turn history, budget enforcement — without a real LLM. |
+| `Vais.Agents.Gateways.OpenAiCompat` | OpenAI-compatible HTTP gateway. Exposes `POST /v1/chat/completions` (non-streaming JSON + streaming SSE) and `GET /v1/models` over any `IModelRouter` + `LlmGatewayMiddleware` chain. Bearer auth via `IInboundIdentityResolver`. Error mapping: 401/404/422/429/400/500. All DTOs are `internal`. | `AddOpenAiCompatGateway`, `MapOpenAiCompat`, `IInboundIdentityResolver`, `IModelRouter`, `ModelRoute`, `ModelNotFoundException`, `PassThroughIdentityResolver`, `InMemoryModelRouter`, `LlmGatewayPipeline` | Exposing your gateway as an OpenAI-compatible endpoint so Python clients, LiteLLM, or any OpenAI-SDK consumer can target it without custom integration. |
+| `Vais.Agents.Gateways.Prometheus` | Prometheus metrics middleware. `LlmPrometheusMiddleware` records `llm_requests_total`, `llm_request_duration_seconds`, and `llm_tokens_total` per call, labelled by `model` and `workspace`. Depends on `Abstractions` + `prometheus-net` only (no `Core` dep). Test constructor accepts an isolated `MetricFactory`. | `LlmPrometheusMiddleware`, `AddLlmPrometheusMiddleware` | Scraping LLM call metrics into any Prometheus-compatible backend (Grafana, Thanos, etc.). |
 
 ## Adapters
 
@@ -155,11 +157,13 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 - **Plugin-authored agent shipped as a DLL** *(v0.18 Pillar C)* — runtime container + `Vais.Agents.Abstractions` + `Vais.Agents.Core` in a separate `classlib` publish + `[assembly: VaisPlugin(...)]`. Ship as an overlay image (`FROM vais-agents-runtime` + `COPY ./publish /var/lib/vais/plugins/...`). Walk-through: [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md).
 - **Graph as a first-class deployable** *(v0.19 Pillar D)* — apply `kind: AgentGraph` manifests via `vais apply`, invoke via `vais invoke-graph`, stream via `vais invoke-graph --stream`. Graph manifests persist in `OrleansAgentGraphRegistry` + project into the K8s CRD. No extra NuGet — wired in the runtime host's `CompositionRoot`.
 - **Cross-runtime graph refs** *(v0.20 Pillar E)* — set `ref.runtimeUrl` on any `kind: Agent` node to dispatch it to a remote runtime. `IAgentRemoteInvoker` (`Control.Http.Client`) handles the HTTP forwarding + bearer-token propagation. Walk-through: [compose-a-graph-across-runtimes guide](../guides/compose-a-graph-across-runtimes.md).
-- **Everything** — 31 packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
+- **OpenAI-compatible gateway** — `Gateways.OpenAiCompat` + `Core` (ships `InMemoryModelRouter`, `PassThroughIdentityResolver`, `LlmGatewayPipeline`) + any provider adapter. Wire `AddOpenAiCompatGateway()` + `MapOpenAiCompat()` on `WebApplication`. Add other `Gateways.*` middleware for rate limiting, caching, fallback, etc. Guide: [expose-openai-compatible-gateway](../guides/expose-openai-compatible-gateway.md).
+- **Prometheus LLM metrics** — any gateway setup above + `Gateways.Prometheus`. `AddLlmPrometheusMiddleware()` registers `LlmPrometheusMiddleware` as the outermost middleware; `llm_requests_total`, `llm_request_duration_seconds`, and `llm_tokens_total` are automatically scraped.
+- **Everything** — 34 packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
 
 ## Version pins (in `Directory.Packages.props`)
 
-See [installation](../getting-started/installation.md) for the full pin list — SK 1.74, MAF 1.1.0, MEAI 10.5.0, OpenAI 2.10.0, Orleans 10.1.0, MCP 1.2.0, A2A 1.0.0-preview2, OTel 1.15.2, AspNetCore.OpenApi 9.0.11, ServerSentEvents 10.0.2, KubeOps 10.3.4, Spectre.Console.Cli 0.55.0.
+See [installation](../getting-started/installation.md) for the full pin list — SK 1.74, MAF 1.1.0, MEAI 10.5.0, OpenAI 2.10.0, Orleans 10.1.0, MCP 1.2.0, A2A 1.0.0-preview2, OTel 1.15.2, AspNetCore.OpenApi 9.0.11, ServerSentEvents 10.0.2, KubeOps 10.3.4, Spectre.Console.Cli 0.55.0, prometheus-net 8.2.1.
 
 ## See also
 

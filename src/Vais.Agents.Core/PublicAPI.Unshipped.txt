@@ -21,3 +21,15 @@ const Vais.Agents.Core.AgenticTags.PrivilegeLevel = "vais.privilege.level" -> st
 const Vais.Agents.Core.AgenticTags.AutonomyLevel = "vais.autonomy.level" -> string!
 const Vais.Agents.Core.AgenticTags.AllowedTools = "vais.allowed_tools" -> string!
 const Vais.Agents.Core.AgenticTags.MaxChainDepth = "vais.max_chain_depth" -> string!
+Vais.Agents.Core.InMemoryModelRouter
+Vais.Agents.Core.InMemoryModelRouter.InMemoryModelRouter(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.ModelRoute!>! routes) -> void
+Vais.Agents.Core.InMemoryModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Core.InMemoryModelRouter.ResolveAsync(string! modelAlias, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ModelRoute!>
+Vais.Agents.Core.PassThroughIdentityResolver
+Vais.Agents.Core.PassThroughIdentityResolver.PassThroughIdentityResolver(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.PassThroughIdentityResolver!>! logger, Vais.Agents.AgentContext? context = null) -> void
+Vais.Agents.Core.PassThroughIdentityResolver.ResolveAsync(string! bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentContext!>
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddInMemoryModelRouter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<System.Collections.Generic.Dictionary<string!, Vais.Agents.ModelRoute!>!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddPassThroughIdentityResolver(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.AgentContext? context = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.LlmGatewayPipeline
+static Vais.Agents.Core.LlmGatewayPipeline.InvokeAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.ICompletionProvider! provider, System.Collections.Generic.IEnumerable<Vais.Agents.LlmGatewayMiddleware!>! middleware, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!
+static Vais.Agents.Core.LlmGatewayPipeline.StreamAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.IStreamingCompletionProvider! provider, System.Collections.Generic.IEnumerable<Vais.Agents.LlmGatewayMiddleware!>! middleware, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!

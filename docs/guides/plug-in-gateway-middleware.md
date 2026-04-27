@@ -131,6 +131,40 @@ var agent = new StatefulAiAgent(providerA, new StatefulAgentOptions
 
 Each call increments an internal counter and picks `counter % pool.Count`. Thread-safe via `Interlocked.Increment`.
 
+## LlmPrometheusMiddleware — emit per-call Prometheus metrics
+
+```csharp
+using Vais.Agents.Gateways.Prometheus;
+
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    GatewayMiddleware =
+    [
+        new LlmPrometheusMiddleware(contextAccessor),
+        // other middleware…
+    ],
+    ContextAccessor = contextAccessor,
+});
+```
+
+`LlmPrometheusMiddleware` records three metrics per call, labelled by `model` and `workspace`:
+
+| Metric | Type | Labels | Description |
+|---|---|---|---|
+| `llm_requests_total` | Counter | `model`, `workspace`, `status` | `status` is `success` or `error` |
+| `llm_request_duration_seconds` | Histogram | `model`, `workspace` | Wall-clock latency |
+| `llm_tokens_total` | Counter | `model`, `workspace`, `type` | `type` is `prompt` or `completion` |
+
+The `workspace` label is sourced from `AgentContext.WorkspaceId`; it defaults to `_default` when no context is set.
+
+For test isolation, pass an explicit `MetricFactory` from an isolated registry so tests do not pollute `Metrics.DefaultRegistry`:
+
+```csharp
+var registry = Metrics.NewCustomRegistry();
+var factory = Metrics.WithCustomRegistry(registry);
+var middleware = new LlmPrometheusMiddleware(accessor, factory);
+```
+
 ## Combining multiple middlewares
 
 Middlewares compose left-to-right in `GatewayMiddleware`. The outermost (index 0) runs first. A typical production stack:
@@ -163,13 +197,14 @@ On a cache hit:
 Each gateway package ships a DI extension for use with the manifest translator. Register in `IServiceCollection`:
 
 ```csharp
-services.AddLlmLoggingMiddleware();          // Core
-services.AddLlmUsageMiddleware();            // Core
-services.AddLlmOtelMiddleware();             // Core
-services.AddLlmSemanticCacheMiddleware();    // Gateways.SemanticCache
-services.AddLlmRateLimitMiddleware(options); // Gateways.Governance
-services.AddLlmFallbackMiddleware(pool);     // Gateways.Fallback
-services.AddLlmLoadBalancingMiddleware(pool);// Gateways.Fallback
+services.AddLlmLoggingMiddleware();           // Core
+services.AddLlmUsageMiddleware();             // Core
+services.AddLlmOtelMiddleware();              // Core
+services.AddLlmSemanticCacheMiddleware();     // Gateways.SemanticCache
+services.AddLlmRateLimitMiddleware(options);  // Gateways.Governance
+services.AddLlmFallbackMiddleware(pool);      // Gateways.Fallback
+services.AddLlmLoadBalancingMiddleware(pool); // Gateways.Fallback
+services.AddLlmPrometheusMiddleware();        // Gateways.Prometheus
 ```
 
 Registered middleware is automatically prepended to the filter chains of all agents instantiated by `IAgentManifestTranslator`. The registration order determines the chain order (first registered = outermost).
@@ -177,5 +212,6 @@ Registered middleware is automatically prepended to the filter chains of all age
 ## See also
 
 - [Reference: packages](../reference/packages.md) — full package descriptions for each `Gateways.*` package.
+- [Expose an OpenAI-compatible gateway](expose-openai-compatible-gateway.md) — wire `LlmGatewayMiddleware` behind an OpenAI-compatible HTTP endpoint using `Gateways.OpenAiCompat`.
 - [Add input and output guardrails](add-input-output-guardrails.md) — per-turn guardrails that run outside the gateway layer.
 - [Deploy OTel and Langfuse](deploy-otel-and-langfuse.md) — `LlmOtelMiddleware` produces spans consumed by OTel collectors.

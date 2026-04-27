@@ -137,6 +137,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Fallba
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Fallback.Tests", "tests\Vais.Agents.Gateways.Fallback.Tests\Vais.Agents.Gateways.Fallback.Tests.csproj", "{FEF247DC-693E-4517-AD74-485C9677822C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.OpenAiCompat", "src\Vais.Agents.Gateways.OpenAiCompat\Vais.Agents.Gateways.OpenAiCompat.csproj", "{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.OpenAiCompat.Tests", "tests\Vais.Agents.Gateways.OpenAiCompat.Tests\Vais.Agents.Gateways.OpenAiCompat.Tests.csproj", "{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Prometheus", "src\Vais.Agents.Gateways.Prometheus\Vais.Agents.Gateways.Prometheus.csproj", "{9EB18147-EE7A-41FB-ADF4-F714E786AAC5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Gateways.Prometheus.Tests", "tests\Vais.Agents.Gateways.Prometheus.Tests\Vais.Agents.Gateways.Prometheus.Tests.csproj", "{5C4E9E49-8178-4CEE-B467-97D2E578C7B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -406,6 +414,22 @@ Global
 		{FEF247DC-693E-4517-AD74-485C9677822C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEF247DC-693E-4517-AD74-485C9677822C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEF247DC-693E-4517-AD74-485C9677822C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EB18147-EE7A-41FB-ADF4-F714E786AAC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EB18147-EE7A-41FB-ADF4-F714E786AAC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EB18147-EE7A-41FB-ADF4-F714E786AAC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EB18147-EE7A-41FB-ADF4-F714E786AAC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C4E9E49-8178-4CEE-B467-97D2E578C7B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C4E9E49-8178-4CEE-B467-97D2E578C7B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C4E9E49-8178-4CEE-B467-97D2E578C7B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C4E9E49-8178-4CEE-B467-97D2E578C7B2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -473,5 +497,9 @@ Global
 		{70C7BC00-55D5-4F4D-9D50-C4E7B8E66CA5} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{D78AA6B3-FD40-41C5-BDC4-EC81805EB624} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{FEF247DC-693E-4517-AD74-485C9677822C} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{84D5EF0B-CCC4-4A39-BE8A-DCB971914E3F} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{8BB55CBA-CDA1-4B88-9DBB-92F91324CD8E} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{9EB18147-EE7A-41FB-ADF4-F714E786AAC5} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{5C4E9E49-8178-4CEE-B467-97D2E578C7B2} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal
