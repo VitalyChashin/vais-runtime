@@ -1,0 +1,13 @@
+apiVersion: vais.agents/v1
+kind: LlmGatewayConfig
+metadata:
+  id: demo-llm-gateway
+  version: "1.0"
+  description: Observable LLM gateway — structured logging, OTel traces, and Prometheus metrics.
+spec:
+  middleware:
+    - name: LlmLogging
+    - name: LlmOtel
+    - name: Prometheus
+  rateLimit:
+    requestsPerMinute: 60

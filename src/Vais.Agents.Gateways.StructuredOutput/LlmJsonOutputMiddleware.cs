@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace Vais.Agents.Gateways.StructuredOutput;
@@ -58,4 +59,20 @@ public sealed class LlmJsonOutputMiddleware<T> : LlmGatewayMiddleware
                 $"Response is not valid {typeof(T).Name} JSON: {ex.Message}");
         }
     }
+}
+
+/// <summary>DI extension methods for registering <see cref="LlmJsonOutputMiddleware{T}"/>.</summary>
+public static class LlmStructuredOutputServiceCollectionExtensions
+{
+    /// <summary>
+    /// Registers <see cref="LlmJsonOutputMiddleware{JsonDocument}"/> as a named factory under
+    /// the key <c>"StructuredOutput"</c>. The factory validates that each LLM response is
+    /// well-formed JSON. For strongly-typed schema validation, register a custom
+    /// <c>LlmJsonOutputMiddleware&lt;T&gt;</c> directly.
+    /// </summary>
+    public static IServiceCollection AddNamedLlmGatewayMiddleware_StructuredOutput(
+        this IServiceCollection services)
+        => services.AddSingleton(new NamedLlmGatewayMiddlewareRegistration(
+            "StructuredOutput",
+            (_, _) => new LlmJsonOutputMiddleware<JsonDocument>()));
 }

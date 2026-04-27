@@ -275,6 +275,23 @@ public sealed class AgentGraphEntityControllerTests
 
         public Task CancelGraphRunAsync(string graphId, string runId, string? version = null, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        // Gateway stubs — not exercised by graph operator tests.
+        public Task<LlmGatewayConfigHandle> CreateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(new LlmGatewayConfigHandle(manifest.Id, manifest.Version));
+        public Task<LlmGatewayConfigHandle> UpdateLlmGatewayConfigAsync(string id, LlmGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new LlmGatewayConfigHandle(id, manifest.Version));
+        public Task<LlmGatewayConfigListResponse> ListLlmGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default) => Task.FromResult(new LlmGatewayConfigListResponse([]));
+        public Task<LlmGatewayConfigQueryResponse?> QueryLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult<LlmGatewayConfigQueryResponse?>(null);
+        public Task EvictLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<McpGatewayConfigHandle> CreateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(new McpGatewayConfigHandle(manifest.Id, manifest.Version));
+        public Task<McpGatewayConfigHandle> UpdateMcpGatewayConfigAsync(string id, McpGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new McpGatewayConfigHandle(id, manifest.Version));
+        public Task<McpGatewayConfigListResponse> ListMcpGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default) => Task.FromResult(new McpGatewayConfigListResponse([]));
+        public Task<McpGatewayConfigQueryResponse?> QueryMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult<McpGatewayConfigQueryResponse?>(null);
+        public Task EvictMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(new McpServerHandle(manifest.Id, manifest.Version));
+        public Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest manifest, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult(new McpServerHandle(id, manifest.Version));
+        public Task<McpServerListResponse> ListMcpServersAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default) => Task.FromResult(new McpServerListResponse([]));
+        public Task<McpServerQueryResponse?> QueryMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.FromResult<McpServerQueryResponse?>(null);
+        public Task EvictMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     internal sealed class FakeGraphKubernetesClient : IAgentGraphEntityKubernetesClient

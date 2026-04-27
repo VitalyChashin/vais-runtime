@@ -99,6 +99,15 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                     case ManifestResource.AgentGraphCase graphCase:
                         await ApplyGraphAsync(client, graphCase.Graph, idempotencyKey, cancellationToken);
                         break;
+                    case ManifestResource.LlmGatewayConfigCase llmCase:
+                        await ApplyLlmGatewayConfigAsync(client, llmCase.Config, idempotencyKey, cancellationToken);
+                        break;
+                    case ManifestResource.McpGatewayConfigCase mcpGwCase:
+                        await ApplyMcpGatewayConfigAsync(client, mcpGwCase.Config, idempotencyKey, cancellationToken);
+                        break;
+                    case ManifestResource.McpServerCase mcpServerCase:
+                        await ApplyMcpServerAsync(client, mcpServerCase.Server, idempotencyKey, cancellationToken);
+                        break;
                     default:
                         AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
                         break;
@@ -142,6 +151,48 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         {
             var updated = await client.UpdateGraphAsync(graph.Id, graph, graph.Version, idempotencyKey, ct);
             AnsiConsole.MarkupLine($"{updated.GraphId} [blue]updated[/] (graph, version {updated.Version})");
+        }
+    }
+
+    private static async Task ApplyLlmGatewayConfigAsync(IAgentControlPlaneClient client, LlmGatewayConfigManifest manifest, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateLlmGatewayConfigAsync(manifest, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (llm-gateway, version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateLlmGatewayConfigAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (llm-gateway, version {updated.Version})");
+        }
+    }
+
+    private static async Task ApplyMcpGatewayConfigAsync(IAgentControlPlaneClient client, McpGatewayConfigManifest manifest, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateMcpGatewayConfigAsync(manifest, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (mcp-gateway, version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateMcpGatewayConfigAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (mcp-gateway, version {updated.Version})");
+        }
+    }
+
+    private static async Task ApplyMcpServerAsync(IAgentControlPlaneClient client, McpServerManifest manifest, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateMcpServerAsync(manifest, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (mcp-server, version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateMcpServerAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (mcp-server, version {updated.Version})");
         }
     }
 

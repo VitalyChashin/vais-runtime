@@ -54,4 +54,46 @@ public enum PolicyOperation
 
     /// <summary>Remove a graph manifest and all its run state.</summary>
     GraphEvict = 13,
+
+    // ── LLM gateway config operations (v0.20) ────────────────────────────
+
+    /// <summary>Register a new LLM gateway config or version.</summary>
+    LlmGatewayConfigCreate = 14,
+
+    /// <summary>Mutate an existing LLM gateway config manifest.</summary>
+    LlmGatewayConfigUpdate = 15,
+
+    /// <summary>Read-only query of LLM gateway config status.</summary>
+    LlmGatewayConfigQuery = 16,
+
+    /// <summary>Remove an LLM gateway config manifest.</summary>
+    LlmGatewayConfigEvict = 17,
+
+    // ── MCP gateway config operations (v0.20) ────────────────────────────
+
+    /// <summary>Register a new MCP gateway config or version.</summary>
+    McpGatewayConfigCreate = 18,
+
+    /// <summary>Mutate an existing MCP gateway config manifest.</summary>
+    McpGatewayConfigUpdate = 19,
+
+    /// <summary>Read-only query of MCP gateway config status.</summary>
+    McpGatewayConfigQuery = 20,
+
+    /// <summary>Remove an MCP gateway config manifest.</summary>
+    McpGatewayConfigEvict = 21,
+
+    // ── MCP server operations (v0.20) ─────────────────────────────────────
+
+    /// <summary>Register a new MCP server manifest or version.</summary>
+    McpServerCreate = 22,
+
+    /// <summary>Mutate an existing MCP server manifest.</summary>
+    McpServerUpdate = 23,
+
+    /// <summary>Read-only query of MCP server status.</summary>
+    McpServerQuery = 24,
+
+    /// <summary>Remove an MCP server manifest.</summary>
+    McpServerEvict = 25,
 }

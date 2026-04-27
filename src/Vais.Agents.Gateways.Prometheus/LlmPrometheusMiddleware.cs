@@ -146,4 +146,16 @@ public static class LlmPrometheusServiceCollectionExtensions
         services.AddSingleton<LlmGatewayMiddleware, LlmPrometheusMiddleware>();
         return services;
     }
+
+    /// <summary>
+    /// Registers <see cref="LlmPrometheusMiddleware"/> as a named factory under the key
+    /// <c>"Prometheus"</c> so it can be referenced from <c>LlmGatewayConfig</c> middleware lists.
+    /// </summary>
+    public static IServiceCollection AddNamedLlmGatewayMiddleware_Prometheus(
+        this IServiceCollection services)
+        => services.AddSingleton(
+            sp => new NamedLlmGatewayMiddlewareRegistration(
+                "Prometheus",
+                (_, _) => new LlmPrometheusMiddleware(
+                    sp.GetRequiredService<IAgentContextAccessor>())));
 }

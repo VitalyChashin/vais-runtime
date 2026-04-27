@@ -31,4 +31,13 @@ public abstract record ManifestResource
 
     /// <summary><c>kind: AgentGraph</c>.</summary>
     public sealed record AgentGraphCase(AgentGraphManifest Graph) : ManifestResource;
+
+    /// <summary><c>kind: LlmGatewayConfig</c>.</summary>
+    public sealed record LlmGatewayConfigCase(LlmGatewayConfigManifest Config) : ManifestResource;
+
+    /// <summary><c>kind: McpGatewayConfig</c>.</summary>
+    public sealed record McpGatewayConfigCase(McpGatewayConfigManifest Config) : ManifestResource;
+
+    /// <summary><c>kind: McpServer</c>.</summary>
+    public sealed record McpServerCase(McpServerManifest Server) : ManifestResource;
 }

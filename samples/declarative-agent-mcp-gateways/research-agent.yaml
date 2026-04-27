@@ -1,0 +1,28 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: research-agent
+  version: "1.0"
+  description: Fetch-capable research assistant with observable LLM + tool gateways.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a research assistant. Use the fetch tool to retrieve web content
+      and summarize findings concisely. Always cite the URL you fetched.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  llmGatewayRef: demo-llm-gateway
+  mcpGatewayRef: demo-mcp-governance
+  mcpServers:
+    - name: mcp-fetch
+      transport: registered
+  tools:
+    - name: fetch
+      source: mcp:mcp-fetch
+  budget:
+    maxTurns: 5

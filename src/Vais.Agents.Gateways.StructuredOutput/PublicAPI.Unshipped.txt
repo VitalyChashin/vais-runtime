@@ -1,3 +1,5 @@
 #nullable enable
 Vais.Agents.Gateways.StructuredOutput.LlmJsonOutputMiddleware<T>
 Vais.Agents.Gateways.StructuredOutput.LlmJsonOutputMiddleware<T>.LlmJsonOutputMiddleware(System.Text.Json.JsonSerializerOptions? options = null) -> void
+Vais.Agents.Gateways.StructuredOutput.LlmStructuredOutputServiceCollectionExtensions
+static Vais.Agents.Gateways.StructuredOutput.LlmStructuredOutputServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_StructuredOutput(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

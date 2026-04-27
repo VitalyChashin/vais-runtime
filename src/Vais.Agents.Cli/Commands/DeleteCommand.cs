@@ -9,17 +9,19 @@ using Vais.Agents.Control.Http;
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
-/// Destructive — maps to <c>IAgentControlPlaneClient.EvictAsync</c>.
-/// Prompts confirm when stdin is a TTY and <c>--force</c> is not set,
-/// so scripts (no TTY) auto-accept while interactive sessions stay safe.
+/// Destructive delete. Accepts either a plain agent id (backward-compat) or a
+/// <c>&lt;resource-type&gt;/&lt;id&gt;</c> path for gateway resources:
+/// <c>agents/&lt;id&gt;</c>, <c>llm-gateways/&lt;id&gt;</c>,
+/// <c>mcp-gateways/&lt;id&gt;</c>, <c>mcp-servers/&lt;id&gt;</c>.
+/// Prompts confirm when stdin is a TTY and <c>--force</c> is not set.
 /// </summary>
 internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
-        [Description("Agent id to delete.")]
-        [CommandArgument(0, "<id>")]
-        public required string AgentId { get; init; }
+        [Description("Resource to delete: plain agent-id, or <resource-type>/<id> (agents/, llm-gateways/, mcp-gateways/, mcp-servers/).")]
+        [CommandArgument(0, "<resource>")]
+        public required string Resource { get; init; }
 
         [Description("Version to evict (omit for all versions).")]
         [CommandOption("--version")]
@@ -44,11 +46,12 @@ internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
-        // Confirm prompt only when interactive + --force is not set.
+        var (resourceKind, resourceId) = ParseResource(settings.Resource);
+
         if (!settings.Force && AnsiConsole.Profile.Capabilities.Interactive)
         {
             var versionSuffix = string.IsNullOrWhiteSpace(settings.Version) ? string.Empty : $" (version {settings.Version})";
-            if (!AnsiConsole.Confirm($"Delete agent [bold]'{settings.AgentId}'[/]{versionSuffix}?", defaultValue: false))
+            if (!AnsiConsole.Confirm($"Delete {resourceKind} [bold]'{resourceId}'[/]{versionSuffix}?", defaultValue: false))
             {
                 AnsiConsole.MarkupLine("[yellow]cancelled[/]");
                 return ProblemDetailsParser.ExitSuccess;
@@ -61,13 +64,39 @@ internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
         try
         {
             var idempotencyKey = settings.IdempotencyKey ?? Guid.NewGuid().ToString("N");
-            await client.EvictAsync(settings.AgentId, settings.Version, idempotencyKey, cancellationToken);
-            AnsiConsole.MarkupLine($"{settings.AgentId} [red]deleted[/]");
+            switch (resourceKind)
+            {
+                case "llm-gateways":
+                    await client.EvictLlmGatewayConfigAsync(resourceId, settings.Version, cancellationToken);
+                    break;
+                case "mcp-gateways":
+                    await client.EvictMcpGatewayConfigAsync(resourceId, settings.Version, cancellationToken);
+                    break;
+                case "mcp-servers":
+                    await client.EvictMcpServerAsync(resourceId, settings.Version, cancellationToken);
+                    break;
+                default:
+                    await client.EvictAsync(resourceId, settings.Version, idempotencyKey, cancellationToken);
+                    break;
+            }
+            AnsiConsole.MarkupLine($"{resourceId} [red]deleted[/]");
             return ProblemDetailsParser.ExitSuccess;
         }
         catch (AgentControlPlaneException ex)
         {
             return ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
         }
+    }
+
+    private static (string Kind, string Id) ParseResource(string resource)
+    {
+        var slash = resource.IndexOf('/', StringComparison.Ordinal);
+        if (slash > 0)
+        {
+            var kind = resource[..slash];
+            var id = resource[(slash + 1)..];
+            return (kind, id);
+        }
+        return ("agents", resource);
     }
 }

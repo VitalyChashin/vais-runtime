@@ -23,4 +23,24 @@ public static class McpTransformationServiceCollectionExtensions
         services.AddSingleton<ToolGatewayMiddleware, ToolHtmlToMarkdownMiddleware>();
         return services;
     }
+
+    /// <summary>
+    /// Registers <see cref="ToolJsonRepairMiddleware"/> as a named factory under the key
+    /// <c>"ToolJsonRepair"</c>.
+    /// </summary>
+    public static IServiceCollection AddNamedToolGatewayMiddleware_ToolJsonRepair(
+        this IServiceCollection services)
+        => services.AddSingleton(new NamedToolGatewayMiddlewareRegistration(
+            "ToolJsonRepair",
+            (_, _) => new ToolJsonRepairMiddleware()));
+
+    /// <summary>
+    /// Registers <see cref="ToolHtmlToMarkdownMiddleware"/> as a named factory under the key
+    /// <c>"ToolHtmlToMarkdown"</c>.
+    /// </summary>
+    public static IServiceCollection AddNamedToolGatewayMiddleware_ToolHtmlToMarkdown(
+        this IServiceCollection services)
+        => services.AddSingleton(new NamedToolGatewayMiddlewareRegistration(
+            "ToolHtmlToMarkdown",
+            (_, _) => new ToolHtmlToMarkdownMiddleware()));
 }

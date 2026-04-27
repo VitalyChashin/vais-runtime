@@ -15,10 +15,10 @@ namespace Vais.Agents;
 /// <see cref="Tools"/> allowlist reference from <see cref="ToolRef.Source"/>.
 /// </param>
 /// <param name="Transport">
-/// One of <c>"stdio"</c>, <c>"streamableHttp"</c>, <c>"sse"</c>, or <c>"plugin"</c>.
-/// Use <c>"plugin"</c> for servers whose subprocess is managed by the runtime (e.g. Python plugins
-/// loaded via <c>INamedToolSourceProvider</c>); <c>command</c> and <c>url</c> are not required or used
-/// for this transport.
+/// One of <c>"stdio"</c>, <c>"streamableHttp"</c>, <c>"sse"</c>, <c>"plugin"</c>, or
+/// <see cref="RegisteredTransport"/>. Use <c>"plugin"</c> for servers whose subprocess is managed
+/// by the runtime (e.g. Python plugins loaded via <c>INamedToolSourceProvider</c>);
+/// <c>command</c> and <c>url</c> are not required or used for this transport.
 /// </param>
 /// <param name="Command">Executable path for <c>stdio</c> transport. Required when <see cref="Transport"/> = <c>"stdio"</c>.</param>
 /// <param name="Args">Command-line arguments for <c>stdio</c>.</param>
@@ -37,4 +37,13 @@ public sealed record McpServerRef(
     string? Url = null,
     IReadOnlyDictionary<string, string>? Env = null,
     string? AuthRef = null,
-    IReadOnlyList<string>? Tools = null);
+    IReadOnlyList<string>? Tools = null)
+{
+    /// <summary>
+    /// Transport sentinel for registered virtual or physical servers. When
+    /// <see cref="Transport"/> equals this value, <see cref="Name"/> is treated as an
+    /// <see cref="McpServerManifest.Id"/> in <see cref="IMcpServerRegistry"/> rather
+    /// than as a connection hint. The translator expands it at grain activation time.
+    /// </summary>
+    public const string RegisteredTransport = "registered";
+}

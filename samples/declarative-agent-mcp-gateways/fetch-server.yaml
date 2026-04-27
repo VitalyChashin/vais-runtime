@@ -1,0 +1,10 @@
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: mcp-fetch
+  version: "1.0"
+  description: HTTP fetch tool via MCP (streamableHttp transport).
+spec:
+  transport: streamableHttp
+  url: http://mcp-fetch:3000/mcp
+  mcpGatewayRef: demo-mcp-governance

@@ -505,6 +505,279 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new GraphValidationResult(Valid: true, Array.Empty<string>());
     }
 
+    // ── LLM gateway config verbs (GCF-13) ──────────────────────────────────────
+
+    /// <inheritdoc />
+    public Task<LlmGatewayConfigHandle> CreateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+        => CreateLlmGatewayConfigAsync(manifest, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<LlmGatewayConfigHandle> CreateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/llm-gateways")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<LlmGatewayConfigApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateLlmGatewayConfig.");
+    }
+
+    /// <inheritdoc />
+    public Task<LlmGatewayConfigHandle> UpdateLlmGatewayConfigAsync(string id, LlmGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        => UpdateLlmGatewayConfigAsync(id, manifest, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<LlmGatewayConfigHandle> UpdateLlmGatewayConfigAsync(string id, LlmGatewayConfigManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(manifest);
+        var path = version is null ? $"/v1/llm-gateways/{Uri.EscapeDataString(id)}" : $"/v1/llm-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Patch, path)
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<LlmGatewayConfigApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateLlmGatewayConfig.");
+    }
+
+    /// <inheritdoc />
+    public async Task<LlmGatewayConfigListResponse> ListLlmGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(labelPrefix)) qs.Add($"labels={Uri.EscapeDataString(labelPrefix)}");
+        if (limit is int l) qs.Add($"limit={l}");
+        if (!string.IsNullOrWhiteSpace(cursor)) qs.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        var path = qs.Count > 0 ? $"/v1/llm-gateways?{string.Join('&', qs)}" : "/v1/llm-gateways";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<LlmGatewayConfigListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new LlmGatewayConfigListResponse(Array.Empty<LlmGatewayConfigManifest>());
+    }
+
+    /// <inheritdoc />
+    public async Task<LlmGatewayConfigQueryResponse?> QueryLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/llm-gateways/{Uri.EscapeDataString(id)}" : $"/v1/llm-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<LlmGatewayConfigQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task EvictLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/llm-gateways/{Uri.EscapeDataString(id)}" : $"/v1/llm-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<LlmGatewayConfigValidationResult> ValidateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/llm-gateways/validate")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<LlmGatewayConfigValidationResult>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new LlmGatewayConfigValidationResult(Valid: true, Array.Empty<string>());
+    }
+
+    // ── MCP gateway config verbs (GCF-13) ──────────────────────────────────────
+
+    /// <inheritdoc />
+    public Task<McpGatewayConfigHandle> CreateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+        => CreateMcpGatewayConfigAsync(manifest, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<McpGatewayConfigHandle> CreateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/mcp-gateways")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<McpGatewayConfigApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateMcpGatewayConfig.");
+    }
+
+    /// <inheritdoc />
+    public Task<McpGatewayConfigHandle> UpdateMcpGatewayConfigAsync(string id, McpGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        => UpdateMcpGatewayConfigAsync(id, manifest, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<McpGatewayConfigHandle> UpdateMcpGatewayConfigAsync(string id, McpGatewayConfigManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(manifest);
+        var path = version is null ? $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}" : $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Patch, path)
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<McpGatewayConfigApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateMcpGatewayConfig.");
+    }
+
+    /// <inheritdoc />
+    public async Task<McpGatewayConfigListResponse> ListMcpGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(labelPrefix)) qs.Add($"labels={Uri.EscapeDataString(labelPrefix)}");
+        if (limit is int l) qs.Add($"limit={l}");
+        if (!string.IsNullOrWhiteSpace(cursor)) qs.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        var path = qs.Count > 0 ? $"/v1/mcp-gateways?{string.Join('&', qs)}" : "/v1/mcp-gateways";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpGatewayConfigListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new McpGatewayConfigListResponse(Array.Empty<McpGatewayConfigManifest>());
+    }
+
+    /// <inheritdoc />
+    public async Task<McpGatewayConfigQueryResponse?> QueryMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}" : $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpGatewayConfigQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task EvictMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}" : $"/v1/mcp-gateways/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<McpGatewayConfigValidationResult> ValidateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/mcp-gateways/validate")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpGatewayConfigValidationResult>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new McpGatewayConfigValidationResult(Valid: true, Array.Empty<string>());
+    }
+
+    // ── MCP server verbs (GCF-13) ───────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default)
+        => CreateMcpServerAsync(manifest, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/mcp-servers")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<McpServerApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateMcpServer.");
+    }
+
+    /// <inheritdoc />
+    public Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        => UpdateMcpServerAsync(id, manifest, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(manifest);
+        var path = version is null ? $"/v1/mcp-servers/{Uri.EscapeDataString(id)}" : $"/v1/mcp-servers/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Patch, path)
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<McpServerApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateMcpServer.");
+    }
+
+    /// <inheritdoc />
+    public async Task<McpServerListResponse> ListMcpServersAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(labelPrefix)) qs.Add($"labels={Uri.EscapeDataString(labelPrefix)}");
+        if (limit is int l) qs.Add($"limit={l}");
+        if (!string.IsNullOrWhiteSpace(cursor)) qs.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        var path = qs.Count > 0 ? $"/v1/mcp-servers?{string.Join('&', qs)}" : "/v1/mcp-servers";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpServerListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new McpServerListResponse(Array.Empty<McpServerManifest>());
+    }
+
+    /// <inheritdoc />
+    public async Task<McpServerQueryResponse?> QueryMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/mcp-servers/{Uri.EscapeDataString(id)}" : $"/v1/mcp-servers/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpServerQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task EvictMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/mcp-servers/{Uri.EscapeDataString(id)}" : $"/v1/mcp-servers/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<McpServerValidationResult> ValidateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/mcp-servers/validate")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<McpServerValidationResult>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new McpServerValidationResult(Valid: true, Array.Empty<string>());
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

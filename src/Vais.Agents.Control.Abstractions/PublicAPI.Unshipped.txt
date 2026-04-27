@@ -15,3 +15,96 @@ override Vais.Agents.Control.RemoteRuntimeEntry.GetHashCode() -> int
 override Vais.Agents.Control.RemoteRuntimeEntry.ToString() -> string!
 static Vais.Agents.Control.RemoteRuntimeEntry.operator !=(Vais.Agents.Control.RemoteRuntimeEntry? left, Vais.Agents.Control.RemoteRuntimeEntry? right) -> bool
 static Vais.Agents.Control.RemoteRuntimeEntry.operator ==(Vais.Agents.Control.RemoteRuntimeEntry? left, Vais.Agents.Control.RemoteRuntimeEntry? right) -> bool
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager.CreateAsync(Vais.Agents.LlmGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigHandle!>
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager.EvictAsync(Vais.Agents.LlmGatewayConfigHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.LlmGatewayConfigManifest!>!
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager.QueryAsync(Vais.Agents.LlmGatewayConfigHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigStatus!>
+Vais.Agents.Control.ILlmGatewayConfigLifecycleManager.UpdateAsync(Vais.Agents.LlmGatewayConfigHandle! handle, Vais.Agents.LlmGatewayConfigManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigHandle!>
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager.CreateAsync(Vais.Agents.McpGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigHandle!>
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager.EvictAsync(Vais.Agents.McpGatewayConfigHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpGatewayConfigManifest!>!
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager.QueryAsync(Vais.Agents.McpGatewayConfigHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigStatus!>
+Vais.Agents.Control.IMcpGatewayConfigLifecycleManager.UpdateAsync(Vais.Agents.McpGatewayConfigHandle! handle, Vais.Agents.McpGatewayConfigManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigHandle!>
+Vais.Agents.Control.IMcpServerLifecycleManager
+Vais.Agents.Control.IMcpServerLifecycleManager.CreateAsync(Vais.Agents.McpServerManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerHandle!>
+Vais.Agents.Control.IMcpServerLifecycleManager.EvictAsync(Vais.Agents.McpServerHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IMcpServerLifecycleManager.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpServerManifest!>!
+Vais.Agents.Control.IMcpServerLifecycleManager.QueryAsync(Vais.Agents.McpServerHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerStatus!>
+Vais.Agents.Control.IMcpServerLifecycleManager.UpdateAsync(Vais.Agents.McpServerHandle! handle, Vais.Agents.McpServerManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerHandle!>
+Vais.Agents.Control.LlmGatewayConfigHandleNotFoundException
+Vais.Agents.Control.LlmGatewayConfigHandleNotFoundException.ConfigId.get -> string!
+Vais.Agents.Control.LlmGatewayConfigHandleNotFoundException.LlmGatewayConfigHandleNotFoundException(string! configId, string! version) -> void
+Vais.Agents.Control.LlmGatewayConfigHandleNotFoundException.Version.get -> string!
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Config.get -> Vais.Agents.LlmGatewayConfigManifest!
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Config.init -> void
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Deconstruct(out Vais.Agents.LlmGatewayConfigManifest! Config) -> void
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Equals(Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase? other) -> bool
+Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.LlmGatewayConfigCase(Vais.Agents.LlmGatewayConfigManifest! Config) -> void
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Config.get -> Vais.Agents.McpGatewayConfigManifest!
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Config.init -> void
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Deconstruct(out Vais.Agents.McpGatewayConfigManifest! Config) -> void
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Equals(Vais.Agents.Control.ManifestResource.McpGatewayConfigCase? other) -> bool
+Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.McpGatewayConfigCase(Vais.Agents.McpGatewayConfigManifest! Config) -> void
+Vais.Agents.Control.ManifestResource.McpServerCase
+Vais.Agents.Control.ManifestResource.McpServerCase.Deconstruct(out Vais.Agents.McpServerManifest! Server) -> void
+Vais.Agents.Control.ManifestResource.McpServerCase.Equals(Vais.Agents.Control.ManifestResource.McpServerCase? other) -> bool
+Vais.Agents.Control.ManifestResource.McpServerCase.McpServerCase(Vais.Agents.McpServerManifest! Server) -> void
+Vais.Agents.Control.ManifestResource.McpServerCase.Server.get -> Vais.Agents.McpServerManifest!
+Vais.Agents.Control.ManifestResource.McpServerCase.Server.init -> void
+Vais.Agents.Control.McpGatewayConfigHandleNotFoundException
+Vais.Agents.Control.McpGatewayConfigHandleNotFoundException.ConfigId.get -> string!
+Vais.Agents.Control.McpGatewayConfigHandleNotFoundException.McpGatewayConfigHandleNotFoundException(string! configId, string! version) -> void
+Vais.Agents.Control.McpGatewayConfigHandleNotFoundException.Version.get -> string!
+Vais.Agents.Control.McpServerHandleNotFoundException
+Vais.Agents.Control.McpServerHandleNotFoundException.McpServerHandleNotFoundException(string! serverId, string! version) -> void
+Vais.Agents.Control.McpServerHandleNotFoundException.ServerId.get -> string!
+Vais.Agents.Control.McpServerHandleNotFoundException.Version.get -> string!
+override Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase!
+override Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.ToString() -> string!
+override Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.McpGatewayConfigCase!
+override Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.ToString() -> string!
+override Vais.Agents.Control.ManifestResource.McpServerCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.McpServerCase!
+override Vais.Agents.Control.ManifestResource.McpServerCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.McpServerCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.McpServerCase.ToString() -> string!
+override sealed Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+override sealed Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+override sealed Vais.Agents.Control.ManifestResource.McpServerCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+static Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.operator !=(Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase? left, Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase.operator ==(Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase? left, Vais.Agents.Control.ManifestResource.LlmGatewayConfigCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.operator !=(Vais.Agents.Control.ManifestResource.McpGatewayConfigCase? left, Vais.Agents.Control.ManifestResource.McpGatewayConfigCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.McpGatewayConfigCase.operator ==(Vais.Agents.Control.ManifestResource.McpGatewayConfigCase? left, Vais.Agents.Control.ManifestResource.McpGatewayConfigCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.McpServerCase.operator !=(Vais.Agents.Control.ManifestResource.McpServerCase? left, Vais.Agents.Control.ManifestResource.McpServerCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.McpServerCase.operator ==(Vais.Agents.Control.ManifestResource.McpServerCase? left, Vais.Agents.Control.ManifestResource.McpServerCase? right) -> bool
+Vais.Agents.Control.LlmGatewayConfigConflictException
+Vais.Agents.Control.LlmGatewayConfigConflictException.ConfigId.get -> string!
+Vais.Agents.Control.LlmGatewayConfigConflictException.LlmGatewayConfigConflictException(string! configId, string! version) -> void
+Vais.Agents.Control.LlmGatewayConfigConflictException.Version.get -> string!
+Vais.Agents.Control.McpGatewayConfigConflictException
+Vais.Agents.Control.McpGatewayConfigConflictException.ConfigId.get -> string!
+Vais.Agents.Control.McpGatewayConfigConflictException.McpGatewayConfigConflictException(string! configId, string! version) -> void
+Vais.Agents.Control.McpGatewayConfigConflictException.Version.get -> string!
+Vais.Agents.Control.McpServerConflictException
+Vais.Agents.Control.McpServerConflictException.McpServerConflictException(string! serverId, string! version) -> void
+Vais.Agents.Control.McpServerConflictException.ServerId.get -> string!
+Vais.Agents.Control.McpServerConflictException.Version.get -> string!
+Vais.Agents.Control.PolicyOperation.LlmGatewayConfigCreate = 14 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.LlmGatewayConfigEvict = 17 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.LlmGatewayConfigQuery = 16 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.LlmGatewayConfigUpdate = 15 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpGatewayConfigCreate = 18 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpGatewayConfigEvict = 21 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpGatewayConfigQuery = 20 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpGatewayConfigUpdate = 19 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpServerCreate = 22 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpServerEvict = 25 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpServerQuery = 24 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.McpServerUpdate = 23 -> Vais.Agents.Control.PolicyOperation

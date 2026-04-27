@@ -26,6 +26,9 @@ public sealed class JsonAgentGraphManifestLoader
     internal const string ExpectedApiVersion = "vais.agents/v1";
     internal const string AgentGraphKind = "AgentGraph";
     internal const string AgentKind = "Agent";
+    internal const string LlmGatewayConfigKind = "LlmGatewayConfig";
+    internal const string McpGatewayConfigKind = "McpGatewayConfig";
+    internal const string McpServerKind = "McpServer";
 
     /// <summary>Parse graph manifests from an in-memory string. Agent-kind documents in the stream are silently skipped.</summary>
     public ValueTask<IReadOnlyList<AgentGraphManifest>> LoadFromStringAsync(string content, CancellationToken cancellationToken = default)
@@ -170,8 +173,24 @@ public sealed class JsonAgentGraphManifestLoader
             var graph = ParseGraph(root, errors, prefix);
             return graph is null ? null : new ManifestResource.AgentGraphCase(graph);
         }
+        if (string.Equals(kind, LlmGatewayConfigKind, StringComparison.Ordinal))
+        {
+            var cfg = ParseLlmGatewayConfig(root, errors, prefix);
+            return cfg is null ? null : new ManifestResource.LlmGatewayConfigCase(cfg);
+        }
+        if (string.Equals(kind, McpGatewayConfigKind, StringComparison.Ordinal))
+        {
+            var cfg = ParseMcpGatewayConfig(root, errors, prefix);
+            return cfg is null ? null : new ManifestResource.McpGatewayConfigCase(cfg);
+        }
+        if (string.Equals(kind, McpServerKind, StringComparison.Ordinal))
+        {
+            var srv = ParseMcpServer(root, errors, prefix);
+            return srv is null ? null : new ManifestResource.McpServerCase(srv);
+        }
 
-        errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' (expected '{AgentKind}' or '{AgentGraphKind}')");
+        errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' " +
+            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', or '{McpServerKind}')");
         return null;
     }
 
@@ -612,12 +631,233 @@ public sealed class JsonAgentGraphManifestLoader
             {
                 ManifestResource.AgentCase a => ("Agent", a.Manifest.Id, a.Manifest.Version),
                 ManifestResource.AgentGraphCase g => ("AgentGraph", g.Graph.Id, g.Graph.Version),
-                _ => throw new NotSupportedException(),
+                ManifestResource.LlmGatewayConfigCase l => ("LlmGatewayConfig", l.Config.Id, l.Config.Version),
+                ManifestResource.McpGatewayConfigCase m => ("McpGatewayConfig", m.Config.Id, m.Config.Version),
+                ManifestResource.McpServerCase s => ("McpServer", s.Server.Id, s.Server.Version),
+                _ => throw new NotSupportedException($"Unknown ManifestResource type: {r.GetType().Name}"),
             };
             if (!seen.Add(key))
             {
                 errors.Add($"duplicate manifest: kind='{key.Item1}' id='{key.Item2}' version='{key.Item3}'");
             }
         }
+    }
+
+    private static (string? Id, string? Version, string? Description, IReadOnlyDictionary<string, string>? Labels, IReadOnlyDictionary<string, string>? Annotations)
+        ParseGatewayMetadata(JsonElement root, List<string> errors, string prefix)
+    {
+        if (!root.TryGetProperty("metadata", out var metadata) || metadata.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid metadata block");
+            return (null, null, null, null, null);
+        }
+
+        var id = metadata.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        var version = metadata.TryGetProperty("version", out var vEl) ? vEl.GetString() : null;
+        var description = metadata.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+
+        if (string.IsNullOrEmpty(id))
+            errors.Add($"{prefix}metadata.id is required");
+        else if (!ManifestValidation.IsValidId(id))
+            errors.Add($"{prefix}metadata.id '{id}' does not match ^[a-z][a-z0-9-]{{0,62}}$");
+
+        if (string.IsNullOrEmpty(version))
+            errors.Add($"{prefix}metadata.version is required");
+        else if (!ManifestValidation.IsValidVersion(version))
+            errors.Add($"{prefix}metadata.version '{version}' does not match ^\\d+\\.\\d+(\\.\\d+)?$");
+
+        var labels = ParseStringMap(metadata, "labels");
+        var annotations = ParseStringMap(metadata, "annotations");
+
+        return (id, version, description, labels, annotations);
+    }
+
+    private static IReadOnlyList<GatewayMiddlewareSpec> ParseGatewayMiddleware(JsonElement spec, List<string> errors, string prefix)
+    {
+        if (!spec.TryGetProperty("middleware", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return Array.Empty<GatewayMiddlewareSpec>();
+
+        var list = new List<GatewayMiddlewareSpec>();
+        var index = 0;
+        foreach (var item in arr.EnumerateArray())
+        {
+            var itemPrefix = $"{prefix}spec.middleware[{index}] ";
+            var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+            if (string.IsNullOrEmpty(name))
+            {
+                errors.Add($"{itemPrefix}name is required");
+                index++;
+                continue;
+            }
+            JsonElement? parms = item.TryGetProperty("params", out var pEl) && pEl.ValueKind != JsonValueKind.Null
+                ? pEl.Clone() : null;
+            list.Add(new GatewayMiddlewareSpec(name!, parms));
+            index++;
+        }
+        return list;
+    }
+
+    private static LlmGatewayConfigManifest? ParseLlmGatewayConfig(JsonElement root, List<string> errors, string prefix)
+    {
+        var (id, version, description, labels, annotations) = ParseGatewayMetadata(root, errors, prefix);
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(version)) return null;
+
+        var middleware = ParseGatewayMiddleware(spec, errors, prefix);
+
+        LlmRateLimitSpec? rateLimit = null;
+        if (spec.TryGetProperty("rateLimit", out var rl) && rl.ValueKind == JsonValueKind.Object)
+        {
+            int? rpm = rl.TryGetProperty("requestsPerMinute", out var rpmEl) && rpmEl.ValueKind == JsonValueKind.Number
+                ? rpmEl.GetInt32() : null;
+            int? tpm = rl.TryGetProperty("tokensPerMinute", out var tpmEl) && tpmEl.ValueKind == JsonValueKind.Number
+                ? tpmEl.GetInt32() : null;
+            rateLimit = new LlmRateLimitSpec { RequestsPerMinute = rpm, TokensPerMinute = tpm };
+        }
+
+        return new LlmGatewayConfigManifest(id!, version!, middleware, description, labels)
+        {
+            RateLimit = rateLimit,
+            Annotations = annotations,
+        };
+    }
+
+    private static McpGatewayConfigManifest? ParseMcpGatewayConfig(JsonElement root, List<string> errors, string prefix)
+    {
+        var (id, version, description, labels, annotations) = ParseGatewayMetadata(root, errors, prefix);
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(version)) return null;
+
+        var middleware = ParseGatewayMiddleware(spec, errors, prefix);
+
+        IReadOnlyDictionary<string, McpWorkspacePolicySpec>? workspacePolicies = null;
+        if (spec.TryGetProperty("workspacePolicies", out var wpEl) && wpEl.ValueKind == JsonValueKind.Object)
+        {
+            var map = new Dictionary<string, McpWorkspacePolicySpec>();
+            foreach (var prop in wpEl.EnumerateObject())
+            {
+                if (prop.Value.ValueKind != JsonValueKind.Object) continue;
+                var allowed = ParseStringArray(prop.Value, "allowedTools");
+                var denied = ParseStringArray(prop.Value, "deniedTools");
+                int minPriv = prop.Value.TryGetProperty("minPrivilegeLevel", out var mpEl) && mpEl.ValueKind == JsonValueKind.Number
+                    ? mpEl.GetInt32() : 0;
+                map[prop.Name] = new McpWorkspacePolicySpec(allowed, denied, minPriv);
+            }
+            if (map.Count > 0) workspacePolicies = map;
+        }
+
+        return new McpGatewayConfigManifest(id!, version!, middleware, description, labels)
+        {
+            WorkspacePolicies = workspacePolicies,
+            Annotations = annotations,
+        };
+    }
+
+    private static McpServerManifest? ParseMcpServer(JsonElement root, List<string> errors, string prefix)
+    {
+        var (id, version, description, labels, annotations) = ParseGatewayMetadata(root, errors, prefix);
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(version)) return null;
+
+        bool isVirtual = spec.TryGetProperty("virtual", out var vEl) && vEl.ValueKind == JsonValueKind.True;
+
+        string? transport = spec.TryGetProperty("transport", out var tEl) ? tEl.GetString() : null;
+        string? url = spec.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
+        string? command = spec.TryGetProperty("command", out var cmdEl) ? cmdEl.GetString() : null;
+        var args = ParseStringArray(spec, "args");
+        var env = ParseStringMap(spec, "env");
+        string? authRef = spec.TryGetProperty("authRef", out var arEl) ? arEl.GetString() : null;
+        var tools = ParseStringArray(spec, "tools");
+        string? mcpGatewayRef = spec.TryGetProperty("mcpGatewayRef", out var mgEl) ? mgEl.GetString() : null;
+
+        // Parse virtual sources
+        IReadOnlyList<McpServerSourceRef>? sources = null;
+        if (spec.TryGetProperty("sources", out var srcArr) && srcArr.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<McpServerSourceRef>();
+            var idx = 0;
+            foreach (var item in srcArr.EnumerateArray())
+            {
+                var itemPrefix = $"{prefix}spec.sources[{idx}] ";
+                var refVal = item.TryGetProperty("ref", out var rEl) ? rEl.GetString() : null;
+                if (string.IsNullOrEmpty(refVal))
+                    errors.Add($"{itemPrefix}ref is required");
+                else
+                    list.Add(new McpServerSourceRef(refVal!));
+                idx++;
+            }
+            if (list.Count > 0) sources = list;
+        }
+
+        // Parse tool projection
+        IReadOnlyList<McpServerToolProjection>? toolProjection = null;
+        if (spec.TryGetProperty("toolProjection", out var tpArr) && tpArr.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<McpServerToolProjection>();
+            var idx = 0;
+            foreach (var item in tpArr.EnumerateArray())
+            {
+                var itemPrefix = $"{prefix}spec.toolProjection[{idx}] ";
+                var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+                var from = item.TryGetProperty("from", out var fEl) ? fEl.GetString() : null;
+                if (string.IsNullOrEmpty(name)) errors.Add($"{itemPrefix}name is required");
+                if (string.IsNullOrEmpty(from)) errors.Add($"{itemPrefix}from is required");
+                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(from))
+                {
+                    var sourceToolName = item.TryGetProperty("sourceToolName", out var stnEl) ? stnEl.GetString() : null;
+                    list.Add(new McpServerToolProjection(name!, from!, sourceToolName));
+                }
+                idx++;
+            }
+            if (list.Count > 0) toolProjection = list;
+        }
+
+        // Structural validation: virtual vs physical field consistency
+        if (isVirtual)
+        {
+            if (sources is null || sources.Count == 0)
+                errors.Add($"{prefix}virtual server must have at least one entry in spec.sources");
+            if (transport != null)
+                errors.Add($"{prefix}spec.transport must be absent for virtual servers");
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(transport))
+                errors.Add($"{prefix}spec.transport is required for physical servers");
+        }
+
+        return new McpServerManifest(id!, version!, description, labels)
+        {
+            Transport = transport,
+            Url = url,
+            Command = command,
+            Args = args,
+            Env = env,
+            AuthRef = authRef,
+            Tools = tools,
+            Virtual = isVirtual,
+            Sources = sources,
+            ToolProjection = toolProjection,
+            McpGatewayRef = mcpGatewayRef,
+            Annotations = annotations,
+        };
     }
 }

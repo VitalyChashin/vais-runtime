@@ -77,3 +77,302 @@ static Vais.Agents.ToolGatewayContext.operator ==(Vais.Agents.ToolGatewayContext
 Vais.Agents.IToolResultCache
 Vais.Agents.IToolResultCache.TryGetAsync(string! toolName, System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome?>
 Vais.Agents.IToolResultCache.SetAsync(string! toolName, System.Text.Json.JsonElement arguments, Vais.Agents.ToolCallOutcome! outcome, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.AgentManifest.LlmGatewayRef.get -> string?
+Vais.Agents.AgentManifest.LlmGatewayRef.init -> void
+Vais.Agents.AgentManifest.McpGatewayRef.get -> string?
+Vais.Agents.AgentManifest.McpGatewayRef.init -> void
+Vais.Agents.GatewayMiddlewareSpec
+Vais.Agents.GatewayMiddlewareSpec.<Clone>$() -> Vais.Agents.GatewayMiddlewareSpec!
+Vais.Agents.GatewayMiddlewareSpec.Deconstruct(out string! Name, out System.Text.Json.JsonElement? Params) -> void
+Vais.Agents.GatewayMiddlewareSpec.Equals(Vais.Agents.GatewayMiddlewareSpec? other) -> bool
+Vais.Agents.GatewayMiddlewareSpec.GatewayMiddlewareSpec(string! Name, System.Text.Json.JsonElement? Params = null) -> void
+Vais.Agents.GatewayMiddlewareSpec.Name.get -> string!
+Vais.Agents.GatewayMiddlewareSpec.Name.init -> void
+Vais.Agents.GatewayMiddlewareSpec.Params.get -> System.Text.Json.JsonElement?
+Vais.Agents.GatewayMiddlewareSpec.Params.init -> void
+Vais.Agents.ILlmGatewayConfigRegistry
+Vais.Agents.ILlmGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigManifest?>
+Vais.Agents.ILlmGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.LlmGatewayConfigManifest!>!
+Vais.Agents.ILlmGatewayConfigRegistry.RegisterAsync(Vais.Agents.LlmGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.ILlmGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.ILlmGatewayMiddlewareFactory
+Vais.Agents.ILlmGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.LlmGatewayMiddleware!
+Vais.Agents.IMcpGatewayConfigRegistry
+Vais.Agents.IMcpGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigManifest?>
+Vais.Agents.IMcpGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpGatewayConfigManifest!>!
+Vais.Agents.IMcpGatewayConfigRegistry.RegisterAsync(Vais.Agents.McpGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IMcpGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IMcpServerRegistry
+Vais.Agents.IMcpServerRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerManifest?>
+Vais.Agents.IMcpServerRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpServerManifest!>!
+Vais.Agents.IMcpServerRegistry.RegisterAsync(Vais.Agents.McpServerManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IMcpServerRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IToolGatewayMiddlewareFactory
+Vais.Agents.IToolGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.ToolGatewayMiddleware!
+Vais.Agents.LlmGatewayConfigHandle
+Vais.Agents.LlmGatewayConfigHandle.<Clone>$() -> Vais.Agents.LlmGatewayConfigHandle!
+Vais.Agents.LlmGatewayConfigHandle.Deconstruct(out string! Id, out string! Version) -> void
+Vais.Agents.LlmGatewayConfigHandle.Equals(Vais.Agents.LlmGatewayConfigHandle? other) -> bool
+Vais.Agents.LlmGatewayConfigHandle.Id.get -> string!
+Vais.Agents.LlmGatewayConfigHandle.Id.init -> void
+Vais.Agents.LlmGatewayConfigHandle.LlmGatewayConfigHandle(string! Id, string! Version) -> void
+Vais.Agents.LlmGatewayConfigHandle.Version.get -> string!
+Vais.Agents.LlmGatewayConfigHandle.Version.init -> void
+Vais.Agents.LlmGatewayConfigManifest
+Vais.Agents.LlmGatewayConfigManifest.<Clone>$() -> Vais.Agents.LlmGatewayConfigManifest!
+Vais.Agents.LlmGatewayConfigManifest.Annotations.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.LlmGatewayConfigManifest.Annotations.init -> void
+Vais.Agents.LlmGatewayConfigManifest.Deconstruct(out string! Id, out string! Version, out System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>! Middleware, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.LlmGatewayConfigManifest.Description.get -> string?
+Vais.Agents.LlmGatewayConfigManifest.Description.init -> void
+Vais.Agents.LlmGatewayConfigManifest.Equals(Vais.Agents.LlmGatewayConfigManifest? other) -> bool
+Vais.Agents.LlmGatewayConfigManifest.Id.get -> string!
+Vais.Agents.LlmGatewayConfigManifest.Id.init -> void
+Vais.Agents.LlmGatewayConfigManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.LlmGatewayConfigManifest.Labels.init -> void
+Vais.Agents.LlmGatewayConfigManifest.LlmGatewayConfigManifest(string! Id, string! Version, System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>! Middleware, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.LlmGatewayConfigManifest.Middleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>!
+Vais.Agents.LlmGatewayConfigManifest.Middleware.init -> void
+Vais.Agents.LlmGatewayConfigManifest.RateLimit.get -> Vais.Agents.LlmRateLimitSpec?
+Vais.Agents.LlmGatewayConfigManifest.RateLimit.init -> void
+Vais.Agents.LlmGatewayConfigManifest.Version.get -> string!
+Vais.Agents.LlmGatewayConfigManifest.Version.init -> void
+Vais.Agents.LlmGatewayConfigStatus
+Vais.Agents.LlmGatewayConfigStatus.<Clone>$() -> Vais.Agents.LlmGatewayConfigStatus!
+Vais.Agents.LlmGatewayConfigStatus.Deconstruct(out Vais.Agents.LlmGatewayConfigHandle! Handle, out System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.LlmGatewayConfigStatus.Equals(Vais.Agents.LlmGatewayConfigStatus? other) -> bool
+Vais.Agents.LlmGatewayConfigStatus.Handle.get -> Vais.Agents.LlmGatewayConfigHandle!
+Vais.Agents.LlmGatewayConfigStatus.Handle.init -> void
+Vais.Agents.LlmGatewayConfigStatus.LlmGatewayConfigStatus(Vais.Agents.LlmGatewayConfigHandle! Handle, System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.LlmGatewayConfigStatus.RegisteredAt.get -> System.DateTimeOffset
+Vais.Agents.LlmGatewayConfigStatus.RegisteredAt.init -> void
+Vais.Agents.LlmRateLimitSpec
+Vais.Agents.LlmRateLimitSpec.<Clone>$() -> Vais.Agents.LlmRateLimitSpec!
+Vais.Agents.LlmRateLimitSpec.Equals(Vais.Agents.LlmRateLimitSpec? other) -> bool
+Vais.Agents.LlmRateLimitSpec.LlmRateLimitSpec() -> void
+Vais.Agents.LlmRateLimitSpec.RequestsPerMinute.get -> int?
+Vais.Agents.LlmRateLimitSpec.RequestsPerMinute.init -> void
+Vais.Agents.LlmRateLimitSpec.TokensPerMinute.get -> int?
+Vais.Agents.LlmRateLimitSpec.TokensPerMinute.init -> void
+Vais.Agents.McpGatewayConfigHandle
+Vais.Agents.McpGatewayConfigHandle.<Clone>$() -> Vais.Agents.McpGatewayConfigHandle!
+Vais.Agents.McpGatewayConfigHandle.Deconstruct(out string! Id, out string! Version) -> void
+Vais.Agents.McpGatewayConfigHandle.Equals(Vais.Agents.McpGatewayConfigHandle? other) -> bool
+Vais.Agents.McpGatewayConfigHandle.Id.get -> string!
+Vais.Agents.McpGatewayConfigHandle.Id.init -> void
+Vais.Agents.McpGatewayConfigHandle.McpGatewayConfigHandle(string! Id, string! Version) -> void
+Vais.Agents.McpGatewayConfigHandle.Version.get -> string!
+Vais.Agents.McpGatewayConfigHandle.Version.init -> void
+Vais.Agents.McpGatewayConfigManifest
+Vais.Agents.McpGatewayConfigManifest.<Clone>$() -> Vais.Agents.McpGatewayConfigManifest!
+Vais.Agents.McpGatewayConfigManifest.Annotations.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpGatewayConfigManifest.Annotations.init -> void
+Vais.Agents.McpGatewayConfigManifest.Deconstruct(out string! Id, out string! Version, out System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>! Middleware, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.McpGatewayConfigManifest.Description.get -> string?
+Vais.Agents.McpGatewayConfigManifest.Description.init -> void
+Vais.Agents.McpGatewayConfigManifest.Equals(Vais.Agents.McpGatewayConfigManifest? other) -> bool
+Vais.Agents.McpGatewayConfigManifest.Id.get -> string!
+Vais.Agents.McpGatewayConfigManifest.Id.init -> void
+Vais.Agents.McpGatewayConfigManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpGatewayConfigManifest.Labels.init -> void
+Vais.Agents.McpGatewayConfigManifest.McpGatewayConfigManifest(string! Id, string! Version, System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>! Middleware, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.McpGatewayConfigManifest.Middleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.GatewayMiddlewareSpec!>!
+Vais.Agents.McpGatewayConfigManifest.Middleware.init -> void
+Vais.Agents.McpGatewayConfigManifest.Version.get -> string!
+Vais.Agents.McpGatewayConfigManifest.Version.init -> void
+Vais.Agents.McpGatewayConfigManifest.WorkspacePolicies.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.McpWorkspacePolicySpec!>?
+Vais.Agents.McpGatewayConfigManifest.WorkspacePolicies.init -> void
+Vais.Agents.McpGatewayConfigStatus
+Vais.Agents.McpGatewayConfigStatus.<Clone>$() -> Vais.Agents.McpGatewayConfigStatus!
+Vais.Agents.McpGatewayConfigStatus.Deconstruct(out Vais.Agents.McpGatewayConfigHandle! Handle, out System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.McpGatewayConfigStatus.Equals(Vais.Agents.McpGatewayConfigStatus? other) -> bool
+Vais.Agents.McpGatewayConfigStatus.Handle.get -> Vais.Agents.McpGatewayConfigHandle!
+Vais.Agents.McpGatewayConfigStatus.Handle.init -> void
+Vais.Agents.McpGatewayConfigStatus.McpGatewayConfigStatus(Vais.Agents.McpGatewayConfigHandle! Handle, System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.McpGatewayConfigStatus.RegisteredAt.get -> System.DateTimeOffset
+Vais.Agents.McpGatewayConfigStatus.RegisteredAt.init -> void
+Vais.Agents.McpServerHandle
+Vais.Agents.McpServerHandle.<Clone>$() -> Vais.Agents.McpServerHandle!
+Vais.Agents.McpServerHandle.Deconstruct(out string! Id, out string! Version) -> void
+Vais.Agents.McpServerHandle.Equals(Vais.Agents.McpServerHandle? other) -> bool
+Vais.Agents.McpServerHandle.Id.get -> string!
+Vais.Agents.McpServerHandle.Id.init -> void
+Vais.Agents.McpServerHandle.McpServerHandle(string! Id, string! Version) -> void
+Vais.Agents.McpServerHandle.Version.get -> string!
+Vais.Agents.McpServerHandle.Version.init -> void
+Vais.Agents.McpServerManifest
+Vais.Agents.McpServerManifest.<Clone>$() -> Vais.Agents.McpServerManifest!
+Vais.Agents.McpServerManifest.Annotations.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpServerManifest.Annotations.init -> void
+Vais.Agents.McpServerManifest.Args.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpServerManifest.Args.init -> void
+Vais.Agents.McpServerManifest.AuthRef.get -> string?
+Vais.Agents.McpServerManifest.AuthRef.init -> void
+Vais.Agents.McpServerManifest.Command.get -> string?
+Vais.Agents.McpServerManifest.Command.init -> void
+Vais.Agents.McpServerManifest.Deconstruct(out string! Id, out string! Version, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.McpServerManifest.Description.get -> string?
+Vais.Agents.McpServerManifest.Description.init -> void
+Vais.Agents.McpServerManifest.Env.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpServerManifest.Env.init -> void
+Vais.Agents.McpServerManifest.Equals(Vais.Agents.McpServerManifest? other) -> bool
+Vais.Agents.McpServerManifest.Id.get -> string!
+Vais.Agents.McpServerManifest.Id.init -> void
+Vais.Agents.McpServerManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.McpServerManifest.Labels.init -> void
+Vais.Agents.McpServerManifest.McpGatewayRef.get -> string?
+Vais.Agents.McpServerManifest.McpGatewayRef.init -> void
+Vais.Agents.McpServerManifest.McpServerManifest(string! Id, string! Version, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.McpServerManifest.Sources.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerSourceRef!>?
+Vais.Agents.McpServerManifest.Sources.init -> void
+Vais.Agents.McpServerManifest.ToolProjection.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerToolProjection!>?
+Vais.Agents.McpServerManifest.ToolProjection.init -> void
+Vais.Agents.McpServerManifest.Tools.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpServerManifest.Tools.init -> void
+Vais.Agents.McpServerManifest.Transport.get -> string?
+Vais.Agents.McpServerManifest.Transport.init -> void
+Vais.Agents.McpServerManifest.Url.get -> string?
+Vais.Agents.McpServerManifest.Url.init -> void
+Vais.Agents.McpServerManifest.Version.get -> string!
+Vais.Agents.McpServerManifest.Version.init -> void
+Vais.Agents.McpServerManifest.Virtual.get -> bool
+Vais.Agents.McpServerManifest.Virtual.init -> void
+Vais.Agents.McpServerSourceRef
+Vais.Agents.McpServerSourceRef.<Clone>$() -> Vais.Agents.McpServerSourceRef!
+Vais.Agents.McpServerSourceRef.Deconstruct(out string! Ref) -> void
+Vais.Agents.McpServerSourceRef.Equals(Vais.Agents.McpServerSourceRef? other) -> bool
+Vais.Agents.McpServerSourceRef.McpServerSourceRef(string! Ref) -> void
+Vais.Agents.McpServerSourceRef.Ref.get -> string!
+Vais.Agents.McpServerSourceRef.Ref.init -> void
+Vais.Agents.McpServerStatus
+Vais.Agents.McpServerStatus.<Clone>$() -> Vais.Agents.McpServerStatus!
+Vais.Agents.McpServerStatus.Deconstruct(out Vais.Agents.McpServerHandle! Handle, out bool Virtual, out System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.McpServerStatus.Equals(Vais.Agents.McpServerStatus? other) -> bool
+Vais.Agents.McpServerStatus.Handle.get -> Vais.Agents.McpServerHandle!
+Vais.Agents.McpServerStatus.Handle.init -> void
+Vais.Agents.McpServerStatus.McpServerStatus(Vais.Agents.McpServerHandle! Handle, bool Virtual, System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.McpServerStatus.RegisteredAt.get -> System.DateTimeOffset
+Vais.Agents.McpServerStatus.RegisteredAt.init -> void
+Vais.Agents.McpServerStatus.Virtual.get -> bool
+Vais.Agents.McpServerStatus.Virtual.init -> void
+Vais.Agents.McpServerToolProjection
+Vais.Agents.McpServerToolProjection.<Clone>$() -> Vais.Agents.McpServerToolProjection!
+Vais.Agents.McpServerToolProjection.Deconstruct(out string! Name, out string! From, out string? SourceToolName) -> void
+Vais.Agents.McpServerToolProjection.Equals(Vais.Agents.McpServerToolProjection? other) -> bool
+Vais.Agents.McpServerToolProjection.From.get -> string!
+Vais.Agents.McpServerToolProjection.From.init -> void
+Vais.Agents.McpServerToolProjection.McpServerToolProjection(string! Name, string! From, string? SourceToolName = null) -> void
+Vais.Agents.McpServerToolProjection.Name.get -> string!
+Vais.Agents.McpServerToolProjection.Name.init -> void
+Vais.Agents.McpServerToolProjection.SourceToolName.get -> string?
+Vais.Agents.McpServerToolProjection.SourceToolName.init -> void
+Vais.Agents.McpWorkspacePolicySpec
+Vais.Agents.McpWorkspacePolicySpec.<Clone>$() -> Vais.Agents.McpWorkspacePolicySpec!
+Vais.Agents.McpWorkspacePolicySpec.AllowedTools.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpWorkspacePolicySpec.AllowedTools.init -> void
+Vais.Agents.McpWorkspacePolicySpec.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>? AllowedTools, out System.Collections.Generic.IReadOnlyList<string!>? DeniedTools, out int MinPrivilegeLevel) -> void
+Vais.Agents.McpWorkspacePolicySpec.DeniedTools.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.McpWorkspacePolicySpec.DeniedTools.init -> void
+Vais.Agents.McpWorkspacePolicySpec.Equals(Vais.Agents.McpWorkspacePolicySpec? other) -> bool
+Vais.Agents.McpWorkspacePolicySpec.McpWorkspacePolicySpec(System.Collections.Generic.IReadOnlyList<string!>? AllowedTools = null, System.Collections.Generic.IReadOnlyList<string!>? DeniedTools = null, int MinPrivilegeLevel = 0) -> void
+Vais.Agents.McpWorkspacePolicySpec.MinPrivilegeLevel.get -> int
+Vais.Agents.McpWorkspacePolicySpec.MinPrivilegeLevel.init -> void
+const Vais.Agents.McpServerRef.RegisteredTransport = "registered" -> string!
+override Vais.Agents.GatewayMiddlewareSpec.Equals(object? obj) -> bool
+override Vais.Agents.GatewayMiddlewareSpec.GetHashCode() -> int
+override Vais.Agents.GatewayMiddlewareSpec.ToString() -> string!
+override Vais.Agents.LlmGatewayConfigHandle.Equals(object? obj) -> bool
+override Vais.Agents.LlmGatewayConfigHandle.GetHashCode() -> int
+override Vais.Agents.LlmGatewayConfigHandle.ToString() -> string!
+override Vais.Agents.LlmGatewayConfigManifest.Equals(object? obj) -> bool
+override Vais.Agents.LlmGatewayConfigManifest.GetHashCode() -> int
+override Vais.Agents.LlmGatewayConfigManifest.ToString() -> string!
+override Vais.Agents.LlmGatewayConfigStatus.Equals(object? obj) -> bool
+override Vais.Agents.LlmGatewayConfigStatus.GetHashCode() -> int
+override Vais.Agents.LlmGatewayConfigStatus.ToString() -> string!
+override Vais.Agents.LlmRateLimitSpec.Equals(object? obj) -> bool
+override Vais.Agents.LlmRateLimitSpec.GetHashCode() -> int
+override Vais.Agents.LlmRateLimitSpec.ToString() -> string!
+override Vais.Agents.McpGatewayConfigHandle.Equals(object? obj) -> bool
+override Vais.Agents.McpGatewayConfigHandle.GetHashCode() -> int
+override Vais.Agents.McpGatewayConfigHandle.ToString() -> string!
+override Vais.Agents.McpGatewayConfigManifest.Equals(object? obj) -> bool
+override Vais.Agents.McpGatewayConfigManifest.GetHashCode() -> int
+override Vais.Agents.McpGatewayConfigManifest.ToString() -> string!
+override Vais.Agents.McpGatewayConfigStatus.Equals(object? obj) -> bool
+override Vais.Agents.McpGatewayConfigStatus.GetHashCode() -> int
+override Vais.Agents.McpGatewayConfigStatus.ToString() -> string!
+override Vais.Agents.McpServerHandle.Equals(object? obj) -> bool
+override Vais.Agents.McpServerHandle.GetHashCode() -> int
+override Vais.Agents.McpServerHandle.ToString() -> string!
+override Vais.Agents.McpServerManifest.Equals(object? obj) -> bool
+override Vais.Agents.McpServerManifest.GetHashCode() -> int
+override Vais.Agents.McpServerManifest.ToString() -> string!
+override Vais.Agents.McpServerSourceRef.Equals(object? obj) -> bool
+override Vais.Agents.McpServerSourceRef.GetHashCode() -> int
+override Vais.Agents.McpServerSourceRef.ToString() -> string!
+override Vais.Agents.McpServerStatus.Equals(object? obj) -> bool
+override Vais.Agents.McpServerStatus.GetHashCode() -> int
+override Vais.Agents.McpServerStatus.ToString() -> string!
+override Vais.Agents.McpServerToolProjection.Equals(object? obj) -> bool
+override Vais.Agents.McpServerToolProjection.GetHashCode() -> int
+override Vais.Agents.McpServerToolProjection.ToString() -> string!
+override Vais.Agents.McpWorkspacePolicySpec.Equals(object? obj) -> bool
+override Vais.Agents.McpWorkspacePolicySpec.GetHashCode() -> int
+override Vais.Agents.McpWorkspacePolicySpec.ToString() -> string!
+static Vais.Agents.GatewayMiddlewareSpec.operator !=(Vais.Agents.GatewayMiddlewareSpec? left, Vais.Agents.GatewayMiddlewareSpec? right) -> bool
+static Vais.Agents.GatewayMiddlewareSpec.operator ==(Vais.Agents.GatewayMiddlewareSpec? left, Vais.Agents.GatewayMiddlewareSpec? right) -> bool
+static Vais.Agents.LlmGatewayConfigHandle.operator !=(Vais.Agents.LlmGatewayConfigHandle? left, Vais.Agents.LlmGatewayConfigHandle? right) -> bool
+static Vais.Agents.LlmGatewayConfigHandle.operator ==(Vais.Agents.LlmGatewayConfigHandle? left, Vais.Agents.LlmGatewayConfigHandle? right) -> bool
+static Vais.Agents.LlmGatewayConfigManifest.operator !=(Vais.Agents.LlmGatewayConfigManifest? left, Vais.Agents.LlmGatewayConfigManifest? right) -> bool
+static Vais.Agents.LlmGatewayConfigManifest.operator ==(Vais.Agents.LlmGatewayConfigManifest? left, Vais.Agents.LlmGatewayConfigManifest? right) -> bool
+static Vais.Agents.LlmGatewayConfigStatus.operator !=(Vais.Agents.LlmGatewayConfigStatus? left, Vais.Agents.LlmGatewayConfigStatus? right) -> bool
+static Vais.Agents.LlmGatewayConfigStatus.operator ==(Vais.Agents.LlmGatewayConfigStatus? left, Vais.Agents.LlmGatewayConfigStatus? right) -> bool
+static Vais.Agents.LlmRateLimitSpec.operator !=(Vais.Agents.LlmRateLimitSpec? left, Vais.Agents.LlmRateLimitSpec? right) -> bool
+static Vais.Agents.LlmRateLimitSpec.operator ==(Vais.Agents.LlmRateLimitSpec? left, Vais.Agents.LlmRateLimitSpec? right) -> bool
+static Vais.Agents.McpGatewayConfigHandle.operator !=(Vais.Agents.McpGatewayConfigHandle? left, Vais.Agents.McpGatewayConfigHandle? right) -> bool
+static Vais.Agents.McpGatewayConfigHandle.operator ==(Vais.Agents.McpGatewayConfigHandle? left, Vais.Agents.McpGatewayConfigHandle? right) -> bool
+static Vais.Agents.McpGatewayConfigManifest.operator !=(Vais.Agents.McpGatewayConfigManifest? left, Vais.Agents.McpGatewayConfigManifest? right) -> bool
+static Vais.Agents.McpGatewayConfigManifest.operator ==(Vais.Agents.McpGatewayConfigManifest? left, Vais.Agents.McpGatewayConfigManifest? right) -> bool
+static Vais.Agents.McpGatewayConfigStatus.operator !=(Vais.Agents.McpGatewayConfigStatus? left, Vais.Agents.McpGatewayConfigStatus? right) -> bool
+static Vais.Agents.McpGatewayConfigStatus.operator ==(Vais.Agents.McpGatewayConfigStatus? left, Vais.Agents.McpGatewayConfigStatus? right) -> bool
+static Vais.Agents.McpServerHandle.operator !=(Vais.Agents.McpServerHandle? left, Vais.Agents.McpServerHandle? right) -> bool
+static Vais.Agents.McpServerHandle.operator ==(Vais.Agents.McpServerHandle? left, Vais.Agents.McpServerHandle? right) -> bool
+static Vais.Agents.McpServerManifest.operator !=(Vais.Agents.McpServerManifest? left, Vais.Agents.McpServerManifest? right) -> bool
+static Vais.Agents.McpServerManifest.operator ==(Vais.Agents.McpServerManifest? left, Vais.Agents.McpServerManifest? right) -> bool
+static Vais.Agents.McpServerSourceRef.operator !=(Vais.Agents.McpServerSourceRef? left, Vais.Agents.McpServerSourceRef? right) -> bool
+static Vais.Agents.McpServerSourceRef.operator ==(Vais.Agents.McpServerSourceRef? left, Vais.Agents.McpServerSourceRef? right) -> bool
+static Vais.Agents.McpServerStatus.operator !=(Vais.Agents.McpServerStatus? left, Vais.Agents.McpServerStatus? right) -> bool
+static Vais.Agents.McpServerStatus.operator ==(Vais.Agents.McpServerStatus? left, Vais.Agents.McpServerStatus? right) -> bool
+static Vais.Agents.McpServerToolProjection.operator !=(Vais.Agents.McpServerToolProjection? left, Vais.Agents.McpServerToolProjection? right) -> bool
+static Vais.Agents.McpServerToolProjection.operator ==(Vais.Agents.McpServerToolProjection? left, Vais.Agents.McpServerToolProjection? right) -> bool
+static Vais.Agents.McpWorkspacePolicySpec.operator !=(Vais.Agents.McpWorkspacePolicySpec? left, Vais.Agents.McpWorkspacePolicySpec? right) -> bool
+static Vais.Agents.McpWorkspacePolicySpec.operator ==(Vais.Agents.McpWorkspacePolicySpec? left, Vais.Agents.McpWorkspacePolicySpec? right) -> bool
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.<Clone>$() -> Vais.Agents.NamedLlmGatewayMiddlewareRegistration!
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Deconstruct(out string! Name, out System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.LlmGatewayMiddleware!>! Factory) -> void
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Equals(Vais.Agents.NamedLlmGatewayMiddlewareRegistration? other) -> bool
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Factory.get -> System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.LlmGatewayMiddleware!>!
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Factory.init -> void
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Name.get -> string!
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Name.init -> void
+Vais.Agents.NamedLlmGatewayMiddlewareRegistration.NamedLlmGatewayMiddlewareRegistration(string! Name, System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.LlmGatewayMiddleware!>! Factory) -> void
+override Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Equals(object? obj) -> bool
+override Vais.Agents.NamedLlmGatewayMiddlewareRegistration.GetHashCode() -> int
+override Vais.Agents.NamedLlmGatewayMiddlewareRegistration.ToString() -> string!
+static Vais.Agents.NamedLlmGatewayMiddlewareRegistration.operator !=(Vais.Agents.NamedLlmGatewayMiddlewareRegistration? left, Vais.Agents.NamedLlmGatewayMiddlewareRegistration? right) -> bool
+static Vais.Agents.NamedLlmGatewayMiddlewareRegistration.operator ==(Vais.Agents.NamedLlmGatewayMiddlewareRegistration? left, Vais.Agents.NamedLlmGatewayMiddlewareRegistration? right) -> bool
+Vais.Agents.NamedToolGatewayMiddlewareRegistration
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.<Clone>$() -> Vais.Agents.NamedToolGatewayMiddlewareRegistration!
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Deconstruct(out string! Name, out System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.ToolGatewayMiddleware!>! Factory) -> void
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Equals(Vais.Agents.NamedToolGatewayMiddlewareRegistration? other) -> bool
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Factory.get -> System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.ToolGatewayMiddleware!>!
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Factory.init -> void
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Name.get -> string!
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.Name.init -> void
+Vais.Agents.NamedToolGatewayMiddlewareRegistration.NamedToolGatewayMiddlewareRegistration(string! Name, System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.ToolGatewayMiddleware!>! Factory) -> void
+override Vais.Agents.NamedToolGatewayMiddlewareRegistration.Equals(object? obj) -> bool
+override Vais.Agents.NamedToolGatewayMiddlewareRegistration.GetHashCode() -> int
+override Vais.Agents.NamedToolGatewayMiddlewareRegistration.ToString() -> string!
+static Vais.Agents.NamedToolGatewayMiddlewareRegistration.operator !=(Vais.Agents.NamedToolGatewayMiddlewareRegistration? left, Vais.Agents.NamedToolGatewayMiddlewareRegistration? right) -> bool
+static Vais.Agents.NamedToolGatewayMiddlewareRegistration.operator ==(Vais.Agents.NamedToolGatewayMiddlewareRegistration? left, Vais.Agents.NamedToolGatewayMiddlewareRegistration? right) -> bool

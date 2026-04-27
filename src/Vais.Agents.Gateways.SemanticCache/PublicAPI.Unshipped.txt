@@ -10,3 +10,4 @@ Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheMiddleware
 Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheMiddleware.LlmSemanticCacheMiddleware(Vais.Agents.Gateways.SemanticCache.ISemanticCacheStore! store) -> void
 Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheServiceCollectionExtensions
 static Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheServiceCollectionExtensions.AddLlmSemanticCacheMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.SemanticCache.LlmSemanticCacheServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_SemanticCache(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

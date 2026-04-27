@@ -1,0 +1,43 @@
+# docker-compose.yaml — declarative-agent-mcp-gateways sample
+#
+# Starts two containers:
+#   vais-runtime  — Vais.Agents runtime in localhost mode
+#   mcp-fetch     — MCP fetch server (streamableHttp on port 3000)
+#
+# Usage: docker compose up -d
+# Requires: OPENAI_API_KEY in the environment
+
+services:
+  runtime:
+    build:
+      context: ../..
+      dockerfile: src/Vais.Agents.Runtime.Host/Dockerfile
+    image: vais-agents-runtime:local
+    container_name: vais-runtime
+    environment:
+      VAIS_HOSTING_MODE: localhost
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      VAIS_OTEL_CONSOLE: ${VAIS_OTEL_CONSOLE:-false}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  mcp-fetch:
+    image: ghcr.io/modelcontextprotocol/servers/fetch:latest
+    container_name: mcp-fetch
+    environment:
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s

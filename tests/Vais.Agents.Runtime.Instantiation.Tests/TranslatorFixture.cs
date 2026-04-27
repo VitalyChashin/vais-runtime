@@ -26,6 +26,13 @@ internal sealed class TranslatorFixture
     private readonly List<IAgentHandlerFactory> _pluginFactories = new();
     private readonly List<INamedToolSourceProvider> _toolSourceProviders = new();
     private IManifestApplyDiagnosticsSink? _diagnosticsSink;
+    private ILlmGatewayConfigRegistry? _llmGatewayConfigRegistry;
+    private IMcpGatewayConfigRegistry? _mcpGatewayConfigRegistry;
+    private IMcpServerRegistry? _mcpServerRegistry;
+    private ILlmGatewayMiddlewareFactory? _llmGatewayFactory;
+    private IToolGatewayMiddlewareFactory? _toolGatewayFactory;
+    private readonly List<LlmGatewayMiddleware> _diGlobalLlmMiddleware = new();
+    private readonly List<ToolGatewayMiddleware> _diGlobalToolMiddleware = new();
     private IAgentManifestTranslator? _translator;
 
     public IAgentManifestTranslator Translator => _translator ??= Build();
@@ -101,6 +108,55 @@ internal sealed class TranslatorFixture
     public TranslatorFixture WithDiagnosticsSink(IManifestApplyDiagnosticsSink sink)
     {
         _diagnosticsSink = sink;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithLlmGatewayConfigRegistry(ILlmGatewayConfigRegistry registry)
+    {
+        _llmGatewayConfigRegistry = registry;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithMcpGatewayConfigRegistry(IMcpGatewayConfigRegistry registry)
+    {
+        _mcpGatewayConfigRegistry = registry;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithMcpServerRegistry(IMcpServerRegistry registry)
+    {
+        _mcpServerRegistry = registry;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithLlmGatewayFactory(ILlmGatewayMiddlewareFactory factory)
+    {
+        _llmGatewayFactory = factory;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithToolGatewayFactory(IToolGatewayMiddlewareFactory factory)
+    {
+        _toolGatewayFactory = factory;
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithDiGlobalLlmMiddleware(LlmGatewayMiddleware middleware)
+    {
+        _diGlobalLlmMiddleware.Add(middleware);
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithDiGlobalToolMiddleware(ToolGatewayMiddleware middleware)
+    {
+        _diGlobalToolMiddleware.Add(middleware);
         _translator = null;
         return this;
     }
@@ -181,6 +237,21 @@ internal sealed class TranslatorFixture
         {
             services.AddSingleton<INamedToolSourceProvider>(provider);
         }
+
+        if (_llmGatewayConfigRegistry is not null)
+            services.AddSingleton(_llmGatewayConfigRegistry);
+        if (_mcpGatewayConfigRegistry is not null)
+            services.AddSingleton(_mcpGatewayConfigRegistry);
+        if (_mcpServerRegistry is not null)
+            services.AddSingleton(_mcpServerRegistry);
+        if (_llmGatewayFactory is not null)
+            services.AddSingleton(_llmGatewayFactory);
+        if (_toolGatewayFactory is not null)
+            services.AddSingleton(_toolGatewayFactory);
+        foreach (var mw in _diGlobalLlmMiddleware)
+            services.AddSingleton<LlmGatewayMiddleware>(mw);
+        foreach (var mw in _diGlobalToolMiddleware)
+            services.AddSingleton<ToolGatewayMiddleware>(mw);
 
         services.AddAgentManifestInstantiator();
 

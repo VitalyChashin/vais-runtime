@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Gateways.McpGovernance\Vais.Agents.Gateways.McpGovernance.csproj" />
   </ItemGroup>
 
   <ItemGroup>

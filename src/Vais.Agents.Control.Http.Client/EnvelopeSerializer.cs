@@ -56,6 +56,8 @@ internal static class EnvelopeSerializer
         if (manifest.AgentMode != AgentMode.ToolCalling) spec["agentMode"] = manifest.AgentMode.ToString();
         AddIfSet(spec, "reasoning", manifest.Reasoning);
         AddIfSet(spec, "observability", manifest.Observability);
+        AddIfSet(spec, "llmGatewayRef", manifest.LlmGatewayRef);
+        AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
 
         var envelope = new JsonObject
         {
@@ -133,6 +135,76 @@ internal static class EnvelopeSerializer
         foreach (var edge in edges)
         {
             var obj = new JsonObject { ["from"] = edge.From, ["to"] = edge.To };
+            arr.Add(obj);
+        }
+        return arr;
+    }
+
+    public static string Serialize(LlmGatewayConfigManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
+        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
+        if (manifest.RateLimit is { } rl)
+        {
+            var rlObj = new JsonObject();
+            if (rl.RequestsPerMinute is int rpm) rlObj["requestsPerMinute"] = rpm;
+            if (rl.TokensPerMinute is int tpm) rlObj["tokensPerMinute"] = tpm;
+            spec["rateLimit"] = rlObj;
+        }
+        return WrapEnvelope("LlmGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+    }
+
+    public static string Serialize(McpGatewayConfigManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
+        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
+        if (manifest.WorkspacePolicies is { Count: > 0 } wp)
+            spec["workspacePolicies"] = JsonSerializer.SerializeToNode(wp, JsonOptions);
+        return WrapEnvelope("McpGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+    }
+
+    public static string Serialize(McpServerManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
+        var spec = new JsonObject();
+        if (manifest.Virtual) spec["virtual"] = true;
+        AddIfSet(spec, "transport", manifest.Transport);
+        AddIfSet(spec, "url", manifest.Url);
+        AddIfSet(spec, "command", manifest.Command);
+        if (manifest.Args is { Count: > 0 }) spec["args"] = JsonSerializer.SerializeToNode(manifest.Args, JsonOptions);
+        if (manifest.Env is { Count: > 0 }) spec["env"] = JsonSerializer.SerializeToNode(manifest.Env, JsonOptions);
+        AddIfSet(spec, "authRef", manifest.AuthRef);
+        if (manifest.Tools is { Count: > 0 }) spec["tools"] = JsonSerializer.SerializeToNode(manifest.Tools, JsonOptions);
+        if (manifest.Sources is { Count: > 0 }) spec["sources"] = JsonSerializer.SerializeToNode(manifest.Sources, JsonOptions);
+        if (manifest.ToolProjection is { Count: > 0 }) spec["toolProjection"] = JsonSerializer.SerializeToNode(manifest.ToolProjection, JsonOptions);
+        AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
+        return WrapEnvelope("McpServer", metadata, spec).ToJsonString(JsonOptions);
+    }
+
+    private static JsonObject BuildGatewayMetadata(string id, string version, string? description,
+        IReadOnlyDictionary<string, string>? labels, IReadOnlyDictionary<string, string>? annotations)
+    {
+        var metadata = new JsonObject { ["id"] = id, ["version"] = version };
+        if (description is not null) metadata["description"] = description;
+        if (labels is { Count: > 0 }) metadata["labels"] = ToJsonObject(labels);
+        if (annotations is { Count: > 0 }) metadata["annotations"] = ToJsonObject(annotations);
+        return metadata;
+    }
+
+    private static JsonObject WrapEnvelope(string kind, JsonObject metadata, JsonObject spec)
+        => new() { ["apiVersion"] = "vais.agents/v1", ["kind"] = kind, ["metadata"] = metadata, ["spec"] = spec };
+
+    private static JsonArray SerializeMiddleware(IReadOnlyList<GatewayMiddlewareSpec> middleware)
+    {
+        var arr = new JsonArray();
+        foreach (var m in middleware)
+        {
+            var obj = new JsonObject { ["name"] = m.Name };
+            if (m.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
+                obj["params"] = JsonNode.Parse(p.GetRawText());
             arr.Add(obj);
         }
         return arr;

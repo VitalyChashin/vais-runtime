@@ -28,6 +28,15 @@ using Vais.Agents.Runtime.Instantiation.Guardrails;
 using Vais.Agents.Runtime.Instantiation.ModelProviders;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
+using Vais.Agents.Gateways.Prometheus;
+using Vais.Agents.Gateways.Fallback;
+using Vais.Agents.Gateways.SemanticCache;
+using Vais.Agents.Gateways.StructuredOutput;
+using Vais.Agents.Gateways.McpGovernance;
+using Vais.Agents.Gateways.McpSecurity;
+using Vais.Agents.Gateways.McpReliability;
+using Vais.Agents.Gateways.McpCache;
+using Vais.Agents.Gateways.McpTransformation;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -144,6 +153,9 @@ internal static class CompositionRoot
         //    gets resolved at grain activation.
         services.AddOrleansAgentRegistry();
         services.AddOrleansAgentGraphRegistry();
+        services.AddOrleansLlmGatewayConfigRegistry();
+        services.AddOrleansMcpGatewayConfigRegistry();
+        services.AddOrleansMcpServerRegistry();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
@@ -173,6 +185,39 @@ internal static class CompositionRoot
             services.AddHealthChecks()
                 .AddCheck<PythonPluginsReadyCheck>("python-plugins", tags: ["ready"]);
         }
+
+        // GCF-20/21 — named middleware registrations + composite factories.
+        // Each AddNamed* call registers one NamedL*GatewayMiddlewareRegistration singleton;
+        // the DefaultL*GatewayMiddlewareFactory collects them all via IEnumerable<> injection.
+        // Core LLM middleware
+        services.AddNamedLlmGatewayMiddleware_LlmLogging();
+        services.AddNamedLlmGatewayMiddleware_LlmUsage();
+        services.AddNamedLlmGatewayMiddleware_LlmOtel();
+        services.AddNamedLlmGatewayMiddleware_LlmPromptEnrichment();
+        // Package LLM middleware
+        services.AddNamedLlmGatewayMiddleware_Prometheus();
+        services.AddNamedLlmGatewayMiddleware_Fallback();
+        services.AddNamedLlmGatewayMiddleware_SemanticCache();
+        services.AddNamedLlmGatewayMiddleware_StructuredOutput();
+        // Core Tool middleware
+        services.AddNamedToolGatewayMiddleware_ToolLogging();
+        services.AddNamedToolGatewayMiddleware_ToolOtel();
+        services.AddNamedToolGatewayMiddleware_ToolDenyFilter();
+        services.AddNamedToolGatewayMiddleware_ToolResponseTruncation();
+        // Package Tool middleware
+        services.AddNamedToolGatewayMiddleware_ToolRateLimit();
+        services.AddNamedToolGatewayMiddleware_ToolWorkspacePolicy();
+        services.AddNamedToolGatewayMiddleware_ToolArgumentValidation();
+        services.AddNamedToolGatewayMiddleware_ToolOutputLengthGuard();
+        services.AddNamedToolGatewayMiddleware_ToolRetry();
+        services.AddNamedToolGatewayMiddleware_ToolTimeout();
+        services.AddNamedToolGatewayMiddleware_ToolCircuitBreaker();
+        services.AddNamedToolGatewayMiddleware_ToolResultCache();
+        services.AddNamedToolGatewayMiddleware_ToolJsonRepair();
+        services.AddNamedToolGatewayMiddleware_ToolHtmlToMarkdown();
+        // Composite factories — resolve named registrations above via IEnumerable<> injection.
+        services.AddDefaultLlmGatewayMiddlewareFactory();
+        services.AddDefaultToolGatewayMiddlewareFactory();
 
         services.AddAgentManifestInstantiator();
         services.AddBuiltinModelProviders();
@@ -231,6 +276,26 @@ internal static class CompositionRoot
                         ? header[7..] : null;
                 });
         });
+
+        // v0.20 Gateway config lifecycle managers (GCF-17).
+        services.AddSingleton<ILlmGatewayConfigLifecycleManager>(sp => new LlmGatewayConfigLifecycleManager(
+            sp.GetRequiredService<ILlmGatewayConfigRegistry>(),
+            policy: sp.GetService<IAgentPolicyEngine>(),
+            audit: sp.GetService<IAuditLog>(),
+            contextAccessor: sp.GetService<IAgentContextAccessor>(),
+            logger: sp.GetService<ILogger<LlmGatewayConfigLifecycleManager>>()));
+        services.AddSingleton<IMcpGatewayConfigLifecycleManager>(sp => new McpGatewayConfigLifecycleManager(
+            sp.GetRequiredService<IMcpGatewayConfigRegistry>(),
+            policy: sp.GetService<IAgentPolicyEngine>(),
+            audit: sp.GetService<IAuditLog>(),
+            contextAccessor: sp.GetService<IAgentContextAccessor>(),
+            logger: sp.GetService<ILogger<McpGatewayConfigLifecycleManager>>()));
+        services.AddSingleton<IMcpServerLifecycleManager>(sp => new McpServerLifecycleManager(
+            sp.GetRequiredService<IMcpServerRegistry>(),
+            policy: sp.GetService<IAgentPolicyEngine>(),
+            audit: sp.GetService<IAuditLog>(),
+            contextAccessor: sp.GetService<IAgentContextAccessor>(),
+            logger: sp.GetService<ILogger<McpServerLifecycleManager>>()));
 
         // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
         services.AddAgentControlPlane();

@@ -4,3 +4,4 @@ Vais.Agents.Gateways.Prometheus.LlmPrometheusMiddleware.LlmPrometheusMiddleware(
 Vais.Agents.Gateways.Prometheus.LlmPrometheusMiddleware.LlmPrometheusMiddleware(Vais.Agents.IAgentContextAccessor! contextAccessor, Prometheus.MetricFactory! metricFactory) -> void
 Vais.Agents.Gateways.Prometheus.LlmPrometheusServiceCollectionExtensions
 static Vais.Agents.Gateways.Prometheus.LlmPrometheusServiceCollectionExtensions.AddLlmPrometheusMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.Prometheus.LlmPrometheusServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_Prometheus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

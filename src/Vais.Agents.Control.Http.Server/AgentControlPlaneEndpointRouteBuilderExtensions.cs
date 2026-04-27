@@ -169,6 +169,9 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapGraphControlPlane(builder, prefix);
         MapPluginControlPlane(builder, prefix);
         MapRuntimeTopologyControlPlane(builder, prefix);
+        MapLlmGatewayControlPlane(builder, prefix);
+        MapMcpGatewayControlPlane(builder, prefix);
+        MapMcpServerControlPlane(builder, prefix);
 
         return builder;
     }
@@ -442,6 +445,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         var manifest = parsed[0];
         try
         {
+            // GCF-18: eager ref validation — resolve gateway refs before persisting
+            var refError = await ValidateAgentGatewayRefsAsync(http, manifest, ct).ConfigureAwait(false);
+            if (refError is not null) return refError;
+
             using var capture = sink?.BeginCapture();
             var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
             var warnings = capture?.Drain() ?? Array.Empty<ApplyDiagnostic>();
@@ -1320,5 +1327,758 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             heartbeatTimer?.Dispose();
             try { await producerTask.ConfigureAwait(false); } catch { }
         }
+    }
+
+    // ── LLM gateway config handlers (v0.20) ───────────────────────────────────
+
+    /// <summary>
+    /// Mount only the LLM gateway config control-plane endpoints (v0.20). Useful for
+    /// hosts that want these routes without the full agent route surface, or for isolated testing.
+    /// </summary>
+    public static IEndpointRouteBuilder MapLlmGatewayControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("LlmGateways");
+
+        group.MapPost("/llm-gateways/validate", LlmGatewayValidateAsync)
+            .WithName("LlmGateways.Validate")
+            .WithSummary("Dry-run validation: structural checks. Always 200; inspect Valid/Errors.")
+            .Accepts<LlmGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<LlmGatewayConfigValidationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/llm-gateways", LlmGatewayCreateAsync)
+            .WithName("LlmGateways.Create")
+            .WithSummary("Register an LLM gateway config manifest.")
+            .Accepts<LlmGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<LlmGatewayConfigApplyResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/llm-gateways", LlmGatewayListAsync)
+            .WithName("LlmGateways.List")
+            .WithSummary("List registered LLM gateway config manifests with optional label-prefix filter.")
+            .Produces<LlmGatewayConfigListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/llm-gateways/{id}", LlmGatewayQueryAsync)
+            .WithName("LlmGateways.Query")
+            .WithSummary("Fetch an LLM gateway config manifest + current lifecycle status.")
+            .Produces<LlmGatewayConfigQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPatch("/llm-gateways/{id}", LlmGatewayUpdateAsync)
+            .WithName("LlmGateways.Update")
+            .WithSummary("Publish a new manifest version for an existing LLM gateway config.")
+            .Accepts<LlmGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<LlmGatewayConfigApplyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapDelete("/llm-gateways/{id}", LlmGatewayEvictAsync)
+            .WithName("LlmGateways.Evict")
+            .WithSummary("Remove an LLM gateway config manifest.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> LlmGatewayValidateAsync(HttpContext http, CancellationToken ct)
+    {
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.LlmGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"POST /llm-gateways/validate accepts exactly one LlmGatewayConfig manifest; got {configs.Count}." });
+            return Results.Ok(new LlmGatewayConfigValidationResult(Valid: true, Errors: Array.Empty<string>()));
+        }
+        catch (AgentManifestValidationException ex)
+        {
+            return Results.Ok(new LlmGatewayConfigValidationResult(Valid: false, ex.Errors.ToArray()));
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.LlmGatewayConfigCreate);
+        }
+    }
+
+    private static async Task<IResult> LlmGatewayCreateAsync(HttpContext http, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<ILlmGatewayConfigLifecycleManager>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        LlmGatewayConfigManifest manifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.LlmGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"POST /llm-gateways accepts exactly one LlmGatewayConfig manifest; got {configs.Count}." });
+            manifest = configs[0].Config;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.LlmGatewayConfigCreate);
+        }
+
+        try
+        {
+            var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}",
+                new LlmGatewayConfigApplyResponse(handle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.LlmGatewayConfigCreate);
+        }
+    }
+
+    private static async Task<IResult> LlmGatewayListAsync(HttpContext http, string? labels, int? limit, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<ILlmGatewayConfigRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<LlmGatewayConfigManifest>();
+            await foreach (var m in registry.ListAsync(labels, ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new LlmGatewayConfigListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.LlmGatewayConfigQuery);
+        }
+    }
+
+    private static async Task<IResult> LlmGatewayQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<ILlmGatewayConfigRegistry>();
+        var manager = http.RequestServices.GetRequiredService<ILlmGatewayConfigLifecycleManager>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+                return Results.NotFound(new { error = $"llm-gateway '{id}' not found" });
+            var handle = new LlmGatewayConfigHandle(id, manifest.Version);
+            var status = await manager.QueryAsync(handle, ct).ConfigureAwait(false);
+            return Results.Ok(new LlmGatewayConfigQueryResponse(manifest, handle, status));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.LlmGatewayConfigQuery);
+        }
+    }
+
+    private static async Task<IResult> LlmGatewayUpdateAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<ILlmGatewayConfigLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<ILlmGatewayConfigRegistry>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        LlmGatewayConfigManifest newManifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.LlmGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"PATCH /llm-gateways/{{id}} accepts exactly one LlmGatewayConfig manifest; got {configs.Count}." });
+            newManifest = configs[0].Config;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.LlmGatewayConfigUpdate);
+        }
+
+        try
+        {
+            var existingVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (existingVersion is null)
+                return Results.NotFound(new { error = $"llm-gateway '{id}' not found" });
+            var currentHandle = new LlmGatewayConfigHandle(id, existingVersion);
+            var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
+            return Results.Ok(new LlmGatewayConfigApplyResponse(newHandle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.LlmGatewayConfigUpdate);
+        }
+    }
+
+    private static async Task<IResult> LlmGatewayEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<ILlmGatewayConfigLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<ILlmGatewayConfigRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+                return Results.NotFound(new { error = $"llm-gateway '{id}' not found" });
+            await manager.EvictAsync(new LlmGatewayConfigHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    // ── MCP gateway config handlers (v0.20) ───────────────────────────────────
+
+    /// <summary>
+    /// Mount only the MCP gateway config control-plane endpoints (v0.20).
+    /// </summary>
+    public static IEndpointRouteBuilder MapMcpGatewayControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("McpGateways");
+
+        group.MapPost("/mcp-gateways/validate", McpGatewayValidateAsync)
+            .WithName("McpGateways.Validate")
+            .WithSummary("Dry-run validation: structural checks. Always 200; inspect Valid/Errors.")
+            .Accepts<McpGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<McpGatewayConfigValidationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/mcp-gateways", McpGatewayCreateAsync)
+            .WithName("McpGateways.Create")
+            .WithSummary("Register an MCP gateway config manifest.")
+            .Accepts<McpGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<McpGatewayConfigApplyResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/mcp-gateways", McpGatewayListAsync)
+            .WithName("McpGateways.List")
+            .WithSummary("List registered MCP gateway config manifests with optional label-prefix filter.")
+            .Produces<McpGatewayConfigListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/mcp-gateways/{id}", McpGatewayQueryAsync)
+            .WithName("McpGateways.Query")
+            .WithSummary("Fetch an MCP gateway config manifest + current lifecycle status.")
+            .Produces<McpGatewayConfigQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPatch("/mcp-gateways/{id}", McpGatewayUpdateAsync)
+            .WithName("McpGateways.Update")
+            .WithSummary("Publish a new manifest version for an existing MCP gateway config.")
+            .Accepts<McpGatewayConfigManifest>("application/json", "application/yaml")
+            .Produces<McpGatewayConfigApplyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapDelete("/mcp-gateways/{id}", McpGatewayEvictAsync)
+            .WithName("McpGateways.Evict")
+            .WithSummary("Remove an MCP gateway config manifest.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> McpGatewayValidateAsync(HttpContext http, CancellationToken ct)
+    {
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.McpGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"POST /mcp-gateways/validate accepts exactly one McpGatewayConfig manifest; got {configs.Count}." });
+            return Results.Ok(new McpGatewayConfigValidationResult(Valid: true, Errors: Array.Empty<string>()));
+        }
+        catch (AgentManifestValidationException ex)
+        {
+            return Results.Ok(new McpGatewayConfigValidationResult(Valid: false, ex.Errors.ToArray()));
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpGatewayConfigCreate);
+        }
+    }
+
+    private static async Task<IResult> McpGatewayCreateAsync(HttpContext http, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpGatewayConfigLifecycleManager>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        McpGatewayConfigManifest manifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.McpGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"POST /mcp-gateways accepts exactly one McpGatewayConfig manifest; got {configs.Count}." });
+            manifest = configs[0].Config;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpGatewayConfigCreate);
+        }
+
+        try
+        {
+            var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}",
+                new McpGatewayConfigApplyResponse(handle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.McpGatewayConfigCreate);
+        }
+    }
+
+    private static async Task<IResult> McpGatewayListAsync(HttpContext http, string? labels, int? limit, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IMcpGatewayConfigRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<McpGatewayConfigManifest>();
+            await foreach (var m in registry.ListAsync(labels, ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new McpGatewayConfigListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpGatewayConfigQuery);
+        }
+    }
+
+    private static async Task<IResult> McpGatewayQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IMcpGatewayConfigRegistry>();
+        var manager = http.RequestServices.GetRequiredService<IMcpGatewayConfigLifecycleManager>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+                return Results.NotFound(new { error = $"mcp-gateway '{id}' not found" });
+            var handle = new McpGatewayConfigHandle(id, manifest.Version);
+            var status = await manager.QueryAsync(handle, ct).ConfigureAwait(false);
+            return Results.Ok(new McpGatewayConfigQueryResponse(manifest, handle, status));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpGatewayConfigQuery);
+        }
+    }
+
+    private static async Task<IResult> McpGatewayUpdateAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpGatewayConfigLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IMcpGatewayConfigRegistry>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        McpGatewayConfigManifest newManifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var configs = resources.OfType<ManifestResource.McpGatewayConfigCase>().ToList();
+            if (configs.Count != 1)
+                return Results.BadRequest(new { error = $"PATCH /mcp-gateways/{{id}} accepts exactly one McpGatewayConfig manifest; got {configs.Count}." });
+            newManifest = configs[0].Config;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpGatewayConfigUpdate);
+        }
+
+        try
+        {
+            var existingVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (existingVersion is null)
+                return Results.NotFound(new { error = $"mcp-gateway '{id}' not found" });
+            var currentHandle = new McpGatewayConfigHandle(id, existingVersion);
+            var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
+            return Results.Ok(new McpGatewayConfigApplyResponse(newHandle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpGatewayConfigUpdate);
+        }
+    }
+
+    private static async Task<IResult> McpGatewayEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpGatewayConfigLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IMcpGatewayConfigRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+                return Results.NotFound(new { error = $"mcp-gateway '{id}' not found" });
+            await manager.EvictAsync(new McpGatewayConfigHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    // ── MCP server handlers (v0.20) ───────────────────────────────────────────
+
+    /// <summary>
+    /// Mount only the MCP server control-plane endpoints (v0.20).
+    /// </summary>
+    public static IEndpointRouteBuilder MapMcpServerControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("McpServers");
+
+        group.MapPost("/mcp-servers/validate", McpServerValidateAsync)
+            .WithName("McpServers.Validate")
+            .WithSummary("Dry-run validation: structural checks + source-ref resolution. Always 200; inspect Valid/Errors.")
+            .Accepts<McpServerManifest>("application/json", "application/yaml")
+            .Produces<McpServerValidationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/mcp-servers", McpServerCreateAsync)
+            .WithName("McpServers.Create")
+            .WithSummary("Register an MCP server manifest.")
+            .Accepts<McpServerManifest>("application/json", "application/yaml")
+            .Produces<McpServerApplyResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/mcp-servers", McpServerListAsync)
+            .WithName("McpServers.List")
+            .WithSummary("List registered MCP server manifests with optional label-prefix filter.")
+            .Produces<McpServerListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/mcp-servers/{id}", McpServerQueryAsync)
+            .WithName("McpServers.Query")
+            .WithSummary("Fetch an MCP server manifest + current lifecycle status.")
+            .Produces<McpServerQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPatch("/mcp-servers/{id}", McpServerUpdateAsync)
+            .WithName("McpServers.Update")
+            .WithSummary("Publish a new manifest version for an existing MCP server.")
+            .Accepts<McpServerManifest>("application/json", "application/yaml")
+            .Produces<McpServerApplyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapDelete("/mcp-servers/{id}", McpServerEvictAsync)
+            .WithName("McpServers.Evict")
+            .WithSummary("Remove an MCP server manifest.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> McpServerValidateAsync(HttpContext http, CancellationToken ct)
+    {
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        IReadOnlyList<ManifestResource> resources;
+        try
+        {
+            resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+        }
+        catch (AgentManifestValidationException ex)
+        {
+            return Results.Ok(new McpServerValidationResult(Valid: false, ex.Errors.ToArray()));
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpServerCreate);
+        }
+
+        var servers = resources.OfType<ManifestResource.McpServerCase>().ToList();
+        if (servers.Count != 1)
+            return Results.BadRequest(new { error = $"POST /mcp-servers/validate accepts exactly one McpServer manifest; got {servers.Count}." });
+
+        var manifest = servers[0].Server;
+        var errors = await ValidateMcpServerRefsAsync(http, manifest, ct).ConfigureAwait(false);
+        return Results.Ok(new McpServerValidationResult(Valid: errors.Count == 0, errors));
+    }
+
+    private static async Task<IResult> McpServerCreateAsync(HttpContext http, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpServerLifecycleManager>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        McpServerManifest manifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var servers = resources.OfType<ManifestResource.McpServerCase>().ToList();
+            if (servers.Count != 1)
+                return Results.BadRequest(new { error = $"POST /mcp-servers accepts exactly one McpServer manifest; got {servers.Count}." });
+            manifest = servers[0].Server;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpServerCreate);
+        }
+
+        try
+        {
+            var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}",
+                new McpServerApplyResponse(handle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.McpServerCreate);
+        }
+    }
+
+    private static async Task<IResult> McpServerListAsync(HttpContext http, string? labels, int? limit, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IMcpServerRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<McpServerManifest>();
+            await foreach (var m in registry.ListAsync(labels, ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new McpServerListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.McpServerQuery);
+        }
+    }
+
+    private static async Task<IResult> McpServerQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IMcpServerRegistry>();
+        var manager = http.RequestServices.GetRequiredService<IMcpServerLifecycleManager>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+                return Results.NotFound(new { error = $"mcp-server '{id}' not found" });
+            var handle = new McpServerHandle(id, manifest.Version);
+            var status = await manager.QueryAsync(handle, ct).ConfigureAwait(false);
+            return Results.Ok(new McpServerQueryResponse(manifest, handle, status));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpServerQuery);
+        }
+    }
+
+    private static async Task<IResult> McpServerUpdateAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpServerLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IMcpServerRegistry>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        McpServerManifest newManifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var servers = resources.OfType<ManifestResource.McpServerCase>().ToList();
+            if (servers.Count != 1)
+                return Results.BadRequest(new { error = $"PATCH /mcp-servers/{{id}} accepts exactly one McpServer manifest; got {servers.Count}." });
+            newManifest = servers[0].Server;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpServerUpdate);
+        }
+
+        try
+        {
+            var existingVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (existingVersion is null)
+                return Results.NotFound(new { error = $"mcp-server '{id}' not found" });
+            var currentHandle = new McpServerHandle(id, existingVersion);
+            var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
+            return Results.Ok(new McpServerApplyResponse(newHandle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.McpServerUpdate);
+        }
+    }
+
+    private static async Task<IResult> McpServerEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IMcpServerLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IMcpServerRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+                return Results.NotFound(new { error = $"mcp-server '{id}' not found" });
+            await manager.EvictAsync(new McpServerHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    // ── GCF-18: gateway ref validation helpers ────────────────────────────────
+
+    private static async Task<IResult?> ValidateAgentGatewayRefsAsync(HttpContext http, AgentManifest manifest, CancellationToken ct)
+    {
+        if (manifest.LlmGatewayRef is { } llmRef)
+        {
+            var llmRegistry = http.RequestServices.GetService<ILlmGatewayConfigRegistry>();
+            if (llmRegistry is not null)
+            {
+                var found = await llmRegistry.GetAsync(llmRef, version: null, ct).ConfigureAwait(false);
+                if (found is null)
+                    return Results.UnprocessableEntity(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Type = ProblemDetailsMapping.TypePrefix + "ref-not-found",
+                        Title = "LlmGatewayRef not found",
+                        Status = StatusCodes.Status422UnprocessableEntity,
+                        Detail = $"LlmGatewayConfig '{llmRef}' is not registered. Apply it before the agent.",
+                    });
+            }
+        }
+
+        if (manifest.McpGatewayRef is { } mcpRef)
+        {
+            var mcpRegistry = http.RequestServices.GetService<IMcpGatewayConfigRegistry>();
+            if (mcpRegistry is not null)
+            {
+                var found = await mcpRegistry.GetAsync(mcpRef, version: null, ct).ConfigureAwait(false);
+                if (found is null)
+                    return Results.UnprocessableEntity(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Type = ProblemDetailsMapping.TypePrefix + "ref-not-found",
+                        Title = "McpGatewayRef not found",
+                        Status = StatusCodes.Status422UnprocessableEntity,
+                        Detail = $"McpGatewayConfig '{mcpRef}' is not registered. Apply it before the agent.",
+                    });
+            }
+        }
+
+        if (manifest.McpServers is { Count: > 0 } mcpServers)
+        {
+            var serverRegistry = http.RequestServices.GetService<IMcpServerRegistry>();
+            if (serverRegistry is not null)
+            {
+                foreach (var serverRef in mcpServers)
+                {
+                    if (!string.Equals(serverRef.Transport, McpServerRef.RegisteredTransport, StringComparison.Ordinal))
+                        continue;
+                    if (string.IsNullOrEmpty(serverRef.Name)) continue;
+                    var found = await serverRegistry.GetAsync(serverRef.Name, version: null, ct).ConfigureAwait(false);
+                    if (found is null)
+                        return Results.UnprocessableEntity(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                        {
+                            Type = ProblemDetailsMapping.TypePrefix + "ref-not-found",
+                            Title = "McpServerRef not found",
+                            Status = StatusCodes.Status422UnprocessableEntity,
+                            Detail = $"McpServer '{serverRef.Name}' is not registered. Apply it before the agent.",
+                        });
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<List<string>> ValidateMcpServerRefsAsync(HttpContext http, McpServerManifest manifest, CancellationToken ct)
+    {
+        var errors = new List<string>();
+
+        if (manifest.Virtual && manifest.Sources is { Count: > 0 } sources)
+        {
+            var serverRegistry = http.RequestServices.GetService<IMcpServerRegistry>();
+            if (serverRegistry is not null)
+            {
+                foreach (var src in sources)
+                {
+                    var found = await serverRegistry.GetAsync(src.Ref, version: null, ct).ConfigureAwait(false);
+                    if (found is null)
+                        errors.Add($"Sources[*].Ref '{src.Ref}': no registered McpServer with that id");
+                }
+            }
+        }
+
+        if (manifest.McpGatewayRef is { } gwRef)
+        {
+            var mcpRegistry = http.RequestServices.GetService<IMcpGatewayConfigRegistry>();
+            if (mcpRegistry is not null)
+            {
+                var found = await mcpRegistry.GetAsync(gwRef, version: null, ct).ConfigureAwait(false);
+                if (found is null)
+                    errors.Add($"McpGatewayRef '{gwRef}': no registered McpGatewayConfig with that id");
+            }
+        }
+
+        return errors;
     }
 }

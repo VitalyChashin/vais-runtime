@@ -208,4 +208,91 @@ public interface IAgentControlPlaneClient
     /// </summary>
     Task<PluginListResponse> ListPluginsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new PluginListResponse(Array.Empty<PluginInfo>()));
+
+    // ── LLM gateway config verbs (GCF-13) ──────────────────────────────────────
+
+    /// <summary>POST /v1/llm-gateways — register a manifest, get a handle.</summary>
+    Task<LlmGatewayConfigHandle> CreateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/llm-gateways — register a manifest with an explicit idempotency key.</summary>
+    Task<LlmGatewayConfigHandle> CreateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+        => CreateLlmGatewayConfigAsync(manifest, cancellationToken);
+
+    /// <summary>PATCH /v1/llm-gateways/{id} — publish a new manifest version.</summary>
+    Task<LlmGatewayConfigHandle> UpdateLlmGatewayConfigAsync(string id, LlmGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>PATCH /v1/llm-gateways/{id} — publish a new manifest version with an explicit idempotency key.</summary>
+    Task<LlmGatewayConfigHandle> UpdateLlmGatewayConfigAsync(string id, LlmGatewayConfigManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => UpdateLlmGatewayConfigAsync(id, manifest, version, cancellationToken);
+
+    /// <summary>GET /v1/llm-gateways — list registered manifests.</summary>
+    Task<LlmGatewayConfigListResponse> ListLlmGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>GET /v1/llm-gateways/{id} — fetch manifest + current status. Returns null on 404.</summary>
+    Task<LlmGatewayConfigQueryResponse?> QueryLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>DELETE /v1/llm-gateways/{id} — remove the manifest.</summary>
+    Task EvictLlmGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/llm-gateways/validate — dry-run validation without registering. Default: always valid.</summary>
+    Task<LlmGatewayConfigValidationResult> ValidateLlmGatewayConfigAsync(LlmGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(new LlmGatewayConfigValidationResult(Valid: true, Array.Empty<string>()));
+
+    // ── MCP gateway config verbs (GCF-13) ──────────────────────────────────────
+
+    /// <summary>POST /v1/mcp-gateways — register a manifest, get a handle.</summary>
+    Task<McpGatewayConfigHandle> CreateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/mcp-gateways — register a manifest with an explicit idempotency key.</summary>
+    Task<McpGatewayConfigHandle> CreateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+        => CreateMcpGatewayConfigAsync(manifest, cancellationToken);
+
+    /// <summary>PATCH /v1/mcp-gateways/{id} — publish a new manifest version.</summary>
+    Task<McpGatewayConfigHandle> UpdateMcpGatewayConfigAsync(string id, McpGatewayConfigManifest manifest, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>PATCH /v1/mcp-gateways/{id} — publish a new manifest version with an explicit idempotency key.</summary>
+    Task<McpGatewayConfigHandle> UpdateMcpGatewayConfigAsync(string id, McpGatewayConfigManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => UpdateMcpGatewayConfigAsync(id, manifest, version, cancellationToken);
+
+    /// <summary>GET /v1/mcp-gateways — list registered manifests.</summary>
+    Task<McpGatewayConfigListResponse> ListMcpGatewayConfigsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>GET /v1/mcp-gateways/{id} — fetch manifest + current status. Returns null on 404.</summary>
+    Task<McpGatewayConfigQueryResponse?> QueryMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>DELETE /v1/mcp-gateways/{id} — remove the manifest.</summary>
+    Task EvictMcpGatewayConfigAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/mcp-gateways/validate — dry-run validation without registering. Default: always valid.</summary>
+    Task<McpGatewayConfigValidationResult> ValidateMcpGatewayConfigAsync(McpGatewayConfigManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(new McpGatewayConfigValidationResult(Valid: true, Array.Empty<string>()));
+
+    // ── MCP server verbs (GCF-13) ───────────────────────────────────────────────
+
+    /// <summary>POST /v1/mcp-servers — register a manifest, get a handle.</summary>
+    Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/mcp-servers — register a manifest with an explicit idempotency key.</summary>
+    Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+        => CreateMcpServerAsync(manifest, cancellationToken);
+
+    /// <summary>PATCH /v1/mcp-servers/{id} — publish a new manifest version.</summary>
+    Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest manifest, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>PATCH /v1/mcp-servers/{id} — publish a new manifest version with an explicit idempotency key.</summary>
+    Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => UpdateMcpServerAsync(id, manifest, version, cancellationToken);
+
+    /// <summary>GET /v1/mcp-servers — list registered manifests.</summary>
+    Task<McpServerListResponse> ListMcpServersAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>GET /v1/mcp-servers/{id} — fetch manifest + current status. Returns null on 404.</summary>
+    Task<McpServerQueryResponse?> QueryMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>DELETE /v1/mcp-servers/{id} — remove the manifest.</summary>
+    Task EvictMcpServerAsync(string id, string? version = null, CancellationToken cancellationToken = default);
+
+    /// <summary>POST /v1/mcp-servers/validate — dry-run validation without registering. Default: always valid.</summary>
+    Task<McpServerValidationResult> ValidateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(new McpServerValidationResult(Valid: true, Array.Empty<string>()));
 }

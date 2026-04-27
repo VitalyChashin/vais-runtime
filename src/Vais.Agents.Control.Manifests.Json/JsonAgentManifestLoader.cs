@@ -280,6 +280,11 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
         var autoscaling = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("autoscaling", out var asEl)
             ? ParseAutoscaling(asEl, errors, prefix) : null;
 
+        var llmGatewayRef = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("llmGatewayRef", out var llmRefEl)
+            ? llmRefEl.GetString() : null;
+        var mcpGatewayRef = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("mcpGatewayRef", out var mcpGwRefEl)
+            ? mcpGwRefEl.GetString() : null;
+
         return new AgentManifest(
             id, version, handler, protocols, tools,
             Memory: memory,
@@ -300,6 +305,8 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             Reasoning = reasoning,
             Observability = observability,
             Annotations = annotations,
+            LlmGatewayRef = llmGatewayRef,
+            McpGatewayRef = mcpGatewayRef,
         };
     }
 
@@ -424,7 +431,9 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             var url = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
             // "plugin" transport means the server is managed by the runtime (e.g. Python plugin via
             // INamedToolSourceProvider) — no command/url needed or validated.
-            if (!string.Equals(transport, "plugin", StringComparison.Ordinal) && (command is null) == (url is null))
+            var isVirtualTransport = string.Equals(transport, "plugin", StringComparison.Ordinal)
+                || string.Equals(transport, McpServerRef.RegisteredTransport, StringComparison.Ordinal);
+            if (!isVirtualTransport && (command is null) == (url is null))
             {
                 errors.Add($"{prefix}spec.mcpServers[{name}] must set exactly one of command (for stdio) or url (for http/sse)");
             }

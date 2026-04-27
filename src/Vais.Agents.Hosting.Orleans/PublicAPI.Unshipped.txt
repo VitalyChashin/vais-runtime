@@ -15,3 +15,123 @@ Vais.Agents.Hosting.Orleans.AgentContextSurrogate.PrivilegeLevel -> int?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AutonomyLevel -> int?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AllowedTools -> System.Collections.Immutable.ImmutableHashSet<string!>?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.MaxChainDepth -> int?
+const Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.DirectoryKey = "vais.agents.llm-gateway-config-registry.directory" -> string!
+const Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.DirectoryKey = "vais.agents.mcp-gateway-config-registry.directory" -> string!
+const Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.DirectoryKey = "vais.agents.mcp-server-registry.directory" -> string!
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryDirectoryGrain.TrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryDirectoryGrain.UntrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryGrain
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ILlmGatewayConfigRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryDirectoryGrain.TrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryDirectoryGrain.UntrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryGrain
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpGatewayConfigRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryDirectoryGrain.TrackAsync(string! serverId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryDirectoryGrain.UntrackAsync(string! serverId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryGrain
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IMcpServerRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrain.LlmGatewayConfigRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrain.TrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrain.UntrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrainState.ConfigIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrainState.ConfigIds.set -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryDirectoryGrainState.LlmGatewayConfigRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain.LlmGatewayConfigRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState.LlmGatewayConfigRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState.ManifestJsonByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.LlmGatewayConfigRegistryGrainState.ManifestJsonByVersion.set -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrain.McpGatewayConfigRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrain.TrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrain.UntrackAsync(string! configId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrainState.ConfigIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrainState.ConfigIds.set -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryDirectoryGrainState.McpGatewayConfigRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain.McpGatewayConfigRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState.ManifestJsonByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState.ManifestJsonByVersion.set -> void
+Vais.Agents.Hosting.Orleans.McpGatewayConfigRegistryGrainState.McpGatewayConfigRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrain.McpServerRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrain.TrackAsync(string! serverId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrain.UntrackAsync(string! serverId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrainState.McpServerRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrainState.ServerIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.McpServerRegistryDirectoryGrainState.ServerIds.set -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain.McpServerRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState.ManifestJsonByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState.ManifestJsonByVersion.set -> void
+Vais.Agents.Hosting.Orleans.McpServerRegistryGrainState.McpServerRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigManifest?>
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.LlmGatewayConfigManifest!>!
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.OrleansLlmGatewayConfigRegistry(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.RegisterAsync(Vais.Agents.LlmGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigManifest?>
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpGatewayConfigManifest!>!
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.OrleansMcpGatewayConfigRegistry(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.RegisterAsync(Vais.Agents.McpGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerManifest?>
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpServerManifest!>!
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.OrleansMcpServerRegistry(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.RegisterAsync(Vais.Agents.McpServerManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansLlmGatewayConfigRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansMcpGatewayConfigRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansMcpServerRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.DeserializeManifest(string! json) -> Vais.Agents.LlmGatewayConfigManifest!
+static Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.SerializeManifest(Vais.Agents.LlmGatewayConfigManifest! manifest) -> string!
+static Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.DeserializeManifest(string! json) -> Vais.Agents.McpGatewayConfigManifest!
+static Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.SerializeManifest(Vais.Agents.McpGatewayConfigManifest! manifest) -> string!
+static Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.DeserializeManifest(string! json) -> Vais.Agents.McpServerManifest!
+static Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.SerializeManifest(Vais.Agents.McpServerManifest! manifest) -> string!

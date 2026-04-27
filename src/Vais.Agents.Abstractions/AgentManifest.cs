@@ -87,6 +87,23 @@ public sealed record AgentManifest(
 
     /// <summary>Free-form annotations — operator-visible metadata not indexed by the registry. Parallel to K8s annotations.</summary>
     public IReadOnlyDictionary<string, string>? Annotations { get; init; }
+
+    /// <summary>
+    /// Optional reference to a deployed <see cref="LlmGatewayConfigManifest"/> by id.
+    /// When set, the translator builds a per-agent <c>LlmGatewayPipeline</c> from the
+    /// referenced config at grain activation, replacing (not appending to) the DI-global
+    /// chain entirely.
+    /// Null = DI-global chain applies unchanged (backwards compatible).
+    /// </summary>
+    public string? LlmGatewayRef { get; init; }
+
+    /// <summary>
+    /// Optional reference to a deployed <see cref="McpGatewayConfigManifest"/> by id.
+    /// When set, a per-agent <c>ToolGatewayMiddleware</c> chain is built from the referenced
+    /// config at grain activation, replacing the DI-global chain entirely.
+    /// Null = DI-global chain applies unchanged.
+    /// </summary>
+    public string? McpGatewayRef { get; init; }
 }
 
 /// <summary>Reference to the code or image that implements an agent's handler.</summary>

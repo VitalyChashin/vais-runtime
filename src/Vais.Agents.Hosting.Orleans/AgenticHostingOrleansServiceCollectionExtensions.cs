@@ -180,4 +180,46 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IAgentGraphRegistry>(sp => sp.GetRequiredService<OrleansAgentGraphRegistry>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansLlmGatewayConfigRegistry"/> as the durable
+    /// <see cref="ILlmGatewayConfigRegistry"/>. Config registrations survive silo restart
+    /// via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansLlmGatewayConfigRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansLlmGatewayConfigRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<ILlmGatewayConfigRegistry>(sp => sp.GetRequiredService<OrleansLlmGatewayConfigRegistry>());
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="OrleansMcpGatewayConfigRegistry"/> as the durable
+    /// <see cref="IMcpGatewayConfigRegistry"/>. Config registrations survive silo restart
+    /// via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansMcpGatewayConfigRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansMcpGatewayConfigRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IMcpGatewayConfigRegistry>(sp => sp.GetRequiredService<OrleansMcpGatewayConfigRegistry>());
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="OrleansMcpServerRegistry"/> as the durable
+    /// <see cref="IMcpServerRegistry"/>. Server registrations survive silo restart
+    /// via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansMcpServerRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansMcpServerRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IMcpServerRegistry>(sp => sp.GetRequiredService<OrleansMcpServerRegistry>());
+        return services;
+    }
 }

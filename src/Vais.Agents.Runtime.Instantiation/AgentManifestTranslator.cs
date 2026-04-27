@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents.Control;
 using Vais.Agents.Core;
+using Vais.Agents.Gateways.McpGovernance;
 using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Instantiation;
@@ -21,6 +22,11 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IManifestApplyDiagnosticsSink? _diagnosticsSink;
     private readonly IServiceProvider _serviceProvider;
     private readonly IReadOnlyList<INamedToolSourceProvider> _toolSourceProviders;
+    private readonly ILlmGatewayConfigRegistry? _llmGatewayConfigRegistry;
+    private readonly IMcpGatewayConfigRegistry? _mcpGatewayConfigRegistry;
+    private readonly IMcpServerRegistry? _mcpServerRegistry;
+    private readonly ILlmGatewayMiddlewareFactory? _llmGatewayFactory;
+    private readonly IToolGatewayMiddlewareFactory? _toolGatewayFactory;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
     public AgentManifestTranslator(
@@ -33,7 +39,12 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IPromptFileLoader? promptFileLoader = null,
         IPluginHandlerRegistry? pluginRegistry = null,
         IManifestApplyDiagnosticsSink? diagnosticsSink = null,
-        IEnumerable<INamedToolSourceProvider>? toolSourceProviders = null)
+        IEnumerable<INamedToolSourceProvider>? toolSourceProviders = null,
+        ILlmGatewayConfigRegistry? llmGatewayConfigRegistry = null,
+        IMcpGatewayConfigRegistry? mcpGatewayConfigRegistry = null,
+        IMcpServerRegistry? mcpServerRegistry = null,
+        ILlmGatewayMiddlewareFactory? llmGatewayFactory = null,
+        IToolGatewayMiddlewareFactory? toolGatewayFactory = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(providerPool);
@@ -49,6 +60,11 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _diagnosticsSink = diagnosticsSink;
         _serviceProvider = serviceProvider;
         _toolSourceProviders = toolSourceProviders?.ToList() ?? [];
+        _llmGatewayConfigRegistry = llmGatewayConfigRegistry;
+        _mcpGatewayConfigRegistry = mcpGatewayConfigRegistry;
+        _mcpServerRegistry = mcpServerRegistry;
+        _llmGatewayFactory = llmGatewayFactory;
+        _toolGatewayFactory = toolGatewayFactory;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
         foreach (var factory in guardrailFactories)
@@ -142,16 +158,64 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         var provider = await _providerPool.GetAsync(manifest.Model, cancellationToken).ConfigureAwait(false);
 
         var systemPrompt = await ResolveSystemPromptAsync(manifest.SystemPrompt, cancellationToken).ConfigureAwait(false);
-        var toolRegistry = await ResolveToolsAsync(manifest, cancellationToken).ConfigureAwait(false);
         var (inputGuardrails, outputGuardrails, toolGuardrails) = ResolveGuardrails(manifest.Guardrails);
 
-        var gatewayMiddleware = _serviceProvider
-            .GetServices<LlmGatewayMiddleware>()
-            .ToArray();
+        // GCF-22: LlmGatewayRef — per-agent pipeline replaces DI-global chain entirely.
+        // Agents without llmGatewayRef continue to use the DI-global chain unchanged.
+        LlmGatewayMiddleware[] gatewayMiddleware;
+        if (_llmGatewayConfigRegistry is not null && _llmGatewayFactory is not null
+            && manifest.LlmGatewayRef is { } llmRef)
+        {
+            var llmCfg = await _llmGatewayConfigRegistry.GetAsync(llmRef, ct: cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException(
+                    $"Agent '{manifest.Id}' references LlmGatewayConfig '{llmRef}' which is not registered.");
+            gatewayMiddleware = llmCfg.Middleware
+                .Select(spec => _llmGatewayFactory.Create(spec))
+                .ToArray();
+        }
+        else
+        {
+            gatewayMiddleware = _serviceProvider.GetServices<LlmGatewayMiddleware>().ToArray();
+        }
 
-        var toolGatewayMiddleware = _serviceProvider
-            .GetServices<ToolGatewayMiddleware>()
-            .ToArray();
+        // GCF-23: McpGatewayRef — per-agent pipeline replaces DI-global chain entirely.
+        // "ToolWorkspacePolicy" is a special case: workspace policies come from the manifest,
+        // not from GatewayMiddlewareSpec.Params (the factory is a no-op sentinel).
+        ToolGatewayMiddleware[] toolGatewayMiddleware;
+        if (_mcpGatewayConfigRegistry is not null && _toolGatewayFactory is not null
+            && manifest.McpGatewayRef is { } mcpGwRef)
+        {
+            var mcpCfg = await _mcpGatewayConfigRegistry.GetAsync(mcpGwRef, ct: cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException(
+                    $"Agent '{manifest.Id}' references McpGatewayConfig '{mcpGwRef}' which is not registered.");
+
+            var workspacePolicies = mcpCfg.WorkspacePolicies?
+                .ToDictionary(
+                    kv => kv.Key,
+                    kv => new WorkspaceToolPolicy(
+                        (IReadOnlyList<string>)(kv.Value.AllowedTools ?? []),
+                        (IReadOnlyList<string>)(kv.Value.DeniedTools ?? []),
+                        kv.Value.MinPrivilegeLevel));
+
+            toolGatewayMiddleware = mcpCfg.Middleware
+                .Select(spec =>
+                    spec.Name == "ToolWorkspacePolicy" && workspacePolicies is not null
+                        ? (ToolGatewayMiddleware)new ToolWorkspacePolicyMiddleware(workspacePolicies)
+                        : _toolGatewayFactory.Create(spec))
+                .ToArray();
+        }
+        else
+        {
+            toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
+        }
+
+        // GCF-24: Expand transport:registered McpServerRefs into IToolSources.
+        // Virtual servers → VirtualMcpToolSource; physical servers → INamedToolSourceProvider bridge.
+        // TODO: A hosted service bridging IMcpServerRegistry → McpClient connections for physical
+        //       registered servers is out of scope here (TranslatorInvalidationHook v0.22 pattern).
+        var registeredSources = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+
+        var toolRegistry = await ResolveToolsAsync(manifest, registeredSources, cancellationToken).ConfigureAwait(false);
 
         var options = new StatefulAgentOptions
         {
@@ -252,7 +316,57 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         return raw;
     }
 
-    private async ValueTask<IToolRegistry?> ResolveToolsAsync(AgentManifest manifest, CancellationToken cancellationToken)
+    private async ValueTask<IReadOnlyDictionary<string, IToolSource>> ResolveRegisteredMcpSourcesAsync(
+        AgentManifest manifest, CancellationToken cancellationToken)
+    {
+        if (_mcpServerRegistry is null || manifest.McpServers is not { Count: > 0 })
+            return new Dictionary<string, IToolSource>(StringComparer.Ordinal);
+
+        var result = new Dictionary<string, IToolSource>(StringComparer.Ordinal);
+        foreach (var serverRef in manifest.McpServers)
+        {
+            if (serverRef.Transport != McpServerRef.RegisteredTransport) continue;
+
+            var srv = await _mcpServerRegistry.GetAsync(serverRef.Name, ct: cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException(
+                    $"Agent '{manifest.Id}' references McpServer '{serverRef.Name}' which is not registered.");
+
+            if (srv.Virtual)
+            {
+                result[serverRef.Name] = BuildVirtualMcpToolSource(srv);
+            }
+            // Physical servers: delegated to INamedToolSourceProvider at tool-resolution time.
+            // A hosting service bridging IMcpServerRegistry → McpClient connections is needed
+            // to serve physical registered servers via INamedToolSourceProvider.
+            // TODO: TranslatorInvalidationHook for physical registered server reconnections (v0.22 pattern).
+        }
+        return result;
+    }
+
+    private VirtualMcpToolSource BuildVirtualMcpToolSource(McpServerManifest srv)
+    {
+        var upstreamSources = new List<(IToolSource Source, string ServerId)>();
+        foreach (var sourceRef in srv.Sources ?? [])
+        {
+            IToolSource? upstreamSource = null;
+            foreach (var provider in _toolSourceProviders)
+            {
+                upstreamSource = provider.GetByName(sourceRef.Ref);
+                if (upstreamSource is not null) break;
+            }
+            if (upstreamSource is null)
+                throw new InvalidOperationException(
+                    $"Virtual MCP server '{srv.Id}' references source '{sourceRef.Ref}' which is unavailable. " +
+                    $"No INamedToolSourceProvider has a ready source for '{sourceRef.Ref}'.");
+            upstreamSources.Add((upstreamSource, sourceRef.Ref));
+        }
+        return new VirtualMcpToolSource(upstreamSources, srv.ToolProjection);
+    }
+
+    private async ValueTask<IToolRegistry?> ResolveToolsAsync(
+        AgentManifest manifest,
+        IReadOnlyDictionary<string, IToolSource> registeredSources,
+        CancellationToken cancellationToken)
     {
         if (manifest.Tools is null || manifest.Tools.Count == 0)
         {
@@ -261,7 +375,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
 
         var resolved = new List<ITool>();
         // Per-call caches so each server's IToolSource and discovered tool list is fetched once.
+        // Pre-populate with registered sources (transport:registered expansions take priority).
         var mcpSourceCache = new Dictionary<string, IToolSource?>(StringComparer.Ordinal);
+        foreach (var kv in registeredSources) mcpSourceCache[kv.Key] = kv.Value;
         var mcpToolsCache = new Dictionary<string, List<ITool>>(StringComparer.Ordinal);
 
         foreach (var toolRef in manifest.Tools)

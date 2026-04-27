@@ -115,4 +115,17 @@ public static class LlmFallbackServiceCollectionExtensions
         services.AddSingleton<LlmGatewayMiddleware, LlmFallbackMiddleware>();
         return services;
     }
+
+    /// <summary>
+    /// Registers <see cref="LlmFallbackMiddleware"/> as a named factory under the key
+    /// <c>"Fallback"</c>. The middleware resolves <see cref="IFallbackProviderPool"/> from DI
+    /// at agent activation time; the pool must be registered separately.
+    /// </summary>
+    public static IServiceCollection AddNamedLlmGatewayMiddleware_Fallback(
+        this IServiceCollection services)
+        => services.AddSingleton(
+            sp => new NamedLlmGatewayMiddlewareRegistration(
+                "Fallback",
+                (_, _) => new LlmFallbackMiddleware(
+                    sp.GetRequiredService<IFallbackProviderPool>())));
 }

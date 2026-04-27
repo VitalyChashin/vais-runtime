@@ -1,0 +1,15 @@
+apiVersion: vais.agents/v1
+kind: McpGatewayConfig
+metadata:
+  id: demo-mcp-governance
+  version: "1.0"
+  description: Tool governance — OTel tracing, per-minute rate limit, and response truncation.
+spec:
+  middleware:
+    - name: ToolOtel
+    - name: ToolRateLimit
+      params:
+        callsPerMinute: 30
+    - name: ToolResponseTruncation
+      params:
+        maxCharacters: 8192

@@ -136,3 +136,187 @@ Vais.Agents.Control.Http.PluginListResponse.Equals(Vais.Agents.Control.Http.Plug
 Vais.Agents.Control.Http.PluginListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PluginInfo!>!
 Vais.Agents.Control.Http.PluginListResponse.Items.init -> void
 Vais.Agents.Control.Http.PluginListResponse.PluginListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PluginInfo!>! Items) -> void
+
+const Vais.Agents.Control.Http.ProblemDetailsMapping.LlmGatewayConfigHandleNotFoundType = "urn:vais-agents:llm-gateway-config-handle-not-found" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.LlmGatewayConfigConflictType = "urn:vais-agents:llm-gateway-config-conflict" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.McpGatewayConfigHandleNotFoundType = "urn:vais-agents:mcp-gateway-config-handle-not-found" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.McpGatewayConfigConflictType = "urn:vais-agents:mcp-gateway-config-conflict" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.McpServerHandleNotFoundType = "urn:vais-agents:mcp-server-handle-not-found" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.McpServerConflictType = "urn:vais-agents:mcp-server-conflict" -> string!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapLlmGatewayControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapMcpGatewayControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapMcpServerControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse!
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Deconstruct(out Vais.Agents.LlmGatewayConfigHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Equals(Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse? other) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Handle.get -> Vais.Agents.LlmGatewayConfigHandle!
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.LlmGatewayConfigApplyResponse(Vais.Agents.LlmGatewayConfigHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Warnings.init -> void
+override Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.operator !=(Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse.operator ==(Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigApplyResponse? right) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse!
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Deconstruct(out Vais.Agents.LlmGatewayConfigManifest! Manifest, out Vais.Agents.LlmGatewayConfigHandle! Handle, out Vais.Agents.LlmGatewayConfigStatus! Status) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Equals(Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse? other) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Handle.get -> Vais.Agents.LlmGatewayConfigHandle!
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.LlmGatewayConfigQueryResponse(Vais.Agents.LlmGatewayConfigManifest! Manifest, Vais.Agents.LlmGatewayConfigHandle! Handle, Vais.Agents.LlmGatewayConfigStatus! Status) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Manifest.get -> Vais.Agents.LlmGatewayConfigManifest!
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Status.get -> Vais.Agents.LlmGatewayConfigStatus!
+Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Status.init -> void
+override Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.operator !=(Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse.operator ==(Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigQueryResponse? right) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.<Clone>$() -> Vais.Agents.Control.Http.LlmGatewayConfigListResponse!
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayConfigManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.Equals(Vais.Agents.Control.Http.LlmGatewayConfigListResponse? other) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayConfigManifest!>!
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.Items.init -> void
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.LlmGatewayConfigListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayConfigManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.LlmGatewayConfigListResponse.NextCursor.init -> void
+override Vais.Agents.Control.Http.LlmGatewayConfigListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.LlmGatewayConfigListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.LlmGatewayConfigListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.LlmGatewayConfigListResponse.operator !=(Vais.Agents.Control.Http.LlmGatewayConfigListResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigListResponse? right) -> bool
+static Vais.Agents.Control.Http.LlmGatewayConfigListResponse.operator ==(Vais.Agents.Control.Http.LlmGatewayConfigListResponse? left, Vais.Agents.Control.Http.LlmGatewayConfigListResponse? right) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.<Clone>$() -> Vais.Agents.Control.Http.LlmGatewayConfigValidationResult!
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Deconstruct(out bool Valid, out System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Equals(Vais.Agents.Control.Http.LlmGatewayConfigValidationResult? other) -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Errors.init -> void
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.LlmGatewayConfigValidationResult(bool Valid, System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Valid.get -> bool
+Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Valid.init -> void
+override Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.GetHashCode() -> int
+override Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.ToString() -> string!
+static Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.operator !=(Vais.Agents.Control.Http.LlmGatewayConfigValidationResult? left, Vais.Agents.Control.Http.LlmGatewayConfigValidationResult? right) -> bool
+static Vais.Agents.Control.Http.LlmGatewayConfigValidationResult.operator ==(Vais.Agents.Control.Http.LlmGatewayConfigValidationResult? left, Vais.Agents.Control.Http.LlmGatewayConfigValidationResult? right) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.McpGatewayConfigApplyResponse!
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Deconstruct(out Vais.Agents.McpGatewayConfigHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Equals(Vais.Agents.Control.Http.McpGatewayConfigApplyResponse? other) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Handle.get -> Vais.Agents.McpGatewayConfigHandle!
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.McpGatewayConfigApplyResponse(Vais.Agents.McpGatewayConfigHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Warnings.init -> void
+override Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.operator !=(Vais.Agents.Control.Http.McpGatewayConfigApplyResponse? left, Vais.Agents.Control.Http.McpGatewayConfigApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.McpGatewayConfigApplyResponse.operator ==(Vais.Agents.Control.Http.McpGatewayConfigApplyResponse? left, Vais.Agents.Control.Http.McpGatewayConfigApplyResponse? right) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.McpGatewayConfigQueryResponse!
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Deconstruct(out Vais.Agents.McpGatewayConfigManifest! Manifest, out Vais.Agents.McpGatewayConfigHandle! Handle, out Vais.Agents.McpGatewayConfigStatus! Status) -> void
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Equals(Vais.Agents.Control.Http.McpGatewayConfigQueryResponse? other) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Handle.get -> Vais.Agents.McpGatewayConfigHandle!
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.McpGatewayConfigQueryResponse(Vais.Agents.McpGatewayConfigManifest! Manifest, Vais.Agents.McpGatewayConfigHandle! Handle, Vais.Agents.McpGatewayConfigStatus! Status) -> void
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Manifest.get -> Vais.Agents.McpGatewayConfigManifest!
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Status.get -> Vais.Agents.McpGatewayConfigStatus!
+Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Status.init -> void
+override Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.operator !=(Vais.Agents.Control.Http.McpGatewayConfigQueryResponse? left, Vais.Agents.Control.Http.McpGatewayConfigQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.McpGatewayConfigQueryResponse.operator ==(Vais.Agents.Control.Http.McpGatewayConfigQueryResponse? left, Vais.Agents.Control.Http.McpGatewayConfigQueryResponse? right) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigListResponse
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.<Clone>$() -> Vais.Agents.Control.Http.McpGatewayConfigListResponse!
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.McpGatewayConfigManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.Equals(Vais.Agents.Control.Http.McpGatewayConfigListResponse? other) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.McpGatewayConfigManifest!>!
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.Items.init -> void
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.McpGatewayConfigListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.McpGatewayConfigManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.McpGatewayConfigListResponse.NextCursor.init -> void
+override Vais.Agents.Control.Http.McpGatewayConfigListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpGatewayConfigListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpGatewayConfigListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpGatewayConfigListResponse.operator !=(Vais.Agents.Control.Http.McpGatewayConfigListResponse? left, Vais.Agents.Control.Http.McpGatewayConfigListResponse? right) -> bool
+static Vais.Agents.Control.Http.McpGatewayConfigListResponse.operator ==(Vais.Agents.Control.Http.McpGatewayConfigListResponse? left, Vais.Agents.Control.Http.McpGatewayConfigListResponse? right) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.<Clone>$() -> Vais.Agents.Control.Http.McpGatewayConfigValidationResult!
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Deconstruct(out bool Valid, out System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Equals(Vais.Agents.Control.Http.McpGatewayConfigValidationResult? other) -> bool
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Errors.init -> void
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.McpGatewayConfigValidationResult(bool Valid, System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Valid.get -> bool
+Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Valid.init -> void
+override Vais.Agents.Control.Http.McpGatewayConfigValidationResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpGatewayConfigValidationResult.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpGatewayConfigValidationResult.ToString() -> string!
+static Vais.Agents.Control.Http.McpGatewayConfigValidationResult.operator !=(Vais.Agents.Control.Http.McpGatewayConfigValidationResult? left, Vais.Agents.Control.Http.McpGatewayConfigValidationResult? right) -> bool
+static Vais.Agents.Control.Http.McpGatewayConfigValidationResult.operator ==(Vais.Agents.Control.Http.McpGatewayConfigValidationResult? left, Vais.Agents.Control.Http.McpGatewayConfigValidationResult? right) -> bool
+Vais.Agents.Control.Http.McpServerApplyResponse
+Vais.Agents.Control.Http.McpServerApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.McpServerApplyResponse!
+Vais.Agents.Control.Http.McpServerApplyResponse.Deconstruct(out Vais.Agents.McpServerHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.McpServerApplyResponse.Equals(Vais.Agents.Control.Http.McpServerApplyResponse? other) -> bool
+Vais.Agents.Control.Http.McpServerApplyResponse.Handle.get -> Vais.Agents.McpServerHandle!
+Vais.Agents.Control.Http.McpServerApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.McpServerApplyResponse.McpServerApplyResponse(Vais.Agents.McpServerHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.McpServerApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.McpServerApplyResponse.Warnings.init -> void
+override Vais.Agents.Control.Http.McpServerApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpServerApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpServerApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpServerApplyResponse.operator !=(Vais.Agents.Control.Http.McpServerApplyResponse? left, Vais.Agents.Control.Http.McpServerApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.McpServerApplyResponse.operator ==(Vais.Agents.Control.Http.McpServerApplyResponse? left, Vais.Agents.Control.Http.McpServerApplyResponse? right) -> bool
+Vais.Agents.Control.Http.McpServerQueryResponse
+Vais.Agents.Control.Http.McpServerQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.McpServerQueryResponse!
+Vais.Agents.Control.Http.McpServerQueryResponse.Deconstruct(out Vais.Agents.McpServerManifest! Manifest, out Vais.Agents.McpServerHandle! Handle, out Vais.Agents.McpServerStatus! Status) -> void
+Vais.Agents.Control.Http.McpServerQueryResponse.Equals(Vais.Agents.Control.Http.McpServerQueryResponse? other) -> bool
+Vais.Agents.Control.Http.McpServerQueryResponse.Handle.get -> Vais.Agents.McpServerHandle!
+Vais.Agents.Control.Http.McpServerQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.McpServerQueryResponse.McpServerQueryResponse(Vais.Agents.McpServerManifest! Manifest, Vais.Agents.McpServerHandle! Handle, Vais.Agents.McpServerStatus! Status) -> void
+Vais.Agents.Control.Http.McpServerQueryResponse.Manifest.get -> Vais.Agents.McpServerManifest!
+Vais.Agents.Control.Http.McpServerQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.McpServerQueryResponse.Status.get -> Vais.Agents.McpServerStatus!
+Vais.Agents.Control.Http.McpServerQueryResponse.Status.init -> void
+override Vais.Agents.Control.Http.McpServerQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpServerQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpServerQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpServerQueryResponse.operator !=(Vais.Agents.Control.Http.McpServerQueryResponse? left, Vais.Agents.Control.Http.McpServerQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.McpServerQueryResponse.operator ==(Vais.Agents.Control.Http.McpServerQueryResponse? left, Vais.Agents.Control.Http.McpServerQueryResponse? right) -> bool
+Vais.Agents.Control.Http.McpServerListResponse
+Vais.Agents.Control.Http.McpServerListResponse.<Clone>$() -> Vais.Agents.Control.Http.McpServerListResponse!
+Vais.Agents.Control.Http.McpServerListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.McpServerListResponse.Equals(Vais.Agents.Control.Http.McpServerListResponse? other) -> bool
+Vais.Agents.Control.Http.McpServerListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerManifest!>!
+Vais.Agents.Control.Http.McpServerListResponse.Items.init -> void
+Vais.Agents.Control.Http.McpServerListResponse.McpServerListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.McpServerManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.McpServerListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.McpServerListResponse.NextCursor.init -> void
+override Vais.Agents.Control.Http.McpServerListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpServerListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpServerListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.McpServerListResponse.operator !=(Vais.Agents.Control.Http.McpServerListResponse? left, Vais.Agents.Control.Http.McpServerListResponse? right) -> bool
+static Vais.Agents.Control.Http.McpServerListResponse.operator ==(Vais.Agents.Control.Http.McpServerListResponse? left, Vais.Agents.Control.Http.McpServerListResponse? right) -> bool
+Vais.Agents.Control.Http.McpServerValidationResult
+Vais.Agents.Control.Http.McpServerValidationResult.<Clone>$() -> Vais.Agents.Control.Http.McpServerValidationResult!
+Vais.Agents.Control.Http.McpServerValidationResult.Deconstruct(out bool Valid, out System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.McpServerValidationResult.Equals(Vais.Agents.Control.Http.McpServerValidationResult? other) -> bool
+Vais.Agents.Control.Http.McpServerValidationResult.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.McpServerValidationResult.Errors.init -> void
+Vais.Agents.Control.Http.McpServerValidationResult.McpServerValidationResult(bool Valid, System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.McpServerValidationResult.Valid.get -> bool
+Vais.Agents.Control.Http.McpServerValidationResult.Valid.init -> void
+override Vais.Agents.Control.Http.McpServerValidationResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpServerValidationResult.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpServerValidationResult.ToString() -> string!
+static Vais.Agents.Control.Http.McpServerValidationResult.operator !=(Vais.Agents.Control.Http.McpServerValidationResult? left, Vais.Agents.Control.Http.McpServerValidationResult? right) -> bool
+static Vais.Agents.Control.Http.McpServerValidationResult.operator ==(Vais.Agents.Control.Http.McpServerValidationResult? left, Vais.Agents.Control.Http.McpServerValidationResult? right) -> bool

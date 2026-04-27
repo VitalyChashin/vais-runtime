@@ -8,6 +8,7 @@ Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware
 Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware.LlmFallbackMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> void
 Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions
 static Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions.AddLlmFallbackMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_Fallback(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Gateways.Fallback.LlmLoadBalancingMiddleware
 Vais.Agents.Gateways.Fallback.LlmLoadBalancingMiddleware.LlmLoadBalancingMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> void
 Vais.Agents.Gateways.Fallback.LlmLoadBalancingServiceCollectionExtensions

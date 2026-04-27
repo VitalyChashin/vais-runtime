@@ -54,3 +54,37 @@ Vais.Agents.Core.ToolResponseTruncationMiddleware
 Vais.Agents.Core.ToolResponseTruncationMiddleware.ToolResponseTruncationMiddleware(int maxCharacters = 4096) -> void
 override Vais.Agents.Core.ToolResponseTruncationMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
 static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolResponseTruncationMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int maxCharacters = 4096) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.LlmGatewayConfigManifest?>
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry.InMemoryLlmGatewayConfigRegistry() -> void
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.LlmGatewayConfigManifest!>!
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry.RegisterAsync(Vais.Agents.LlmGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryLlmGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpGatewayConfigManifest?>
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry.InMemoryMcpGatewayConfigRegistry() -> void
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpGatewayConfigManifest!>!
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry.RegisterAsync(Vais.Agents.McpGatewayConfigManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryMcpGatewayConfigRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryMcpServerRegistry
+Vais.Agents.Core.InMemoryMcpServerRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerManifest?>
+Vais.Agents.Core.InMemoryMcpServerRegistry.InMemoryMcpServerRegistry() -> void
+Vais.Agents.Core.InMemoryMcpServerRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.McpServerManifest!>!
+Vais.Agents.Core.InMemoryMcpServerRegistry.RegisterAsync(Vais.Agents.McpServerManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryMcpServerRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.DefaultLlmGatewayMiddlewareFactory
+Vais.Agents.Core.DefaultLlmGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.LlmGatewayMiddleware!
+Vais.Agents.Core.DefaultLlmGatewayMiddlewareFactory.DefaultLlmGatewayMiddlewareFactory(System.Collections.Generic.IEnumerable<Vais.Agents.NamedLlmGatewayMiddlewareRegistration!>! registrations, System.IServiceProvider! services) -> void
+Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory
+Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.ToolGatewayMiddleware!
+Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory.DefaultToolGatewayMiddlewareFactory(System.Collections.Generic.IEnumerable<Vais.Agents.NamedToolGatewayMiddlewareRegistration!>! registrations, System.IServiceProvider! services) -> void
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmLogging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmUsage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmOtel(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmPromptEnrichment(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddDefaultLlmGatewayMiddlewareFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolLogging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolOtel(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolDenyFilter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolResponseTruncation(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddDefaultToolGatewayMiddlewareFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

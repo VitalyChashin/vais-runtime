@@ -97,4 +97,17 @@ public static class LlmSemanticCacheServiceCollectionExtensions
         services.AddSingleton<LlmGatewayMiddleware, LlmSemanticCacheMiddleware>();
         return services;
     }
+
+    /// <summary>
+    /// Registers <see cref="LlmSemanticCacheMiddleware"/> as a named factory under the key
+    /// <c>"SemanticCache"</c>. The middleware resolves <see cref="ISemanticCacheStore"/> from DI
+    /// at agent activation time; the store must be registered separately.
+    /// </summary>
+    public static IServiceCollection AddNamedLlmGatewayMiddleware_SemanticCache(
+        this IServiceCollection services)
+        => services.AddSingleton(
+            sp => new NamedLlmGatewayMiddlewareRegistration(
+                "SemanticCache",
+                (_, _) => new LlmSemanticCacheMiddleware(
+                    sp.GetRequiredService<ISemanticCacheStore>())));
 }

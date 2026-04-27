@@ -34,6 +34,15 @@
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.Prometheus\Vais.Agents.Gateways.Prometheus.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.Fallback\Vais.Agents.Gateways.Fallback.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.SemanticCache\Vais.Agents.Gateways.SemanticCache.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.StructuredOutput\Vais.Agents.Gateways.StructuredOutput.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.McpGovernance\Vais.Agents.Gateways.McpGovernance.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.McpSecurity\Vais.Agents.Gateways.McpSecurity.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.McpReliability\Vais.Agents.Gateways.McpReliability.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.McpCache\Vais.Agents.Gateways.McpCache.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.McpTransformation\Vais.Agents.Gateways.McpTransformation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -67,6 +67,26 @@ public static class ProblemDetailsMapping
     /// <summary>Graph manifest failed structural validation.</summary>
     public const string GraphValidationFailedType = TypePrefix + "graph-validation-failed";
 
+    // ── Gateway config URNs (v0.20) ─────────────────────────────────────────
+
+    /// <summary>LLM gateway config handle not found.</summary>
+    public const string LlmGatewayConfigHandleNotFoundType = TypePrefix + "llm-gateway-config-handle-not-found";
+
+    /// <summary>LLM gateway config (id, version) already registered — use UpdateAsync to replace.</summary>
+    public const string LlmGatewayConfigConflictType = TypePrefix + "llm-gateway-config-conflict";
+
+    /// <summary>MCP gateway config handle not found.</summary>
+    public const string McpGatewayConfigHandleNotFoundType = TypePrefix + "mcp-gateway-config-handle-not-found";
+
+    /// <summary>MCP gateway config (id, version) already registered — use UpdateAsync to replace.</summary>
+    public const string McpGatewayConfigConflictType = TypePrefix + "mcp-gateway-config-conflict";
+
+    /// <summary>MCP server handle not found.</summary>
+    public const string McpServerHandleNotFoundType = TypePrefix + "mcp-server-handle-not-found";
+
+    /// <summary>MCP server (id, version) already registered — use UpdateAsync to replace.</summary>
+    public const string McpServerConflictType = TypePrefix + "mcp-server-conflict";
+
     /// <summary>
     /// Translate a control-plane exception into an <see cref="IResult"/> carrying
     /// Problem Details with an appropriate status code + type URN.
@@ -193,6 +213,13 @@ public static class ProblemDetailsMapping
         GraphInterruptMismatchException => (StatusCodes.Status409Conflict, GraphInterruptMismatchType, "Graph interrupt mismatch"),
         GraphAlreadyCompleteException => (StatusCodes.Status409Conflict, GraphAlreadyCompleteType, "Graph run already complete"),
         GraphRecursionException => (StatusCodes.Status422UnprocessableEntity, GraphRecursionLimitType, "Graph recursion limit exceeded"),
+        // ── Gateway config exceptions (v0.20) ────────────────────────────
+        LlmGatewayConfigHandleNotFoundException => (StatusCodes.Status404NotFound, LlmGatewayConfigHandleNotFoundType, "LLM gateway config not found"),
+        LlmGatewayConfigConflictException => (StatusCodes.Status409Conflict, LlmGatewayConfigConflictType, "LLM gateway config already registered"),
+        McpGatewayConfigHandleNotFoundException => (StatusCodes.Status404NotFound, McpGatewayConfigHandleNotFoundType, "MCP gateway config not found"),
+        McpGatewayConfigConflictException => (StatusCodes.Status409Conflict, McpGatewayConfigConflictType, "MCP gateway config already registered"),
+        McpServerHandleNotFoundException => (StatusCodes.Status404NotFound, McpServerHandleNotFoundType, "MCP server not found"),
+        McpServerConflictException => (StatusCodes.Status409Conflict, McpServerConflictType, "MCP server already registered"),
         _ => (StatusCodes.Status503ServiceUnavailable, BackendUnavailableType, "Backend unavailable"),
     };
 }
