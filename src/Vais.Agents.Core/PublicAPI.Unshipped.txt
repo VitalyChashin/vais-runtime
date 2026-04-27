@@ -33,3 +33,24 @@ static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddPassThroughIden
 Vais.Agents.Core.LlmGatewayPipeline
 static Vais.Agents.Core.LlmGatewayPipeline.InvokeAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.ICompletionProvider! provider, System.Collections.Generic.IEnumerable<Vais.Agents.LlmGatewayMiddleware!>! middleware, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.CompletionResponse!>!
 static Vais.Agents.Core.LlmGatewayPipeline.StreamAsync(Vais.Agents.CompletionRequest! request, Vais.Agents.IStreamingCompletionProvider! provider, System.Collections.Generic.IEnumerable<Vais.Agents.LlmGatewayMiddleware!>! middleware, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.CompletionUpdate!>!
+Vais.Agents.Core.ToolGatewayServiceCollectionExtensions
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolGatewayMiddleware<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolGatewayMiddleware!>!
+Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.init -> void
+Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null, System.Collections.Generic.IEnumerable<Vais.Agents.ToolGatewayMiddleware!>? gatewayMiddleware = null) -> void
+Vais.Agents.Core.ToolLoggingMiddleware
+Vais.Agents.Core.ToolLoggingMiddleware.ToolLoggingMiddleware(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.ToolLoggingMiddleware!>! logger) -> void
+override Vais.Agents.Core.ToolLoggingMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolLoggingMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.ToolOtelMiddleware
+Vais.Agents.Core.ToolOtelMiddleware.ToolOtelMiddleware() -> void
+override Vais.Agents.Core.ToolOtelMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolOtelMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.ToolDenyFilterMiddleware
+Vais.Agents.Core.ToolDenyFilterMiddleware.ToolDenyFilterMiddleware(System.Collections.Generic.IReadOnlyList<string!>! blockedToolNames) -> void
+override Vais.Agents.Core.ToolDenyFilterMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolDenyFilterMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlyList<string!>! blockedToolNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.ToolResponseTruncationMiddleware
+Vais.Agents.Core.ToolResponseTruncationMiddleware.ToolResponseTruncationMiddleware(int maxCharacters = 4096) -> void
+override Vais.Agents.Core.ToolResponseTruncationMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolResponseTruncationMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int maxCharacters = 4096) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

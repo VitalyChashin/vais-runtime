@@ -229,6 +229,18 @@ public sealed class StatefulAgentOptions
         = Array.Empty<LlmGatewayMiddleware>();
 
     /// <summary>
+    /// Ordered tool gateway middleware applied as the outermost layer of outbound tool dispatch.
+    /// Each <see cref="ToolGatewayMiddleware"/> instance wraps <c>DefaultToolCallDispatcher</c>'s
+    /// inner dispatch path (AllowedTools enforcement, <see cref="IToolGuardrail"/> hooks, tool
+    /// invocation). Register via <c>services.AddToolGatewayMiddleware&lt;T&gt;()</c> for
+    /// DI-driven injection, or set directly for manual construction. First-registered = outermost.
+    /// <see cref="IToolGuardrail"/> hooks remain as the inner layer (backwards-compatible).
+    /// Default: empty.
+    /// </summary>
+    public IReadOnlyList<ToolGatewayMiddleware> ToolGatewayMiddleware { get; init; }
+        = Array.Empty<ToolGatewayMiddleware>();
+
+    /// <summary>
     /// Dispatcher for tool calls surfaced by the provider. When null, <c>StatefulAiAgent</c>
     /// constructs a <see cref="DefaultToolCallDispatcher"/> from <see cref="ToolRegistry"/> +
     /// <see cref="ToolGuardrails"/> automatically. Supply your own to override — e.g., a

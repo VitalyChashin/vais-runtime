@@ -13,7 +13,6 @@ Vais.Agents.Core.AsyncLocalAgentContextAccessor.AsyncLocalAgentContextAccessor()
 Vais.Agents.Core.AsyncLocalAgentContextAccessor.Current.get -> Vais.Agents.AgentContext!
 Vais.Agents.Core.AsyncLocalAgentContextAccessor.Push(Vais.Agents.AgentContext! context) -> System.IDisposable!
 Vais.Agents.Core.DefaultToolCallDispatcher
-Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null) -> void
 Vais.Agents.Core.DefaultToolCallDispatcher.DispatchAsync(Vais.Agents.ToolCallRequest! request, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome!>
 Vais.Agents.Core.FormatStringPromptTemplate
 Vais.Agents.Core.FormatStringPromptTemplate.RenderAsync(string! template, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! variables, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>

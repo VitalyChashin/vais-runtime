@@ -1,0 +1,10 @@
+#nullable enable
+Vais.Agents.Gateways.McpCache.ToolResultCacheMiddleware
+Vais.Agents.Gateways.McpCache.ToolResultCacheMiddleware.ToolResultCacheMiddleware(Vais.Agents.IToolResultCache! cache, System.Collections.Generic.IReadOnlyList<string!>? excludedTools = null) -> void
+override Vais.Agents.Gateways.McpCache.ToolResultCacheMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpCache.InMemoryToolResultCache
+Vais.Agents.Gateways.McpCache.InMemoryToolResultCache.InMemoryToolResultCache() -> void
+Vais.Agents.Gateways.McpCache.InMemoryToolResultCache.SetAsync(string! toolName, System.Text.Json.JsonElement arguments, Vais.Agents.ToolCallOutcome! outcome, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Gateways.McpCache.InMemoryToolResultCache.TryGetAsync(string! toolName, System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome?>
+Vais.Agents.Gateways.McpCache.McpCacheServiceCollectionExtensions
+static Vais.Agents.Gateways.McpCache.McpCacheServiceCollectionExtensions.AddInMemoryToolResultCache(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlyList<string!>? excludedTools = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

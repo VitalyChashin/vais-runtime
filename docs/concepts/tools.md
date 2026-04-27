@@ -110,12 +110,34 @@ var agent = new StatefulAiAgent(provider, new StatefulAgentOptions { ToolRegistr
 
 Consumers can inject `StatefulAgentOptions.ToolCallDispatcher` to override — useful for bespoke retry / circuit-breaker logic around tool calls. Any custom dispatcher should emit the same event envelope for observability parity.
 
+## Tool Gateway
+
+`ToolGatewayMiddleware` intercepts every tool invocation between `DefaultToolCallDispatcher` and the actual `ITool.InvokeAsync`. Wire middleware into `StatefulAgentOptions.ToolGatewayMiddleware` (index 0 = outermost):
+
+```csharp
+using Vais.Agents.Core;
+using Vais.Agents.Gateways.McpReliability;
+
+var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+{
+    ToolRegistry = registry,
+    ToolGatewayMiddleware =
+    [
+        new ToolLoggingMiddleware(logger),
+        new ToolTimeoutGuard(TimeSpan.FromSeconds(10)),
+    ],
+});
+```
+
+A gateway middleware returns a `ToolCallOutcome` with a non-null `Error` to short-circuit without calling the tool — the model observes the error and adapts. Core ships four reference plugins (`ToolLoggingMiddleware`, `ToolOtelMiddleware`, `ToolDenyFilterMiddleware`, `ToolResponseTruncationMiddleware`); five optional packages cover reliability, caching, governance, security, and transformation. See the [Tool Gateway guide](../guides/gate-tool-calls-with-the-tool-gateway.md) for the full stack.
+
 ## Extension points
 
 - **Custom `ITool`** — implement the four members. Name must match `[A-Za-z0-9_-]+`; adapters validate this on registration.
 - **Custom `IToolSource`** — useful for discovery mechanisms we haven't built (plugin DLLs, HTTP catalogues).
-- **Custom `IToolCallDispatcher`** — for retry, circuit-break, timeout-per-tool, or audit logging.
-- **`IToolGuardrail`** — see [guardrails](guardrails.md); runs inside `DefaultToolCallDispatcher`.
+- **Custom `ToolGatewayMiddleware`** — subclass and override `InvokeAsync` for cross-cutting concerns (retry, circuit-break, audit). Preferred over a custom dispatcher for new use cases.
+- **Custom `IToolCallDispatcher`** — replace the whole dispatch strategy; only warranted when the gateway middleware chain is not sufficient.
+- **`IToolGuardrail`** — see [guardrails](guardrails.md); runs inside `DefaultToolCallDispatcher`, before the gateway chain.
 
 ## MCP + A2A adapters
 
@@ -146,3 +168,4 @@ See [interop](interop.md) for details.
 - [Guardrails](guardrails.md) — tool-layer semantics.
 - [Interop](interop.md) — MCP + A2A adapters.
 - [Wire a custom tool guide](../guides/wire-a-custom-tool.md)
+- [Gate tool calls with the Tool Gateway](../guides/gate-tool-calls-with-the-tool-gateway.md) — full guide to all gateway middleware.

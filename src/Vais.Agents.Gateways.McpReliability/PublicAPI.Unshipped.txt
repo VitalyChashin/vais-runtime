@@ -1,0 +1,14 @@
+#nullable enable
+Vais.Agents.Gateways.McpReliability.ToolRetryMiddleware
+Vais.Agents.Gateways.McpReliability.ToolRetryMiddleware.ToolRetryMiddleware(int maxAttempts = 3, System.TimeSpan? initialDelay = null) -> void
+override Vais.Agents.Gateways.McpReliability.ToolRetryMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpReliability.ToolTimeoutGuard
+Vais.Agents.Gateways.McpReliability.ToolTimeoutGuard.ToolTimeoutGuard(System.TimeSpan timeout) -> void
+override Vais.Agents.Gateways.McpReliability.ToolTimeoutGuard.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpReliability.ToolCircuitBreakerMiddleware
+Vais.Agents.Gateways.McpReliability.ToolCircuitBreakerMiddleware.ToolCircuitBreakerMiddleware(int failureThreshold = 5, System.TimeSpan? resetTimeout = null) -> void
+override Vais.Agents.Gateways.McpReliability.ToolCircuitBreakerMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpReliability.McpReliabilityServiceCollectionExtensions
+static Vais.Agents.Gateways.McpReliability.McpReliabilityServiceCollectionExtensions.AddToolRetryMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int maxAttempts = 3, System.TimeSpan? initialDelay = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.McpReliability.McpReliabilityServiceCollectionExtensions.AddToolTimeoutGuard(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.TimeSpan timeout) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.McpReliability.McpReliabilityServiceCollectionExtensions.AddToolCircuitBreakerMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int failureThreshold = 5, System.TimeSpan? resetTimeout = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

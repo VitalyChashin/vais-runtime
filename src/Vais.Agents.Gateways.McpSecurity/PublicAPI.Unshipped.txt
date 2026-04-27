@@ -1,0 +1,10 @@
+#nullable enable
+Vais.Agents.Gateways.McpSecurity.ToolArgumentValidationMiddleware
+Vais.Agents.Gateways.McpSecurity.ToolArgumentValidationMiddleware.ToolArgumentValidationMiddleware(System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<string!>!>! requiredArgsByTool) -> void
+override Vais.Agents.Gateways.McpSecurity.ToolArgumentValidationMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpSecurity.ToolOutputLengthGuard
+Vais.Agents.Gateways.McpSecurity.ToolOutputLengthGuard.ToolOutputLengthGuard(int maxCharacters) -> void
+override Vais.Agents.Gateways.McpSecurity.ToolOutputLengthGuard.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpSecurity.McpSecurityServiceCollectionExtensions
+static Vais.Agents.Gateways.McpSecurity.McpSecurityServiceCollectionExtensions.AddToolArgumentValidationMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<string!>!>! requiredArgsByTool) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.McpSecurity.McpSecurityServiceCollectionExtensions.AddToolOutputLengthGuard(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int maxCharacters) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

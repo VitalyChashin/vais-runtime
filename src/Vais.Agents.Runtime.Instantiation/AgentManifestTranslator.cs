@@ -149,6 +149,10 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             .GetServices<LlmGatewayMiddleware>()
             .ToArray();
 
+        var toolGatewayMiddleware = _serviceProvider
+            .GetServices<ToolGatewayMiddleware>()
+            .ToArray();
+
         var options = new StatefulAgentOptions
         {
             AgentName = manifest.Id,
@@ -160,6 +164,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             ToolGuardrails = toolGuardrails,
             Budget = manifest.Budget,
             GatewayMiddleware = gatewayMiddleware,
+            ToolGatewayMiddleware = toolGatewayMiddleware,
         };
 
         // First-writer-wins: concurrent TranslateAsync calls for the same id

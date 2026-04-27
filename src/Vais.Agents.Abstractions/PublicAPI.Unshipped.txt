@@ -53,3 +53,27 @@ static Vais.Agents.ModelRoute.operator !=(Vais.Agents.ModelRoute? left, Vais.Age
 static Vais.Agents.ModelRoute.operator ==(Vais.Agents.ModelRoute? left, Vais.Agents.ModelRoute? right) -> bool
 Vais.Agents.IAgentContextSetter
 Vais.Agents.IAgentContextSetter.Push(Vais.Agents.AgentContext! context) -> System.IDisposable!
+Vais.Agents.ToolGatewayMiddleware
+Vais.Agents.ToolGatewayMiddleware.ToolGatewayMiddleware() -> void
+virtual Vais.Agents.ToolGatewayMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.ToolGatewayContext
+Vais.Agents.ToolGatewayContext.<Clone>$() -> Vais.Agents.ToolGatewayContext!
+Vais.Agents.ToolGatewayContext.AgentContext.get -> Vais.Agents.AgentContext!
+Vais.Agents.ToolGatewayContext.AgentContext.init -> void
+Vais.Agents.ToolGatewayContext.Arguments.get -> System.Text.Json.JsonElement
+Vais.Agents.ToolGatewayContext.Arguments.init -> void
+Vais.Agents.ToolGatewayContext.CallId.get -> string!
+Vais.Agents.ToolGatewayContext.CallId.init -> void
+Vais.Agents.ToolGatewayContext.Deconstruct(out string! ToolName, out string! CallId, out System.Text.Json.JsonElement Arguments, out Vais.Agents.AgentContext! AgentContext) -> void
+Vais.Agents.ToolGatewayContext.Equals(Vais.Agents.ToolGatewayContext? other) -> bool
+Vais.Agents.ToolGatewayContext.ToolGatewayContext(string! ToolName, string! CallId, System.Text.Json.JsonElement Arguments, Vais.Agents.AgentContext! AgentContext) -> void
+Vais.Agents.ToolGatewayContext.ToolName.get -> string!
+Vais.Agents.ToolGatewayContext.ToolName.init -> void
+override Vais.Agents.ToolGatewayContext.Equals(object? obj) -> bool
+override Vais.Agents.ToolGatewayContext.GetHashCode() -> int
+override Vais.Agents.ToolGatewayContext.ToString() -> string!
+static Vais.Agents.ToolGatewayContext.operator !=(Vais.Agents.ToolGatewayContext? left, Vais.Agents.ToolGatewayContext? right) -> bool
+static Vais.Agents.ToolGatewayContext.operator ==(Vais.Agents.ToolGatewayContext? left, Vais.Agents.ToolGatewayContext? right) -> bool
+Vais.Agents.IToolResultCache
+Vais.Agents.IToolResultCache.TryGetAsync(string! toolName, System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ToolCallOutcome?>
+Vais.Agents.IToolResultCache.SetAsync(string! toolName, System.Text.Json.JsonElement arguments, Vais.Agents.ToolCallOutcome! outcome, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

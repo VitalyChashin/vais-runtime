@@ -1,0 +1,10 @@
+#nullable enable
+Vais.Agents.Gateways.McpTransformation.ToolJsonRepairMiddleware
+Vais.Agents.Gateways.McpTransformation.ToolJsonRepairMiddleware.ToolJsonRepairMiddleware() -> void
+override Vais.Agents.Gateways.McpTransformation.ToolJsonRepairMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpTransformation.ToolHtmlToMarkdownMiddleware
+Vais.Agents.Gateways.McpTransformation.ToolHtmlToMarkdownMiddleware.ToolHtmlToMarkdownMiddleware() -> void
+override Vais.Agents.Gateways.McpTransformation.ToolHtmlToMarkdownMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpTransformation.McpTransformationServiceCollectionExtensions
+static Vais.Agents.Gateways.McpTransformation.McpTransformationServiceCollectionExtensions.AddToolJsonRepairMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.McpTransformation.McpTransformationServiceCollectionExtensions.AddToolHtmlToMarkdownMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

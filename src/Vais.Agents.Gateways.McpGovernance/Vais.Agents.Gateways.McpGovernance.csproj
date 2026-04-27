@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Gateways.McpGovernance</RootNamespace>
+    <AssemblyName>Vais.Agents.Gateways.McpGovernance</AssemblyName>
+    <Description>Governance gateway middleware for Vais.Agents MCP/tool dispatch: rate limiting and workspace-scoped tool policies.</Description>
+    <PackageTags>agents;ai;mcp;tools;governance;rate-limit;policy</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.Governance\Vais.Agents.Gateways.Governance.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>

@@ -42,18 +42,21 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
     private readonly IReadOnlyList<IToolGuardrail> _toolGuardrails;
     private readonly IAgentEventBus _eventBus;
     private readonly IAgentJournal _journal;
+    private readonly ToolGatewayMiddleware[] _gatewayMiddleware;
 
     /// <summary>Construct a dispatcher over the given registry + guardrails + optional event bus + optional journal.</summary>
     public DefaultToolCallDispatcher(
         IToolRegistry? toolRegistry,
         IReadOnlyList<IToolGuardrail>? toolGuardrails = null,
         IAgentEventBus? eventBus = null,
-        IAgentJournal? journal = null)
+        IAgentJournal? journal = null,
+        IEnumerable<ToolGatewayMiddleware>? gatewayMiddleware = null)
     {
         _toolRegistry = toolRegistry;
         _toolGuardrails = toolGuardrails ?? Array.Empty<IToolGuardrail>();
         _eventBus = eventBus ?? NullAgentEventBus.Instance;
         _journal = journal ?? NullAgentJournal.Instance;
+        _gatewayMiddleware = gatewayMiddleware?.ToArray() ?? Array.Empty<ToolGatewayMiddleware>();
     }
 
     /// <inheritdoc />
@@ -64,9 +67,9 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Cache-replay: only meaningful when the agent has stamped a RunId on the
-        // ambient context AND a real journal is wired. A null RunId or the null
-        // journal skips straight to the normal dispatch path (v0.4 behaviour).
+        // Journal replay: bypasses gateway chain entirely (durable execution concern).
+        // Cache-replay is only meaningful when the agent has stamped a RunId on the
+        // ambient context AND a real journal is wired.
         if (context.RunId is { } runId && !ReferenceEquals(_journal, NullAgentJournal.Instance))
         {
             await foreach (var entry in _journal.ReadAsync(runId, cancellationToken).ConfigureAwait(false))
@@ -85,6 +88,33 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             }
         }
 
+        // Fast path: no gateway middleware registered — avoid context allocation.
+        if (_gatewayMiddleware.Length == 0)
+            return await InnerDispatchAsync(request, context, cancellationToken).ConfigureAwait(false);
+
+        var gwCtx = new ToolGatewayContext(
+            request.ToolName, request.CallId, request.Arguments, context);
+
+        // Build right-to-left middleware pipeline; innermost = InnerDispatchAsync.
+        Func<Task<ToolCallOutcome>> chain =
+            () => InnerDispatchAsync(request, context, cancellationToken);
+        for (var i = _gatewayMiddleware.Length - 1; i >= 0; i--)
+        {
+            var mw = _gatewayMiddleware[i];
+            var prev = chain;
+            chain = () => mw.InvokeAsync(gwCtx, prev, cancellationToken);
+        }
+
+        return await chain().ConfigureAwait(false);
+    }
+
+    // All of the original DispatchAsync body lives here: AllowedTools, registry, guardrails,
+    // events, tool invocation, and journal write. Gateway chain is the outer layer.
+    private async Task<ToolCallOutcome> InnerDispatchAsync(
+        ToolCallRequest request,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
         // AllowedTools enforcement: when the context carries an explicit tool allow-list,
         // reject any tool not on it before hitting the registry or guardrails.
         // null AllowedTools = no restriction (default for all pre-RCB deployments).

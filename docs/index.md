@@ -44,6 +44,7 @@ Task-focused, sample-backed recipes.
 - [Wire a custom tool](guides/wire-a-custom-tool.md)
 - [Add input and output guardrails](guides/add-input-output-guardrails.md)
 - [Plug in gateway middleware](guides/plug-in-gateway-middleware.md) — fallback, caching, rate limiting, structured output, test doubles.
+- [Gate tool calls with the Tool Gateway](guides/gate-tool-calls-with-the-tool-gateway.md) — logging, OTel, deny filter, truncation, retries, circuit breaking, caching, governance, security, transformation.
 - [Run on Orleans locally](guides/run-on-orleans-locally.md)
 - [Add Redis persistence](guides/add-redis-persistence.md)
 - [Add Postgres persistence](guides/add-postgres-persistence.md)

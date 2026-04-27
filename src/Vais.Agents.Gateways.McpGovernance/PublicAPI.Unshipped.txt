@@ -1,0 +1,33 @@
+#nullable enable
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions.MaxRequestsPerWindow.get -> int
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions.MaxRequestsPerWindow.init -> void
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions.ToolRateLimitOptions() -> void
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions.Window.get -> System.TimeSpan
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions.Window.init -> void
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitMiddleware
+Vais.Agents.Gateways.McpGovernance.ToolRateLimitMiddleware.ToolRateLimitMiddleware(Vais.Agents.Gateways.Governance.IRateLimitStore! store, Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions! options) -> void
+override Vais.Agents.Gateways.McpGovernance.ToolRateLimitMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.<Clone>$() -> Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy!
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.AllowedPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.AllowedPrefixes.init -> void
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! AllowedPrefixes, out System.Collections.Generic.IReadOnlyList<string!>! DeniedPrefixes, out int MinPrivilegeLevel) -> void
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.DeniedPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.DeniedPrefixes.init -> void
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.Equals(Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy? other) -> bool
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.IsAllowed(string! toolName, Vais.Agents.PrivilegeLevel? callerLevel) -> bool
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.MinPrivilegeLevel.get -> int
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.MinPrivilegeLevel.init -> void
+Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.WorkspaceToolPolicy(System.Collections.Generic.IReadOnlyList<string!>! AllowedPrefixes, System.Collections.Generic.IReadOnlyList<string!>! DeniedPrefixes, int MinPrivilegeLevel = 0) -> void
+override Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.Equals(object? obj) -> bool
+override Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.GetHashCode() -> int
+override Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.ToString() -> string!
+static Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.operator !=(Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy? left, Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy? right) -> bool
+static Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy.operator ==(Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy? left, Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy? right) -> bool
+Vais.Agents.Gateways.McpGovernance.ToolWorkspacePolicyMiddleware
+Vais.Agents.Gateways.McpGovernance.ToolWorkspacePolicyMiddleware.ToolWorkspacePolicyMiddleware(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy!>! policies) -> void
+override Vais.Agents.Gateways.McpGovernance.ToolWorkspacePolicyMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Gateways.McpGovernance.McpGovernanceServiceCollectionExtensions
+static Vais.Agents.Gateways.McpGovernance.McpGovernanceServiceCollectionExtensions.AddToolRateLimitMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.McpGovernance.ToolRateLimitOptions! options) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.McpGovernance.McpGovernanceServiceCollectionExtensions.AddToolWorkspacePolicyMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Gateways.McpGovernance.WorkspaceToolPolicy!>! policies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

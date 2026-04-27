@@ -105,7 +105,12 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             : [.. gw, .. options.StreamingFilters];
         _budget = options.Budget ?? RunBudget.Unlimited;
         _toolCallDispatcher = options.ToolCallDispatcher
-            ?? new DefaultToolCallDispatcher(options.ToolRegistry, options.ToolGuardrails, _eventBus, options.Journal);
+            ?? new DefaultToolCallDispatcher(
+                options.ToolRegistry,
+                options.ToolGuardrails,
+                _eventBus,
+                options.Journal,
+                options.ToolGatewayMiddleware.Count > 0 ? options.ToolGatewayMiddleware : null);
         _journal = options.Journal ?? NullAgentJournal.Instance;
         _replayMode = options.ReplayMode;
         _runIdFactory = options.RunIdFactory ?? DefaultRunIdFactory;

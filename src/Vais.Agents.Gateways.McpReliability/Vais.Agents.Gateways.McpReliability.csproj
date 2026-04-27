@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Gateways.McpReliability</RootNamespace>
+    <AssemblyName>Vais.Agents.Gateways.McpReliability</AssemblyName>
+    <Description>Reliability gateway middleware for Vais.Agents MCP/tool dispatch: retry, timeout, and circuit breaker.</Description>
+    <PackageTags>agents;ai;mcp;tools;reliability;retry;circuit-breaker</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>

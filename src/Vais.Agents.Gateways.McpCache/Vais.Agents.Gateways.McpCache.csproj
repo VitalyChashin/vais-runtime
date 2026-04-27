@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Gateways.McpCache</RootNamespace>
+    <AssemblyName>Vais.Agents.Gateways.McpCache</AssemblyName>
+    <Description>Deterministic tool result cache gateway middleware for Vais.Agents. Short-circuits repeated tool calls with identical arguments.</Description>
+    <PackageTags>agents;ai;mcp;tools;cache</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+</Project>
