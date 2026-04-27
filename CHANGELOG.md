@@ -7,7 +7,7 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
-## [0.24.0-preview] — 2026-04-27
+## [0.40.0-preview] — 2026-04-27
 
 ### Added
 - **Gateway Config Control Plane pillar.** Declarative YAML manifests for `LlmGatewayConfig` and `McpGatewayConfig` — named, versioned middleware pipelines applied at agent activation without redeployment. Any agent can bind to a shared gateway config via `llmGatewayRef` / `mcpGatewayRef`; updating the config (re-`apply`) takes effect on the next grain activation.
