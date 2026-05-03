@@ -13,7 +13,7 @@ async def invoke(request: AgentRequest) -> AgentResponse:
     else:
         state = ResearchState.initial(request.user_message)
 
-    state, tracker = run_graph(state, request.user_message)
+    state, tracker = await run_graph(state, request.user_message)
 
     usage = None
     if tracker.input_tokens > 0 or tracker.output_tokens > 0:

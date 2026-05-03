@@ -75,10 +75,12 @@
     <!--
       Runtime-host-only (Vais.Agents.Runtime.Host) — exporter + DI wiring. Library
       packages remain exporter-agnostic so consumers pick their own backend.
+      Prometheus exporter is still in beta upstream; no stable release exists yet.
     -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.0-beta.1" />
   </ItemGroup>
   <ItemGroup Label="Orleans host (Vais.Agents.Hosting.Orleans). Aligned 10.x family.">
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.1.0" />

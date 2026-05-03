@@ -33,6 +33,10 @@ app.Logger.LogInformation(
 
 app.UseAgentControlPlaneIdempotency();
 
+var corsDisabled = string.Equals(options.CorsOrigins, "disabled", StringComparison.OrdinalIgnoreCase);
+if (!corsDisabled && (options.Mode == "localhost" || !string.IsNullOrWhiteSpace(options.CorsOrigins)))
+    app.UseCors();
+
 if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
 {
     app.UseAuthentication();
@@ -48,6 +52,9 @@ app.MapHealthChecks("/readyz", new HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("ready"),
 });
+
+if (!string.IsNullOrWhiteSpace(options.OtelEndpoint) || options.OtelConsole)
+    app.MapPrometheusScrapingEndpoint();
 
 app.Run();
 

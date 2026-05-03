@@ -38,7 +38,7 @@ spec:
         id: sgr-analyst
         version: "1.0"
       stateBindings:
-        input:  [research_findings]
+        input:  [query, research_plan]
         output: [analysis]
 
     - id: synthesizer

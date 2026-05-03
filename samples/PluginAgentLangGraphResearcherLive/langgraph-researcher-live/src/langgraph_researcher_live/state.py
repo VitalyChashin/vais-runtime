@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class ResearchState(BaseModel):
     user_input: str = ""
     plan: Optional[list[str]] = None
+    search_results: list[str] = []
     summary: Optional[str] = None
     turn_count: int = 0
 

@@ -91,6 +91,14 @@ internal sealed record RuntimeOptions
     /// </summary>
     public bool UseSaPrincipalMapper { get; init; }
 
+    /// <summary>
+    /// Comma-separated list of allowed CORS origins (e.g. <c>http://localhost:5173</c>).
+    /// In <c>localhost</c> mode, defaults to allowing all <c>localhost</c> / <c>127.0.0.1</c>
+    /// origins so the Workbench dev server works without extra configuration.
+    /// Set <c>VAIS_CORS_ORIGINS</c> to override; set to <c>disabled</c> to opt out entirely.
+    /// </summary>
+    public string? CorsOrigins { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -113,6 +121,7 @@ internal sealed record RuntimeOptions
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
+            CorsOrigins = Env("VAIS_CORS_ORIGINS"),
         };
 
         static string? Env(string name)

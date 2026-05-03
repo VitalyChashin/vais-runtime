@@ -355,6 +355,28 @@ internal static class CompositionRoot
         //    that Handler.TypeName entries resolve to a loaded plugin. Logs LogError (no throw)
         //    for misses so mis-deployed plugins surface at host start, not at first invocation.
         services.AddHostedService<PluginManifestConsistencyCheck>();
+
+        // 9. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
+        //    any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.
+        //    Set VAIS_CORS_ORIGINS=disabled to opt out even in localhost mode.
+        var corsDisabled = string.Equals(options.CorsOrigins, "disabled", StringComparison.OrdinalIgnoreCase);
+        if (!corsDisabled && (options.Mode == "localhost" || !string.IsNullOrWhiteSpace(options.CorsOrigins)))
+        {
+            services.AddCors(cors => cors.AddDefaultPolicy(policy =>
+            {
+                if (!string.IsNullOrWhiteSpace(options.CorsOrigins))
+                {
+                    var origins = options.CorsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+                }
+                else
+                {
+                    policy.SetIsOriginAllowed(o => Uri.TryCreate(o, UriKind.Absolute, out var uri)
+                            && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                        .AllowAnyHeader().AllowAnyMethod();
+                }
+            }));
+        }
     }
 
     private static void ConfigureObservability(IServiceCollection services, RuntimeOptions options)
@@ -385,6 +407,7 @@ internal static class CompositionRoot
                 .WithMetrics(m =>
                 {
                     m.AddAgenticInstrumentation();
+                    m.AddPrometheusExporter();
                     if (!string.IsNullOrWhiteSpace(options.OtelEndpoint))
                     {
                         m.AddOtlpExporter(o =>

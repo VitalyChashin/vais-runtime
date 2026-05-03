@@ -7,6 +7,25 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.52.0-preview] — 2026-05-03
+
+### Added
+
+- **LangGraph researcher — real web search via Tavily MCP** (`samples/PluginAgentLangGraphResearcherLive/`). Graph extended from two nodes to three: `plan → search → summarize`. The `_node_search` async node calls the Tavily MCP server via `langchain-mcp-adapters` for each generated research question and passes the results to the summarizer. Requires `TAVILY_MCP_URL` secret (defaults to `http://tavily-mcp:8000/mcp`).
+  - New dependency: `langchain-mcp-adapters >=0.1,<1`
+  - New secret binding: `TAVILY_MCP_URL: "secret://env/TAVILY_MCP_URL"` in `plugin.yaml`; invoke timeout raised to 120 s.
+  - New MCP manifest: `samples/PluginAgentResearchPipeline/gateways/mcp-server-tavily.yaml`
+  - Tavily MCP server source: `samples/PluginAgentLangGraphResearcherLive/tavily-mcp-server/`
+
+### Fixed
+
+- **SGR analyst — `api_key` never reached `WebSearchTool` at invocation time** (`samples/PluginAgentResearchPipeline/sgr-analyst/`). Root cause: `sgr-agent-core` 0.7.0's `NextStepToolsBuilder` creates `D_<ToolName>` subclasses dynamically; `BaseTool.__init_subclass__` then sets `D_WebSearchTool.tool_name = "d_websearchtool"`, shadowing the parent's `"websearchtool"`. The `_action_phase` lookup `tool_configs.get(tool.tool_name, {})` returned `{}` → `WebSearchConfig(api_key=None)` → `ValueError`. Fixed by aliasing `d_{key}` entries into `tool_configs` after `AgentFactory.create()`. Added diagnostic logging to `research.py` for future debugging.
+- **Research pipeline analyst node received wrong input** (`samples/PluginAgentResearchPipeline/research-pipeline.yaml`). `stateBindings.input` was `[research_findings]` — the researcher's output — so the analyst rewrote existing findings instead of running independent research. Corrected to `[query, research_plan]`.
+- **`InProcessGraphOrchestrator.BuildAgentInputText` ignored binding filter** (`src/Vais.Agents.Core/`). Graph state always carries `messages` from prior nodes; nodes that did not declare `messages` as an input key still received it as their primary text, shadowing their declared key (e.g. `query`). Fixed by calling `FilterByInputBinding` before `BuildAgentInputText` and `BuildMetadata`.
+- **`sgr-analyst` missing `TAVILY_API_KEY` secret declaration** (`samples/PluginAgentResearchPipeline/sgr-analyst/plugin.yaml`). Secret was present in the runtime env but absent from the plugin manifest, so the subprocess never received it.
+
+---
+
 ## [0.51.0-preview] — 2026-05-03
 
 ### Added

@@ -419,7 +419,10 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     nodeActivity?.SetTag("vais.agent.name", agentRefId);
                 // Set gen_ai.prompt to the text the agent will receive — same attribute grain.ask uses,
                 // proven to map to Langfuse's Input column for non-generation spans.
-                nodeActivity?.SetTag("gen_ai.prompt", BuildAgentInputText(state, node.StateBindings));
+                // Use the binding-filtered state so nodes that don't declare `messages` as an input
+                // key receive their declared primary key (e.g. `query`) rather than the last message.
+                var nodeFilteredInput = FilterByInputBinding(state, node.StateBindings);
+                nodeActivity?.SetTag("gen_ai.prompt", BuildAgentInputText(nodeFilteredInput, node.StateBindings));
 
                 var nodeStartedEvt = new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, currentNodeId, node.Kind);
                 await _graphEventBus.PublishAsync(nodeStartedEvt, cancellationToken).ConfigureAwait(false);
@@ -539,8 +542,11 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             }
 
             // Build invocation request from state bindings (shared by local + remote paths).
-            var text = BuildAgentInputText(state, node.StateBindings);
-            var metadata = BuildMetadata(state, node.StateBindings);
+            // Filter state to declared input keys first so `messages` doesn't shadow other keys
+            // for nodes that don't list `messages` in their input binding.
+            var filteredInput = FilterByInputBinding(state, node.StateBindings);
+            var text = BuildAgentInputText(filteredInput, node.StateBindings);
+            var metadata = BuildMetadata(filteredInput, node.StateBindings);
 
             AgentInvocationResult result;
 
@@ -639,7 +645,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     internal const string DefaultAgentInputText = "(continue)";
 
     private static string BuildAgentInputText(
-        IDictionary<string, JsonElement> state,
+        IReadOnlyDictionary<string, JsonElement> state,
         GraphStateBindings? bindings)
     {
         // Resolve order: last message in `messages` → `query` state key → placeholder.
@@ -671,7 +677,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     }
 
     private static IReadOnlyDictionary<string, string>? BuildMetadata(
-        IDictionary<string, JsonElement> state,
+        IReadOnlyDictionary<string, JsonElement> state,
         GraphStateBindings? bindings)
     {
         if (bindings?.Input is not { Count: > 0 } keys)

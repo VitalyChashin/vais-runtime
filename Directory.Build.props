@@ -61,9 +61,11 @@
     NuGet audit suppressions — tracked here so they are visible and auditable.
     Each entry should be removed when the dep is upgraded past the fixed version.
     GHSA-mr8r-92fq-pj8p : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability.
+    GHSA-4625-4j76-fww9 : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability (gRPC).
   -->
   <ItemGroup>
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-mr8r-92fq-pj8p" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4625-4j76-fww9" />
   </ItemGroup>
 
 </Project>

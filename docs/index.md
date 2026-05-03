@@ -10,6 +10,7 @@ Stack-neutral agent library for .NET. This tree is the full walkthrough — conc
 - [Hello agent](getting-started/hello-agent.md) — the 30-second walkthrough.
 - [Install the CLI](getting-started/install-the-cli.md) — `dotnet tool install -g Vais.Agents.Cli` + first-run config (v0.15).
 - [Install the runtime locally](guides/install-the-runtime-locally.md) — docker-compose recipes for the `vais-agents-runtime` container (v0.16).
+- [Vais Workbench](../workbench/docs/quickstart.md) — Electron desktop app for browsing, deploying, and testing resources on a running runtime without the CLI (v0.50).
 - [Deploy the runtime to Kubernetes](guides/deploy-the-runtime-to-kubernetes.md) — Helm chart walkthrough: kind quickstart → production shape (v0.16).
 - [Choosing a stack: SK vs MAF](getting-started/choosing-a-stack.md) — decision framework + the parity findings that shaped the library.
 

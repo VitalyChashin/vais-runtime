@@ -5,6 +5,9 @@
     <AssemblyName>Vais.Agents.Control.Http.Client</AssemblyName>
     <Description>Typed HTTP client for the Vais.Agents control plane. Mirrors IAgentLifecycleManager verbs; wraps HttpClient so consumers can plug into IHttpClientFactory, retry, and correlation middleware.</Description>
     <PackageTags>agents;ai;llm;control-plane;http;client</PackageTags>
+    <!-- RS0027: convenience overloads (manifest, CT=default) intentionally have fewer params than
+         full overloads (manifest, idempotencyKey, CT). Both overloads are part of the public API. -->
+    <NoWarn>$(NoWarn);RS0027</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

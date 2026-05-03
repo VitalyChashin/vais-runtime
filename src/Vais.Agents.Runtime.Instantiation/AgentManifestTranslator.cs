@@ -229,6 +229,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             Budget = manifest.Budget,
             GatewayMiddleware = gatewayMiddleware,
             ToolGatewayMiddleware = toolGatewayMiddleware,
+            UsageSink = _serviceProvider.GetService<IUsageSink>(),
         };
 
         // First-writer-wins: concurrent TranslateAsync calls for the same id

@@ -14,6 +14,7 @@ spec:
   health:
     handshakeTimeoutSeconds: 10
     restartPolicy: exponentialBackoff
-    invokeTimeoutSeconds: 60
+    invokeTimeoutSeconds: 120
   secrets:
     OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"
+    TAVILY_MCP_URL: "secret://env/TAVILY_MCP_URL"

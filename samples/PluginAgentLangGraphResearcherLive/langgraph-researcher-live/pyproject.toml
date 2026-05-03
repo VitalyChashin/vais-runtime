@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
   "langgraph >=1.0,<2",
   "langchain-openai >=0.2,<1",
+  "langchain-mcp-adapters >=0.1,<1",
   "pydantic >=2.8,<3",
   # vais-agent-sdk is installed from the local monorepo path below.
   # Replace with "vais-agent-sdk>=0.24" once published to PyPI.
