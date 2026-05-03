@@ -36,3 +36,5 @@ const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadHandlerTypeNameC
 const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadHandshakeFailed = "urn:vais-agents:python-reload-handshake-failed" -> string!
 const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadNoSupervisor = "urn:vais-agents:python-reload-no-supervisor" -> string!
 const Vais.Agents.Runtime.Plugins.Python.PythonPluginUrns.ReloadScanFailed = "urn:vais-agents:python-reload-scan-failed" -> string!
+Vais.Agents.Runtime.Plugins.Python.IPythonPluginReloader
+Vais.Agents.Runtime.Plugins.Python.IPythonPluginReloader.ReloadAsync(string! pluginDirectory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult!>!

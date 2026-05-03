@@ -492,6 +492,21 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<PluginSourcePushResponse> PushPluginSourceAsync(
+        string pluginName, Stream sourceTarGz, CancellationToken cancellationToken = default)
+    {
+        using var content = new StreamContent(sourceTarGz);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/gzip");
+        using var response = await _http.PostAsync(
+            $"/v1/plugins/{Uri.EscapeDataString(pluginName)}/source", content, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PluginSourcePushResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from PushPluginSourceAsync.");
+    }
+
+    /// <inheritdoc />
     public async Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(manifest);

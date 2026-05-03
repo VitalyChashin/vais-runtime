@@ -77,6 +77,12 @@ app.Configure(config =>
     config.AddCommand<PluginStatusCommand>("plugin-status")
         .WithDescription("List loaded plugins (assembly + Python) with their lifecycle state, handlers, and PID.");
 
+    config.AddCommand<PluginPushCommand>("plugin-push")
+        .WithDescription("Pack a Python plugin's source directory and hot-reload it in the runtime.");
+
+    config.AddCommand<PluginWatchCommand>("plugin-watch")
+        .WithDescription("Watch a Python plugin's source directory and hot-reload on every change.");
+
     config.AddBranch("config", branch =>
     {
         branch.SetDescription("Inspect and mutate the ~/.vais/config.yaml file.");

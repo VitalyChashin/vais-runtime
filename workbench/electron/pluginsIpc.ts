@@ -1,9 +1,27 @@
-import { ipcMain } from 'electron'
+import { dialog, ipcMain } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { packSourceDir } from './tarPack'
 
 export function registerPluginsIpc() {
+  ipcMain.handle('plugin:pushSource', async (_, name: string, baseUrl: string) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: `Select source directory for "${name}"`,
+      properties: ['openDirectory'],
+    })
+    if (canceled || filePaths.length === 0) return { cancelled: true }
+
+    const archive = packSourceDir(filePaths[0])
+    const url = `${baseUrl.replace(/\/$/, '')}/v1/plugins/${encodeURIComponent(name)}/source`
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/gzip' },
+      body: new Uint8Array(archive),
+    })
+    return resp.json() as Promise<unknown>
+  })
+
   ipcMain.handle('plugins:load', () => {
     const pluginsDir = path.join(os.homedir(), '.vais', 'workbench', 'plugins')
     fs.mkdirSync(pluginsDir, { recursive: true })

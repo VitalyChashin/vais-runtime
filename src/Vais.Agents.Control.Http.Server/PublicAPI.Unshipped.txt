@@ -114,6 +114,32 @@ static Vais.Agents.Control.Http.PluginInfo.operator !=(Vais.Agents.Control.Http.
 static Vais.Agents.Control.Http.PluginInfo.operator ==(Vais.Agents.Control.Http.PluginInfo? left, Vais.Agents.Control.Http.PluginInfo? right) -> bool
 static Vais.Agents.Control.Http.PluginListResponse.operator !=(Vais.Agents.Control.Http.PluginListResponse? left, Vais.Agents.Control.Http.PluginListResponse? right) -> bool
 static Vais.Agents.Control.Http.PluginListResponse.operator ==(Vais.Agents.Control.Http.PluginListResponse? left, Vais.Agents.Control.Http.PluginListResponse? right) -> bool
+Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.Success = 0 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.HandshakeFailed = 1 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.HandlerTypeNameChanged = 2 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.NoSupervisor = 3 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.ReloadDisabled = 4 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.UnpackFailed = 5 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.ScanFailed = 6 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushResponse
+Vais.Agents.Control.Http.PluginSourcePushResponse.<Clone>$() -> Vais.Agents.Control.Http.PluginSourcePushResponse!
+Vais.Agents.Control.Http.PluginSourcePushResponse.Deconstruct(out string! PluginName, out Vais.Agents.Control.Http.PluginSourcePushStatus Status, out int? ProcessId, out string? ErrorMessage) -> void
+Vais.Agents.Control.Http.PluginSourcePushResponse.Equals(Vais.Agents.Control.Http.PluginSourcePushResponse? other) -> bool
+Vais.Agents.Control.Http.PluginSourcePushResponse.ErrorMessage.get -> string?
+Vais.Agents.Control.Http.PluginSourcePushResponse.ErrorMessage.init -> void
+Vais.Agents.Control.Http.PluginSourcePushResponse.PluginName.get -> string!
+Vais.Agents.Control.Http.PluginSourcePushResponse.PluginName.init -> void
+Vais.Agents.Control.Http.PluginSourcePushResponse.PluginSourcePushResponse(string! PluginName, Vais.Agents.Control.Http.PluginSourcePushStatus Status, int? ProcessId, string? ErrorMessage) -> void
+Vais.Agents.Control.Http.PluginSourcePushResponse.ProcessId.get -> int?
+Vais.Agents.Control.Http.PluginSourcePushResponse.ProcessId.init -> void
+Vais.Agents.Control.Http.PluginSourcePushResponse.Status.get -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushResponse.Status.init -> void
+override Vais.Agents.Control.Http.PluginSourcePushResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginSourcePushResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginSourcePushResponse.ToString() -> string!
+static Vais.Agents.Control.Http.PluginSourcePushResponse.operator !=(Vais.Agents.Control.Http.PluginSourcePushResponse? left, Vais.Agents.Control.Http.PluginSourcePushResponse? right) -> bool
+static Vais.Agents.Control.Http.PluginSourcePushResponse.operator ==(Vais.Agents.Control.Http.PluginSourcePushResponse? left, Vais.Agents.Control.Http.PluginSourcePushResponse? right) -> bool
 Vais.Agents.Control.Http.PluginInfo
 Vais.Agents.Control.Http.PluginInfo.<Clone>$() -> Vais.Agents.Control.Http.PluginInfo!
 Vais.Agents.Control.Http.PluginInfo.AssemblyPath.get -> string!

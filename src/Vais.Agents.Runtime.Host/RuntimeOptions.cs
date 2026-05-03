@@ -68,6 +68,14 @@ internal sealed record RuntimeOptions
     public string? PythonPluginsDirectory { get; init; }
 
     /// <summary>
+    /// v0.xx Python plugin hot-reload policy. <see cref="ReloadPolicy.DrainAndSwap"/> registers
+    /// <see cref="IPythonPluginReloader"/> and starts the filesystem watcher that restarts the
+    /// Python subprocess on source changes without touching the .NET silo.
+    /// Set <c>VAIS_PYTHON_PLUGINS_RELOAD_POLICY=DrainAndSwap</c> to enable.
+    /// </summary>
+    public ReloadPolicy PythonPluginsReloadPolicy { get; init; } = ReloadPolicy.Disabled;
+
+    /// <summary>
     /// v0.30 OIDC authority URL (e.g. <c>https://keycloak.example.com/realms/my-realm</c>).
     /// When set, the full JWT bearer-token authentication pipeline is wired on the runtime host.
     /// Null ⇒ auth pipeline disabled — existing localhost semantics unchanged.
@@ -118,6 +126,7 @@ internal sealed record RuntimeOptions
             PluginsDirectory = PluginsEnv("VAIS_PLUGINS_DIRECTORY"),
             PluginsHotReload = ParseReloadPolicy(Env("VAIS_PLUGINS_RELOAD_POLICY")),
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
+            PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),

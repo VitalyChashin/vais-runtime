@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Formats.Tar;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -221,6 +223,21 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 "Returns 200 with an empty items array when no plugin infrastructure is registered.")
             .Produces<PluginListResponse>(StatusCodes.Status200OK);
 
+        // POST /plugins/{name}/source — Source push + hot-reload
+        plugins.MapPost("/plugins/{name}/source", PushPluginSourceAsync)
+            .WithName("Plugins.PushSource")
+            .WithSummary("Push a tar.gz source archive and trigger a DrainAndSwap hot-reload.")
+            .WithDescription(
+                "Accepts a gzip-compressed tar archive (Content-Type: application/gzip) of the plugin source, " +
+                "unpacks it over the plugin directory, and calls the DrainAndSwap reloader. " +
+                "Returns 503 when hot-reload is disabled (VAIS_PYTHON_PLUGINS_RELOAD_POLICY is not DrainAndSwap).")
+            .Accepts<IFormFile>("application/gzip")
+            .Produces<PluginSourcePushResponse>(StatusCodes.Status200OK)
+            .Produces<PluginSourcePushResponse>(StatusCodes.Status400BadRequest)
+            .Produces<PluginSourcePushResponse>(StatusCodes.Status404NotFound)
+            .Produces<PluginSourcePushResponse>(StatusCodes.Status422UnprocessableEntity)
+            .Produces<PluginSourcePushResponse>(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -361,6 +378,91 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Select(e => new RuntimeInfo(e.Url, e.IdentityMode))
             .ToArray();
         return Results.Ok(new RuntimeListResponse(items));
+    }
+
+    private static async Task<IResult> PushPluginSourceAsync(
+        string name,
+        HttpContext http,
+        IPythonPluginReloader? reloader,
+        IPythonPluginHost? host,
+        CancellationToken ct)
+    {
+        if (reloader is null)
+            return Results.Json(
+                new PluginSourcePushResponse(name, PluginSourcePushStatus.ReloadDisabled, null,
+                    "Hot-reload is disabled. Set VAIS_PYTHON_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var plugin = host?.LoadedPlugins.FirstOrDefault(p =>
+            string.Equals(p.Descriptor.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (plugin is null)
+            return Results.Json(
+                new PluginSourcePushResponse(name, PluginSourcePushStatus.NoSupervisor, null,
+                    $"No plugin '{name}' is loaded. Verify the plugin name and that it was loaded at startup."),
+                statusCode: StatusCodes.Status404NotFound);
+
+        var pluginDirectory = plugin.Descriptor.PluginDirectory;
+        try
+        {
+            await UnpackTarGzAsync(http.Request.Body, pluginDirectory, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return Results.Json(
+                new PluginSourcePushResponse(name, PluginSourcePushStatus.UnpackFailed, null, ex.Message),
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var result = await reloader.ReloadAsync(pluginDirectory, ct).ConfigureAwait(false);
+        return MapReloadResult(result, host, name);
+    }
+
+    private static async Task UnpackTarGzAsync(Stream source, string targetDirectory, CancellationToken ct)
+    {
+        var targetDir = Path.GetFullPath(targetDirectory);
+        using var gzip = new GZipStream(source, CompressionMode.Decompress, leaveOpen: true);
+        using var reader = new TarReader(gzip, leaveOpen: false);
+        while (await reader.GetNextEntryAsync(copyData: false, ct).ConfigureAwait(false) is { } entry)
+        {
+            if (entry.EntryType is TarEntryType.Directory or TarEntryType.SymbolicLink or TarEntryType.HardLink)
+                continue;
+            var rel = entry.Name.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+            var dest = Path.GetFullPath(Path.Combine(targetDir, rel));
+            if (!dest.StartsWith(targetDir + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Path traversal in tar entry '{entry.Name}'.");
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            if (entry.DataStream is { } data)
+            {
+                await using var fs = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+                await data.CopyToAsync(fs, ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static IResult MapReloadResult(PythonPluginReloadResult result, IPythonPluginHost? host, string pluginName)
+    {
+        var currentPid = host?.LoadedPlugins
+            .FirstOrDefault(p => string.Equals(p.Descriptor.Name, result.PluginName, StringComparison.OrdinalIgnoreCase))
+            ?.ProcessId;
+        return result.Status switch
+        {
+            PythonPluginReloadStatus.Success =>
+                Results.Ok(new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.Success, currentPid, null)),
+            PythonPluginReloadStatus.HandshakeFailed =>
+                Results.Ok(new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.HandshakeFailed, null, result.FailureUrn)),
+            PythonPluginReloadStatus.HandlerTypeNameChanged =>
+                Results.Json(
+                    new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.HandlerTypeNameChanged, null, result.FailureUrn),
+                    statusCode: StatusCodes.Status422UnprocessableEntity),
+            PythonPluginReloadStatus.ScanFailed =>
+                Results.Json(
+                    new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.ScanFailed, null, result.FailureUrn),
+                    statusCode: StatusCodes.Status400BadRequest),
+            _ =>
+                Results.Json(
+                    new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.NoSupervisor, null, result.FailureUrn),
+                    statusCode: StatusCodes.Status404NotFound),
+        };
     }
 
     private static IResult PluginListAsync(HttpContext http)

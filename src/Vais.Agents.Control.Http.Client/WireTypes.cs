@@ -111,6 +111,32 @@ public sealed record PluginInfo(
 /// <summary>Client-side wire type for <c>GET /v1/plugins</c>.</summary>
 public sealed record PluginListResponse(IReadOnlyList<PluginInfo> Items);
 
+/// <summary>Client-side mirror of <c>PluginSourcePushStatus</c> from the server package.</summary>
+public enum PluginSourcePushStatus
+{
+    /// <summary>Archive unpacked and new subprocess started; MCP handshake succeeded.</summary>
+    Success = 0,
+    /// <summary>New subprocess started but the MCP handshake failed.</summary>
+    HandshakeFailed = 1,
+    /// <summary>The new <c>plugin.yaml</c> carries a different handler type name. Silo restart required.</summary>
+    HandlerTypeNameChanged = 2,
+    /// <summary>No supervisor found for this plugin name.</summary>
+    NoSupervisor = 3,
+    /// <summary>Hot-reload is disabled on this runtime.</summary>
+    ReloadDisabled = 4,
+    /// <summary>The tar.gz archive could not be extracted.</summary>
+    UnpackFailed = 5,
+    /// <summary><c>plugin.yaml</c> could not be re-parsed after the unpack.</summary>
+    ScanFailed = 6,
+}
+
+/// <summary>Client-side wire type for <c>POST /v1/plugins/{name}/source</c>.</summary>
+public sealed record PluginSourcePushResponse(
+    string PluginName,
+    PluginSourcePushStatus Status,
+    int? ProcessId,
+    string? ErrorMessage);
+
 /// <summary>
 /// Client-side wire type for <c>POST /v1/graphs/validate</c> (v0.38).
 /// Returned for all syntactically-valid requests; inspect <see cref="Valid"/> to

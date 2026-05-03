@@ -5,6 +5,25 @@ export type ResourceKind =
   | 'mcp-gateways'
   | 'mcp-servers'
 
+export type SelectionKind = ResourceKind | 'plugins'
+
+export interface PluginInfo {
+  name: string
+  kind: 'Assembly' | 'Python'
+  state: 'Loading' | 'Ready' | 'Restarting' | 'Unavailable'
+  processId?: number | null
+  handlers: string[]
+  toolNames?: string[] | null
+  lastErrorSnippet?: string | null
+}
+
+export interface PluginSourcePushResponse {
+  pluginName: string
+  status: 'Success' | 'HandshakeFailed' | 'HandlerTypeNameChanged' | 'NoSupervisor' | 'ReloadDisabled' | 'UnpackFailed' | 'ScanFailed'
+  processId?: number | null
+  errorMessage?: string | null
+}
+
 export interface AgentManifest {
   id: string
   name: string

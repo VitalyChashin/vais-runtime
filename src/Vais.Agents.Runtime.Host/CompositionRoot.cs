@@ -181,6 +181,7 @@ internal static class CompositionRoot
                 // In localhost mode, run `uv sync --frozen` automatically when .venv/ is absent
                 // so contributors don't need a manual setup step after cloning.
                 FallbackUvSync = options.Mode == "localhost",
+                ReloadPolicy = options.PythonPluginsReloadPolicy,
             });
             services.AddHealthChecks()
                 .AddCheck<PythonPluginsReadyCheck>("python-plugins", tags: ["ready"]);

@@ -11,7 +11,7 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 /// continue to hold the same supervisor reference and pick up the new process
 /// transparently on the next <c>AskAsync</c> call.
 /// </summary>
-internal interface IPythonPluginReloader
+public interface IPythonPluginReloader
 {
     /// <summary>
     /// Reload the Python plugin whose root directory is <paramref name="pluginDirectory"/>.

@@ -6,6 +6,7 @@ import { AgentTestPanel } from '../TestPane/AgentTestPanel'
 import { ProbeStub } from '../TestPane/ProbeStub'
 import { usePlugins } from '../../plugins/usePlugins'
 import { PluginTab } from '../../plugins/PluginTab'
+import { PluginDetail } from './PluginDetail'
 
 export function DetailPane() {
   const { kind, id } = useSelection()
@@ -29,6 +30,10 @@ export function DetailPane() {
         </div>
       </div>
     )
+  }
+
+  if (kind === 'plugins') {
+    return <PluginDetail pluginName={id} />
   }
 
   const matchingPlugins = plugins.filter(p => p.kind === kind)

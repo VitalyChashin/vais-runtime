@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import type { ResourceKind } from '../api/types'
+import type { SelectionKind } from '../api/types'
 
 interface SelectionStore {
-  kind: ResourceKind | null
+  kind: SelectionKind | null
   id: string | null
-  select: (kind: ResourceKind, id: string) => void
+  select: (kind: SelectionKind, id: string) => void
   clear: () => void
 }
 

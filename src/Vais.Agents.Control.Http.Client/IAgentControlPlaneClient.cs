@@ -209,6 +209,19 @@ public interface IAgentControlPlaneClient
     Task<PluginListResponse> ListPluginsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new PluginListResponse(Array.Empty<PluginInfo>()));
 
+    /// <summary>
+    /// POST /v1/plugins/{name}/source — push a tar.gz archive of plugin source into the runtime
+    /// and trigger a DrainAndSwap reload. The stream must be a valid gzip-compressed tar archive.
+    /// Returns <see cref="PluginSourcePushStatus.ReloadDisabled"/> (503) when hot-reload is
+    /// not enabled on the target runtime.
+    /// </summary>
+    Task<PluginSourcePushResponse> PushPluginSourceAsync(
+        string pluginName,
+        Stream sourceTarGz,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new PluginSourcePushResponse(
+            pluginName, PluginSourcePushStatus.ReloadDisabled, null, "Not supported by this client."));
+
     // ── LLM gateway config verbs (GCF-13) ──────────────────────────────────────
 
     /// <summary>POST /v1/llm-gateways — register a manifest, get a handle.</summary>

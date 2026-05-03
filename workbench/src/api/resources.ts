@@ -5,9 +5,12 @@ import type {
   LlmGatewayConfigManifest,
   McpGatewayConfigManifest,
   McpServerManifest,
+  PluginInfo,
   ListResponse,
   ValidateResult,
 } from './types'
+
+export const listPlugins = (c: VaisClient) => c.get<{ items: PluginInfo[] }>('/v1/plugins').then(r => r.items)
 
 export const listAgents = (c: VaisClient) => c.get<ListResponse<AgentManifest>>('/v1/agents').then(r => r.items)
 export const getAgent = (c: VaisClient, id: string) => c.get<{ manifest: AgentManifest }>(`/v1/agents/${id}`).then(r => r.manifest)
