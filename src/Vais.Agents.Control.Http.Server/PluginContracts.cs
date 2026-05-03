@@ -1,9 +1,12 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json.Serialization;
+
 namespace Vais.Agents.Control.Http;
 
 /// <summary>Runtime origin of a loaded plugin.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PluginKind
 {
     /// <summary>.NET assembly loaded via <c>AssemblyPluginLoader</c>.</summary>
@@ -14,6 +17,7 @@ public enum PluginKind
 }
 
 /// <summary>Current lifecycle state of a loaded plugin.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PluginState
 {
     /// <summary>The plugin is being initialised (subprocess handshake or assembly load in progress).</summary>

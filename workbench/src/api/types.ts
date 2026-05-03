@@ -24,9 +24,15 @@ export interface PluginSourcePushResponse {
   errorMessage?: string | null
 }
 
+export interface AgentHandlerRef {
+  typeName: string
+  assemblyName?: string | null
+}
+
 export interface AgentManifest {
   id: string
   name: string
+  handler?: AgentHandlerRef
   llmGatewayRef?: string
   mcpGatewayRef?: string
   mcpServers?: string[]

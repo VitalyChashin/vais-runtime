@@ -1,9 +1,9 @@
 import '../../styles/refsTab.css'
 import { useQuery } from '@tanstack/react-query'
-import type { AgentManifest, ResourceKind } from '../../api/types'
+import type { AgentManifest, ResourceKind, SelectionKind } from '../../api/types'
 import { useClient } from '../../api/useClient'
 import { useSelection } from '../../store/selectionStore'
-import { getResource, listAgents, listGraphs } from '../../api/resources'
+import { getResource, listAgents, listGraphs, listPlugins } from '../../api/resources'
 
 interface Props {
   kind: ResourceKind
@@ -17,15 +17,16 @@ interface InboundRef {
 }
 
 type OutboundRow =
-  | { field: string; targetKind: ResourceKind; id: string }
-  | { field: string; targetKind: null; id: null }
+  | { field: string; targetKind: SelectionKind; id: string }
+  | { field: string; targetKind: null; id: null; text?: string }
 
-const KIND_LABEL: Record<ResourceKind, string> = {
+const KIND_LABEL: Record<string, string> = {
   agents: 'Agent',
   graphs: 'Graph',
   'llm-gateways': 'LLM Gateway',
   'mcp-gateways': 'MCP Gateway',
   'mcp-servers': 'MCP Server',
+  plugins: 'Plugin',
 }
 
 function buildOutboundRows(kind: ResourceKind, resource: Record<string, unknown>): OutboundRow[] {
@@ -99,6 +100,12 @@ export function RefsTab({ kind, id }: Props) {
     refetchInterval: 5000,
   })
 
+  const { data: plugins = [] } = useQuery({
+    queryKey: ['plugins', client.baseUrl],
+    queryFn: () => listPlugins(client),
+    refetchInterval: 5000,
+  })
+
   if (isLoading) {
     return (
       <div className="refs">
@@ -108,7 +115,23 @@ export function RefsTab({ kind, id }: Props) {
   }
 
   const raw = resource as unknown as Record<string, unknown>
-  const outboundRows = resource ? buildOutboundRows(kind, raw) : []
+  const baseOutboundRows = resource ? buildOutboundRows(kind, raw) : []
+
+  // For agents: prepend a handler row linking to the backing plugin.
+  let handlerRow: OutboundRow | null = null
+  if (kind === 'agents' && resource) {
+    const typeName = (raw.handler as { typeName?: string } | undefined)?.typeName
+    if (typeName) {
+      const plugin = plugins.find(p => p.handlers.includes(typeName))
+      handlerRow = plugin
+        ? { field: 'handler', targetKind: 'plugins', id: plugin.name }
+        : { field: 'handler', targetKind: null, id: null, text: typeName }
+    } else {
+      handlerRow = { field: 'handler', targetKind: null, id: null }
+    }
+  }
+
+  const outboundRows: OutboundRow[] = handlerRow ? [handlerRow, ...baseOutboundRows] : baseOutboundRows
   const outboundCount = outboundRows.filter(r => r.id !== null).length
 
   const referencedBy: InboundRef[] = [
@@ -152,10 +175,10 @@ export function RefsTab({ kind, id }: Props) {
                         {row.id}
                         <span className="reflink__arrow">→</span>
                       </button>
-                      <span className="reflink__kind">{KIND_LABEL[row.targetKind!]}</span>
+                      <span className="reflink__kind">{KIND_LABEL[row.targetKind!] ?? row.targetKind}</span>
                     </>
                   ) : (
-                    <span className="refs__empty">—</span>
+                    <span className="refs__empty">{'text' in row && row.text ? row.text : '—'}</span>
                   )}
                 </div>
               </div>

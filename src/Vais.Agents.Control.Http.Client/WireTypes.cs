@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json.Serialization;
+
 namespace Vais.Agents.Control.Http;
 
 /// <summary>
@@ -62,6 +64,7 @@ public sealed record RuntimeInfo(string Url, string IdentityMode);
 public sealed record RuntimeListResponse(IReadOnlyList<RuntimeInfo> Items);
 
 /// <summary>Client-side mirror of <c>PluginKind</c> from the server package.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PluginKind
 {
     /// <summary>.NET assembly plugin.</summary>
@@ -71,6 +74,7 @@ public enum PluginKind
 }
 
 /// <summary>Client-side mirror of <c>PluginState</c> from the server package.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PluginState
 {
     /// <summary>Plugin is still initialising.</summary>

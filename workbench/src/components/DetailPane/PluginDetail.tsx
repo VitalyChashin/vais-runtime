@@ -1,11 +1,13 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+import '../../styles/refsTab.css'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useClient } from '../../api/useClient'
-import { listPlugins } from '../../api/resources'
+import { listPlugins, listAgents } from '../../api/resources'
+import { useSelection } from '../../store/selectionStore'
 
 interface Props {
   pluginName: string
@@ -20,12 +22,19 @@ const STATE_COLOR: Record<string, string> = {
 
 export function PluginDetail({ pluginName }: Props) {
   const client = useClient()
+  const { select } = useSelection()
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   const { data: plugins = [], isLoading } = useQuery({
     queryKey: ['plugins', client.baseUrl],
     queryFn: () => listPlugins(client),
+    refetchInterval: 5000,
+  })
+
+  const { data: agents = [] } = useQuery({
+    queryKey: ['agents', client.baseUrl],
+    queryFn: () => listAgents(client),
     refetchInterval: 5000,
   })
 
@@ -60,6 +69,11 @@ export function PluginDetail({ pluginName }: Props) {
       </div>
     )
   }
+
+  const backedAgents = agents.filter(a => {
+    const typeName = a.handler?.typeName
+    return typeName != null && plugin.handlers.includes(typeName)
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -120,6 +134,24 @@ export function PluginDetail({ pluginName }: Props) {
             {pushResult.ok ? '✓ ' : '✗ '}{pushResult.message}
           </div>
         )}
+
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, fontSize: 13, alignItems: 'flex-start' }}>
+          <span style={{ color: 'var(--color-text-muted)', minWidth: 72, flexShrink: 0, paddingTop: backedAgents.length > 1 ? 2 : 0 }}>
+            Used by
+          </span>
+          {backedAgents.length === 0 ? (
+            <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {backedAgents.map(a => (
+                <button key={a.id} className="reflink" onClick={() => select('agents', a.id)}>
+                  {a.name || a.id}
+                  <span className="reflink__arrow">→</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
