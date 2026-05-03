@@ -7,6 +7,38 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.50.0-preview] — 2026-05-03
+
+### Added
+
+- **Prometheus metrics endpoint** (`src/Vais.Agents.Runtime.Host/`) — when OTel is enabled (`OTEL_EXPORTER_OTLP_ENDPOINT` or `VAIS_OTEL_CONSOLE`), the runtime now exposes `GET /metrics` in Prometheus text format. Scrapes the `gen_ai.client.token.usage` and `gen_ai.client.operation.duration` instruments from `Vais.Agents.Observability.OpenTelemetry`. Uses `OpenTelemetry.Exporter.Prometheus.AspNetCore` 1.15.0-beta.1 (no stable release exists upstream yet). Wired via `m.AddPrometheusExporter()` in `CompositionRoot.ConfigureObservability` and `app.MapPrometheusScrapingEndpoint()` in `Program.cs`.
+
+- **Vais Workbench** (`workbench/`) — Electron 33 + React 19 + TypeScript 5 desktop app for managing Vais.Agents resources on a running runtime. Connects to the HTTP control plane; no auth required for v1.
+  - **Resource tree** — collapsible sidebar listing all five resource kinds (`agents`, `graphs`, `llm-gateways`, `mcp-gateways`, `mcp-servers`) with 5-second polling via TanStack Query v5.
+  - **YAML tab** — read-only Monaco editor showing the selected resource manifest. Edit button pre-fills the Deploy pane; Delete button opens a confirmation dialog.
+  - **References tab** — outbound (`llmGatewayRef`, `mcpGatewayRef`, `mcpServers[]`) and inbound (agents/graphs that reference the current resource) cross-reference navigation. Clickable links navigate to the referenced resource in the tree.
+  - **Deploy pane** — modal Monaco editor with `kind:` auto-detection, `Validate` (→ `POST /v1/<kind>/validate`), and `Apply` (→ `POST /v1/<kind>`). Multi-document YAML applies in dependency order: `llm-gateways → mcp-gateways → mcp-servers → agents → graphs`.
+  - **Delete dialog** — confirmation dialog with `DELETE /v1/<kind>/{id}` on confirm; clears selection and invalidates the TanStack Query cache.
+  - **Test tab for agents/graphs** — message textarea → `POST /v1/<kind>/{id}/invoke` → streamed response via `ReadableStream`; last 5 runs in component state.
+  - **Stub test panels** for `llm-gateways`, `mcp-gateways`, `mcp-servers` (probe endpoints not yet available).
+  - **Plugin extension point** — CommonJS `.js` files in `~/.vais/workbench/plugins/` add custom tabs to any resource kind's detail pane. Each plugin exports `{ kind, tabLabel, render(resource) → string }`.
+  - **Connection config** — `~/.vais/workbench/config.yaml` stores named connections; active connection saved across restarts.
+- Docs: `workbench/docs/quickstart.md` — prerequisites, dev setup, feature walkthrough, config file schema, keyboard shortcuts.
+- Docs: `workbench/docs/plugins.md` — plugin contract, two examples, security note.
+- **CORS middleware** (`src/Vais.Agents.Runtime.Host/`) — runtime now configures CORS when running in `localhost` mode or when `VAIS_CORS_ORIGINS` is set. In localhost mode, all `localhost`/`127.0.0.1` origins are allowed (enables the Workbench dev server to connect without a proxy). Set `VAIS_CORS_ORIGINS=disabled` to opt out, or supply a comma-separated origin list for production deployments.
+
+### Fixed
+
+- **`AgentManifestTranslator` — `IUsageSink` was never wired** (`src/Vais.Agents.Runtime.Instantiation/`). All declarative agents silently fell back to `NullUsageSink`, causing zero OTel token-usage metrics to be emitted. Fixed by resolving `IUsageSink` from DI when building `StatefulAgentOptions`.
+- **Workbench default connection port** (`workbench/src/config/types.ts`). `DEFAULT_CONFIG` pointed to port 5000; corrected to 8080 (the runtime's actual default port).
+- **`Vais.Agents.Control.Http.Client` RS0027 build warning** — added `<NoWarn>RS0027</NoWarn>` to suppress the public-API analyser warning on intentional optional-parameter convenience overloads (`CreateLlmGatewayConfigAsync`, `CreateMcpServerAsync`, etc.) that are part of the package's public API surface.
+- **`sgr-analyst` Tavily API key not passed to `WebSearchTool`** (`samples/PluginAgentResearchPipeline/sgr-analyst/`). `_make_toolkit()` wrapped `ExtractPageContentTool` in a `ToolDefinition` with the key but left `WebSearchTool` as a bare class reference. Fixed by wrapping both tools in `ToolDefinition(... tavily_api_key=tavily_key)`.
+- **Workbench list responses not unwrapped** (`workbench/src/api/`). All five list fetchers treated the API response as a plain array, but the control plane returns `{ "items": [...], "nextCursor": null }`. This caused a runtime `data.map is not a function` crash on startup. Fixed by introducing `ListResponse<T>` and unwrapping `.items` in `listAgents`, `listGraphs`, `listLlmGateways`, `listMcpGateways`, and `listMcpServers`.
+- **Workbench `useClient` fallback port** (`workbench/src/api/useClient.ts`). The hardcoded fallback URL used port 5000 while the runtime listens on 8080. Fixed to match `DEFAULT_CONFIG`.
+- **Workbench agent invoke field name** (`workbench/src/components/TestPane/AgentTestPanel.tsx`). The test panel sent `{ message }` but `AgentInvocationRequest` requires `{ text }`. Corrected field name.
+
+---
+
 ## [0.40.0-preview] — 2026-04-27
 
 ### Added
