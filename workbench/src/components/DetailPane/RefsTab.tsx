@@ -1,3 +1,4 @@
+import '../../styles/refsTab.css'
 import { useQuery } from '@tanstack/react-query'
 import type { AgentManifest, ResourceKind } from '../../api/types'
 import { useClient } from '../../api/useClient'
@@ -9,56 +10,79 @@ interface Props {
   id: string
 }
 
-interface Ref {
+interface InboundRef {
   kind: ResourceKind
   id: string
   label: string
 }
 
-function extractOutboundRefs(resource: Record<string, unknown>): Ref[] {
-  const refs: Ref[] = []
-  if (typeof resource.llmGatewayRef === 'string') {
-    refs.push({ kind: 'llm-gateways', id: resource.llmGatewayRef, label: `LLM Gateway: ${resource.llmGatewayRef}` })
-  }
-  if (typeof resource.mcpGatewayRef === 'string') {
-    refs.push({ kind: 'mcp-gateways', id: resource.mcpGatewayRef, label: `MCP Gateway: ${resource.mcpGatewayRef}` })
-  }
-  if (Array.isArray(resource.mcpServers)) {
-    for (const s of resource.mcpServers as string[]) {
-      refs.push({ kind: 'mcp-servers', id: s, label: `MCP Server: ${s}` })
+type OutboundRow =
+  | { field: string; targetKind: ResourceKind; id: string }
+  | { field: string; targetKind: null; id: null }
+
+const KIND_LABEL: Record<ResourceKind, string> = {
+  agents: 'Agent',
+  graphs: 'Graph',
+  'llm-gateways': 'LLM Gateway',
+  'mcp-gateways': 'MCP Gateway',
+  'mcp-servers': 'MCP Server',
+}
+
+function buildOutboundRows(kind: ResourceKind, resource: Record<string, unknown>): OutboundRow[] {
+  if (kind === 'agents') {
+    const rows: OutboundRow[] = []
+    rows.push(
+      typeof resource.llmGatewayRef === 'string'
+        ? { field: 'llmGatewayRef', targetKind: 'llm-gateways', id: resource.llmGatewayRef }
+        : { field: 'llmGatewayRef', targetKind: null, id: null }
+    )
+    rows.push(
+      typeof resource.mcpGatewayRef === 'string'
+        ? { field: 'mcpGatewayRef', targetKind: 'mcp-gateways', id: resource.mcpGatewayRef }
+        : { field: 'mcpGatewayRef', targetKind: null, id: null }
+    )
+    const servers = resource.mcpServers as string[] | null
+    if (Array.isArray(servers) && servers.length > 0) {
+      servers.forEach((s, i) => rows.push({ field: `mcpServers[${i}]`, targetKind: 'mcp-servers', id: s }))
+    } else {
+      rows.push({ field: 'mcpServers', targetKind: null, id: null })
     }
+    return rows
   }
-  return refs
+  if (kind === 'graphs') {
+    const nodes = (resource.nodes as Array<{ id: string; ref?: { id: string } }>) ?? []
+    return nodes
+      .filter(n => n.ref?.id)
+      .map(n => ({ field: `nodes.${n.id}`, targetKind: 'agents' as ResourceKind, id: n.ref!.id }))
+  }
+  return []
 }
 
 function referencesId(agent: AgentManifest, targetId: string): boolean {
   return (
     agent.llmGatewayRef === targetId ||
     agent.mcpGatewayRef === targetId ||
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ((agent as any).mcpServers?.includes(targetId) ?? false)
+    (agent.mcpServers?.includes(targetId) ?? false)
   )
 }
 
-const SectionHeader = ({ children }: { children: string }) => (
-  <h3 style={{
-    fontSize: 10,
-    fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    marginBottom: 8,
-    marginTop: 0,
-  }}>
-    {children}
-  </h3>
+const ArrowRight = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+  </svg>
+)
+
+const ArrowLeft = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(180deg)' }}>
+    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+  </svg>
 )
 
 export function RefsTab({ kind, id }: Props) {
   const client = useClient()
   const { select } = useSelection()
 
-  const { data: resource, isLoading: resourceLoading } = useQuery({
+  const { data: resource, isLoading } = useQuery({
     queryKey: [kind, id, client.baseUrl],
     queryFn: () => getResource(client, kind, id),
   })
@@ -75,63 +99,105 @@ export function RefsTab({ kind, id }: Props) {
     refetchInterval: 5000,
   })
 
-  if (resourceLoading) {
+  if (isLoading) {
     return (
-      <div style={{ padding: 16, fontSize: 13, color: 'var(--color-text-muted)' }}>
-        Loading…
+      <div className="refs">
+        <span className="refs__empty">Loading…</span>
       </div>
     )
   }
 
-  const outbound = resource ? extractOutboundRefs(resource as unknown as Record<string, unknown>) : []
-  const referencedBy: Ref[] = [
+  const raw = resource as unknown as Record<string, unknown>
+  const outboundRows = resource ? buildOutboundRows(kind, raw) : []
+  const outboundCount = outboundRows.filter(r => r.id !== null).length
+
+  const referencedBy: InboundRef[] = [
     ...agents
       .filter(a => referencesId(a, id))
       .map(a => ({ kind: 'agents' as ResourceKind, id: a.id, label: a.name || a.id })),
     ...graphs
-      .filter(g => (g as AgentManifest).llmGatewayRef === id || (g as AgentManifest).mcpGatewayRef === id)
+      .filter(g => {
+        if ((g as unknown as AgentManifest).llmGatewayRef === id) return true
+        if ((g as unknown as AgentManifest).mcpGatewayRef === id) return true
+        return g.nodes?.some(n => n.ref?.id === id) ?? false
+      })
       .map(g => ({ kind: 'graphs' as ResourceKind, id: g.id, label: g.name || g.id })),
   ]
 
-  const Muted = ({ children }: { children: string }) => (
-    <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>{children}</p>
-  )
+  const kindGroups = [
+    { label: 'Agents', items: referencedBy.filter(r => r.kind === 'agents') },
+    { label: 'Graphs', items: referencedBy.filter(r => r.kind === 'graphs') },
+  ].filter(g => g.items.length > 0)
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <section>
-        <SectionHeader>Outbound</SectionHeader>
-        {outbound.length === 0 ? (
-          <Muted>No references</Muted>
-        ) : (
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {outbound.map(ref => (
-              <li key={`${ref.kind}:${ref.id}`}>
-                <button className="ref-link" onClick={() => select(ref.kind, ref.id)}>
-                  {ref.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+    <div className="refs">
 
-      <section>
-        <SectionHeader>Referenced by</SectionHeader>
-        {referencedBy.length === 0 ? (
-          <Muted>Not referenced</Muted>
+      <div className="refs__group">
+        <div className="refs__heading">
+          <ArrowRight />
+          Outbound references
+          {outboundCount > 0 && <span className="refs__heading-count">{outboundCount}</span>}
+        </div>
+        {outboundRows.length === 0 ? (
+          <span className="refs__empty">—</span>
         ) : (
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {referencedBy.map(ref => (
-              <li key={`${ref.kind}:${ref.id}`}>
-                <button className="ref-link" onClick={() => select(ref.kind, ref.id)}>
-                  {ref.label}
-                </button>
-              </li>
+          <div>
+            {outboundRows.map(row => (
+              <div className="refs__row" key={row.field}>
+                <div className="refs__label">{row.field}</div>
+                <div className="refs__value">
+                  {row.id !== null ? (
+                    <>
+                      <button className="reflink" onClick={() => select(row.targetKind!, row.id!)}>
+                        {row.id}
+                        <span className="reflink__arrow">→</span>
+                      </button>
+                      <span className="reflink__kind">{KIND_LABEL[row.targetKind!]}</span>
+                    </>
+                  ) : (
+                    <span className="refs__empty">—</span>
+                  )}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </section>
+      </div>
+
+      <div className="refs__group">
+        <div className="refs__heading">
+          <ArrowLeft />
+          Referenced by
+          {referencedBy.length > 0 && <span className="refs__heading-count">{referencedBy.length}</span>}
+        </div>
+        {kindGroups.length === 0 ? (
+          <span className="refs__empty">—</span>
+        ) : (
+          <div>
+            {kindGroups.map(group => (
+              <div className="refs__inbound-kind-group" key={group.label}>
+                <div className="refs__inbound-kind-label">
+                  {group.label}
+                  <span className="refs__inbound-kind-label-count">{group.items.length}</span>
+                </div>
+                <div className="refs__inbound-list">
+                  {group.items.map(ref => (
+                    <div
+                      className="refs__inbound-item"
+                      key={`${ref.kind}:${ref.id}`}
+                      onClick={() => select(ref.kind, ref.id)}
+                    >
+                      <span className="refs__inbound-bullet">·</span>
+                      <button className="reflink">{ref.label}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

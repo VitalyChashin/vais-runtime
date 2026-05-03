@@ -485,16 +485,3 @@
 .vmsg--err  { color: var(--color-error);   }
 .vmsg--idle { color: var(--color-text-muted); }
 
-/* === Refs tab ============================================================= */
-
-.ref-link {
-  color: var(--color-accent);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-}
-.ref-link:hover { text-decoration: underline; }

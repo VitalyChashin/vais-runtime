@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.0] — 2026-05-03
+
+### Fixed
+
+- **References tab now shows real data.** `GET /v1/{kind}/{id}` returns a `{ manifest, handle, status }` envelope; the five per-kind `get*` helpers in `resources.ts` now unwrap `.manifest` so the YAML tab and References tab receive the bare manifest object instead of the raw response envelope.
+- **Graph → agent references visible.** `AgentGraphManifest` was missing `nodes`; added `GraphNode` / `GraphNodeRef` types and `nodes?: GraphNode[]`. `RefsTab` now extracts outbound agent refs from `nodes[].ref.id` (for the graph's own Outbound section) and checks those same node refs when computing the "Referenced by" list for each agent.
+
+### Changed
+
+- **References tab redesigned.** Replaced ad-hoc inline styles with BEM classes from the design system (`refsTab.css`).
+  - Outbound section renders a two-column field-label / value table (field name monospace in muted colour; reflink in teal with `→` arrow and kind badge; `—` for null fields). Agents always show all three ref fields even when unset.
+  - Inbound "Referenced by" section groups results under Agents / Graphs kind headers with count badges.
+  - Section headings have a directional arrow icon, uppercase label with 0.10em letter-spacing, and a bottom border rule.
+  - Empty states render `—` (was prose "No references / Not referenced").
+  - `.ref-link` (chrome.css stub) replaced by `.reflink` and supporting classes in `src/styles/refsTab.css`.
+
+---
+
 ## [0.2.0] — 2026-05-03
 
 ### Added

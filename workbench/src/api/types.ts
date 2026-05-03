@@ -13,9 +13,20 @@ export interface AgentManifest {
   mcpServers?: string[]
 }
 
+export interface GraphNodeRef {
+  id: string
+}
+
+export interface GraphNode {
+  id: string
+  kind: string
+  ref?: GraphNodeRef
+}
+
 export interface AgentGraphManifest {
   id: string
   name: string
+  nodes?: GraphNode[]
 }
 
 export interface LlmGatewayConfigManifest {
