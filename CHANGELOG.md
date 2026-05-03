@@ -7,6 +7,19 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.51.0-preview] — 2026-05-03
+
+### Added
+
+- **Vais Workbench — dark theme design system** (`workbench/`). Full visual redesign of the desktop app; all Tailwind utility-class strings replaced with a BEM CSS architecture keyed to semantic design tokens.
+  - **Design tokens** — 16 CSS custom properties in `src/index.css` (registered in both `:root` and Tailwind v4 `@theme`). Charcoal dark palette; teal/cyan accent (`#2dd4bf`); VS Code Dark+ Monaco theme (`src/monacoTheme.ts`) applied to both editor instances.
+  - **Shared chrome** (`src/chrome.css`) — `.app` CSS grid shell, header, sidebar sections with per-kind icons and shimmer skeleton rows, tab bar, toolbar, kind badge, modal overlay, button variants (`--primary`, `--ghost`, `--bare`, `--danger`).
+  - **Component-local styles** — `src/styles/testPanel.css` (run cards, animated teal streaming cursor), `src/styles/deleteDialog.css` (amber reverse-reference warning callout).
+  - **Sidebar footer** — active connection URL and green connected indicator.
+  - **Reverse-reference warning in DeleteDialog** — amber callout listing resources that reference the one being deleted (completes WB-7).
+
+---
+
 ## [0.50.0-preview] — 2026-05-03
 
 ### Added

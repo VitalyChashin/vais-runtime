@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "./chrome.css";
+
+/* ---- Design tokens (dark theme) ---- */
+
+@theme {
+  --color-bg-base:       #0d0e10;
+  --color-bg-surface:    #16181b;
+  --color-bg-elevated:   #1d2024;
+  --color-bg-inset:      #0a0b0d;
+
+  --color-border:        rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+
+  --color-text-primary:   #e6e8eb;
+  --color-text-secondary: #b4b8be;
+  --color-text-muted:     #6b7178;
+
+  --color-accent:        #2dd4bf;
+  --color-accent-hover:  #5eead4;
+  --color-accent-subtle: rgba(45, 212, 191, 0.12);
+
+  --color-success:       #4ade80;
+  --color-warn:          #fbbf24;
+  --color-warn-subtle:   rgba(251, 191, 36, 0.10);
+  --color-error:         #f87171;
+  --color-error-subtle:  rgba(248, 113, 113, 0.14);
+}
+
+:root {
+  --color-bg-base:       #0d0e10;
+  --color-bg-surface:    #16181b;
+  --color-bg-elevated:   #1d2024;
+  --color-bg-inset:      #0a0b0d;
+
+  --color-border:        rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+
+  --color-text-primary:   #e6e8eb;
+  --color-text-secondary: #b4b8be;
+  --color-text-muted:     #6b7178;
+
+  --color-accent:        #2dd4bf;
+  --color-accent-hover:  #5eead4;
+  --color-accent-subtle: rgba(45, 212, 191, 0.12);
+
+  --color-success:       #4ade80;
+  --color-warn:          #fbbf24;
+  --color-warn-subtle:   rgba(251, 191, 36, 0.10);
+  --color-error:         #f87171;
+  --color-error-subtle:  rgba(248, 113, 113, 0.14);
+}
+
+/* ---- Base reset ---- */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--color-bg-base);
+  color: var(--color-text-secondary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+::selection {
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+/* Thin dark scrollbars */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}

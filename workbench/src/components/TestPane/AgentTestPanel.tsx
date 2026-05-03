@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useClient } from '../../api/useClient'
 import { invokeResource } from '../../api/resources'
+import '../../styles/testPanel.css'
 
 interface Run {
   id: number
@@ -59,10 +60,10 @@ export function AgentTestPanel({ kind, id }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4">
-      <div className="flex gap-2 items-end">
+    <div className="test">
+      <div className="test__input">
         <textarea
-          className="flex-1 border rounded p-2 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="test__textarea"
           placeholder="Enter message… (Shift+Enter for newline)"
           value={message}
           onChange={e => setMessage(e.target.value)}
@@ -70,42 +71,44 @@ export function AgentTestPanel({ kind, id }: Props) {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
           }}
         />
-        <button
-          onClick={handleSend}
-          disabled={sending || !message.trim()}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {sending ? 'Sending…' : 'Send'}
-        </button>
+        <div className="test__send-wrap">
+          <button
+            className="btn btn--primary"
+            style={{ flex: 1 }}
+            onClick={handleSend}
+            disabled={sending || !message.trim()}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="6 3 20 12 6 21 6 3"/>
+            </svg>
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+          <span className="test__send-hint">Shift+↵ newline</span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 overflow-auto flex-1">
-        {runs.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center mt-8">No runs yet.</p>
-        ) : (
-          runs.map(run => (
-            <div key={run.id} className="border rounded p-3 text-sm flex flex-col gap-2">
-              <div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Input</span>
-                <p className="mt-1 whitespace-pre-wrap">{run.input}</p>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Output</span>
-                {run.error ? (
-                  <p className="mt-1 text-red-600">{run.error}</p>
-                ) : (
-                  <pre className="mt-1 whitespace-pre-wrap font-mono text-xs bg-gray-50 rounded p-2">
-                    {run.chunks.join('')}
-                    {!run.done && (
-                      <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse align-middle ml-0.5" />
-                    )}
-                  </pre>
-                )}
-              </div>
+      {runs.length === 0 ? (
+        <div className="test__empty">No runs yet.</div>
+      ) : (
+        <div className="test__runs">
+          {runs.map(run => (
+            <div key={run.id} className="run">
+              <div className="run__hd">Input</div>
+              <div className="run__input">{run.input}</div>
+              <div className="run__divider" />
+              <div className="run__hd">Output</div>
+              {run.error ? (
+                <div className="run__error">{run.error}</div>
+              ) : (
+                <div className="run__output">
+                  {run.chunks.join('')}
+                  {!run.done && <span className="run__cursor" />}
+                </div>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
