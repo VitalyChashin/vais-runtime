@@ -13,3 +13,5 @@ spec:
   protocols:
     - kind: Http
   tools: []
+  llmGatewayRef: research-llm-gateway
+  mcpGatewayRef: research-mcp-gateway

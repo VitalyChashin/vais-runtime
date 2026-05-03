@@ -1,0 +1,15 @@
+apiVersion: vais.agents/v1
+kind: LlmGatewayConfig
+metadata:
+  id: research-llm-gateway
+  version: "1.0"
+  description: >
+    LLM gateway for the research pipeline — structured logging, OTel traces,
+    and Prometheus metrics on every LLM call.
+spec:
+  middleware:
+    - name: LlmLogging
+    - name: LlmOtel
+    - name: Prometheus
+  rateLimit:
+    requestsPerMinute: 60

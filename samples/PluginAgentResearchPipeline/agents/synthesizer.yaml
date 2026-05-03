@@ -14,6 +14,8 @@ spec:
   protocols:
     - kind: Http
   tools: []
+  llmGatewayRef: research-llm-gateway
+  mcpGatewayRef: research-mcp-gateway
   model:
     provider: openai
     id: gpt-4o-mini

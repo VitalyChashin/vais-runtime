@@ -32,7 +32,10 @@ export function AgentTestPanel({ kind, id }: Props) {
     setRuns(prev => [{ id: runId, input, chunks: [], done: false }, ...prev].slice(0, 5))
 
     try {
-      const response = await invokeResource(client, kind, id, { text: input })
+      const body = kind === 'graphs'
+        ? { initialState: { query: input } }
+        : { text: input }
+      const response = await invokeResource(client, kind, id, body)
       const reader = response.body?.getReader()
 
       if (!reader) {
