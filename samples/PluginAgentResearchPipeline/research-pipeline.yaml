@@ -56,12 +56,19 @@ spec:
   edges:
     - from: planner
       to: researcher
+      concurrent: true
+
+    - from: planner
+      to: analyst
+      concurrent: true
 
     - from: researcher
-      to: analyst
+      to: synthesizer
+      concurrent: true
 
     - from: analyst
       to: synthesizer
+      concurrent: true
 
     - from: synthesizer
       to: end
