@@ -39,6 +39,14 @@ public abstract record GraphStateReducer
     public sealed record Append : GraphStateReducer;
 
     /// <summary>
+    /// First-write-wins — keeps the existing value if the key is already present in
+    /// state; takes the incoming value only when the key does not yet exist. Useful in
+    /// fan-in joins where the first branch to write a key should own it (e.g., the
+    /// first valid plan wins and later branches cannot overwrite it).
+    /// </summary>
+    public sealed record FirstWriteWins : GraphStateReducer;
+
+    /// <summary>
     /// Dispatches to a DI-resolved <see cref="IGraphStateReducer"/> implementation.
     /// Resolved by the orchestrator at merge time using the caller-supplied
     /// <c>reducerResolver</c> delegate.

@@ -18,6 +18,7 @@
   <ItemGroup Label="Agent-runtime library references">
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.csproj" />
     <ProjectReference Include="..\Vais.Agents.Protocols.A2A\Vais.Agents.Protocols.A2A.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.InProcess\Vais.Agents.Control.InProcess.csproj" />
@@ -31,6 +32,8 @@
     <ProjectReference Include="..\Vais.Agents.Persistence.Postgres\Vais.Agents.Persistence.Postgres.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.OpenTelemetry\Vais.Agents.Observability.OpenTelemetry.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Observability.RunStore\Vais.Agents.Observability.RunStore.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />

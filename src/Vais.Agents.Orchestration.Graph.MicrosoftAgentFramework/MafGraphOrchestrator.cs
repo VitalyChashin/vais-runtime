@@ -68,6 +68,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly IGraphCheckpointer? _checkpointer;
     private readonly IAgentGraphEventBus _graphEventBus;
 
+    private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
+
     /// <summary>Default max-step ceiling matching the in-process orchestrator.</summary>
     public const int DefaultMaxSteps = 1000;
 
@@ -369,6 +371,21 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         var maxSteps = _manifest.MaxSteps ?? DefaultMaxSteps;
         var isResume = resumeFromNodeId is not null;
 
+        // Root activity — mirrors InProcessGraphOrchestrator so all node spans are grouped
+        // under a single Langfuse trace. Activity.Current is set to null first to force a
+        // trace root rather than attaching as a child of whatever the caller has active.
+        Activity.Current = null;
+        using var graphActivity = _activitySource.StartActivity("graph.run", ActivityKind.Internal);
+        graphActivity?.SetTag("graph.id",      _manifest.Id);
+        graphActivity?.SetTag("graph.version", _manifest.Version);
+        graphActivity?.SetTag("graph.run_id",  runId);
+        graphActivity?.SetTag("graph.entry",   _manifest.Entry);
+        graphActivity?.SetTag("langfuse.trace.name", _manifest.Id);
+        if (!string.IsNullOrEmpty(context.CorrelationId))
+            graphActivity?.SetTag("langfuse.session.id", context.CorrelationId);
+        else if (!string.IsNullOrEmpty(context.UserId))
+            graphActivity?.SetTag("langfuse.session.id", context.UserId);
+
         // Build the MAF workflow starting at the resume node (for resume) or the manifest
         // entry (for fresh runs). Starting at the interrupt node ensures the initial message
         // is delivered directly to that executor, where it skips its body via ResumeFromNodeId.
@@ -515,6 +532,14 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                         error.Data?.GetType().Name ?? "WorkflowError",
                         error.Data?.ToString() ?? "Workflow error.",
                         TimeSpan.Zero),
+                };
+
+            case NodeAgentInvokedEvent nai:
+                return new AgentGraphEvent[]
+                {
+                    new NodeAgentInvoked(DateTimeOffset.UtcNow, context, runId, superStep,
+                        nai.NodeId, nai.AgentId, nai.InputText, nai.OutputText,
+                        nai.InputTokens, nai.OutputTokens),
                 };
 
             case GraphInterruptedEvent interrupt:

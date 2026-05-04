@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
@@ -17,11 +18,11 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
 {
     private readonly int _incomingBranchCount;
+    private readonly AgentGraphManifest _joinManifest;
+    private readonly Func<GraphHandlerRef, IGraphStateReducer>? _joinReducerResolver;
     private int _receivedCount;
     private Dictionary<string, JsonElement>? _accumulated;
-    // Guards _accumulated + _receivedCount. MAF barrier semantics serialize the
-    // HandleAsync calls, but the lock is cheap insurance against future changes.
-    private readonly object _lock = new();
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     public GraphJoinNodeExecutor(
         GraphNode node,
@@ -43,6 +44,8 @@ internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
                bearerToken, checkpointer)
     {
         _incomingBranchCount = incomingBranchCount;
+        _joinManifest = manifest;
+        _joinReducerResolver = reducerResolver;
     }
 
     public override async ValueTask HandleAsync(
@@ -51,20 +54,23 @@ internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
         bool isLastBranch;
         GraphMessage mergedMessage;
 
-        lock (_lock)
+        await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
             _accumulated ??= new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-            // Last-write-wins merge. AgentGraphManifestValidator enforces non-overlapping
-            // output bindings across branches, so this is deterministic.
-            foreach (var (k, v) in message.State)
-            {
-                _accumulated[k] = v;
-            }
+            await GraphStateReducers.MergeAsync(
+                _accumulated, (IReadOnlyDictionary<string, JsonElement>)message.State,
+                _joinManifest.StateReducers, _joinReducerResolver,
+                cancellationToken).ConfigureAwait(false);
             _receivedCount++;
             isLastBranch = _receivedCount >= _incomingBranchCount;
             mergedMessage = isLastBranch
                 ? message with { State = new Dictionary<string, JsonElement>(_accumulated, StringComparer.Ordinal) }
                 : message;
+        }
+        finally
+        {
+            _semaphore.Release();
         }
 
         if (!isLastBranch)

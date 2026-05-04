@@ -135,6 +135,7 @@ internal static class EnvelopeSerializer
         foreach (var edge in edges)
         {
             var obj = new JsonObject { ["from"] = edge.From, ["to"] = edge.To };
+            if (edge.Concurrent) obj["concurrent"] = true;
             arr.Add(obj);
         }
         return arr;

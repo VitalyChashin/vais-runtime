@@ -66,7 +66,10 @@ app.Configure(config =>
         .WithDescription("Attach to an agent's live run via SSE; print events until Ctrl-C or turn.completed.");
 
     config.AddCommand<GraphLogsCommand>("graph-logs")
-        .WithDescription("Stream graph run events via SSE. --interrupt-id resumes an interrupted run for observation.");
+        .WithDescription("Stream graph run events via SSE. --from-run-id shows stored history instead of streaming.");
+
+    config.AddCommand<GetRunsCommand>("get-runs")
+        .WithDescription("List historical graph runs or inspect a specific run's node executions from the run store.");
 
     config.AddCommand<SignalCommand>("signal")
         .WithDescription("Send a signal (with arbitrary JSON payload) to an in-flight run.");

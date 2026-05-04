@@ -42,6 +42,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     private readonly IAgentRemoteInvoker? _remoteInvoker;
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly Func<string?>? _bearerTokenProvider;
+    private readonly IAgentGraphEventBus? _graphEventBus;
+    private readonly Func<AgentGraphManifest, string, IAgentGraph<IDictionary<string, JsonElement>>>? _orchestratorFactory;
 
     // Per-graph state: manifest-keyed counters + run-id-keyed CTS map.
     private readonly ConcurrentDictionary<(string Id, string Version), GraphEntry> _graphs = new();
@@ -64,6 +66,12 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     /// <param name="remoteInvoker">Invoker for cross-runtime graph nodes. Required when any graph manifest contains nodes with a <see cref="GraphAgentRef.RuntimeUrl"/>.</param>
     /// <param name="a2aInvoker">Invoker for A2A protocol graph nodes. Required when any graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/>.</param>
     /// <param name="bearerTokenProvider">Factory invoked per graph run to obtain the current bearer token for remote runtime calls. Typically reads from <c>IHttpContextAccessor</c>.</param>
+    /// <param name="graphEventBus">Event bus to fan out graph lifecycle events (started, node completed, etc.). Null ⇒ events are dropped.</param>
+    /// <param name="orchestratorFactory">
+    /// Optional factory that overrides the default <see cref="InProcessGraphOrchestrator{TState}"/> creation.
+    /// Receives the effective manifest (maxSteps already applied) and the run id; returns the orchestrator to use.
+    /// Use this to wire in <c>MafGraphOrchestrator</c> for graphs that require concurrent-edge support.
+    /// </param>
     public AgentGraphLifecycleManager(
         IAgentGraphRegistry graphRegistry,
         IAgentRegistry agentRegistry,
@@ -75,7 +83,9 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ILogger<AgentGraphLifecycleManager>? logger = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        Func<string?>? bearerTokenProvider = null)
+        Func<string?>? bearerTokenProvider = null,
+        IAgentGraphEventBus? graphEventBus = null,
+        Func<AgentGraphManifest, string, IAgentGraph<IDictionary<string, JsonElement>>>? orchestratorFactory = null)
     {
         ArgumentNullException.ThrowIfNull(graphRegistry);
         ArgumentNullException.ThrowIfNull(agentRegistry);
@@ -92,6 +102,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         _remoteInvoker = remoteInvoker;
         _a2aInvoker = a2aInvoker;
         _bearerTokenProvider = bearerTokenProvider;
+        _graphEventBus = graphEventBus;
+        _orchestratorFactory = orchestratorFactory;
     }
 
     /// <inheritdoc />
@@ -324,8 +336,9 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
                 mergedState = stateWithPayload;
             }
             var mergedCheckpoint = checkpoint with { State = mergedState };
+            var resumable = (IResumableAgentGraph<IDictionary<string, JsonElement>>)orchestrator;
 
-            await foreach (var evt in orchestrator.ResumeStreamAsync(mergedCheckpoint, resumePayload: null, context, cts.Token).ConfigureAwait(false))
+            await foreach (var evt in resumable.ResumeStreamAsync(mergedCheckpoint, resumePayload: null, context, cts.Token).ConfigureAwait(false))
             {
                 if (evt is GraphCompleted) completed = true;
                 if (evt is GraphInterrupted) interrupted = true;
@@ -463,12 +476,15 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         return (manifest, entry, checkpoint);
     }
 
-    private InProcessGraphOrchestrator<IDictionary<string, JsonElement>> BuildOrchestrator(
+    private IAgentGraph<IDictionary<string, JsonElement>> BuildOrchestrator(
         AgentGraphManifest manifest, string runId, int? maxStepsOverride)
     {
         var effectiveManifest = maxStepsOverride.HasValue
             ? manifest with { MaxSteps = maxStepsOverride.Value }
             : manifest;
+
+        if (_orchestratorFactory is not null)
+            return _orchestratorFactory(effectiveManifest, runId);
 
         return new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
             effectiveManifest,
@@ -478,11 +494,12 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             runIdFactory: () => runId,
             remoteInvoker: _remoteInvoker,
             a2aInvoker: _a2aInvoker,
-            bearerToken: _bearerTokenProvider?.Invoke());
+            bearerToken: _bearerTokenProvider?.Invoke(),
+            graphEventBus: _graphEventBus);
     }
 
     private static async ValueTask<GraphInvocationResult> DrainInvokeAsync(
-        InProcessGraphOrchestrator<IDictionary<string, JsonElement>> orchestrator,
+        IAgentGraph<IDictionary<string, JsonElement>> orchestrator,
         IDictionary<string, JsonElement> initialState,
         AgentContext context,
         string runId,
@@ -520,13 +537,15 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     }
 
     private static async ValueTask<GraphInvocationResult> DrainResumeAsync(
-        InProcessGraphOrchestrator<IDictionary<string, JsonElement>> orchestrator,
+        IAgentGraph<IDictionary<string, JsonElement>> orchestrator,
         GraphCheckpoint checkpoint,
         JsonElement? resumePayload,
         AgentContext context,
         string runId,
         CancellationToken ct)
     {
+        var resumable = (IResumableAgentGraph<IDictionary<string, JsonElement>>)orchestrator;
+
         // Pre-merge the caller's resume payload into state so the orchestrator picks
         // it up under the well-known "resume.payload" key. We then pass null for the
         // orchestrator's resumePayload parameter to avoid a double-write.
@@ -547,7 +566,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         string? pendingInterruptReason = null;
         bool isComplete = false;
 
-        await foreach (var evt in orchestrator.ResumeStreamAsync(mergedCheckpoint, resumePayload: null, context, ct).ConfigureAwait(false))
+        await foreach (var evt in resumable.ResumeStreamAsync(mergedCheckpoint, resumePayload: null, context, ct).ConfigureAwait(false))
         {
             if (evt is GraphCompleted gc)
             {

@@ -1,0 +1,214 @@
+/* Logs tab — run history */
+
+.logs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.logs__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 40px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.logs__toolbar-spacer { flex: 1; }
+
+.logs__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 0 24px;
+}
+
+.logs__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Run row */
+.logrun {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.logrun:last-child { border-bottom: none; }
+
+.logrun__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.logrun__summary:hover { background: var(--color-bg-elevated); }
+
+.logrun__chevron {
+  width: 10px;
+  height: 10px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: transform 100ms ease;
+}
+.logrun--open .logrun__chevron { transform: rotate(90deg); }
+
+.logrun__status {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  min-width: 74px;
+  flex-shrink: 0;
+}
+.logrun__status--completed { color: var(--color-success); }
+.logrun__status--failed    { color: var(--color-error); }
+.logrun__status--running   { color: #60a5fa; }
+.logrun__status--interrupted { color: var(--color-warn); }
+
+.logrun__id {
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logrun__meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Node list inside an expanded run */
+.logrun__nodes {
+  background: var(--color-bg-inset);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 4px 0;
+}
+
+/* Node row */
+.lognode {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.lognode:last-child { border-bottom: none; }
+
+.lognode__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 16px 0 32px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.lognode__summary:hover { background: rgba(255, 255, 255, 0.03); }
+
+.lognode__chevron {
+  width: 9px;
+  height: 9px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: transform 100ms ease;
+}
+.lognode--open .lognode__chevron { transform: rotate(90deg); }
+
+.lognode__status {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  min-width: 68px;
+  flex-shrink: 0;
+}
+.lognode__status--completed { color: var(--color-success); }
+.lognode__status--failed    { color: var(--color-error); }
+.lognode__status--running   { color: #60a5fa; }
+.lognode__status--interrupted { color: var(--color-warn); }
+
+.lognode__id {
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lognode__kind {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, monospace;
+}
+
+.lognode__meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Node input/output detail */
+.lognode__detail {
+  padding: 0 16px 10px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lognode__section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.lognode__text {
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.lognode__error {
+  font-size: 11px;
+  color: var(--color-error);
+  font-family: ui-monospace, monospace;
+}
+
+.lognode__edges {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, monospace;
+}

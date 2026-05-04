@@ -382,3 +382,37 @@ override Vais.Agents.NamedToolGatewayMiddlewareRegistration.GetHashCode() -> int
 override Vais.Agents.NamedToolGatewayMiddlewareRegistration.ToString() -> string!
 static Vais.Agents.NamedToolGatewayMiddlewareRegistration.operator !=(Vais.Agents.NamedToolGatewayMiddlewareRegistration? left, Vais.Agents.NamedToolGatewayMiddlewareRegistration? right) -> bool
 static Vais.Agents.NamedToolGatewayMiddlewareRegistration.operator ==(Vais.Agents.NamedToolGatewayMiddlewareRegistration? left, Vais.Agents.NamedToolGatewayMiddlewareRegistration? right) -> bool
+Vais.Agents.NodeAgentInvoked
+Vais.Agents.NodeAgentInvoked.NodeAgentInvoked(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! NodeId, string! AgentId, string! InputText, string! OutputText, int InputTokens, int OutputTokens) -> void
+Vais.Agents.NodeAgentInvoked.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! NodeId, out string! AgentId, out string! InputText, out string! OutputText, out int InputTokens, out int OutputTokens) -> void
+Vais.Agents.NodeAgentInvoked.NodeId.get -> string!
+Vais.Agents.NodeAgentInvoked.NodeId.init -> void
+Vais.Agents.NodeAgentInvoked.AgentId.get -> string!
+Vais.Agents.NodeAgentInvoked.AgentId.init -> void
+Vais.Agents.NodeAgentInvoked.InputText.get -> string!
+Vais.Agents.NodeAgentInvoked.InputText.init -> void
+Vais.Agents.NodeAgentInvoked.OutputText.get -> string!
+Vais.Agents.NodeAgentInvoked.OutputText.init -> void
+Vais.Agents.NodeAgentInvoked.InputTokens.get -> int
+Vais.Agents.NodeAgentInvoked.InputTokens.init -> void
+Vais.Agents.NodeAgentInvoked.OutputTokens.get -> int
+Vais.Agents.NodeAgentInvoked.OutputTokens.init -> void
+Vais.Agents.IResumableAgentGraph<TState>.ResumeStreamAsync(Vais.Agents.GraphCheckpoint! checkpoint, TState? resumePayload, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.GraphStateReducer.FirstWriteWins
+Vais.Agents.GraphStateReducer.FirstWriteWins.FirstWriteWins() -> void
+Vais.Agents.GraphStateReducer.FirstWriteWins.Equals(Vais.Agents.GraphStateReducer.FirstWriteWins? other) -> bool
+override Vais.Agents.GraphStateReducer.FirstWriteWins.<Clone>$() -> Vais.Agents.GraphStateReducer.FirstWriteWins!
+override Vais.Agents.GraphStateReducer.FirstWriteWins.Equals(object? obj) -> bool
+override Vais.Agents.GraphStateReducer.FirstWriteWins.GetHashCode() -> int
+override Vais.Agents.GraphStateReducer.FirstWriteWins.ToString() -> string!
+override sealed Vais.Agents.GraphStateReducer.FirstWriteWins.Equals(Vais.Agents.GraphStateReducer? other) -> bool
+static Vais.Agents.GraphStateReducer.FirstWriteWins.operator !=(Vais.Agents.GraphStateReducer.FirstWriteWins? left, Vais.Agents.GraphStateReducer.FirstWriteWins? right) -> bool
+static Vais.Agents.GraphStateReducer.FirstWriteWins.operator ==(Vais.Agents.GraphStateReducer.FirstWriteWins? left, Vais.Agents.GraphStateReducer.FirstWriteWins? right) -> bool
+Vais.Agents.NodeAgentInvoked.Equals(Vais.Agents.NodeAgentInvoked? other) -> bool
+override Vais.Agents.NodeAgentInvoked.<Clone>$() -> Vais.Agents.NodeAgentInvoked!
+override sealed Vais.Agents.NodeAgentInvoked.Equals(Vais.Agents.AgentGraphEvent? other) -> bool
+override Vais.Agents.NodeAgentInvoked.Equals(object? obj) -> bool
+override Vais.Agents.NodeAgentInvoked.GetHashCode() -> int
+override Vais.Agents.NodeAgentInvoked.ToString() -> string!
+static Vais.Agents.NodeAgentInvoked.operator !=(Vais.Agents.NodeAgentInvoked? left, Vais.Agents.NodeAgentInvoked? right) -> bool
+static Vais.Agents.NodeAgentInvoked.operator ==(Vais.Agents.NodeAgentInvoked? left, Vais.Agents.NodeAgentInvoked? right) -> bool

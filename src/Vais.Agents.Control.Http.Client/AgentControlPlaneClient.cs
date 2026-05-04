@@ -474,6 +474,67 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<RunListResponse> ListRunsAsync(
+        string graphId,
+        string? status = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(graphId);
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(status)) qs.Add($"status={Uri.EscapeDataString(status)}");
+        if (since.HasValue) qs.Add($"since={Uri.EscapeDataString(since.Value.ToString("O"))}");
+        if (until.HasValue) qs.Add($"until={Uri.EscapeDataString(until.Value.ToString("O"))}");
+        if (limit != 20) qs.Add($"limit={limit}");
+        var path = qs.Count > 0
+            ? $"/v1/graphs/{Uri.EscapeDataString(graphId)}/runs?{string.Join('&', qs)}"
+            : $"/v1/graphs/{Uri.EscapeDataString(graphId)}/runs";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<RunListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new RunListResponse(Array.Empty<PipelineRunDto>());
+    }
+
+    /// <inheritdoc />
+    public async Task<PipelineRunDto?> GetRunAsync(string graphId, string runId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(graphId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        var path = $"/v1/graphs/{Uri.EscapeDataString(graphId)}/runs/{Uri.EscapeDataString(runId)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PipelineRunDto>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NodeExecutionDto>> GetRunNodesAsync(string graphId, string runId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(graphId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        var path = $"/v1/graphs/{Uri.EscapeDataString(graphId)}/runs/{Uri.EscapeDataString(runId)}/nodes";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<NodeExecutionDto>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? Array.Empty<NodeExecutionDto>();
+    }
+
+    /// <inheritdoc />
+    public async Task<NodeExecutionDto?> GetRunNodeAsync(string graphId, string runId, string nodeId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(graphId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
+        var path = $"/v1/graphs/{Uri.EscapeDataString(graphId)}/runs/{Uri.EscapeDataString(runId)}/nodes/{Uri.EscapeDataString(nodeId)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<NodeExecutionDto>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<RuntimeListResponse> GetRemoteRuntimesAsync(CancellationToken cancellationToken = default)
     {
         using var response = await _http.GetAsync("/v1/runtimes", cancellationToken).ConfigureAwait(false);

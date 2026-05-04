@@ -41,6 +41,32 @@ public sealed record GraphMessage(
     public string? ResumeFromNodeId { get; init; }
 }
 
+/// <summary>
+/// MAF workflow event surfaced after an agent-kind node invocation completes.
+/// Carries the resolved input text and the agent's response text so the run store
+/// can persist them without requiring a separate agent-event-bus correlation.
+/// </summary>
+internal sealed class NodeAgentInvokedEvent : WorkflowEvent
+{
+    public NodeAgentInvokedEvent(string nodeId, string agentId, string inputText, string outputText, int inputTokens, int outputTokens)
+        : base(data: null)
+    {
+        NodeId = nodeId;
+        AgentId = agentId;
+        InputText = inputText;
+        OutputText = outputText;
+        InputTokens = inputTokens;
+        OutputTokens = outputTokens;
+    }
+
+    public string NodeId { get; }
+    public string AgentId { get; }
+    public string InputText { get; }
+    public string OutputText { get; }
+    public int InputTokens { get; }
+    public int OutputTokens { get; }
+}
+
 /// <summary>MAF workflow event surfaced by a graph node executor when it traverses an outgoing edge.</summary>
 internal sealed class EdgeTraversedEvent : WorkflowEvent
 {

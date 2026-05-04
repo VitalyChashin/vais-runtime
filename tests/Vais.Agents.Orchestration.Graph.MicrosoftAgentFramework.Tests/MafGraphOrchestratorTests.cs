@@ -832,6 +832,76 @@ public sealed class MafGraphOrchestratorTests
         finalState.Should().ContainKey("hitl.response");
     }
 
+    // ---- RS-1/RS-2/RS-3: NodeAgentInvoked event ----
+
+    [Fact]
+    public async Task AgentNode_Emits_NodeAgentInvoked_With_Correct_Input_And_Output()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("agent-output"));
+        await lifecycle.CreateAsync(ManifestFor("worker"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "invoked-event-test", Version: "1.0", Entry: "worker",
+            Nodes: new[]
+            {
+                new GraphNode("worker", "Agent", Ref: new GraphAgentRef("worker")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("worker", "end") });
+
+        var events = new List<AgentGraphEvent>();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+        await foreach (var e in orchestrator.StreamAsync(
+            new Dictionary<string, JsonElement> { ["query"] = JsonSerializer.SerializeToElement("hello world") },
+            new AgentContext()))
+        {
+            events.Add(e);
+        }
+
+        var invoked = events.OfType<NodeAgentInvoked>().SingleOrDefault();
+        invoked.Should().NotBeNull("NodeAgentInvoked must be emitted for agent-kind nodes");
+        invoked!.NodeId.Should().Be("worker");
+        invoked.AgentId.Should().Be("worker");
+        invoked.InputText.Should().Be("hello world");
+        invoked.OutputText.Should().Be("agent-output");
+        invoked.InputTokens.Should().Be(0);
+        invoked.OutputTokens.Should().Be(0);
+
+        // The event must appear between NodeStarted and NodeCompleted for the same node.
+        var nodeStartedIdx = events.FindIndex(e => e is NodeStarted ns && ns.NodeId == "worker");
+        var nodeCompletedIdx = events.FindIndex(e => e is NodeCompleted nc && nc.NodeId == "worker");
+        var invokedIdx = events.IndexOf(invoked);
+        invokedIdx.Should().BeGreaterThan(nodeStartedIdx, "NodeAgentInvoked follows NodeStarted");
+        invokedIdx.Should().BeLessThan(nodeCompletedIdx, "NodeAgentInvoked precedes NodeCompleted");
+    }
+
+    [Fact]
+    public async Task AgentNode_NodeAgentInvoked_Published_On_Bus()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("bus-output"));
+        await lifecycle.CreateAsync(ManifestFor("node-a"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "invoked-bus-test", Version: "1.0", Entry: "a",
+            Nodes: new[]
+            {
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("node-a")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("a", "end") });
+
+        var bus = new InMemoryAgentGraphEventBus();
+        var busEvents = new List<AgentGraphEvent>();
+        using var _ = bus.Subscribe((e, ct) => { busEvents.Add(e); return ValueTask.CompletedTask; });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, graphEventBus: bus);
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        busEvents.OfType<NodeAgentInvoked>().Should().ContainSingle()
+            .Which.OutputText.Should().Be("bus-output");
+    }
+
     // ---- FO-7c / FO-7d: fan-out / fan-in ----
 
     [Fact]

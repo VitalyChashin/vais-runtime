@@ -117,10 +117,11 @@ public static class MafGraphBuilder
                 ExecutorBindingExtensions.BindExecutor(toExec));
         }
 
-        // Fan-out: one AddFanOutEdge per fork source — MAF dispatches to all targets concurrently.
+        // Fan-out: one AddFanOutEdge per fork source (2+ concurrent targets) — MAF dispatches to all targets concurrently.
         var fanOutGroups = manifest.Edges
             .Where(e => e.Concurrent)
-            .GroupBy(e => e.From, StringComparer.Ordinal);
+            .GroupBy(e => e.From, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1);
         foreach (var group in fanOutGroups)
         {
             if (!executors.TryGetValue(group.Key, out var fromExec)) continue;
@@ -290,7 +291,7 @@ public static class MafGraphBuilder
     }
 
     internal static bool IsForkSource(string nodeId, AgentGraphManifest manifest) =>
-        manifest.Edges.Any(e => string.Equals(e.From, nodeId, StringComparison.Ordinal) && e.Concurrent);
+        manifest.Edges.Count(e => string.Equals(e.From, nodeId, StringComparison.Ordinal) && e.Concurrent) > 1;
 
     internal static bool IsJoinTarget(string nodeId, AgentGraphManifest manifest) =>
         manifest.Edges.Count(e => string.Equals(e.To, nodeId, StringComparison.Ordinal) && e.Concurrent) > 1;

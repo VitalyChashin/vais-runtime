@@ -438,6 +438,7 @@ public sealed class JsonAgentGraphManifestLoader
             return el.GetString() switch
             {
                 "lastWriteWins" => new GraphStateReducer.LastWriteWins(),
+                "firstWriteWins" => new GraphStateReducer.FirstWriteWins(),
                 "append" => new GraphStateReducer.Append(),
                 _ => ReportUnknown(el.GetString()!, errors, prefix),
             };
@@ -455,15 +456,15 @@ public sealed class JsonAgentGraphManifestLoader
                 }
                 return new GraphStateReducer.HandlerRef(new GraphHandlerRef(typeName, asmName));
             }
-            errors.Add($"{prefix}must be the string 'lastWriteWins' or 'append', or an object with handlerRef");
+            errors.Add($"{prefix}must be the string 'lastWriteWins', 'firstWriteWins', 'append', or an object with handlerRef");
             return null;
         }
-        errors.Add($"{prefix}must be a string ('lastWriteWins' | 'append') or an object with handlerRef");
+        errors.Add($"{prefix}must be a string ('lastWriteWins' | 'firstWriteWins' | 'append') or an object with handlerRef");
         return null;
 
         static GraphStateReducer? ReportUnknown(string name, List<string> errors, string prefix)
         {
-            errors.Add($"{prefix}unknown reducer '{name}' — expected 'lastWriteWins' or 'append'");
+            errors.Add($"{prefix}unknown reducer '{name}' — expected 'lastWriteWins', 'firstWriteWins', or 'append'");
             return null;
         }
     }

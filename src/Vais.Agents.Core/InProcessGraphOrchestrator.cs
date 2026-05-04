@@ -434,7 +434,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 Exception? nodeFailure = null;
                 try
                 {
-                    nodeOutput = await ExecuteNodeAsync(node, state, context, cancellationToken).ConfigureAwait(false);
+                    nodeOutput = await ExecuteNodeAsync(node, state, context, runId, superStep, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -532,6 +532,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         GraphNode node,
         IDictionary<string, JsonElement> state,
         AgentContext context,
+        string runId,
+        int superStep,
         CancellationToken cancellationToken)
     {
         if (string.Equals(node.Kind, "Agent", StringComparison.Ordinal))
@@ -549,6 +551,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             var metadata = BuildMetadata(filteredInput, node.StateBindings);
 
             AgentInvocationResult result;
+            string agentId;
 
             if (node.Ref.RuntimeUrl is { } runtimeUrl)
             {
@@ -557,6 +560,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     throw new InvalidOperationException(
                         $"Node '{node.Id}' has RuntimeUrl '{runtimeUrl}' but no IAgentRemoteInvoker was supplied to the orchestrator.");
 
+                agentId = node.Ref.Id;
                 var remoteHandle = new AgentHandle(node.Ref.Id, node.Ref.Version ?? string.Empty);
                 result = await _remoteInvoker.InvokeAsync(
                     runtimeUrl,
@@ -572,6 +576,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     throw new InvalidOperationException(
                         $"Node '{node.Id}' has A2AUrl '{a2aUrl}' but no IA2AGraphNodeInvoker was supplied to the orchestrator.");
 
+                agentId = node.Ref.Id;
                 var responseText = await _a2aInvoker.InvokeAsync(
                     a2aUrl,
                     text,
@@ -591,12 +596,17 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                         $"Node '{node.Id}' references agent '{node.Ref.Id}' version '{node.Ref.Version ?? "latest"}', but no matching manifest is registered.");
                 }
 
+                agentId = resolvedManifest.Id;
                 var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
                 result = await _lifecycle.InvokeAsync(
                     handle,
                     new AgentInvocationRequest(text, context.UserId, metadata),
                     cancellationToken).ConfigureAwait(false);
             }
+
+            var invokedEvt = new NodeAgentInvoked(DateTimeOffset.UtcNow, context, runId, superStep,
+                node.Id, agentId, TruncateText(text), TruncateText(result.Text ?? string.Empty), 0, 0);
+            await _graphEventBus.PublishAsync(invokedEvt, cancellationToken).ConfigureAwait(false);
 
             // Project the agent's reply into state: raw text under "lastAssistantText",
             // plus parsed structured output if the reply is JSON (StateBindings.Output
@@ -607,12 +617,12 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             };
 
             // Append the turn to messages history (AppendMessages reducer handles it).
-            var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text));
+            var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text ?? string.Empty));
             updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
             // If the reply text parses as JSON object and the node has an output binding,
             // merge the parsed shape into state.
-            if (node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(result.Text, out var parsed))
+            if (node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(result.Text ?? string.Empty, out var parsed))
             {
                 foreach (var prop in parsed.EnumerateObject())
                 {
@@ -738,6 +748,9 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
 
     private static IReadOnlyDictionary<string, JsonElement> AsReadOnly(IDictionary<string, JsonElement> state)
         => state as IReadOnlyDictionary<string, JsonElement> ?? new Dictionary<string, JsonElement>(state, StringComparer.Ordinal);
+
+    private static string TruncateText(string s, int maxChars = 8192) =>
+        s.Length <= maxChars ? s : string.Concat(s.AsSpan(0, maxChars), "…");
 
     private static bool TryParseJsonObject(string text, out JsonElement element)
     {

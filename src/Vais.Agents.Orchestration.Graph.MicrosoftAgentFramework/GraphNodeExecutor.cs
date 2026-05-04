@@ -164,7 +164,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             IReadOnlyDictionary<string, JsonElement> nodeOutput;
             if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
             {
-                nodeOutput = await ExecuteAgentNodeAsync(state, cancellationToken).ConfigureAwait(false);
+                nodeOutput = await ExecuteAgentNodeAsync(state, context, cancellationToken).ConfigureAwait(false);
             }
             else if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
             {
@@ -272,6 +272,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
 
     private async ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAgentNodeAsync(
         IDictionary<string, JsonElement> state,
+        IWorkflowContext context,
         CancellationToken cancellationToken)
     {
         if (_node.Ref is null)
@@ -327,14 +328,23 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
                 cancellationToken).ConfigureAwait(false);
         }
 
+        var outputText = result.Text ?? string.Empty;
+        await context.AddEventAsync(new NodeAgentInvokedEvent(
+            _node.Id,
+            _node.Ref.Id,
+            TruncateText(text),
+            TruncateText(outputText),
+            inputTokens: 0,
+            outputTokens: 0)).ConfigureAwait(false);
+
         var updates = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
         {
-            ["lastAssistantText"] = JsonSerializer.SerializeToElement(result.Text),
+            ["lastAssistantText"] = JsonSerializer.SerializeToElement(outputText),
         };
-        var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text));
+        var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, outputText));
         updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
-        if (_node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(result.Text, out var parsed))
+        if (_node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(outputText, out var parsed))
         {
             foreach (var prop in parsed.EnumerateObject())
             {
@@ -351,7 +361,8 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             messages.ValueKind == JsonValueKind.Array && messages.GetArrayLength() > 0)
         {
             var last = messages[messages.GetArrayLength() - 1];
-            if (last.ValueKind == JsonValueKind.Object && last.TryGetProperty("Text", out var textProp))
+            if (last.ValueKind == JsonValueKind.Object &&
+                (last.TryGetProperty("Text", out var textProp) || last.TryGetProperty("text", out textProp)))
             {
                 var text = textProp.GetString();
                 if (!string.IsNullOrEmpty(text)) return text;
@@ -404,6 +415,9 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
 
     private static IReadOnlyDictionary<string, JsonElement> AsReadOnly(IDictionary<string, JsonElement> state)
         => state as IReadOnlyDictionary<string, JsonElement> ?? new Dictionary<string, JsonElement>(state, StringComparer.Ordinal);
+
+    private static string TruncateText(string s, int maxChars = 8192) =>
+        s.Length <= maxChars ? s : string.Concat(s.AsSpan(0, maxChars), "…");
 
     private static bool TryParseJsonObject(string text, out JsonElement element)
     {

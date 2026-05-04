@@ -33,6 +33,9 @@ internal sealed class GraphEventRenderer
             case NodeCompleted nc:
                 _console.MarkupLine($"[blue]◁ node.completed[/] [grey]{nc.At:HH:mm:ss.fff}[/] step={nc.SuperStep} {EscapeMarkup(nc.NodeId)} ({nc.Duration.TotalMilliseconds:F0}ms)");
                 break;
+            case NodeAgentInvoked nai:
+                _console.MarkupLine($"[blue]◈ node.agent.invoked[/] [grey]{nai.At:HH:mm:ss.fff}[/] step={nai.SuperStep} {EscapeMarkup(nai.NodeId)} in={nai.InputText.Length}ch out={nai.OutputText.Length}ch");
+                break;
             case EdgeTraversed et:
                 _console.MarkupLine($"[cyan]→ edge.traversed[/] [grey]{et.At:HH:mm:ss.fff}[/] step={et.SuperStep} {EscapeMarkup(et.From)} → {EscapeMarkup(et.To)}");
                 break;
@@ -63,6 +66,7 @@ internal sealed class GraphEventRenderer
         GraphStarted _ => "graph.started",
         NodeStarted _ => "node.started",
         NodeCompleted _ => "node.completed",
+        NodeAgentInvoked _ => "node.agent.invoked",
         EdgeTraversed _ => "edge.traversed",
         StateUpdated _ => "state.updated",
         GraphInterrupted _ => "graph.interrupted",

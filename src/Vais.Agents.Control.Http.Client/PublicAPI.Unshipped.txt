@@ -440,3 +440,87 @@ static Vais.Agents.Control.Http.McpServerQueryResponse.operator !=(Vais.Agents.C
 static Vais.Agents.Control.Http.McpServerQueryResponse.operator ==(Vais.Agents.Control.Http.McpServerQueryResponse? left, Vais.Agents.Control.Http.McpServerQueryResponse? right) -> bool
 static Vais.Agents.Control.Http.McpServerValidationResult.operator !=(Vais.Agents.Control.Http.McpServerValidationResult? left, Vais.Agents.Control.Http.McpServerValidationResult? right) -> bool
 static Vais.Agents.Control.Http.McpServerValidationResult.operator ==(Vais.Agents.Control.Http.McpServerValidationResult? left, Vais.Agents.Control.Http.McpServerValidationResult? right) -> bool
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListRunsAsync(string! graphId, string? status = null, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, int limit = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRunAsync(string! graphId, string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PipelineRunDto?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRunNodesAsync(string! graphId, string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.NodeExecutionDto!>!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRunNodeAsync(string! graphId, string! runId, string! nodeId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.NodeExecutionDto?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListRunsAsync(string! graphId, string? status = null, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, int limit = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunAsync(string! graphId, string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PipelineRunDto?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunNodesAsync(string! graphId, string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.NodeExecutionDto!>!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunNodeAsync(string! graphId, string! runId, string! nodeId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.NodeExecutionDto?>!
+Vais.Agents.Control.Http.PipelineRunDto
+Vais.Agents.Control.Http.PipelineRunDto.<Clone>$() -> Vais.Agents.Control.Http.PipelineRunDto!
+Vais.Agents.Control.Http.PipelineRunDto.PipelineRunDto(string! RunId, string! GraphId, string! Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, int SuperSteps, string? Error) -> void
+Vais.Agents.Control.Http.PipelineRunDto.Deconstruct(out string! RunId, out string! GraphId, out string! Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out int SuperSteps, out string? Error) -> void
+Vais.Agents.Control.Http.PipelineRunDto.Equals(Vais.Agents.Control.Http.PipelineRunDto? other) -> bool
+Vais.Agents.Control.Http.PipelineRunDto.RunId.get -> string!
+Vais.Agents.Control.Http.PipelineRunDto.RunId.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.GraphId.get -> string!
+Vais.Agents.Control.Http.PipelineRunDto.GraphId.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.Status.get -> string!
+Vais.Agents.Control.Http.PipelineRunDto.Status.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.PipelineRunDto.StartedAt.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.EndedAt.get -> System.DateTimeOffset?
+Vais.Agents.Control.Http.PipelineRunDto.EndedAt.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.DurationMs.get -> long?
+Vais.Agents.Control.Http.PipelineRunDto.DurationMs.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.SuperSteps.get -> int
+Vais.Agents.Control.Http.PipelineRunDto.SuperSteps.init -> void
+Vais.Agents.Control.Http.PipelineRunDto.Error.get -> string?
+Vais.Agents.Control.Http.PipelineRunDto.Error.init -> void
+override Vais.Agents.Control.Http.PipelineRunDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PipelineRunDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.PipelineRunDto.ToString() -> string!
+static Vais.Agents.Control.Http.PipelineRunDto.operator !=(Vais.Agents.Control.Http.PipelineRunDto? left, Vais.Agents.Control.Http.PipelineRunDto? right) -> bool
+static Vais.Agents.Control.Http.PipelineRunDto.operator ==(Vais.Agents.Control.Http.PipelineRunDto? left, Vais.Agents.Control.Http.PipelineRunDto? right) -> bool
+Vais.Agents.Control.Http.NodeExecutionDto
+Vais.Agents.Control.Http.NodeExecutionDto.<Clone>$() -> Vais.Agents.Control.Http.NodeExecutionDto!
+Vais.Agents.Control.Http.NodeExecutionDto.NodeExecutionDto(string! RunId, string! NodeId, string! NodeKind, string? AgentId, string! Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, string? InputText, string? OutputText, int InputTokens, int OutputTokens, string? Error, System.Collections.Generic.IReadOnlyList<string!>? EdgesTaken) -> void
+Vais.Agents.Control.Http.NodeExecutionDto.Deconstruct(out string! RunId, out string! NodeId, out string! NodeKind, out string? AgentId, out string! Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out string? InputText, out string? OutputText, out int InputTokens, out int OutputTokens, out string? Error, out System.Collections.Generic.IReadOnlyList<string!>? EdgesTaken) -> void
+Vais.Agents.Control.Http.NodeExecutionDto.Equals(Vais.Agents.Control.Http.NodeExecutionDto? other) -> bool
+Vais.Agents.Control.Http.NodeExecutionDto.RunId.get -> string!
+Vais.Agents.Control.Http.NodeExecutionDto.RunId.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.NodeId.get -> string!
+Vais.Agents.Control.Http.NodeExecutionDto.NodeId.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.NodeKind.get -> string!
+Vais.Agents.Control.Http.NodeExecutionDto.NodeKind.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.AgentId.get -> string?
+Vais.Agents.Control.Http.NodeExecutionDto.AgentId.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.Status.get -> string!
+Vais.Agents.Control.Http.NodeExecutionDto.Status.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.NodeExecutionDto.StartedAt.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.EndedAt.get -> System.DateTimeOffset?
+Vais.Agents.Control.Http.NodeExecutionDto.EndedAt.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.DurationMs.get -> long?
+Vais.Agents.Control.Http.NodeExecutionDto.DurationMs.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.InputText.get -> string?
+Vais.Agents.Control.Http.NodeExecutionDto.InputText.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.OutputText.get -> string?
+Vais.Agents.Control.Http.NodeExecutionDto.OutputText.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.InputTokens.get -> int
+Vais.Agents.Control.Http.NodeExecutionDto.InputTokens.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.OutputTokens.get -> int
+Vais.Agents.Control.Http.NodeExecutionDto.OutputTokens.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.Error.get -> string?
+Vais.Agents.Control.Http.NodeExecutionDto.Error.init -> void
+Vais.Agents.Control.Http.NodeExecutionDto.EdgesTaken.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Http.NodeExecutionDto.EdgesTaken.init -> void
+override Vais.Agents.Control.Http.NodeExecutionDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.NodeExecutionDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.NodeExecutionDto.ToString() -> string!
+static Vais.Agents.Control.Http.NodeExecutionDto.operator !=(Vais.Agents.Control.Http.NodeExecutionDto? left, Vais.Agents.Control.Http.NodeExecutionDto? right) -> bool
+static Vais.Agents.Control.Http.NodeExecutionDto.operator ==(Vais.Agents.Control.Http.NodeExecutionDto? left, Vais.Agents.Control.Http.NodeExecutionDto? right) -> bool
+Vais.Agents.Control.Http.RunListResponse
+Vais.Agents.Control.Http.RunListResponse.<Clone>$() -> Vais.Agents.Control.Http.RunListResponse!
+Vais.Agents.Control.Http.RunListResponse.RunListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PipelineRunDto!>! Items) -> void
+Vais.Agents.Control.Http.RunListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PipelineRunDto!>! Items) -> void
+Vais.Agents.Control.Http.RunListResponse.Equals(Vais.Agents.Control.Http.RunListResponse? other) -> bool
+Vais.Agents.Control.Http.RunListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.PipelineRunDto!>!
+Vais.Agents.Control.Http.RunListResponse.Items.init -> void
+override Vais.Agents.Control.Http.RunListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.RunListResponse.operator !=(Vais.Agents.Control.Http.RunListResponse? left, Vais.Agents.Control.Http.RunListResponse? right) -> bool
+static Vais.Agents.Control.Http.RunListResponse.operator ==(Vais.Agents.Control.Http.RunListResponse? left, Vais.Agents.Control.Http.RunListResponse? right) -> bool

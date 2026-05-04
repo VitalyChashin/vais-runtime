@@ -86,3 +86,35 @@ export interface ValidateResult {
   valid: boolean
   errors?: string[]
 }
+
+export interface PipelineRun {
+  runId: string
+  graphId: string
+  status: string
+  startedAt: string
+  endedAt: string | null
+  durationMs: number | null
+  superSteps: number
+  error: string | null
+}
+
+export interface NodeExecution {
+  runId: string
+  nodeId: string
+  nodeKind: string
+  agentId: string | null
+  status: string
+  startedAt: string
+  endedAt: string | null
+  durationMs: number | null
+  inputText: string | null
+  outputText: string | null
+  inputTokens: number
+  outputTokens: number
+  error: string | null
+  edgesTaken: string[] | null
+}
+
+export interface RunListResponse {
+  items: PipelineRun[]
+}

@@ -19,8 +19,10 @@ using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Protocols.A2A;
+using Vais.Agents.Hosting.InMemory;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.OpenTelemetry;
+using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Persistence.Postgres;
 using Vais.Agents.Persistence.Redis;
 using Vais.Agents.Runtime.Instantiation;
@@ -36,7 +38,9 @@ using Vais.Agents.Gateways.McpGovernance;
 using Vais.Agents.Gateways.McpSecurity;
 using Vais.Agents.Gateways.McpReliability;
 using Vais.Agents.Gateways.McpCache;
+using System.Text.Json;
 using Vais.Agents.Gateways.McpTransformation;
+using Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -140,6 +144,11 @@ internal static class CompositionRoot
         //    which the co-hosted silo exposes into the same DI container.
         services.AddOrleansAgentRuntime();
         services.AddOrleansAgentEventBus();
+
+        // IAgentGraphEventBus — in-process fan-out bus shared by AgentGraphLifecycleManager
+        // (publishes events) and RunStoreSubscriber (persists them). Singleton so all components
+        // share the same instance.
+        services.AddSingleton<IAgentGraphEventBus, InMemoryAgentGraphEventBus>();
 
         // 3. v0.17 Pillar B — swap InMemory registry for Orleans-backed (survives pod roll),
         //    register the manifest translator + built-in model providers + built-in
@@ -275,7 +284,16 @@ internal static class CompositionRoot
                     var header = accessor?.HttpContext?.Request.Headers.Authorization.ToString();
                     return header?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
                         ? header[7..] : null;
-                });
+                },
+                graphEventBus: sp.GetService<IAgentGraphEventBus>(),
+                orchestratorFactory: (manifest, runId) =>
+                    new MafGraphOrchestrator<IDictionary<string, JsonElement>>(
+                        manifest,
+                        sp.GetRequiredService<IAgentRegistry>(),
+                        sp.GetRequiredService<IAgentLifecycleManager>(),
+                        runIdFactory: () => runId,
+                        checkpointer: sp.GetRequiredService<IGraphCheckpointer>(),
+                        graphEventBus: sp.GetService<IAgentGraphEventBus>()));
         });
 
         // v0.20 Gateway config lifecycle managers (GCF-17).
@@ -325,11 +343,19 @@ internal static class CompositionRoot
             });
         }
 
-        // 5. Optional observability. Off unless either the OTel endpoint env var or the
+        // 5. Optional run store — Postgres-backed graph run history. Off-by-default; set
+        //    VAIS_RUN_STORE_CONNECTION to an Npgsql connection string to enable. HTTP endpoints
+        //    return 503 when not configured. Schema is created on first run automatically.
+        if (!string.IsNullOrWhiteSpace(options.RunStoreConnection))
+        {
+            services.AddRunStore(o => o.ConnectionString = options.RunStoreConnection);
+        }
+
+        // 6. Optional observability. Off unless either the OTel endpoint env var or the
         //    console-exporter toggle is set; off-by-default keeps hello-world overhead zero.
         ConfigureObservability(services, options);
 
-        // 6. Optional OPA policy engine. Off-by-default → NullAgentPolicyEngine.Instance
+        // 7. Optional OPA policy engine. Off-by-default → NullAgentPolicyEngine.Instance
         //    (AllowAll) wins. AddOpaPolicyEngine uses TryAddSingleton<IAgentPolicyEngine>,
         //    so it only binds when no prior registration exists — the startup log records
         //    which engine is active so the default-open behaviour is never silent.
@@ -346,18 +372,18 @@ internal static class CompositionRoot
             });
         }
 
-        // 7. Health checks. Liveness (/healthz) maps to the default "catch-all" set; readiness
+        // 8. Health checks. Liveness (/healthz) maps to the default "catch-all" set; readiness
         //    (/readyz) filters on the "ready" tag and gates on the co-hosted silo reaching
         //    SiloStatus.Active. Probe tuning lives in the Helm chart (60s failure threshold).
         services.AddHealthChecks()
             .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"]);
 
-        // 8. Startup consistency check — walks every registered agent manifest and verifies
+        // 9. Startup consistency check — walks every registered agent manifest and verifies
         //    that Handler.TypeName entries resolve to a loaded plugin. Logs LogError (no throw)
         //    for misses so mis-deployed plugins surface at host start, not at first invocation.
         services.AddHostedService<PluginManifestConsistencyCheck>();
 
-        // 9. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
+        // 10. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
         //    any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.
         //    Set VAIS_CORS_ORIGINS=disabled to opt out even in localhost mode.
         var corsDisabled = string.Equals(options.CorsOrigins, "disabled", StringComparison.OrdinalIgnoreCase);

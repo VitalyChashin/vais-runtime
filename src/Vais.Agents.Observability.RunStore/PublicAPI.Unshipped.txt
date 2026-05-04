@@ -1,0 +1,94 @@
+#nullable enable
+Vais.Agents.Observability.RunStore.IRunStore
+Vais.Agents.Observability.RunStore.IRunStore.CompleteNodeAsync(string! runId, string! nodeId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.CompleteRunAsync(string! runId, int superSteps, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.DeleteRunsOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.FailRunAsync(string! runId, string! error, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.GetNodeAsync(string! runId, string! nodeId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Observability.RunStore.NodeExecution?>!
+Vais.Agents.Observability.RunStore.IRunStore.GetNodesAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunStore.NodeExecution!>!>!
+Vais.Agents.Observability.RunStore.IRunStore.GetRunAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Observability.RunStore.PipelineRun?>!
+Vais.Agents.Observability.RunStore.IRunStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.InterruptRunAsync(string! runId, string! interruptId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.ListRunsAsync(string! graphId, Vais.Agents.Observability.RunStore.RunStatus? status = null, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, int limit = 20, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunStore.PipelineRun!>!>!
+Vais.Agents.Observability.RunStore.IRunStore.RecordEdgeAsync(string! runId, string! fromNodeId, string! toNodeId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.RecordNodeInvocationAsync(string! runId, string! nodeId, string! agentId, string! inputText, string! outputText, int inputTokens, int outputTokens, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.StartNodeAsync(string! runId, string! nodeId, string! nodeKind, string? agentId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.IRunStore.StartRunAsync(string! runId, string! graphId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunStore.NodeExecution
+Vais.Agents.Observability.RunStore.NodeExecution.<Clone>$() -> Vais.Agents.Observability.RunStore.NodeExecution!
+Vais.Agents.Observability.RunStore.NodeExecution.AgentId.get -> string?
+Vais.Agents.Observability.RunStore.NodeExecution.AgentId.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.Deconstruct(out string! RunId, out string! NodeId, out string! NodeKind, out string? AgentId, out Vais.Agents.Observability.RunStore.RunStatus Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out string? InputText, out string? OutputText, out int InputTokens, out int OutputTokens, out string? Error, out System.Collections.Generic.IReadOnlyList<string!>? EdgesTaken) -> void
+Vais.Agents.Observability.RunStore.NodeExecution.DurationMs.get -> long?
+Vais.Agents.Observability.RunStore.NodeExecution.DurationMs.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.EdgesTaken.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Observability.RunStore.NodeExecution.EdgesTaken.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.EndedAt.get -> System.DateTimeOffset?
+Vais.Agents.Observability.RunStore.NodeExecution.EndedAt.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.Equals(Vais.Agents.Observability.RunStore.NodeExecution? other) -> bool
+Vais.Agents.Observability.RunStore.NodeExecution.Error.get -> string?
+Vais.Agents.Observability.RunStore.NodeExecution.Error.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.InputText.get -> string?
+Vais.Agents.Observability.RunStore.NodeExecution.InputText.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.InputTokens.get -> int
+Vais.Agents.Observability.RunStore.NodeExecution.InputTokens.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.NodeExecution(string! RunId, string! NodeId, string! NodeKind, string? AgentId, Vais.Agents.Observability.RunStore.RunStatus Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, string? InputText, string? OutputText, int InputTokens, int OutputTokens, string? Error, System.Collections.Generic.IReadOnlyList<string!>? EdgesTaken) -> void
+Vais.Agents.Observability.RunStore.NodeExecution.NodeId.get -> string!
+Vais.Agents.Observability.RunStore.NodeExecution.NodeId.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.NodeKind.get -> string!
+Vais.Agents.Observability.RunStore.NodeExecution.NodeKind.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.OutputText.get -> string?
+Vais.Agents.Observability.RunStore.NodeExecution.OutputText.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.OutputTokens.get -> int
+Vais.Agents.Observability.RunStore.NodeExecution.OutputTokens.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.RunId.get -> string!
+Vais.Agents.Observability.RunStore.NodeExecution.RunId.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Observability.RunStore.NodeExecution.StartedAt.init -> void
+Vais.Agents.Observability.RunStore.NodeExecution.Status.get -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.NodeExecution.Status.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun
+Vais.Agents.Observability.RunStore.PipelineRun.<Clone>$() -> Vais.Agents.Observability.RunStore.PipelineRun!
+Vais.Agents.Observability.RunStore.PipelineRun.Deconstruct(out string! RunId, out string! GraphId, out Vais.Agents.Observability.RunStore.RunStatus Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out int SuperSteps, out string? Error) -> void
+Vais.Agents.Observability.RunStore.PipelineRun.DurationMs.get -> long?
+Vais.Agents.Observability.RunStore.PipelineRun.DurationMs.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.EndedAt.get -> System.DateTimeOffset?
+Vais.Agents.Observability.RunStore.PipelineRun.EndedAt.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.Equals(Vais.Agents.Observability.RunStore.PipelineRun? other) -> bool
+Vais.Agents.Observability.RunStore.PipelineRun.Error.get -> string?
+Vais.Agents.Observability.RunStore.PipelineRun.Error.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.GraphId.get -> string!
+Vais.Agents.Observability.RunStore.PipelineRun.GraphId.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.PipelineRun(string! RunId, string! GraphId, Vais.Agents.Observability.RunStore.RunStatus Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, int SuperSteps, string? Error) -> void
+Vais.Agents.Observability.RunStore.PipelineRun.RunId.get -> string!
+Vais.Agents.Observability.RunStore.PipelineRun.RunId.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Observability.RunStore.PipelineRun.StartedAt.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.Status.get -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.PipelineRun.Status.init -> void
+Vais.Agents.Observability.RunStore.PipelineRun.SuperSteps.get -> int
+Vais.Agents.Observability.RunStore.PipelineRun.SuperSteps.init -> void
+Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.RunStatus.Completed = 1 -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.RunStatus.Failed = 2 -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.RunStatus.Interrupted = 3 -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.RunStatus.Running = 0 -> Vais.Agents.Observability.RunStore.RunStatus
+Vais.Agents.Observability.RunStore.RunStoreExtensions
+static Vais.Agents.Observability.RunStore.RunStoreExtensions.AddRunStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.RunStore.RunStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Observability.RunStore.RunStoreExtensions.AddRunStoreRedisStream(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.RunStore.RunStoreOptions
+Vais.Agents.Observability.RunStore.RunStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.RunStore.RunStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.RunStore.RunStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.RunStore.RunStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.RunStore.RunStoreOptions.RunStoreOptions() -> void
+override Vais.Agents.Observability.RunStore.NodeExecution.Equals(object? obj) -> bool
+override Vais.Agents.Observability.RunStore.NodeExecution.GetHashCode() -> int
+override Vais.Agents.Observability.RunStore.NodeExecution.ToString() -> string!
+override Vais.Agents.Observability.RunStore.PipelineRun.Equals(object? obj) -> bool
+override Vais.Agents.Observability.RunStore.PipelineRun.GetHashCode() -> int
+override Vais.Agents.Observability.RunStore.PipelineRun.ToString() -> string!
+static Vais.Agents.Observability.RunStore.NodeExecution.operator !=(Vais.Agents.Observability.RunStore.NodeExecution? left, Vais.Agents.Observability.RunStore.NodeExecution? right) -> bool
+static Vais.Agents.Observability.RunStore.NodeExecution.operator ==(Vais.Agents.Observability.RunStore.NodeExecution? left, Vais.Agents.Observability.RunStore.NodeExecution? right) -> bool
+static Vais.Agents.Observability.RunStore.PipelineRun.operator !=(Vais.Agents.Observability.RunStore.PipelineRun? left, Vais.Agents.Observability.RunStore.PipelineRun? right) -> bool
+static Vais.Agents.Observability.RunStore.PipelineRun.operator ==(Vais.Agents.Observability.RunStore.PipelineRun? left, Vais.Agents.Observability.RunStore.PipelineRun? right) -> bool

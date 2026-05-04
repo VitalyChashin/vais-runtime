@@ -43,4 +43,14 @@ public interface IResumableAgentGraph<TState>
         TState? resumePayload,
         AgentContext context,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Streaming variant of <see cref="ResumeAsync"/> — yields the full
+    /// <see cref="AgentGraphEvent"/> taxonomy starting with <see cref="GraphResumed"/>.
+    /// </summary>
+    IAsyncEnumerable<AgentGraphEvent> ResumeStreamAsync(
+        GraphCheckpoint checkpoint,
+        TState? resumePayload,
+        AgentContext context,
+        CancellationToken cancellationToken = default);
 }

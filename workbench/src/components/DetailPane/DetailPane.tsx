@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSelection } from '../../store/selectionStore'
 import { YamlTab } from './YamlTab'
 import { RefsTab } from './RefsTab'
+import { LogsTab } from './LogsTab'
 import { AgentTestPanel } from '../TestPane/AgentTestPanel'
 import { ProbeStub } from '../TestPane/ProbeStub'
 import { usePlugins } from '../../plugins/usePlugins'
@@ -42,6 +43,7 @@ export function DetailPane() {
     { key: 'yaml',  label: 'YAML',       isPlugin: false },
     { key: 'refs',  label: 'References', isPlugin: false },
     { key: 'test',  label: 'Test',       isPlugin: false },
+    ...(kind === 'graphs' ? [{ key: 'logs', label: 'Logs', isPlugin: false }] : []),
   ]
   const pluginTabs = matchingPlugins.map(p => ({
     key: `plugin:${p.tabLabel}`,
@@ -68,6 +70,7 @@ export function DetailPane() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         {tab === 'yaml' && <YamlTab kind={kind} id={id} />}
         {tab === 'refs' && <RefsTab kind={kind} id={id} />}
+        {tab === 'logs' && <LogsTab id={id} />}
         {tab === 'test' && (
           kind === 'agents' || kind === 'graphs'
             ? <AgentTestPanel kind={kind} id={id} />

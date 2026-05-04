@@ -42,7 +42,13 @@ export const createMcpServer = (c: VaisClient, body: unknown) => c.post<McpServe
 export const validateMcpServer = (c: VaisClient, body: unknown) => c.post<ValidateResult>('/v1/mcp-servers/validate', body)
 export const deleteMcpServer = (c: VaisClient, id: string) => c.delete(`/v1/mcp-servers/${id}`)
 
-import type { AnyManifest, ResourceKind } from './types'
+import type { AnyManifest, ResourceKind, RunListResponse, NodeExecution } from './types'
+
+export const listRuns = (c: VaisClient, graphId: string, limit = 20) =>
+  c.get<RunListResponse>(`/v1/graphs/${graphId}/runs?limit=${limit}`)
+
+export const getRunNodes = (c: VaisClient, graphId: string, runId: string) =>
+  c.get<NodeExecution[]>(`/v1/graphs/${graphId}/runs/${runId}/nodes`)
 
 export function getResource(c: VaisClient, kind: ResourceKind, id: string): Promise<AnyManifest> {
   switch (kind) {

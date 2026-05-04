@@ -116,6 +116,7 @@ public static class GraphStateReducers
                 reduced = spec switch
                 {
                     GraphStateReducer.LastWriteWins => value,
+                    GraphStateReducer.FirstWriteWins => existingPresent ? existing : value,
                     GraphStateReducer.Append => AppendMessages(existingPresent ? existing : default, value),
                     GraphStateReducer.HandlerRef hr when reducerResolver is not null =>
                         await reducerResolver(hr.Handler).ReduceAsync(

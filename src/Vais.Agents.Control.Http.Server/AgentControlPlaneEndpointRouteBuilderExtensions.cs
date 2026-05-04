@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
 
@@ -365,7 +366,126 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        // GET /graphs/{id}/runs — List historical runs
+        graphs.MapGet("/graphs/{id}/runs", GraphListRunsAsync)
+            .WithName("Graphs.ListRuns")
+            .WithSummary("List historical runs for a graph. Requires AddRunStore().")
+            .WithDescription("Query params: status (running|completed|failed|interrupted), since (ISO 8601), until (ISO 8601), limit (default 20). Returns 503 when the run store is not configured.")
+            .Produces<RunListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /graphs/{id}/runs/{runId} — Get single run
+        graphs.MapGet("/graphs/{id}/runs/{runId}", GraphGetRunAsync)
+            .WithName("Graphs.GetRun")
+            .WithSummary("Fetch metadata for a single graph run. Requires AddRunStore().")
+            .Produces<PipelineRunDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /graphs/{id}/runs/{runId}/nodes — List node executions for a run
+        graphs.MapGet("/graphs/{id}/runs/{runId}/nodes", GraphListRunNodesAsync)
+            .WithName("Graphs.ListRunNodes")
+            .WithSummary("List all node executions for a graph run. Requires AddRunStore().")
+            .Produces<IReadOnlyList<NodeExecutionDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /graphs/{id}/runs/{runId}/nodes/{nodeId} — Get single node execution
+        graphs.MapGet("/graphs/{id}/runs/{runId}/nodes/{nodeId}", GraphGetRunNodeAsync)
+            .WithName("Graphs.GetRunNode")
+            .WithSummary("Fetch a single node execution within a graph run. Requires AddRunStore().")
+            .Produces<NodeExecutionDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
+    }
+
+    private static IResult RunStoreNotConfigured() =>
+        Results.Problem(
+            title: "Run store not configured",
+            detail: "AddRunStore() was not called during startup. Historical run data is unavailable.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    private static PipelineRunDto ToRunDto(PipelineRun r) =>
+        new(r.RunId, r.GraphId, r.Status.ToString().ToLowerInvariant(),
+            r.StartedAt, r.EndedAt, r.DurationMs, r.SuperSteps, r.Error);
+
+    private static NodeExecutionDto ToNodeDto(NodeExecution n) =>
+        new(n.RunId, n.NodeId, n.NodeKind, n.AgentId, n.Status.ToString().ToLowerInvariant(),
+            n.StartedAt, n.EndedAt, n.DurationMs, n.InputText, n.OutputText,
+            n.InputTokens, n.OutputTokens, n.Error, n.EdgesTaken);
+
+    private static RunStatus? ParseRunStatusQuery(string? value) => value?.ToLowerInvariant() switch
+    {
+        "running" => RunStatus.Running,
+        "completed" => RunStatus.Completed,
+        "failed" => RunStatus.Failed,
+        "interrupted" => RunStatus.Interrupted,
+        _ => null,
+    };
+
+    private static async Task<IResult> GraphListRunsAsync(
+        string id,
+        HttpContext http,
+        string? status,
+        string? since,
+        string? until,
+        int limit = 20,
+        CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IRunStore>();
+        if (store is null) return RunStoreNotConfigured();
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
+
+        var runs = await store.ListRunsAsync(id, ParseRunStatusQuery(status), sinceDto, untilDto, limit, ct).ConfigureAwait(false);
+        return Results.Ok(new RunListResponse(runs.Select(ToRunDto).ToArray()));
+    }
+
+    private static async Task<IResult> GraphGetRunAsync(
+        string id,
+        string runId,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var store = http.RequestServices.GetService<IRunStore>();
+        if (store is null) return RunStoreNotConfigured();
+
+        var run = await store.GetRunAsync(runId, ct).ConfigureAwait(false);
+        if (run is null || !string.Equals(run.GraphId, id, StringComparison.Ordinal))
+            return Results.NotFound();
+
+        return Results.Ok(ToRunDto(run));
+    }
+
+    private static async Task<IResult> GraphListRunNodesAsync(
+        string id,
+        string runId,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var store = http.RequestServices.GetService<IRunStore>();
+        if (store is null) return RunStoreNotConfigured();
+
+        var nodes = await store.GetNodesAsync(runId, ct).ConfigureAwait(false);
+        return Results.Ok(nodes.Select(ToNodeDto).ToArray());
+    }
+
+    private static async Task<IResult> GraphGetRunNodeAsync(
+        string id,
+        string runId,
+        string nodeId,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var store = http.RequestServices.GetService<IRunStore>();
+        if (store is null) return RunStoreNotConfigured();
+
+        var node = await store.GetNodeAsync(runId, nodeId, ct).ConfigureAwait(false);
+        if (node is null) return Results.NotFound();
+
+        return Results.Ok(ToNodeDto(node));
     }
 
     private static IResult RuntimeListAsync(HttpContext http)

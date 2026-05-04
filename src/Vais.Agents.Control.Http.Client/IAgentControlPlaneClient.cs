@@ -191,6 +191,30 @@ public interface IAgentControlPlaneClient
     Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
         => Task.FromResult(new GraphValidationResult(Valid: true, Array.Empty<string>()));
 
+    // ── Run history (RS-8) ─────────────────────────────────────────────────
+
+    /// <summary>GET /v1/graphs/{id}/runs — list historical runs. Returns empty list when run store is not configured.</summary>
+    Task<RunListResponse> ListRunsAsync(
+        string graphId,
+        string? status = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new RunListResponse(Array.Empty<PipelineRunDto>()));
+
+    /// <summary>GET /v1/graphs/{id}/runs/{runId} — fetch a single run. Returns null on 404 or when run store is not configured.</summary>
+    Task<PipelineRunDto?> GetRunAsync(string graphId, string runId, CancellationToken cancellationToken = default)
+        => Task.FromResult((PipelineRunDto?)null);
+
+    /// <summary>GET /v1/graphs/{id}/runs/{runId}/nodes — list node executions. Returns empty list when run store is not configured.</summary>
+    Task<IReadOnlyList<NodeExecutionDto>> GetRunNodesAsync(string graphId, string runId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<NodeExecutionDto>>(Array.Empty<NodeExecutionDto>());
+
+    /// <summary>GET /v1/graphs/{id}/runs/{runId}/nodes/{nodeId} — fetch a single node execution. Returns null on 404 or when run store is not configured.</summary>
+    Task<NodeExecutionDto?> GetRunNodeAsync(string graphId, string runId, string nodeId, CancellationToken cancellationToken = default)
+        => Task.FromResult((NodeExecutionDto?)null);
+
     // ── Runtime topology (v0.34) ────────────────────────────────────────────
 
     /// <summary>

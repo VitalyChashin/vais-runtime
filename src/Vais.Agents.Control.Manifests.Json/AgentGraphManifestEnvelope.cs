@@ -199,6 +199,7 @@ public static class AgentGraphManifestEnvelope
         return reducer switch
         {
             GraphStateReducer.LastWriteWins => (JsonNode)"lastWriteWins",
+            GraphStateReducer.FirstWriteWins => (JsonNode)"firstWriteWins",
             GraphStateReducer.Append => (JsonNode)"append",
             GraphStateReducer.HandlerRef hr => new JsonObject { ["handlerRef"] = SerializeHandlerRef(hr.Handler) },
             _ => throw new NotSupportedException($"Unknown reducer subtype '{reducer.GetType().Name}'."),

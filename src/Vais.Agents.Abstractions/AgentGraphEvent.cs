@@ -46,6 +46,24 @@ public sealed record NodeStarted(
     string NodeKind)
     : AgentGraphEvent(At, Context, RunId, SuperStep);
 
+/// <summary>
+/// Emitted by an agent-kind node after the agent invocation completes. Carries the
+/// text passed to the agent and the text it returned. Both fields are truncated to
+/// 8 KB at the emission site; full text is available via the run-store API.
+/// </summary>
+public sealed record NodeAgentInvoked(
+    DateTimeOffset At,
+    AgentContext Context,
+    string RunId,
+    int SuperStep,
+    string NodeId,
+    string AgentId,
+    string InputText,
+    string OutputText,
+    int InputTokens,
+    int OutputTokens)
+    : AgentGraphEvent(At, Context, RunId, SuperStep);
+
 /// <summary>Emitted after a node executes successfully, before outgoing edges are evaluated.</summary>
 public sealed record NodeCompleted(
     DateTimeOffset At,

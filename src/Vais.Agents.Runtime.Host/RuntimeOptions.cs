@@ -107,6 +107,14 @@ internal sealed record RuntimeOptions
     /// </summary>
     public string? CorsOrigins { get; init; }
 
+    /// <summary>
+    /// Postgres connection string for the run store (<see cref="Vais.Agents.Observability.RunStore.IRunStore"/>).
+    /// When set, graph run history is persisted and exposed via the control-plane REST surface.
+    /// Null ⇒ run store disabled (HTTP endpoints return 503).
+    /// Set via <c>VAIS_RUN_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? RunStoreConnection { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -131,6 +139,7 @@ internal sealed record RuntimeOptions
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
+            RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
         };
 
         static string? Env(string name)
