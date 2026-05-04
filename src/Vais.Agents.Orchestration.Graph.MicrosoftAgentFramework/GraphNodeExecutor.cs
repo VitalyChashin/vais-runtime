@@ -215,19 +215,24 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         // the executor drives delivery via SendMessageAsync (one per branch).
         if (_isForkSource)
         {
-            var forkOutgoing = baseOutgoing with { SuperStep = message.SuperStep + 1, SourceNodeId = _node.Id };
+            var forkBase = baseOutgoing with { SuperStep = message.SuperStep + 1, SourceNodeId = _node.Id };
             foreach (var edge in _manifest.Edges.Where(e =>
                 e.Concurrent && string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
             {
+                // Each branch gets its own state copy — branches mutate state independently.
+                var branchMsg = forkBase with
+                {
+                    State = new Dictionary<string, JsonElement>(forkBase.State, StringComparer.Ordinal),
+                };
                 await context.AddEventAsync(new EdgeTraversedEvent(edge.From, edge.To)).ConfigureAwait(false);
-                await context.SendMessageAsync(forkOutgoing, edge.To, cancellationToken).ConfigureAwait(false);
+                await context.SendMessageAsync(branchMsg, edge.To, cancellationToken).ConfigureAwait(false);
             }
             return;
         }
 
         GraphEdge? matchedEdge = null;
         foreach (var edge in _manifest.Edges.Where(e =>
-            !e.Concurrent && string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
+            string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
         {
             var matches = await GraphPredicateEvaluator.EvaluateAsync(
                 edge.When, AsReadOnly(state), _predicateResolver, cancellationToken).ConfigureAwait(false);
