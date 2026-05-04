@@ -832,6 +832,64 @@ public sealed class MafGraphOrchestratorTests
         finalState.Should().ContainKey("hitl.response");
     }
 
+    // ---- FO-7c / FO-7d: fan-out / fan-in ----
+
+    [Fact]
+    public void Build_ConcurrentManifest_DoesNotThrowAndHasCorrectEntry()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = BuildTwoBranchManifest();
+
+        // Build must succeed and expose the correct entry / name.
+        var workflow = MafGraphBuilder.Build(manifest, registry, lifecycle);
+
+        workflow.StartExecutorId.Should().Be("planner");
+        workflow.Name.Should().Be("concurrent-research");
+
+        // Helper classification mirrors the topology built above.
+        MafGraphBuilder.IsForkSource("planner", manifest).Should().BeTrue(
+            "planner has concurrent outgoing edges");
+        MafGraphBuilder.IsJoinTarget("synthesizer", manifest).Should().BeTrue(
+            "synthesizer has 2 concurrent incoming edges");
+        MafGraphBuilder.IsForkSource("end", manifest).Should().BeFalse(
+            "End node has no outgoing edges");
+    }
+
+    [Fact]
+    public async Task FanOut_FanIn_BothBranchOutputsMergedInFinalState()
+    {
+        // All agents return a combined JSON; each node's output binding filters the
+        // relevant key so planner writes nothing (no binding), researcher writes
+        // research_findings, analyst writes analysis, synthesizer writes synthesis.
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse(
+            """{"research_findings":"found","analysis":"analyzed","synthesis":"done"}"""));
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var manifest = BuildTwoBranchManifest();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            events.Add(e);
+
+        events.OfType<NodeStarted>().Select(ns => ns.NodeId).Should().Contain("researcher",
+            "researcher branch must run");
+        events.OfType<NodeStarted>().Select(ns => ns.NodeId).Should().Contain("analyst",
+            "analyst branch must run");
+        events.OfType<GraphCompleted>().Should().ContainSingle();
+
+        var completed = events.OfType<GraphCompleted>().Single();
+        completed.FinalState.Should().NotBeNull();
+        completed.FinalState!.Should().ContainKey("research_findings",
+            "researcher branch output must reach final state");
+        completed.FinalState!.Should().ContainKey("analysis",
+            "analyst branch output must reach final state");
+        completed.FinalState!.Should().ContainKey("synthesis",
+            "synthesizer output must be present after join");
+    }
+
     // ---- helpers ----
 
     private static AgentGraphManifest BuildHandoffGraph() => new(
@@ -855,6 +913,31 @@ public sealed class MafGraphOrchestratorTests
             new GraphEdge("billing", "end"),
             new GraphEdge("sales", "end"),
         });
+
+    private static AgentGraphManifest BuildTwoBranchManifest() => new(
+        Id: "concurrent-research", Version: "1.0", Entry: "planner",
+        Nodes: new[]
+        {
+            new GraphNode("planner",     "Agent", Ref: new GraphAgentRef("planner-agent")),
+            new GraphNode("researcher",  "Agent", Ref: new GraphAgentRef("researcher-agent"),
+                StateBindings: new GraphStateBindings(Output: new[] { "research_findings" })),
+            new GraphNode("analyst",     "Agent", Ref: new GraphAgentRef("analyst-agent"),
+                StateBindings: new GraphStateBindings(Output: new[] { "analysis" })),
+            new GraphNode("synthesizer", "Agent", Ref: new GraphAgentRef("synthesizer-agent"),
+                StateBindings: new GraphStateBindings(
+                    Input: new[] { "research_findings", "analysis" },
+                    Output: new[] { "synthesis" })),
+            new GraphNode("end", "End"),
+        },
+        Edges: new[]
+        {
+            new GraphEdge("planner",     "researcher",  Concurrent: true),
+            new GraphEdge("planner",     "analyst",     Concurrent: true),
+            new GraphEdge("researcher",  "synthesizer", Concurrent: true),
+            new GraphEdge("analyst",     "synthesizer", Concurrent: true),
+            new GraphEdge("synthesizer", "end"),
+        })
+    { MaxSteps = 50 };
 
     private static AgentGraphManifest BuildRetrievalLoop() => new(
         Id: "reflective-qa", Version: "1.0", Entry: "retrieve",

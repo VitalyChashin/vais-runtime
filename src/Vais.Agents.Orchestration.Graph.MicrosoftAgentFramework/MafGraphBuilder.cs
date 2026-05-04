@@ -72,7 +72,25 @@ public static class MafGraphBuilder
             executors[node.Id] = new GraphNodeExecutor(
                 node, manifest, registry, lifecycle,
                 predicateResolver, effectResolver, codeNodeResolver,
-                reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer);
+                reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                isForkSource: IsForkSource(node.Id, manifest));
+        }
+
+        // FO-3c: replace join-node entries with GraphJoinNodeExecutor so the accumulator
+        // collects state from all branches before delegating to the base executor body.
+        foreach (var group in manifest.Edges
+            .Where(e => e.Concurrent)
+            .GroupBy(e => e.To, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1))
+        {
+            var joinNode = manifest.Nodes.FirstOrDefault(n =>
+                string.Equals(n.Id, group.Key, StringComparison.Ordinal));
+            if (joinNode is null) continue;
+            executors[group.Key] = new GraphJoinNodeExecutor(
+                joinNode, manifest, registry, lifecycle,
+                predicateResolver, effectResolver, codeNodeResolver,
+                reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                incomingBranchCount: group.Count());
         }
 
         var effectiveStart = startNodeId ?? manifest.Entry;
@@ -85,10 +103,9 @@ public static class MafGraphBuilder
             .WithName(manifest.Id)
             .WithDescription(manifest.Description ?? $"Vais agent graph '{manifest.Id}' v{manifest.Version}.");
 
-        // Declare edges structurally — routing is handled inside the executor
-        // (see GraphNodeExecutor.HandleAsync). MAF needs the edges declared for
-        // validation + visualisation; the actual conditional logic is ours.
-        foreach (var edge in manifest.Edges)
+        // Non-concurrent edges: structural AddEdge. Routing is evaluated inside
+        // GraphNodeExecutor.HandleAsync (async predicates can't use MAF's conditional-edge API).
+        foreach (var edge in manifest.Edges.Where(e => !e.Concurrent))
         {
             if (!executors.TryGetValue(edge.From, out var fromExec) ||
                 !executors.TryGetValue(edge.To, out var toExec))
@@ -98,6 +115,43 @@ public static class MafGraphBuilder
             builder.AddEdge(
                 ExecutorBindingExtensions.BindExecutor(fromExec),
                 ExecutorBindingExtensions.BindExecutor(toExec));
+        }
+
+        // Fan-out: one AddFanOutEdge per fork source — MAF dispatches to all targets concurrently.
+        var fanOutGroups = manifest.Edges
+            .Where(e => e.Concurrent)
+            .GroupBy(e => e.From, StringComparer.Ordinal);
+        foreach (var group in fanOutGroups)
+        {
+            if (!executors.TryGetValue(group.Key, out var fromExec)) continue;
+            var targetBindings = new List<ExecutorBinding>();
+            foreach (var e in group)
+            {
+                if (executors.TryGetValue(e.To, out var t))
+                    targetBindings.Add(ExecutorBindingExtensions.BindExecutor(t));
+            }
+            if (targetBindings.Count == 0) continue;
+            builder.AddFanOutEdge(ExecutorBindingExtensions.BindExecutor(fromExec), [.. targetBindings]);
+        }
+
+        // Fan-in: one AddFanInBarrierEdge per join target (2+ concurrent incoming).
+        // GraphJoinNodeExecutor accumulates state across the N separate HandleAsync calls
+        // that MAF issues (one per branch) before delegating to the node body.
+        var fanInGroups = manifest.Edges
+            .Where(e => e.Concurrent)
+            .GroupBy(e => e.To, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1);
+        foreach (var group in fanInGroups)
+        {
+            if (!executors.TryGetValue(group.Key, out var sinkExec)) continue;
+            var sourceBindings = new List<ExecutorBinding>();
+            foreach (var e in group)
+            {
+                if (executors.TryGetValue(e.From, out var s))
+                    sourceBindings.Add(ExecutorBindingExtensions.BindExecutor(s));
+            }
+            if (sourceBindings.Count == 0) continue;
+            builder.AddFanInBarrierEdge([.. sourceBindings], ExecutorBindingExtensions.BindExecutor(sinkExec));
         }
 
         // Mark End + Interrupt nodes as output executors — MAF's MaterializeResponseAsync
@@ -234,4 +288,10 @@ public static class MafGraphBuilder
 
         return new MafGraphBuildResult(builder.Build(validateOrphans: false), portIdToNodeId);
     }
+
+    internal static bool IsForkSource(string nodeId, AgentGraphManifest manifest) =>
+        manifest.Edges.Any(e => string.Equals(e.From, nodeId, StringComparison.Ordinal) && e.Concurrent);
+
+    internal static bool IsJoinTarget(string nodeId, AgentGraphManifest manifest) =>
+        manifest.Edges.Count(e => string.Equals(e.To, nodeId, StringComparison.Ordinal) && e.Concurrent) > 1;
 }

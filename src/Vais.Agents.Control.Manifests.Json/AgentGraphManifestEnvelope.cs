@@ -117,6 +117,7 @@ public static class AgentGraphManifestEnvelope
             };
             if (edge.When is not null) obj["when"] = SerializePredicate(edge.When);
             if (edge.OnTraverse is not null) obj["onTraverse"] = SerializeEffect(edge.OnTraverse);
+            if (edge.Concurrent) obj["concurrent"] = true;
             arr.Add(obj);
         }
         return arr;

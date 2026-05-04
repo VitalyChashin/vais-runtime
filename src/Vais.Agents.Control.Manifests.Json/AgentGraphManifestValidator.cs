@@ -26,6 +26,9 @@ namespace Vais.Agents.Control.Manifests;
 ///   <item><description>Cycles are permitted only when a <see cref="AgentGraphManifest.MaxSteps"/> guard is set.</description></item>
 ///   <item><description><see cref="GraphStateBindings"/> input/output keys must be declared in <c>spec.state.schema.properties</c> when a schema is present (well-known runtime keys <c>messages</c> and <c>lastAssistantText</c> are always exempt).</description></item>
 ///   <item><description><see cref="AgentGraphManifest.StateReducers"/> keys must be declared in <c>spec.state.schema.properties</c> when a schema is present.</description></item>
+///   <item><description>A node with any <see cref="GraphEdge.Concurrent"/> outgoing edge must use <c>concurrent: true</c> on all its outgoing edges — mixing routing and fan-out on one node is ambiguous.</description></item>
+///   <item><description>Concurrent branches from the same fork source must declare non-overlapping <c>stateBindings.output</c> keys to avoid non-deterministic state merges at the join (well-known keys <c>messages</c> and <c>lastAssistantText</c> are exempt).</description></item>
+///   <item><description>A node that is both a join target (2+ concurrent incoming edges) and a fork source (concurrent outgoing edges) is rejected — nested fan-out is not supported.</description></item>
 /// </list>
 /// </remarks>
 public static class AgentGraphManifestValidator
@@ -105,6 +108,7 @@ public static class AgentGraphManifestValidator
 
         ValidateStateBindings(manifest, errors, prefix);
         ValidateStateReducers(manifest, errors, prefix);
+        ValidateConcurrentEdges(manifest, nodeById, errors, prefix);
     }
 
     /// <summary>
@@ -271,6 +275,77 @@ public static class AgentGraphManifestValidator
             default:
                 errors.Add($"{prefix}node '{node.Id}' has unknown kind '{node.Kind}' (expected Agent | Code | Interrupt | End)");
                 break;
+        }
+    }
+
+    private static void ValidateConcurrentEdges(
+        AgentGraphManifest manifest,
+        Dictionary<string, GraphNode> nodeById,
+        List<string> errors,
+        string prefix)
+    {
+        var concurrentEdges = manifest.Edges.Where(e => e.Concurrent).ToList();
+        if (concurrentEdges.Count == 0) return;
+
+        // Rule 1: a node with any concurrent edge must not also have non-concurrent edges.
+        var concurrentSources = new HashSet<string>(
+            concurrentEdges.Select(e => e.From), StringComparer.Ordinal);
+        foreach (var edge in manifest.Edges)
+        {
+            if (!edge.Concurrent && concurrentSources.Contains(edge.From))
+            {
+                errors.Add($"{prefix}node '{edge.From}' has both concurrent and non-concurrent outgoing edges — " +
+                    "a fork node must use concurrent edges exclusively");
+                concurrentSources.Remove(edge.From); // report once per node
+            }
+        }
+
+        // Rule 2: non-overlapping output bindings across branches from the same fork source.
+        var fanOutGroups = concurrentEdges.GroupBy(e => e.From);
+        foreach (var group in fanOutGroups)
+        {
+            var branchIds = group.Select(e => e.To).ToList();
+            if (branchIds.Count < 2) continue;
+            var seenOutputKeys = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var branchId in branchIds)
+            {
+                if (!nodeById.TryGetValue(branchId, out var branchNode)) continue;
+                var outputKeys = branchNode.StateBindings?.Output ?? Array.Empty<string>();
+                foreach (var key in outputKeys)
+                {
+                    if (WellKnownStateKeys.Contains(key)) continue;
+                    if (seenOutputKeys.TryGetValue(key, out var firstBranch))
+                    {
+                        errors.Add($"{prefix}concurrent branches '{firstBranch}' and '{branchId}' " +
+                            $"both declare stateBindings.output key '{key}' — output bindings must be " +
+                            "non-overlapping across concurrent branches to avoid non-deterministic state merges");
+                    }
+                    else
+                    {
+                        seenOutputKeys[key] = branchId;
+                    }
+                }
+            }
+        }
+
+        // Rule 3: a join target (2+ concurrent incoming edges) must not also be a fork source.
+        var joinTargets = new HashSet<string>(
+            concurrentEdges.GroupBy(e => e.To)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key),
+            StringComparer.Ordinal);
+        var forkSources = new HashSet<string>(
+            concurrentEdges.GroupBy(e => e.From)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key),
+            StringComparer.Ordinal);
+        foreach (var target in joinTargets)
+        {
+            if (forkSources.Contains(target))
+            {
+                errors.Add($"{prefix}node '{target}' is both a join target and a fork source — " +
+                    "nested fan-out is not supported");
+            }
         }
     }
 

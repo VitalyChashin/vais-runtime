@@ -132,8 +132,16 @@ public sealed record GraphStateBindings(
 /// <param name="To">Target node id.</param>
 /// <param name="When">Predicate. Null means always-true.</param>
 /// <param name="OnTraverse">Side-effect applied to graph state when the edge is taken.</param>
+/// <param name="Concurrent">
+/// When <see langword="true"/>, this edge participates in a fan-out / fan-in topology.
+/// All concurrent edges from the same source node fire in parallel; all concurrent edges
+/// pointing to the same target node form a barrier join (the target waits for all sources).
+/// Requires <c>MafGraphOrchestrator</c>; silently ignored by
+/// <c>InProcessGraphOrchestrator</c>, which is sequential-only.
+/// </param>
 public sealed record GraphEdge(
     string From,
     string To,
     GraphEdgePredicate? When = null,
-    GraphEdgeEffect? OnTraverse = null);
+    GraphEdgeEffect? OnTraverse = null,
+    bool Concurrent = false);

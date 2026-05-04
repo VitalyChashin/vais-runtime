@@ -431,11 +431,9 @@ Vais.Agents.GraphCompleted.FinalNodeId.init -> void
 Vais.Agents.GraphCompleted.GraphCompleted(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! FinalNodeId, System.TimeSpan Duration, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? FinalState = null) -> void
 Vais.Agents.GraphEdge
 Vais.Agents.GraphEdge.<Clone>$() -> Vais.Agents.GraphEdge!
-Vais.Agents.GraphEdge.Deconstruct(out string! From, out string! To, out Vais.Agents.GraphEdgePredicate? When, out Vais.Agents.GraphEdgeEffect? OnTraverse) -> void
 Vais.Agents.GraphEdge.Equals(Vais.Agents.GraphEdge? other) -> bool
 Vais.Agents.GraphEdge.From.get -> string!
 Vais.Agents.GraphEdge.From.init -> void
-Vais.Agents.GraphEdge.GraphEdge(string! From, string! To, Vais.Agents.GraphEdgePredicate? When = null, Vais.Agents.GraphEdgeEffect? OnTraverse = null) -> void
 Vais.Agents.GraphEdge.OnTraverse.get -> Vais.Agents.GraphEdgeEffect?
 Vais.Agents.GraphEdge.OnTraverse.init -> void
 Vais.Agents.GraphEdge.To.get -> string!

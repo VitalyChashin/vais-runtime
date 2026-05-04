@@ -403,7 +403,9 @@ public sealed class JsonAgentGraphManifestLoader
                 onTraverse = ParseEffect(otEl, errors, itemPrefix + "onTraverse ");
             }
 
-            list.Add(new GraphEdge(from!, to!, when, onTraverse));
+            var concurrent = item.TryGetProperty("concurrent", out var cEl) &&
+                             cEl.ValueKind == JsonValueKind.True;
+            list.Add(new GraphEdge(from!, to!, when, onTraverse, concurrent));
             index++;
         }
         return list;

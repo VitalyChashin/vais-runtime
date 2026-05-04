@@ -25,7 +25,7 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 /// </remarks>
 [SendsMessage(typeof(GraphMessage))]
 [YieldsOutput(typeof(GraphMessage))]
-internal sealed class GraphNodeExecutor : Executor<GraphMessage>
+internal class GraphNodeExecutor : Executor<GraphMessage>
 {
     private readonly GraphNode _node;
     private readonly AgentGraphManifest _manifest;
@@ -42,6 +42,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
     private readonly IGraphCheckpointer? _checkpointer;
 
     private readonly string? _hitlPortId;
+    private readonly bool _isForkSource;
 
     public GraphNodeExecutor(
         GraphNode node,
@@ -58,7 +59,8 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         string? bearerToken = null,
         IGraphCheckpointer? checkpointer = null,
         string? executorId = null,
-        string? hitlPortId = null)
+        string? hitlPortId = null,
+        bool isForkSource = false)
         : base(id: executorId ?? node.Id)
     {
         _node = node;
@@ -75,6 +77,7 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         _bearerToken = bearerToken;
         _checkpointer = checkpointer;
         _hitlPortId = hitlPortId;
+        _isForkSource = isForkSource;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -207,8 +210,24 @@ internal sealed class GraphNodeExecutor : Executor<GraphMessage>
         // Clear ResumeFromNodeId on all outgoing messages so downstream executors run normally.
         var baseOutgoing = skipBody ? message with { ResumeFromNodeId = null } : message;
 
+        // Fork nodes: dispatch explicitly to every concurrent target and return.
+        // AddFanOutEdge declares the topology for MAF visualisation and barrier tracking;
+        // the executor drives delivery via SendMessageAsync (one per branch).
+        if (_isForkSource)
+        {
+            var forkOutgoing = baseOutgoing with { SuperStep = message.SuperStep + 1, SourceNodeId = _node.Id };
+            foreach (var edge in _manifest.Edges.Where(e =>
+                e.Concurrent && string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
+            {
+                await context.AddEventAsync(new EdgeTraversedEvent(edge.From, edge.To)).ConfigureAwait(false);
+                await context.SendMessageAsync(forkOutgoing, edge.To, cancellationToken).ConfigureAwait(false);
+            }
+            return;
+        }
+
         GraphEdge? matchedEdge = null;
-        foreach (var edge in _manifest.Edges.Where(e => string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
+        foreach (var edge in _manifest.Edges.Where(e =>
+            !e.Concurrent && string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
         {
             var matches = await GraphPredicateEvaluator.EvaluateAsync(
                 edge.When, AsReadOnly(state), _predicateResolver, cancellationToken).ConfigureAwait(false);

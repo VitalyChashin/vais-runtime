@@ -34,15 +34,23 @@ namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 /// outgoing edges — identical semantics to <c>InProcessGraphOrchestrator.ResumeAsync</c>.
 /// </para>
 /// <para>
-/// <b>Remaining gaps as of v0.36:</b>
+/// <b>Fan-out / fan-in.</b> Manifest edges with <c>concurrent: true</c> are projected
+/// onto MAF's <c>AddFanOutEdge</c> / <c>AddFanInBarrierEdge</c> topology by
+/// <see cref="MafGraphBuilder.Build"/>. Fork executors yield without routing;
+/// MAF infrastructure dispatches to all branch targets. Join nodes use
+/// <c>GraphJoinNodeExecutor</c> to accumulate branch state before executing the node body.
+/// <see cref="InProcessGraphOrchestrator"/> does not support fan-out — graphs with
+/// concurrent edges must use this orchestrator.
 /// </para>
-/// <list type="bullet">
-///   <item><description>MAF-native conditional edges (<c>AddEdge&lt;T&gt;(source, target, condition)</c>) — unused; all routing happens inside the executor.</description></item>
-///   <item><description>RequestPort-based HITL — not used; interrupt nodes halt via <c>IWorkflowContext.RequestHaltAsync</c> + emit a <see cref="GraphInterrupted"/> event instead.</description></item>
-/// </list>
 /// <para>
-/// Consumers who want MAF's richer Workflow features (fan-out/fan-in, sub-workflows,
-/// typed source-generated handlers, native conditional edges) can call
+/// <b>Notes:</b> MAF-native conditional edges (<c>AddEdge&lt;T&gt;(source, target, condition)</c>)
+/// are unused; all routing happens inside the executor. RequestPort-based HITL is not
+/// used; interrupt nodes halt via <c>IWorkflowContext.RequestHaltAsync</c> and emit a
+/// <see cref="GraphInterrupted"/> event instead.
+/// </para>
+/// <para>
+/// Consumers who want MAF's richer Workflow features (sub-workflows, typed
+/// source-generated handlers, native conditional edges) can call
 /// <see cref="MafGraphBuilder.Build"/> directly to get the <see cref="Workflow"/>
 /// and use <c>InProcessExecution</c> themselves — the adapter is thin by design.
 /// </para>
@@ -343,7 +351,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
 
             var completedEvt = new GraphCompleted(
                 DateTimeOffset.UtcNow, context, runId, superStep,
-                finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed);
+                finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
+                FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
             await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
             yield return completedEvt;
         }
@@ -448,7 +457,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             if (!interrupted)
             {
                 var completedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
-                    finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed);
+                    finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
+                    FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
                 await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
                 yield return completedEvt;
             }
