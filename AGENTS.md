@@ -138,6 +138,11 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 
 `TreatWarningsAsErrors=true` is on. A warning breaks the build. Do not suppress — fix.
 
+**Bug fixes in library code must be covered by tests.**
+- If you fix a bug in `src/`, write or extend a test that would have caught it.
+- Sample code (`samples/`) is exempt — samples demonstrate features, not correctness.
+- If a test is genuinely impossible (e.g., requires real external services with no seam for injection), document why in the commit or PR description.
+
 ---
 
 ## Running the runtime locally

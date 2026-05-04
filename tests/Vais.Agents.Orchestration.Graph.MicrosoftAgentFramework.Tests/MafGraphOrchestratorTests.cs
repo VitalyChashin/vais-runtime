@@ -890,6 +890,71 @@ public sealed class MafGraphOrchestratorTests
             "synthesizer output must be present after join");
     }
 
+    [Fact]
+    public async Task FanOut_BranchNodesRouteForwardToJoinTarget()
+    {
+        // Regression for the !e.Concurrent filter bug: branch nodes (researcher,
+        // analyst) have only concurrent outgoing edges. Before the fix, the filter
+        // excluded those edges so matchedEdge was null → RequestHaltAsync, killing
+        // the workflow before both branches could complete.
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse(
+            """{"research_findings":"found","analysis":"analyzed","synthesis":"done"}"""));
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var manifest = BuildTwoBranchManifest();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            events.Add(e);
+
+        var traversed = events.OfType<EdgeTraversed>().Select(e => (e.From, e.To)).ToList();
+        traversed.Should().Contain(("researcher", "synthesizer"),
+            "researcher branch must route forward to synthesizer, not halt");
+        traversed.Should().Contain(("analyst", "synthesizer"),
+            "analyst branch must route forward to synthesizer, not halt");
+    }
+
+    [Fact]
+    public async Task FanOut_BranchesReceiveIsolatedStateCopies()
+    {
+        // Regression for the shared-state-dict bug: both branches referenced the
+        // same State dict. Whichever branch ran first appended its output to
+        // messages; the sibling received that text as its user_message via
+        // BuildAgentInputText instead of seeing planner's output.
+        var callCount = 0;
+        var inputs = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+        var (registry, lifecycle) = BuildHarness(req =>
+        {
+            inputs.Add(req.History.LastOrDefault()?.Text ?? "");
+            var n = Interlocked.Increment(ref callCount);
+            // call 1 = planner; branches get a distinct response so we can detect
+            // if any branch received another branch's output as its input
+            return n == 1
+                ? new CompletionResponse("planner-text")
+                : new CompletionResponse("branch-text");
+        });
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var manifest = BuildTwoBranchManifest();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        // With isolated state each branch independently sees "planner-text" (the
+        // last message planner wrote) as its user_message. With shared state the
+        // second branch would instead see "branch-text" (the first branch's output
+        // appended to the shared messages list), so the count drops to 1.
+        inputs.Count(t => t == "planner-text").Should().Be(2,
+            "both branches must receive planner's output as input, not each other's");
+    }
+
     // ---- helpers ----
 
     private static AgentGraphManifest BuildHandoffGraph() => new(
