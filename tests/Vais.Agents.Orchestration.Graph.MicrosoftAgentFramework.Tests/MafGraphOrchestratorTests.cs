@@ -1089,6 +1089,45 @@ public sealed class MafGraphOrchestratorTests
     }
 
     [Fact]
+    public async Task FanIn_JoinNode_ReceivesStructuredInput_WhenAgentsReturnPlainText()
+    {
+        // Production regression: planner / researcher / analyst all return plain text.
+        // Before the fix, TryParseJsonObject failed so research_findings and analysis
+        // were never written to state, and the synthesizer only saw [query].
+        // Fix: plain-text output maps to the first declared output key.
+        var callCount = 0;
+        string? synthesizerInput = null;
+
+        var (registry, lifecycle) = BuildHarness(req =>
+        {
+            var n = Interlocked.Increment(ref callCount);
+            if (n == 1) return new CompletionResponse("planner-output");     // planner (plain text)
+            if (n <= 3) return n % 2 == 0                                    // researcher / analyst
+                ? new CompletionResponse("researcher findings here")
+                : new CompletionResponse("analyst conclusions here");
+            synthesizerInput = req.History.LastOrDefault()?.Text ?? "";      // synthesizer (n=4)
+            return new CompletionResponse("final-report");
+        });
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var orchestrator = new MafGraphOrchestrator(BuildTwoBranchManifest(), registry, lifecycle);
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        synthesizerInput.Should().NotBeNull();
+        synthesizerInput.Should().Contain("[research_findings]",
+            "output binding must map plain-text researcher response to research_findings key");
+        synthesizerInput.Should().Contain("[analysis]",
+            "output binding must map plain-text analyst response to analysis key");
+        // Exactly one of the two branch values must appear (order is concurrent/nondeterministic)
+        var hasFindings = synthesizerInput!.Contains("researcher findings here")
+            || synthesizerInput.Contains("analyst conclusions here");
+        hasFindings.Should().BeTrue("synthesizer input must contain at least one branch's plain-text output");
+    }
+
+    [Fact]
     public async Task FanIn_JoinNode_ReceivesStructuredInputFromAllBranches()
     {
         // Regression: BuildAgentInputText returned only the last arriving branch's message

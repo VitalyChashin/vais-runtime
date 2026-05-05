@@ -365,11 +365,18 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, outputText));
         updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
-        if (_node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(outputText, out var parsed))
+        if (_node.StateBindings?.Output is { Count: > 0 } outKeys)
         {
-            foreach (var prop in parsed.EnumerateObject())
+            if (TryParseJsonObject(outputText, out var parsed))
             {
-                updates[prop.Name] = prop.Value;
+                foreach (var prop in parsed.EnumerateObject())
+                    updates[prop.Name] = prop.Value;
+            }
+            else if (!string.IsNullOrEmpty(outputText))
+            {
+                // Plain text response: map to the first declared output key so downstream
+                // nodes can find the output via their input binding rather than only via messages.
+                updates[outKeys[0]] = JsonSerializer.SerializeToElement(outputText);
             }
         }
         return updates;
@@ -389,6 +396,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             if (dataKeyCount >= 2)
             {
                 var sb = new StringBuilder();
+                var hasDataContent = false;
                 foreach (var key in inputKeys)
                 {
                     if (key == GraphStateReducers.WellKnownKey.Messages) continue;
@@ -396,8 +404,11 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
                     var v = el.ValueKind == JsonValueKind.String ? el.GetString() : el.GetRawText();
                     if (string.IsNullOrEmpty(v)) continue;
                     sb.Append('[').Append(key).AppendLine("]").AppendLine(v).AppendLine();
+                    if (key != "query") hasDataContent = true;
                 }
-                if (sb.Length > 0) return sb.ToString().TrimEnd();
+                // Only use structured text if at least one non-query data key was found.
+                // If agents haven't written their output keys yet, fall through to messages.
+                if (hasDataContent) return sb.ToString().TrimEnd();
             }
         }
 

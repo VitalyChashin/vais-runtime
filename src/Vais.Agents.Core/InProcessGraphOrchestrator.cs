@@ -625,13 +625,18 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text ?? string.Empty));
             updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
-            // If the reply text parses as JSON object and the node has an output binding,
-            // merge the parsed shape into state.
-            if (node.StateBindings?.Output is { Count: > 0 } && TryParseJsonObject(result.Text ?? string.Empty, out var parsed))
+            // Project output binding: prefer structured JSON extraction; fall back to mapping
+            // the entire reply text to the first declared output key for plain-text agents.
+            if (node.StateBindings?.Output is { Count: > 0 } outKeys)
             {
-                foreach (var prop in parsed.EnumerateObject())
+                if (TryParseJsonObject(result.Text ?? string.Empty, out var parsed))
                 {
-                    updates[prop.Name] = prop.Value;
+                    foreach (var prop in parsed.EnumerateObject())
+                        updates[prop.Name] = prop.Value;
+                }
+                else if (!string.IsNullOrEmpty(result.Text))
+                {
+                    updates[outKeys[0]] = JsonSerializer.SerializeToElement(result.Text);
                 }
             }
             return updates;
@@ -673,6 +678,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             if (dataKeyCount >= 2)
             {
                 var sb = new StringBuilder();
+                var hasDataContent = false;
                 foreach (var key in inputKeys)
                 {
                     if (key == GraphStateReducers.WellKnownKey.Messages) continue;
@@ -680,8 +686,11 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     var v = el.ValueKind == JsonValueKind.String ? el.GetString() : el.GetRawText();
                     if (string.IsNullOrEmpty(v)) continue;
                     sb.Append('[').Append(key).AppendLine("]").AppendLine(v).AppendLine();
+                    if (key != "query") hasDataContent = true;
                 }
-                if (sb.Length > 0) return sb.ToString().TrimEnd();
+                // Only use structured text if at least one non-query data key was found.
+                // If agents haven't written their output keys yet, fall through to messages.
+                if (hasDataContent) return sb.ToString().TrimEnd();
             }
         }
 
