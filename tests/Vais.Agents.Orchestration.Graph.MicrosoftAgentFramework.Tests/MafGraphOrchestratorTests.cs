@@ -1088,6 +1088,49 @@ public sealed class MafGraphOrchestratorTests
             "branches with explicit input bindings must still receive planner output via messages, not fall back to query");
     }
 
+    [Fact]
+    public async Task FanIn_JoinNode_ReceivesStructuredInputFromAllBranches()
+    {
+        // Regression: BuildAgentInputText returned only the last arriving branch's message
+        // for join nodes, so the synthesizer received analyst output but not research_findings
+        // (or vice versa). With the fix it builds [key]\nvalue\n sections for all bound keys
+        // when the binding declares 2+ non-messages, non-query data keys.
+        var callCount = 0;
+        string? synthesizerInput = null;
+
+        var (registry, lifecycle) = BuildHarness(req =>
+        {
+            var n = Interlocked.Increment(ref callCount);
+            if (n == 1)
+                return new CompletionResponse("planner-output");
+            if (n <= 3)
+                // researcher / analyst — each returns JSON with both output keys;
+                // FilterByOutputBinding ensures only the node's declared key reaches state
+                return new CompletionResponse(
+                    """{"research_findings":"rf-value","analysis":"an-value"}""");
+            // n == 4: synthesizer (always last — join waits for both branches)
+            synthesizerInput = req.History.LastOrDefault()?.Text ?? "";
+            return new CompletionResponse("final-report");
+        });
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var orchestrator = new MafGraphOrchestrator(BuildTwoBranchManifest(), registry, lifecycle);
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        synthesizerInput.Should().NotBeNull("synthesizer must be called");
+        synthesizerInput.Should().Contain("rf-value",
+            "synthesizer must receive research_findings from researcher branch");
+        synthesizerInput.Should().Contain("an-value",
+            "synthesizer must receive analysis from analyst branch");
+        synthesizerInput.Should().Contain("[research_findings]",
+            "structured input must label each section with the binding key");
+        synthesizerInput.Should().Contain("[analysis]",
+            "structured input must label each section with the binding key");
+    }
+
     // ---- MP-4: remote invoker / bearer token / lifecycle manager warning ----
 
     [Fact]

@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
 using Vais.Agents.Core;
@@ -178,7 +179,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             IReadOnlyDictionary<string, JsonElement> nodeOutput;
             if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
             {
-                var prompt = BuildAgentInputText(FilterByInputBinding(state, _node.StateBindings));
+                var prompt = BuildAgentInputText(FilterByInputBinding(state, _node.StateBindings), _node.StateBindings);
                 nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
                 nodeOutput = await ExecuteAgentNodeAsync(state, context, cancellationToken).ConfigureAwait(false);
                 if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
@@ -299,7 +300,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         }
 
         var filteredInput = FilterByInputBinding(state, _node.StateBindings);
-        var text = BuildAgentInputText(filteredInput);
+        var text = BuildAgentInputText(filteredInput, _node.StateBindings);
         var metadata = BuildMetadata(filteredInput, _node.StateBindings);
         AgentInvocationResult result;
 
@@ -374,9 +375,33 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         return updates;
     }
 
-    private static string BuildAgentInputText(IReadOnlyDictionary<string, JsonElement> state)
+    private static string BuildAgentInputText(
+        IReadOnlyDictionary<string, JsonElement> state,
+        GraphStateBindings? bindings = null)
     {
-        // Same fallback chain as InProcessGraphOrchestrator.
+        // Fan-in nodes (e.g. synthesizer) declare 2+ data keys in their input binding.
+        // Build structured text from all bound keys so the agent receives the combined
+        // output of all branches, not just the last arriving message.
+        if (bindings?.Input is { Count: > 0 } inputKeys)
+        {
+            var dataKeyCount = inputKeys.Count(k =>
+                k != GraphStateReducers.WellKnownKey.Messages && k != "query");
+            if (dataKeyCount >= 2)
+            {
+                var sb = new StringBuilder();
+                foreach (var key in inputKeys)
+                {
+                    if (key == GraphStateReducers.WellKnownKey.Messages) continue;
+                    if (!state.TryGetValue(key, out var el)) continue;
+                    var v = el.ValueKind == JsonValueKind.String ? el.GetString() : el.GetRawText();
+                    if (string.IsNullOrEmpty(v)) continue;
+                    sb.Append('[').Append(key).AppendLine("]").AppendLine(v).AppendLine();
+                }
+                if (sb.Length > 0) return sb.ToString().TrimEnd();
+            }
+        }
+
+        // Fallback: last message → query key → placeholder.
         if (state.TryGetValue(GraphStateReducers.WellKnownKey.Messages, out var messages) &&
             messages.ValueKind == JsonValueKind.Array && messages.GetArrayLength() > 0)
         {

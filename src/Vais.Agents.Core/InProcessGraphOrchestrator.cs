@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 
 namespace Vais.Agents.Core;
@@ -662,8 +663,29 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         IReadOnlyDictionary<string, JsonElement> state,
         GraphStateBindings? bindings)
     {
-        // Resolve order: last message in `messages` → `query` state key → placeholder.
-        // Richer templating (input-binding interpolation into a prompt) is post-v0.9.
+        // Fan-in nodes (e.g. synthesizer) declare 2+ data keys in their input binding.
+        // Build structured text from all bound keys so the agent receives the combined
+        // output of all branches, not just the last arriving message.
+        if (bindings?.Input is { Count: > 0 } inputKeys)
+        {
+            var dataKeyCount = inputKeys.Count(k =>
+                k != GraphStateReducers.WellKnownKey.Messages && k != "query");
+            if (dataKeyCount >= 2)
+            {
+                var sb = new StringBuilder();
+                foreach (var key in inputKeys)
+                {
+                    if (key == GraphStateReducers.WellKnownKey.Messages) continue;
+                    if (!state.TryGetValue(key, out var el)) continue;
+                    var v = el.ValueKind == JsonValueKind.String ? el.GetString() : el.GetRawText();
+                    if (string.IsNullOrEmpty(v)) continue;
+                    sb.Append('[').Append(key).AppendLine("]").AppendLine(v).AppendLine();
+                }
+                if (sb.Length > 0) return sb.ToString().TrimEnd();
+            }
+        }
+
+        // Fallback: last message → query key → placeholder.
         if (state.TryGetValue(GraphStateReducers.WellKnownKey.Messages, out var messages) &&
             messages.ValueKind == JsonValueKind.Array && messages.GetArrayLength() > 0)
         {
@@ -672,20 +694,14 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 (last.TryGetProperty("Text", out var textProp) || last.TryGetProperty("text", out textProp)))
             {
                 var text = textProp.GetString();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    return text;
-                }
+                if (!string.IsNullOrEmpty(text)) return text;
             }
         }
 
         if (state.TryGetValue("query", out var query) && query.ValueKind == JsonValueKind.String)
         {
             var qtext = query.GetString();
-            if (!string.IsNullOrEmpty(qtext))
-            {
-                return qtext;
-            }
+            if (!string.IsNullOrEmpty(qtext)) return qtext;
         }
 
         return DefaultAgentInputText;
