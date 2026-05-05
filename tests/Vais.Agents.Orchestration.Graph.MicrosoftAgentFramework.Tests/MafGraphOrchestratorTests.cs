@@ -4,6 +4,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Core;
@@ -1025,6 +1026,86 @@ public sealed class MafGraphOrchestratorTests
             "both branches must receive planner's output as input, not each other's");
     }
 
+    // ---- MP-4: remote invoker / bearer token / lifecycle manager warning ----
+
+    [Fact]
+    public async Task MafGraphOrchestrator_RuntimeUrlNode_ForwardsToRemoteInvoker()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var stub = new StubRemoteInvoker();
+        var orchestrator = new MafGraphOrchestrator(
+            BuildRuntimeUrlManifest(), registry, lifecycle, remoteInvoker: stub);
+
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        stub.Calls.Should().ContainSingle()
+            .Which.Url.Should().Be("https://runtime-b.test");
+    }
+
+    [Fact]
+    public async Task MafGraphOrchestrator_BearerToken_PassedToRemoteInvoker()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var stub = new StubRemoteInvoker();
+        var orchestrator = new MafGraphOrchestrator(
+            BuildRuntimeUrlManifest(), registry, lifecycle,
+            remoteInvoker: stub, bearerToken: "test-bearer");
+
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        { }
+
+        stub.Calls.Should().ContainSingle()
+            .Which.Bearer.Should().Be("test-bearer");
+    }
+
+    [Fact]
+    public async Task AgentGraphLifecycleManager_OrchestratorFactory_MafOrchestrator_RunsConcurrentBranches()
+    {
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse(
+            """{"research_findings":"found","analysis":"analyzed","synthesis":"done"}"""));
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var graphRegistry = new InMemoryAgentGraphRegistry();
+        var manager = new AgentGraphLifecycleManager(
+            graphRegistry, registry, lifecycle, new InMemoryCheckpointer(),
+            orchestratorFactory: (manifest, runId) =>
+                new MafGraphOrchestrator(manifest, registry, lifecycle, runIdFactory: () => runId));
+
+        var handle = await manager.CreateAsync(BuildTwoBranchManifest());
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in manager.InvokeStreamAsync(handle, new GraphInvocationRequest(new Dictionary<string, JsonElement>())))
+            events.Add(e);
+
+        events.OfType<NodeStarted>().Select(n => n.NodeId).Should().Contain("researcher",
+            "MAF factory must run concurrent researcher branch");
+        events.OfType<NodeStarted>().Select(n => n.NodeId).Should().Contain("analyst",
+            "MAF factory must run concurrent analyst branch");
+    }
+
+    [Fact]
+    public async Task AgentGraphLifecycleManager_ConcurrentEdges_WithoutFactory_EmitsWarning()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        await lifecycle.CreateAsync(ManifestFor("a-agent"));
+        var graphRegistry = new InMemoryAgentGraphRegistry();
+        var logger = new CapturingLogger<AgentGraphLifecycleManager>();
+        var manager = new AgentGraphLifecycleManager(
+            graphRegistry, registry, lifecycle, new InMemoryCheckpointer(), logger: logger);
+
+        var manifest = new AgentGraphManifest(
+            Id: "warn-test", Version: "1.0", Entry: "a",
+            Nodes: new[] { new GraphNode("a", "Agent", Ref: new GraphAgentRef("a-agent")), new GraphNode("end", "End") },
+            Edges: new[] { new GraphEdge("a", "end", Concurrent: true) });
+
+        var handle = await manager.CreateAsync(manifest);
+        await manager.InvokeAsync(handle, new GraphInvocationRequest(new Dictionary<string, JsonElement>()));
+
+        logger.Messages.Should().Contain(m => m.Contains("concurrent"),
+            "InProcessGraphOrchestrator fallback must warn when concurrent edges are present");
+    }
+
     // ---- helpers ----
 
     private static AgentGraphManifest BuildHandoffGraph() => new(
@@ -1191,5 +1272,45 @@ public sealed class MafGraphOrchestratorTests
         public string ProviderName => "Fake";
         public Task<CompletionResponse> CompleteAsync(CompletionRequest request, CancellationToken cancellationToken = default)
             => Task.FromResult(_respond(request));
+    }
+
+    private static AgentGraphManifest BuildRuntimeUrlManifest() => new(
+        Id: "remote-graph", Version: "1.0", Entry: "step",
+        Nodes: new[]
+        {
+            new GraphNode("step", "Agent", Ref: new GraphAgentRef("remote-agent", "1.0", RuntimeUrl: "https://runtime-b.test")),
+            new GraphNode("end", "End"),
+        },
+        Edges: new[] { new GraphEdge("step", "end") });
+
+    private sealed class StubRemoteInvoker : IAgentRemoteInvoker
+    {
+        public List<(string Url, string? Bearer)> Calls { get; } = new();
+
+        public ValueTask<AgentInvocationResult> InvokeAsync(
+            string runtimeUrl, AgentHandle handle, AgentInvocationRequest request,
+            string? bearerToken, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((runtimeUrl, bearerToken));
+            return ValueTask.FromResult(new AgentInvocationResult("remote-reply"));
+        }
+
+        public IAsyncEnumerable<AgentEvent> StreamAsync(
+            string runtimeUrl, AgentHandle handle, AgentInvocationRequest request,
+            string? bearerToken, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        private readonly List<string> _messages = new();
+        public IReadOnlyList<string> Messages => _messages;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => _messages.Add(formatter(state, exception));
     }
 }

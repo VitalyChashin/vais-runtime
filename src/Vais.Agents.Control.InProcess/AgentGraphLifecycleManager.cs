@@ -486,6 +486,14 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         if (_orchestratorFactory is not null)
             return _orchestratorFactory(effectiveManifest, runId);
 
+        if (effectiveManifest.Edges.Any(e => e.Concurrent))
+            _logger.LogWarning(
+                "Graph '{GraphId}' has concurrent edges but no orchestratorFactory is configured. " +
+                "InProcessGraphOrchestrator does not support fan-out — concurrent branches execute " +
+                "sequentially and only the last branch's state is merged. Wire MafGraphOrchestrator " +
+                "via the orchestratorFactory parameter to enable concurrent execution.",
+                effectiveManifest.Id);
+
         return new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
             effectiveManifest,
             _agentRegistry,

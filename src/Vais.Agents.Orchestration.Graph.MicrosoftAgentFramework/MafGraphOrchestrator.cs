@@ -67,6 +67,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly Func<string>? _runIdFactory;
     private readonly IGraphCheckpointer? _checkpointer;
     private readonly IAgentGraphEventBus _graphEventBus;
+    private readonly IAgentRemoteInvoker? _remoteInvoker;
+    private readonly IA2AGraphNodeInvoker? _a2aInvoker;
+    private readonly string? _bearerToken;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -88,6 +91,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// (compatible with v0.9 callers that do not need durable resume).
     /// </param>
     /// <param name="graphEventBus">Bus to fan out graph lifecycle events to. Null uses <see cref="NullAgentGraphEventBus"/>.</param>
+    /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes (<see cref="GraphAgentRef.RuntimeUrl"/>). Null means runtime-url nodes throw at runtime.</param>
+    /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes (<see cref="GraphAgentRef.A2AUrl"/>). Null means A2A-url nodes throw at runtime.</param>
+    /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -98,7 +104,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
         IGraphCheckpointer? checkpointer = null,
-        IAgentGraphEventBus? graphEventBus = null)
+        IAgentGraphEventBus? graphEventBus = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
+        string? bearerToken = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -113,6 +122,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _runIdFactory = runIdFactory;
         _checkpointer = checkpointer;
         _graphEventBus = graphEventBus ?? NullAgentGraphEventBus.Instance;
+        _remoteInvoker = remoteInvoker;
+        _a2aInvoker = a2aInvoker;
+        _bearerToken = bearerToken;
     }
 
     /// <inheritdoc />
@@ -247,6 +259,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             _manifest, _registry, _lifecycle,
             _predicateResolver, _effectResolver, _codeNodeResolver,
             reducerResolver: _reducerResolver,
+            remoteInvoker: _remoteInvoker,
+            a2aInvoker: _a2aInvoker,
+            bearerToken: _bearerToken,
             checkpointer: _checkpointer);
         var workflow = buildResult.Workflow;
         var portIdToNodeId = buildResult.PortIdToNodeId;
@@ -397,6 +412,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             _effectResolver,
             _codeNodeResolver,
             reducerResolver: _reducerResolver,
+            remoteInvoker: _remoteInvoker,
+            a2aInvoker: _a2aInvoker,
+            bearerToken: _bearerToken,
             startNodeId: resumeFromNodeId,
             checkpointer: _checkpointer);
 
@@ -585,8 +603,11 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         Func<GraphHandlerRef, IGraphStateReducer>? reducerResolver = null,
         Func<string>? runIdFactory = null,
         IGraphCheckpointer? checkpointer = null,
-        IAgentGraphEventBus? graphEventBus = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus)
+        IAgentGraphEventBus? graphEventBus = null,
+        IAgentRemoteInvoker? remoteInvoker = null,
+        IA2AGraphNodeInvoker? a2aInvoker = null,
+        string? bearerToken = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken)
     {
     }
 }

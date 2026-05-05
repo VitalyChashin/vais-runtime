@@ -307,7 +307,12 @@ internal static class CompositionRoot
                         sp.GetRequiredService<IAgentLifecycleManager>(),
                         runIdFactory: () => runId,
                         checkpointer: sp.GetRequiredService<IGraphCheckpointer>(),
-                        graphEventBus: sp.GetService<IAgentGraphEventBus>()));
+                        graphEventBus: sp.GetService<IAgentGraphEventBus>(),
+                        remoteInvoker: sp.GetService<IAgentRemoteInvoker>(),
+                        a2aInvoker: sp.GetService<IA2AGraphNodeInvoker>(),
+                        bearerToken: accessor?.HttpContext?.Request.Headers.Authorization.ToString() is string authHeader
+                            && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                            ? authHeader[7..] : null));
         });
 
         // v0.20 Gateway config lifecycle managers (GCF-17).
