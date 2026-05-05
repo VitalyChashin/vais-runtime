@@ -1,0 +1,48 @@
+#nullable enable
+override Vais.Agents.Observability.McpEventStore.McpEvent.Equals(object? obj) -> bool
+override Vais.Agents.Observability.McpEventStore.McpEvent.GetHashCode() -> int
+override Vais.Agents.Observability.McpEventStore.McpEvent.ToString() -> string!
+static Vais.Agents.Observability.McpEventStore.McpEvent.operator !=(Vais.Agents.Observability.McpEventStore.McpEvent? left, Vais.Agents.Observability.McpEventStore.McpEvent? right) -> bool
+static Vais.Agents.Observability.McpEventStore.McpEvent.operator ==(Vais.Agents.Observability.McpEventStore.McpEvent? left, Vais.Agents.Observability.McpEventStore.McpEvent? right) -> bool
+static Vais.Agents.Observability.McpEventStore.McpEventStoreExtensions.AddMcpEventStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.McpEventStore.McpEventStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.McpEventStore.IMcpEventStore
+Vais.Agents.Observability.McpEventStore.IMcpEventStore.DeleteOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpEventStore.IMcpEventStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpEventStore.IMcpEventStore.ListAsync(string! serverId, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, string? toolName = null, string? kind = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.McpEventStore.McpEvent!>!>!
+Vais.Agents.Observability.McpEventStore.IMcpEventStore.RecordAsync(Vais.Agents.Observability.McpEventStore.McpEvent! evt, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpEventStore.McpEvent
+Vais.Agents.Observability.McpEventStore.McpEvent.<Clone>$() -> Vais.Agents.Observability.McpEventStore.McpEvent!
+Vais.Agents.Observability.McpEventStore.McpEvent.At.get -> System.DateTimeOffset
+Vais.Agents.Observability.McpEventStore.McpEvent.At.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.BlockedReason.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.BlockedReason.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.CacheHit.get -> bool
+Vais.Agents.Observability.McpEventStore.McpEvent.CacheHit.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.CorrelationId.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.CorrelationId.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.Deconstruct(out string! EventId, out string! ServerId, out string! ToolName, out string! EventKind, out long? DurationMs, out bool CacheHit, out string? BlockedReason, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId) -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.DurationMs.get -> long?
+Vais.Agents.Observability.McpEventStore.McpEvent.DurationMs.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.Equals(Vais.Agents.Observability.McpEventStore.McpEvent? other) -> bool
+Vais.Agents.Observability.McpEventStore.McpEvent.ErrorType.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.ErrorType.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.EventId.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEvent.EventId.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.EventKind.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEvent.EventKind.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.McpEvent(string! EventId, string! ServerId, string! ToolName, string! EventKind, long? DurationMs, bool CacheHit, string? BlockedReason, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId) -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.RunId.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.RunId.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.ServerId.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEvent.ServerId.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.ToolName.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEvent.ToolName.init -> void
+Vais.Agents.Observability.McpEventStore.McpEventStoreExtensions
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.McpEventStoreOptions() -> void
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.ServerId.get -> string!
+Vais.Agents.Observability.McpEventStore.McpEventStoreOptions.ServerId.set -> void

@@ -282,6 +282,39 @@ internal sealed class PostgresRunStore : IRunStore
         return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadNodeExecution(reader) : null;
     }
 
+    public async Task<IReadOnlyList<NodeExecution>> ListNodeExecutionsByAgentAsync(string agentId,
+        DateTimeOffset? since = null, DateTimeOffset? until = null, int limit = 20,
+        CancellationToken ct = default)
+    {
+        await using var conn = await OpenAsync(ct).ConfigureAwait(false);
+        await using var cmd = conn.CreateCommand();
+
+        var conditions = new List<string> { "agent_id = $1" };
+        var paramIdx = 2;
+        if (since.HasValue) conditions.Add($"started_at >= ${paramIdx++}");
+        if (until.HasValue) conditions.Add($"started_at <= ${paramIdx++}");
+
+        cmd.CommandText = $"""
+            SELECT run_id, node_id, node_kind, agent_id, status, started_at, ended_at,
+                   duration_ms, input_text, output_text, input_tokens, output_tokens, error, edges_taken
+            FROM vais_graph_run_nodes
+            WHERE {string.Join(" AND ", conditions)}
+            ORDER BY started_at DESC
+            LIMIT ${paramIdx}
+            """;
+
+        cmd.Parameters.AddWithValue(agentId);
+        if (since.HasValue) cmd.Parameters.AddWithValue(since.Value);
+        if (until.HasValue) cmd.Parameters.AddWithValue(until.Value);
+        cmd.Parameters.AddWithValue(limit);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        var result = new List<NodeExecution>();
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+            result.Add(ReadNodeExecution(reader));
+        return result;
+    }
+
     private async ValueTask<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
         var conn = new NpgsqlConnection(_connectionString);

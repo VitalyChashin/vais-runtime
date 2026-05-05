@@ -1,0 +1,50 @@
+#nullable enable
+override Vais.Agents.Observability.GatewayEventStore.GatewayEvent.Equals(object? obj) -> bool
+override Vais.Agents.Observability.GatewayEventStore.GatewayEvent.GetHashCode() -> int
+override Vais.Agents.Observability.GatewayEventStore.GatewayEvent.ToString() -> string!
+static Vais.Agents.Observability.GatewayEventStore.GatewayEvent.operator !=(Vais.Agents.Observability.GatewayEventStore.GatewayEvent? left, Vais.Agents.Observability.GatewayEventStore.GatewayEvent? right) -> bool
+static Vais.Agents.Observability.GatewayEventStore.GatewayEvent.operator ==(Vais.Agents.Observability.GatewayEventStore.GatewayEvent? left, Vais.Agents.Observability.GatewayEventStore.GatewayEvent? right) -> bool
+static Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreExtensions.AddGatewayEventStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.<Clone>$() -> Vais.Agents.Observability.GatewayEventStore.GatewayEvent!
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.At.get -> System.DateTimeOffset
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.At.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.CacheHit.get -> bool?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.CacheHit.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.CorrelationId.get -> string?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.CorrelationId.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.Deconstruct(out string! EventId, out string! GatewayId, out string! EventKind, out string? ModelId, out int InputTokens, out int OutputTokens, out long? DurationMs, out bool? CacheHit, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId) -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.DurationMs.get -> long?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.DurationMs.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.Equals(Vais.Agents.Observability.GatewayEventStore.GatewayEvent? other) -> bool
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.ErrorType.get -> string?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.ErrorType.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.EventId.get -> string!
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.EventId.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.EventKind.get -> string!
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.EventKind.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.GatewayEvent(string! EventId, string! GatewayId, string! EventKind, string? ModelId, int InputTokens, int OutputTokens, long? DurationMs, bool? CacheHit, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId) -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.GatewayId.get -> string!
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.GatewayId.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.InputTokens.get -> int
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.InputTokens.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.ModelId.get -> string?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.ModelId.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.OutputTokens.get -> int
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.OutputTokens.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.RunId.get -> string?
+Vais.Agents.Observability.GatewayEventStore.GatewayEvent.RunId.init -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreExtensions
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.GatewayId.get -> string!
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.GatewayId.set -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.GatewayEventStoreOptions() -> void
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.GatewayEventStore.GatewayEventStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore
+Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore.DeleteOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore.ListAsync(string! gatewayId, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, string? kind = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.GatewayEventStore.GatewayEvent!>!>!
+Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore.RecordAsync(Vais.Agents.Observability.GatewayEventStore.GatewayEvent! evt, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

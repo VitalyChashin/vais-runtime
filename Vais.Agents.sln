@@ -173,6 +173,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Core.PowerFx", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Core.PowerFx.Tests", "tests\Vais.Agents.Core.PowerFx.Tests\Vais.Agents.Core.PowerFx.Tests.csproj", "{D594D543-0E12-488E-95AD-B7FC78B0315D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Observability.AgentRunStore", "src\Vais.Agents.Observability.AgentRunStore\Vais.Agents.Observability.AgentRunStore.csproj", "{B6C9F764-96E9-4D97-89C3-001D7929FD0F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Observability.GatewayEventStore", "src\Vais.Agents.Observability.GatewayEventStore\Vais.Agents.Observability.GatewayEventStore.csproj", "{CD721A7D-1FF1-412F-B1FF-5F854DF37A36}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Observability.McpEventStore", "src\Vais.Agents.Observability.McpEventStore\Vais.Agents.Observability.McpEventStore.csproj", "{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -514,6 +520,18 @@ Global
 		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6C9F764-96E9-4D97-89C3-001D7929FD0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6C9F764-96E9-4D97-89C3-001D7929FD0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6C9F764-96E9-4D97-89C3-001D7929FD0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6C9F764-96E9-4D97-89C3-001D7929FD0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD721A7D-1FF1-412F-B1FF-5F854DF37A36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD721A7D-1FF1-412F-B1FF-5F854DF37A36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD721A7D-1FF1-412F-B1FF-5F854DF37A36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD721A7D-1FF1-412F-B1FF-5F854DF37A36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -599,5 +617,8 @@ Global
 		{62809FF5-9580-4ED8-A3F4-E5D84C4CF029} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{0F56679D-9A92-40C1-8F20-B782793CE094} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{D594D543-0E12-488E-95AD-B7FC78B0315D} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{B6C9F764-96E9-4D97-89C3-001D7929FD0F} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{CD721A7D-1FF1-412F-B1FF-5F854DF37A36} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{05F7CCAF-C050-4D7A-967B-AAB6A1A406B4} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 	EndGlobalSection
 EndGlobal

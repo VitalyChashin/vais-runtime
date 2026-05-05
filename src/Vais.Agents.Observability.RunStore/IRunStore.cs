@@ -55,4 +55,9 @@ public interface IRunStore
 
     /// <summary>Returns a single node execution, or <see langword="null"/> if not found.</summary>
     Task<NodeExecution?> GetNodeAsync(string runId, string nodeId, CancellationToken ct = default);
+
+    /// <summary>Returns node executions for a specific agent across all graph runs, ordered by start time descending.</summary>
+    Task<IReadOnlyList<NodeExecution>> ListNodeExecutionsByAgentAsync(string agentId,
+        DateTimeOffset? since = null, DateTimeOffset? until = null, int limit = 20,
+        CancellationToken ct = default);
 }

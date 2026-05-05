@@ -127,6 +127,46 @@ internal sealed record RuntimeOptions
     public string? RunStoreConnection { get; init; }
 
     /// <summary>
+    /// Postgres connection string for the agent run store. When set, standalone agent invocations
+    /// are persisted and exposed via <c>GET /v1/agents/{id}/runs</c>.
+    /// Null ⇒ store disabled (endpoint returns 503).
+    /// Set via <c>VAIS_AGENT_RUN_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? AgentRunStoreConnection { get; init; }
+
+    /// <summary>
+    /// Postgres connection string for the gateway event store. When set, LLM completion events
+    /// are persisted and exposed via <c>GET /v1/llm-gateways/{id}/events</c>.
+    /// Null ⇒ store disabled (endpoint returns 503).
+    /// Set via <c>VAIS_GATEWAY_EVENT_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? GatewayEventStoreConnection { get; init; }
+
+    /// <summary>
+    /// Gateway ID written into every <c>GatewayEvent</c> row. Must match the manifest
+    /// <c>metadata.id</c> of the LLM gateway so the Workbench Events tab returns data.
+    /// Defaults to <c>default</c> when unset.
+    /// Set via <c>VAIS_GATEWAY_ID</c>.
+    /// </summary>
+    public string? GatewayId { get; init; }
+
+    /// <summary>
+    /// Postgres connection string for the MCP event store. When set, MCP tool-call events
+    /// are persisted and exposed via <c>GET /v1/mcp-servers/{id}/events</c>.
+    /// Null ⇒ store disabled (endpoint returns 503).
+    /// Set via <c>VAIS_MCP_EVENT_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? McpEventStoreConnection { get; init; }
+
+    /// <summary>
+    /// MCP server ID written into every <c>McpEvent</c> row. Must match the manifest
+    /// <c>metadata.id</c> of the MCP server so the Workbench Tool Logs tab returns data.
+    /// Defaults to <c>default</c> when unset.
+    /// Set via <c>VAIS_MCP_SERVER_ID</c>.
+    /// </summary>
+    public string? McpServerId { get; init; }
+
+    /// <summary>
     /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <see cref="AiAgentGrain.StorageName"/>
     /// (the store used by every agent, registry, checkpoint, idempotency, and session grain).
     /// <see cref="LocalhostPersistenceMode.Postgres"/> makes API-deployed agents and graphs survive
@@ -181,6 +221,11 @@ internal sealed record RuntimeOptions
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
+            AgentRunStoreConnection = Env("VAIS_AGENT_RUN_STORE_CONNECTION"),
+            GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),
+            GatewayId = Env("VAIS_GATEWAY_ID"),
+            McpEventStoreConnection = Env("VAIS_MCP_EVENT_STORE_CONNECTION"),
+            McpServerId = Env("VAIS_MCP_SERVER_ID"),
             BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
             LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
             LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),

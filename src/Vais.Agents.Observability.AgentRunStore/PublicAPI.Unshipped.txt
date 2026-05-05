@@ -1,0 +1,59 @@
+#nullable enable
+override Vais.Agents.Observability.AgentRunStore.AgentRun.Equals(object? obj) -> bool
+override Vais.Agents.Observability.AgentRunStore.AgentRun.GetHashCode() -> int
+override Vais.Agents.Observability.AgentRunStore.AgentRun.ToString() -> string!
+static Vais.Agents.Observability.AgentRunStore.AgentRun.operator !=(Vais.Agents.Observability.AgentRunStore.AgentRun? left, Vais.Agents.Observability.AgentRunStore.AgentRun? right) -> bool
+static Vais.Agents.Observability.AgentRunStore.AgentRun.operator ==(Vais.Agents.Observability.AgentRunStore.AgentRun? left, Vais.Agents.Observability.AgentRunStore.AgentRun? right) -> bool
+static Vais.Agents.Observability.AgentRunStore.AgentRunStoreExtensions.AddAgentRunStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.AgentRunStore.AgentRun
+Vais.Agents.Observability.AgentRunStore.AgentRun.<Clone>$() -> Vais.Agents.Observability.AgentRunStore.AgentRun!
+Vais.Agents.Observability.AgentRunStore.AgentRun.AgentId.get -> string!
+Vais.Agents.Observability.AgentRunStore.AgentRun.AgentId.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.AgentRun(string! AgentRunId, string! AgentId, Vais.Agents.Observability.AgentRunStore.AgentRunStatus Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, string? InputText, string? OutputText, int InputTokens, int OutputTokens, string? Error, string? CorrelationId, string? UserId, string? TenantId) -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.AgentRunId.get -> string!
+Vais.Agents.Observability.AgentRunStore.AgentRun.AgentRunId.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.CorrelationId.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.CorrelationId.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.Deconstruct(out string! AgentRunId, out string! AgentId, out Vais.Agents.Observability.AgentRunStore.AgentRunStatus Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out string? InputText, out string? OutputText, out int InputTokens, out int OutputTokens, out string? Error, out string? CorrelationId, out string? UserId, out string? TenantId) -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.DurationMs.get -> long?
+Vais.Agents.Observability.AgentRunStore.AgentRun.DurationMs.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.EndedAt.get -> System.DateTimeOffset?
+Vais.Agents.Observability.AgentRunStore.AgentRun.EndedAt.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.Equals(Vais.Agents.Observability.AgentRunStore.AgentRun? other) -> bool
+Vais.Agents.Observability.AgentRunStore.AgentRun.Error.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.Error.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.InputText.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.InputText.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.InputTokens.get -> int
+Vais.Agents.Observability.AgentRunStore.AgentRun.InputTokens.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.OutputText.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.OutputText.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.OutputTokens.get -> int
+Vais.Agents.Observability.AgentRunStore.AgentRun.OutputTokens.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Observability.AgentRunStore.AgentRun.StartedAt.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.Status.get -> Vais.Agents.Observability.AgentRunStore.AgentRunStatus
+Vais.Agents.Observability.AgentRunStore.AgentRun.Status.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.TenantId.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.TenantId.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRun.UserId.get -> string?
+Vais.Agents.Observability.AgentRunStore.AgentRun.UserId.init -> void
+Vais.Agents.Observability.AgentRunStore.AgentRunStatus
+Vais.Agents.Observability.AgentRunStore.AgentRunStatus.Completed = 1 -> Vais.Agents.Observability.AgentRunStore.AgentRunStatus
+Vais.Agents.Observability.AgentRunStore.AgentRunStatus.Failed = 2 -> Vais.Agents.Observability.AgentRunStore.AgentRunStatus
+Vais.Agents.Observability.AgentRunStore.AgentRunStatus.Running = 0 -> Vais.Agents.Observability.AgentRunStore.AgentRunStatus
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreExtensions
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions.AgentRunStoreOptions() -> void
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.AgentRunStore.AgentRunStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.CompleteRunAsync(string! agentRunId, string? outputText, int inputTokens, int outputTokens, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.DeleteRunsOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.FailRunAsync(string! agentRunId, string! error, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.GetRunAsync(string! agentRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Observability.AgentRunStore.AgentRun?>!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.ListRunsAsync(string! agentId, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, int limit = 20, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.AgentRunStore.AgentRun!>!>!
+Vais.Agents.Observability.AgentRunStore.IAgentRunStore.StartRunAsync(string! agentRunId, string! agentId, string? inputText, string? userId, string? tenantId, string? correlationId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

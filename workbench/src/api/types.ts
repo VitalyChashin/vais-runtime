@@ -126,3 +126,50 @@ export interface NodeExecution {
 export interface RunListResponse {
   items: PipelineRun[]
 }
+
+export interface GatewayEventDto {
+  eventId: string
+  gatewayId: string
+  eventKind: string
+  modelId: string | null
+  inputTokens: number
+  outputTokens: number
+  durationMs: number | null
+  cacheHit: boolean | null
+  errorType: string | null
+  at: string
+  correlationId: string | null
+  runId: string | null
+}
+
+export interface AgentRunDto {
+  runId: string
+  agentId: string
+  source: 'graph' | 'standalone'
+  nodeId: string | null
+  nodeKind: string | null
+  status: string
+  startedAt: string
+  endedAt: string | null
+  durationMs: number | null
+  inputText: string | null
+  outputText: string | null
+  inputTokens: number
+  outputTokens: number
+  error: string | null
+  edgesTaken: string[] | null
+}
+
+export interface McpEventDto {
+  eventId: string
+  serverId: string
+  toolName: string
+  eventKind: string
+  durationMs: number | null
+  cacheHit: boolean
+  blockedReason: string | null
+  errorType: string | null
+  at: string
+  correlationId: string | null
+  runId: string | null
+}

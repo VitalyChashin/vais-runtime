@@ -13,6 +13,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Observability.AgentRunStore;
+using Vais.Agents.Observability.GatewayEventStore;
+using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
@@ -157,6 +160,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /agents/{id}/runs — List invocations for an agent (graph nodes + standalone runs)
+        group.MapGet("/agents/{id}/runs", AgentListRunsAsync)
+            .WithName("Agents.ListRuns")
+            .WithSummary("List invocations for an agent: graph node executions and standalone invoke calls.")
+            .WithDescription("Query params: since (ISO 8601), until (ISO 8601), limit (default 20). Returns entries from both AddRunStore() and AddAgentRunStore(); returns 503 only when neither is configured.")
+            .Produces<IReadOnlyList<AgentRunDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // Health + readiness
@@ -423,6 +434,51 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         "interrupted" => RunStatus.Interrupted,
         _ => null,
     };
+
+    private static async Task<IResult> AgentListRunsAsync(
+        string id,
+        HttpContext http,
+        string? since,
+        string? until,
+        int limit = 20,
+        CancellationToken ct = default)
+    {
+        var runStore = http.RequestServices.GetService<IRunStore>();
+        var agentRunStore = http.RequestServices.GetService<IAgentRunStore>();
+        if (runStore is null && agentRunStore is null) return RunStoreNotConfigured();
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
+
+        var graphItems = runStore is not null
+            ? (await runStore.ListNodeExecutionsByAgentAsync(id, sinceDto, untilDto, limit, ct).ConfigureAwait(false))
+                .Select(n => ToAgentRunDto(n))
+            : [];
+        var standaloneItems = agentRunStore is not null
+            ? (await agentRunStore.ListRunsAsync(id, sinceDto, untilDto, limit, ct).ConfigureAwait(false))
+                .Select(r => ToAgentRunDto(r))
+            : [];
+
+        var merged = graphItems.Concat(standaloneItems)
+            .OrderByDescending(r => r.StartedAt)
+            .Take(limit)
+            .ToArray();
+        return Results.Ok(merged);
+    }
+
+    private static AgentRunDto ToAgentRunDto(NodeExecution n) =>
+        new(n.RunId, n.AgentId ?? string.Empty, "graph", n.NodeId, n.NodeKind,
+            n.Status.ToString().ToLowerInvariant(),
+            n.StartedAt, n.EndedAt, n.DurationMs,
+            n.InputText, n.OutputText, n.InputTokens, n.OutputTokens,
+            n.Error, n.EdgesTaken);
+
+    private static AgentRunDto ToAgentRunDto(AgentRun r) =>
+        new(r.AgentRunId, r.AgentId, "standalone", null, null,
+            r.Status.ToString().ToLowerInvariant(),
+            r.StartedAt, r.EndedAt, r.DurationMs,
+            r.InputText, r.OutputText, r.InputTokens, r.OutputTokens,
+            r.Error, null);
 
     private static async Task<IResult> GraphListRunsAsync(
         string id,
@@ -843,6 +899,15 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return Results.BadRequest(new { error = "request body must contain non-empty 'text'" });
         }
 
+        var agentRunStore = http.RequestServices.GetService<IAgentRunStore>();
+        var agentRunId = Guid.NewGuid().ToString("N");
+        var principal = http.User?.Identity?.IsAuthenticated == true
+            ? new AgentContext(
+                UserId: http.User.FindFirst("sub")?.Value,
+                TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
+            : AgentContext.Empty;
+        var runStarted = false;
+
         try
         {
             var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
@@ -851,14 +916,35 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 return Results.NotFound(new { error = $"agent '{id}' not found" });
             }
             var handle = new AgentHandle(id, resolvedVersion);
+
+            if (agentRunStore is not null)
+            {
+                await agentRunStore.StartRunAsync(agentRunId, id, TruncateText(request.Text),
+                    principal.UserId, principal.TenantId, principal.CorrelationId, ct).ConfigureAwait(false);
+                runStarted = true;
+            }
+
             var result = await manager.InvokeAsync(handle, request, ct).ConfigureAwait(false);
+
+            if (runStarted)
+                try { await agentRunStore!.CompleteRunAsync(agentRunId, TruncateText(result.Text), 0, 0, ct).ConfigureAwait(false); }
+                catch { /* best-effort */ }
+
             return Results.Ok(result);
         }
         catch (Exception ex)
         {
+            if (runStarted)
+                try { await agentRunStore!.FailRunAsync(agentRunId, ex.Message, ct).ConfigureAwait(false); }
+                catch { /* best-effort */ }
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.Invoke);
         }
     }
+
+    private static string? TruncateText(string? text, int maxChars = 8192) =>
+        text is null ? null :
+        text.Length <= maxChars ? text :
+        string.Concat(text.AsSpan(0, maxChars), "…");
 
     private static async Task<IResult> SignalAsync(
         HttpContext http,
@@ -992,6 +1078,21 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
             : AgentContext.Empty;
 
+        var agentRunStore = http.RequestServices.GetService<IAgentRunStore>();
+        var agentRunId = Guid.NewGuid().ToString("N");
+        var runStarted = false;
+        if (agentRunStore is not null)
+        {
+            try
+            {
+                await agentRunStore.StartRunAsync(agentRunId, id, TruncateText(request.Text),
+                    principal.UserId, principal.TenantId, principal.CorrelationId, ct).ConfigureAwait(false);
+                runStarted = true;
+            }
+            catch { /* best-effort */ }
+        }
+
+        Exception? producerError = null;
         var producerTask = Task.Run(async () =>
         {
             try
@@ -1006,6 +1107,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             catch (OperationCanceledException) { /* cooperative shutdown */ }
             catch (Exception ex)
             {
+                producerError = ex;
                 // Mid-stream exception the agent didn't translate to TurnFailed — emit a
                 // synthetic turn.failed event so the client sees a clean terminal.
                 var turnFailed = new TurnFailed(DateTimeOffset.UtcNow, principal, ex.GetType().Name, ex.Message, TimeSpan.Zero);
@@ -1035,6 +1137,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             linkedCts.Cancel();
             heartbeatTimer?.Dispose();
             try { await producerTask.ConfigureAwait(false); } catch { /* already surfaced via frame or cancelled */ }
+            if (runStarted)
+            {
+                if (producerError is not null)
+                    try { await agentRunStore!.FailRunAsync(agentRunId, producerError.Message, CancellationToken.None).ConfigureAwait(false); } catch { }
+                else
+                    try { await agentRunStore!.CompleteRunAsync(agentRunId, null, 0, 0, CancellationToken.None).ConfigureAwait(false); } catch { }
+            }
         }
     }
 
@@ -1612,6 +1721,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        group.MapGet("/llm-gateways/{id}/events", LlmGatewayListEventsAsync)
+            .WithName("LlmGateways.ListEvents")
+            .WithSummary("List LLM completion events for a gateway. Requires AddGatewayEventStore().")
+            .WithDescription("Query params: since (ISO 8601), until (ISO 8601), kind (completion.completed | completion.failed), limit (default 50). Returns 503 when store not configured.")
+            .Produces<IReadOnlyList<GatewayEventDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -1767,6 +1883,35 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
         }
+    }
+
+    private static async Task<IResult> LlmGatewayListEventsAsync(
+        HttpContext http,
+        string id,
+        string? since,
+        string? until,
+        string? kind,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IGatewayEventStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "Gateway event store not configured",
+                detail: "Call AddGatewayEventStore() to enable LLM gateway event history.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:gateway-event-store-not-configured");
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
+        var limitClamped = Math.Clamp(limit, 1, 500);
+
+        var items = await store.ListAsync(id, sinceDto, untilDto, kind, limitClamped, ct)
+            .ConfigureAwait(false);
+        return Results.Ok(items.Select(e => new GatewayEventDto(
+            e.EventId, e.GatewayId, e.EventKind, e.ModelId,
+            e.InputTokens, e.OutputTokens, e.DurationMs, e.CacheHit,
+            e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
     }
 
     // ── MCP gateway config handlers (v0.20) ───────────────────────────────────
@@ -2046,6 +2191,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        group.MapGet("/mcp-servers/{id}/events", McpListEventsAsync)
+            .WithName("McpServers.ListEvents")
+            .WithSummary("List MCP tool-call events for a server. Requires AddMcpEventStore().")
+            .WithDescription("Query params: since (ISO 8601), until (ISO 8601), toolName, kind (call.completed | call.failed | call.blocked | cache.hit), limit (default 50). Returns 503 when store not configured.")
+            .Produces<McpEventDto[]>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -2206,6 +2358,35 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
         }
+    }
+
+    private static async Task<IResult> McpListEventsAsync(
+        HttpContext http,
+        string id,
+        string? since,
+        string? until,
+        string? toolName,
+        string? kind,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IMcpEventStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "MCP event store not configured",
+                detail: "Call AddMcpEventStore() to enable MCP tool-call event history.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:mcp-event-store-not-configured");
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
+        var limitClamped = Math.Clamp(limit, 1, 500);
+
+        var items = await store.ListAsync(id, sinceDto, untilDto, toolName, kind, limitClamped, ct)
+            .ConfigureAwait(false);
+        return Results.Ok(items.Select(e => new McpEventDto(
+            e.EventId, e.ServerId, e.ToolName, e.EventKind, e.DurationMs,
+            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
     }
 
     // ── GCF-18: gateway ref validation helpers ────────────────────────────────

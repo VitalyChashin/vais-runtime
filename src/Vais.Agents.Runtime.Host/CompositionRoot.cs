@@ -21,7 +21,10 @@ using Vais.Agents.Core.PowerFx;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Protocols.A2A;
 using Vais.Agents.Hosting.InMemory;
+using Vais.Agents.Observability.AgentRunStore;
+using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.Langfuse;
+using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.OpenTelemetry;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Persistence.Postgres;
@@ -371,6 +374,31 @@ internal static class CompositionRoot
         if (!string.IsNullOrWhiteSpace(options.RunStoreConnection))
         {
             services.AddRunStore(o => o.ConnectionString = options.RunStoreConnection);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.AgentRunStoreConnection))
+        {
+            services.AddAgentRunStore(o => o.ConnectionString = options.AgentRunStoreConnection);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.GatewayEventStoreConnection))
+        {
+            services.AddGatewayEventStore(o =>
+            {
+                o.ConnectionString = options.GatewayEventStoreConnection;
+                if (!string.IsNullOrWhiteSpace(options.GatewayId))
+                    o.GatewayId = options.GatewayId;
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.McpEventStoreConnection))
+        {
+            services.AddMcpEventStore(o =>
+            {
+                o.ConnectionString = options.McpEventStoreConnection;
+                if (!string.IsNullOrWhiteSpace(options.McpServerId))
+                    o.ServerId = options.McpServerId;
+            });
         }
 
         // 6. Optional observability. Off unless either the OTel endpoint env var or the
