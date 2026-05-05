@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
 using Vais.Agents.Core;
@@ -44,6 +45,9 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
 
     private readonly string? _hitlPortId;
     private readonly bool _isForkSource;
+    private readonly ActivityContext _graphContext;
+
+    private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
     public GraphNodeExecutor(
         GraphNode node,
@@ -81,6 +85,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         _expressionEvaluator = expressionEvaluator;
         _hitlPortId = hitlPortId;
         _isForkSource = isForkSource;
+        _graphContext = Activity.Current?.Context ?? default;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -164,10 +169,20 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         // (the interrupt's outgoing edges are all we evaluate).
         if (!skipBody)
         {
+            using var nodeActivity = _activitySource.StartActivity("graph.node", ActivityKind.Internal, _graphContext);
+            nodeActivity?.SetTag("graph.run_id", message.RunId);
+            nodeActivity?.SetTag("graph.node.id", _node.Id);
+            nodeActivity?.SetTag("graph.node.kind", _node.Kind);
+            if (_node.Ref?.Id is { } agentRefId) nodeActivity?.SetTag("vais.agent.name", agentRefId);
+
             IReadOnlyDictionary<string, JsonElement> nodeOutput;
             if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
             {
+                var prompt = BuildAgentInputText(FilterByInputBinding(state, _node.StateBindings));
+                nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
                 nodeOutput = await ExecuteAgentNodeAsync(state, context, cancellationToken).ConfigureAwait(false);
+                if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
+                    nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
             }
             else if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
             {

@@ -405,6 +405,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             graphActivity?.SetTag("langfuse.session.id", context.CorrelationId);
         else if (!string.IsNullOrEmpty(context.UserId))
             graphActivity?.SetTag("langfuse.session.id", context.UserId);
+        if (state.Count > 0)
+            graphActivity?.SetTag("langfuse.observation.input", JsonSerializer.Serialize(state));
 
         // Build the MAF workflow starting at the resume node (for resume) or the manifest
         // entry (for fresh runs). Starting at the interrupt node ensures the initial message
@@ -497,6 +499,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             // Interrupted runs already emitted GraphInterrupted — don't also mark them Completed.
             if (!interrupted)
             {
+                graphActivity?.SetTag("langfuse.observation.output", JsonSerializer.Serialize(finalMessage.State));
                 var completedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
                     finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
                     FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
