@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "main": "dist-electron/main.js",
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@monaco-editor/react": "^4",
     "@tanstack/react-query": "^5",
+    "@xyflow/react": "^12.10.2",
     "js-yaml": "^4",
     "react": "^19",
     "react-dom": "^19",

@@ -1,0 +1,18 @@
+.react-flow__controls-button {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+  fill: var(--color-text-secondary);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--color-bg-inset);
+}
+
+.react-flow__controls-button svg {
+  fill: var(--color-text-secondary);
+}
+
+.react-flow__attribution {
+  display: none;
+}

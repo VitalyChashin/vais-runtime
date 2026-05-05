@@ -48,10 +48,18 @@ export interface GraphNode {
   ref?: GraphNodeRef
 }
 
+export interface GraphEdge {
+  from: string
+  to: string
+  concurrent?: boolean
+}
+
 export interface AgentGraphManifest {
   id: string
   name: string
+  entry?: string
   nodes?: GraphNode[]
+  edges?: GraphEdge[]
 }
 
 export interface LlmGatewayConfigManifest {

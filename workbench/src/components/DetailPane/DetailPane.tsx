@@ -8,6 +8,7 @@ import { ProbeStub } from '../TestPane/ProbeStub'
 import { usePlugins } from '../../plugins/usePlugins'
 import { PluginTab } from '../../plugins/PluginTab'
 import { PluginDetail } from './PluginDetail'
+import { GraphTab } from './GraphTab'
 
 export function DetailPane() {
   const { kind, id } = useSelection()
@@ -41,6 +42,7 @@ export function DetailPane() {
 
   const builtinTabs = [
     { key: 'yaml',  label: 'YAML',       isPlugin: false },
+    ...(kind === 'graphs' ? [{ key: 'graph', label: 'Graph', isPlugin: false }] : []),
     { key: 'refs',  label: 'References', isPlugin: false },
     { key: 'test',  label: 'Test',       isPlugin: false },
     ...(kind === 'graphs' ? [{ key: 'logs', label: 'Logs', isPlugin: false }] : []),
@@ -67,8 +69,9 @@ export function DetailPane() {
         ))}
       </nav>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: tab === 'graph' ? 'hidden' : 'auto' }}>
         {tab === 'yaml' && <YamlTab kind={kind} id={id} />}
+        {tab === 'graph' && <GraphTab id={id} />}
         {tab === 'refs' && <RefsTab kind={kind} id={id} />}
         {tab === 'logs' && <LogsTab id={id} />}
         {tab === 'test' && (
