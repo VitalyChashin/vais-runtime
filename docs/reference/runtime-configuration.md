@@ -19,9 +19,30 @@ Helm values map 1:1 onto env vars — see the [chart README](../../deploy/helm/v
 | `VAIS_HOSTING_MODE` | `localhost` | `localhost` \| `clustered` | Drives the Orleans silo configurator. `localhost` = `UseLocalhostClustering` + memory grain storage + memory streams (no external deps). `clustered` = requires a clustering connection string below. |
 | `VAIS_CLUSTERING_BACKEND` | `redis` | `redis` \| `postgres` | Ignored in localhost mode. |
 | `VAIS_REDIS_CONNECTION` | (unset) | StackExchange.Redis connection string | Required when `VAIS_HOSTING_MODE=clustered` and `VAIS_CLUSTERING_BACKEND=redis`. Example: `redis:6379,password=...,ssl=false`. Drives clustering, grain storage, and streaming. |
-| `VAIS_POSTGRES_CONNECTION` | (unset) | Npgsql connection string | Required when `VAIS_HOSTING_MODE=clustered` and `VAIS_CLUSTERING_BACKEND=postgres`. Example: `Host=pg;Username=vais;Password=...;Database=orleans`. Clustering + grain storage only — streams degrade to in-silo memory (known limitation; Orleans 10.x has no production Postgres stream provider). |
+| `VAIS_POSTGRES_CONNECTION` | (unset) | Npgsql connection string | Required when (a) `VAIS_HOSTING_MODE=clustered` and `VAIS_CLUSTERING_BACKEND=postgres`, or (b) `VAIS_LOCALHOST_PERSISTENCE=postgres` or `VAIS_LOCALHOST_PUBSUB_PERSISTENCE=postgres` — see *Localhost persistence* below. Example: `Host=pg;Username=vais;Password=...;Database=orleans`. Clustered mode: clustering + grain storage only — streams degrade to in-silo memory (known limitation; Orleans 10.x has no production Postgres stream provider). |
 
 Missing connection strings in clustered mode surface as an `InvalidOperationException` at startup with an actionable message — a test locks this in (`Options_Clustered_Mode_Requires_Connection_String`).
+
+## Localhost persistence
+
+Applies only when `VAIS_HOSTING_MODE=localhost`. By default both grain storage and pub-sub storage use in-process memory — fast and dependency-free, but state is lost on container restart. These vars swap in Postgres-backed ADO.NET grain storage without leaving localhost clustering mode.
+
+| Env var | Default | Values | Notes |
+|---|---|---|---|
+| `VAIS_LOCALHOST_PERSISTENCE` | `memory` | `memory` \| `postgres` | Grain storage provider for `AiAgentGrain`. `memory` = ephemeral, zero deps. `postgres` = durable, requires `VAIS_POSTGRES_CONNECTION` and the Orleans schema (see below). |
+| `VAIS_LOCALHOST_PUBSUB_PERSISTENCE` | `memory` | `memory` \| `postgres` | Grain storage provider for the Orleans `PubSubStore` (stream subscriptions). Defaults independently from grain storage. |
+
+`VAIS_POSTGRES_CONNECTION` must be set when either var is `postgres`; the missing-connection check surfaces as an `InvalidOperationException` at startup (`Options_Localhost_Postgres_Requires_Connection_String` locks this in).
+
+**Orleans schema prerequisite.** The Postgres grain storage provider does not auto-create the `OrleansStorage` table. Apply the schema once before the first start:
+
+```sql
+-- script is at: tests/Vais.Agents.Persistence.Postgres.Tests/Sql/PostgreSQL-Persistence.sql
+-- PostgreSQL-Main.sql is not required in localhost mode — clustering stays in-memory.
+psql -U <user> -d <db> -f PostgreSQL-Persistence.sql
+```
+
+The local dev `dev.ps1 start` applies this automatically against the shared `pgvector-db-1` container.
 
 ## OPA policy engine
 
@@ -121,6 +142,21 @@ Additional env vars that apply when a plugin with `kind: agent-handler` is loade
 
 - `Python agent plugin '<name>' registered handler typeName '<typeName>' (pid=<N>).`
 - `Python agent handler collision: typeName '<typeName>' already registered. Plugin '<name>' skipped.`
+
+## Boot-apply manifests
+
+Off-by-default. When set, the runtime applies all manifests in the directory on every start, before serving traffic.
+
+| Env var | Default | Values | Notes |
+|---|---|---|---|
+| `VAIS_BOOT_MANIFESTS_DIRECTORY` | (unset) | Absolute path, or unset to disable | When set, `BootManifestApplyService` scans the directory (non-recursive) for `.yaml`, `.yml`, and `.json` files (sorted lexicographically) and applies each resource via the appropriate lifecycle manager: `AgentManifest`, `AgentGraphManifest`, `LlmGatewayConfig`, `McpGatewayConfig`, `McpServer`. Missing directory → startup warning + skip. Parse failure → `LogError` + continue. Same-version conflict (LLM/MCP gateway configs, MCP servers) → `LogDebug` + skip. |
+
+**Idempotency.** Agent and agent-graph creates are upsert — safe on repeat restart. Gateway-config and MCP-server creates skip silently on duplicate `(id, version)`.
+
+**Startup log lines worth grepping for:**
+
+- `Boot-manifest directory '<path>' does not exist — skipping boot apply.`
+- `Boot-manifest apply complete — N applied, M skipped (same version), K failed.`
 
 ## Logging
 

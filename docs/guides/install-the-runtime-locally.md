@@ -65,7 +65,28 @@ Teardown:
 docker compose -f docker-compose.localhost.yml down
 ```
 
-Grain state evaporates on `down` — localhost mode is for demos and smoke tests, not durability.
+By default, grain state is memory-only and evaporates on `down`. To keep state across restarts without switching to clustered mode, see [§2.1](#21-localhost-postgres-persistence) below.
+
+### 2.1 Localhost Postgres persistence
+
+Set two env vars to swap in Postgres-backed grain storage while keeping `UseLocalhostClustering` (no Redis required):
+
+```yaml
+# docker-compose.override.yml, or pass with -e
+VAIS_LOCALHOST_PERSISTENCE: postgres
+VAIS_POSTGRES_CONNECTION:   "Host=pg;Port=5432;Database=orleans;Username=vais;Password=..."
+```
+
+**Schema prerequisite — apply once before the first start:**
+
+```bash
+psql -U vais -d orleans \
+  -f tests/Vais.Agents.Persistence.Postgres.Tests/Sql/PostgreSQL-Persistence.sql
+```
+
+`PostgreSQL-Main.sql` is not needed in localhost mode — clustering stays in-memory. After the schema exists, container restarts preserve deployed agents and graphs. Pub-sub subscriptions can be made durable independently: `VAIS_LOCALHOST_PUBSUB_PERSISTENCE=postgres`.
+
+The local dev `dev.ps1 start` applies the schema automatically — see [../reference/runtime-configuration.md](../reference/runtime-configuration.md) for all env vars.
 
 ## 3. Clustered mode — Redis-backed
 
