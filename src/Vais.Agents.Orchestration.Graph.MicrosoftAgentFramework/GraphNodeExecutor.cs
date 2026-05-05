@@ -394,6 +394,11 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         {
             if (state.TryGetValue(key, out var value)) result[key] = value;
         }
+        // Mirror FilterByOutputBinding: always pass messages through so BuildAgentInputText
+        // can find the previous agent's output even when input bindings don't list "messages".
+        if (!result.ContainsKey(GraphStateReducers.WellKnownKey.Messages) &&
+            state.TryGetValue(GraphStateReducers.WellKnownKey.Messages, out var msgs))
+            result[GraphStateReducers.WellKnownKey.Messages] = msgs;
         return result;
     }
 

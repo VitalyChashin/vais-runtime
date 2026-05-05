@@ -1026,6 +1026,68 @@ public sealed class MafGraphOrchestratorTests
             "both branches must receive planner's output as input, not each other's");
     }
 
+    [Fact]
+    public async Task FanOut_BranchesWithExplicitInputBindings_ReceivePlannerOutputNotQuery()
+    {
+        // Regression: branches with explicit Input bindings that omit "messages" caused
+        // FilterByInputBinding to strip the conversation history, so BuildAgentInputText
+        // fell back to "query" ("initial request") instead of the planner's output.
+        // This matches the shape of research-pipeline.yaml: input: [query, research_plan].
+        var callCount = 0;
+        var inputs = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+        var (registry, lifecycle) = BuildHarness(req =>
+        {
+            inputs.Add(req.History.LastOrDefault()?.Text ?? "");
+            var n = Interlocked.Increment(ref callCount);
+            return n == 1
+                ? new CompletionResponse("planner-output")
+                : new CompletionResponse("branch-text");
+        });
+
+        foreach (var id in new[] { "planner-agent", "researcher-agent", "analyst-agent", "synthesizer-agent" })
+            await lifecycle.CreateAsync(ManifestFor(id));
+
+        var manifest = new AgentGraphManifest(
+            Id: "concurrent-research-bound", Version: "1.0", Entry: "planner",
+            Nodes: new[]
+            {
+                new GraphNode("planner",     "Agent", Ref: new GraphAgentRef("planner-agent")),
+                new GraphNode("researcher",  "Agent", Ref: new GraphAgentRef("researcher-agent"),
+                    StateBindings: new GraphStateBindings(
+                        Input:  new[] { "query", "research_plan" },
+                        Output: new[] { "research_findings" })),
+                new GraphNode("analyst",     "Agent", Ref: new GraphAgentRef("analyst-agent"),
+                    StateBindings: new GraphStateBindings(
+                        Input:  new[] { "query", "research_plan" },
+                        Output: new[] { "analysis" })),
+                new GraphNode("synthesizer", "Agent", Ref: new GraphAgentRef("synthesizer-agent"),
+                    StateBindings: new GraphStateBindings(
+                        Input:  new[] { "research_findings", "analysis" },
+                        Output: new[] { "synthesis" })),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("planner",     "researcher",  Concurrent: true),
+                new GraphEdge("planner",     "analyst",     Concurrent: true),
+                new GraphEdge("researcher",  "synthesizer", Concurrent: true),
+                new GraphEdge("analyst",     "synthesizer", Concurrent: true),
+                new GraphEdge("synthesizer", "end"),
+            })
+        { MaxSteps = 50 };
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle);
+        await foreach (var _ in orchestrator.StreamAsync(
+            new Dictionary<string, JsonElement> { ["query"] = JsonSerializer.SerializeToElement("initial request") },
+            new AgentContext()))
+        { }
+
+        // Both branches must receive "planner-output" (from messages), not "initial request" (from query).
+        inputs.Count(t => t == "planner-output").Should().Be(2,
+            "branches with explicit input bindings must still receive planner output via messages, not fall back to query");
+    }
+
     // ---- MP-4: remote invoker / bearer token / lifecycle manager warning ----
 
     [Fact]
