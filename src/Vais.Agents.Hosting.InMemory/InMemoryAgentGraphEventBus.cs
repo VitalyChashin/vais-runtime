@@ -61,6 +61,10 @@ public sealed class InMemoryAgentGraphEventBus : IAgentGraphEventBus
             {
                 throw;
             }
+            catch (OperationCanceledException)
+            {
+                // Subscriber cancelled its own internal token — not our concern; swallow silently.
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(
