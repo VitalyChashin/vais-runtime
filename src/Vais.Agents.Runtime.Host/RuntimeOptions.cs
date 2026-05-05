@@ -167,6 +167,29 @@ internal sealed record RuntimeOptions
     public string? McpServerId { get; init; }
 
     /// <summary>
+    /// Postgres connection string for the MCP gateway event store. When set, MCP tool-call events
+    /// routed through the MCP gateway are persisted and exposed via <c>GET /v1/mcp-gateways/{id}/events</c>.
+    /// Null ⇒ store disabled (endpoint returns 503).
+    /// Set via <c>VAIS_MCP_GATEWAY_EVENT_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? McpGatewayEventStoreConnection { get; init; }
+
+    /// <summary>
+    /// MCP gateway ID written into every <c>McpGatewayEvent</c> row. Must match the manifest
+    /// <c>metadata.id</c> of the MCP gateway config so the Workbench Tool Logs tab returns data.
+    /// Defaults to <c>default</c> when unset.
+    /// Set via <c>VAIS_MCP_GATEWAY_ID</c>.
+    /// </summary>
+    public string? McpGatewayId { get; init; }
+
+    /// <summary>
+    /// Maximum number of log lines retained per agent in the in-memory agent log sink.
+    /// Oldest entries are evicted when the buffer is full.
+    /// Defaults to 500. Set via <c>VAIS_AGENT_LOG_BUFFER_LINES</c>.
+    /// </summary>
+    public int AgentLogBufferLines { get; init; } = 500;
+
+    /// <summary>
     /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <see cref="AiAgentGrain.StorageName"/>
     /// (the store used by every agent, registry, checkpoint, idempotency, and session grain).
     /// <see cref="LocalhostPersistenceMode.Postgres"/> makes API-deployed agents and graphs survive
@@ -226,6 +249,9 @@ internal sealed record RuntimeOptions
             GatewayId = Env("VAIS_GATEWAY_ID"),
             McpEventStoreConnection = Env("VAIS_MCP_EVENT_STORE_CONNECTION"),
             McpServerId = Env("VAIS_MCP_SERVER_ID"),
+            McpGatewayEventStoreConnection = Env("VAIS_MCP_GATEWAY_EVENT_STORE_CONNECTION"),
+            McpGatewayId = Env("VAIS_MCP_GATEWAY_ID"),
+            AgentLogBufferLines = int.TryParse(Env("VAIS_AGENT_LOG_BUFFER_LINES"), out var bufLines) ? bufLines : 500,
             BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
             LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
             LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),

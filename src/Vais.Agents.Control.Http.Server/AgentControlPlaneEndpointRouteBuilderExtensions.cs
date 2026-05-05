@@ -16,6 +16,7 @@ using Vais.Agents.Control.Manifests;
 using Vais.Agents.Observability.AgentRunStore;
 using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.McpEventStore;
+using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
@@ -168,6 +169,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithSummary("List invocations for an agent: graph node executions and standalone invoke calls.")
             .WithDescription("Query params: since (ISO 8601), until (ISO 8601), limit (default 20). Returns entries from both AddRunStore() and AddAgentRunStore(); returns 503 only when neither is configured.")
             .Produces<IReadOnlyList<AgentRunDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /agents/{id}/logs — Captured stdout/stderr from agent grains and Python subprocesses
+        group.MapGet("/agents/{id}/logs", AgentListLogsAsync)
+            .WithName("Agents.ListLogs")
+            .WithSummary("Return captured log lines for an agent from the in-memory ring buffer.")
+            .WithDescription("Query params: since (ISO 8601), limit (default 100). Requires AddAgentLogSink(); returns 503 when not configured.")
+            .Produces<IReadOnlyList<AgentLogEntryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // Health + readiness
@@ -479,6 +488,28 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             r.StartedAt, r.EndedAt, r.DurationMs,
             r.InputText, r.OutputText, r.InputTokens, r.OutputTokens,
             r.Error, null);
+
+    private static IResult AgentListLogsAsync(
+        string id,
+        HttpContext http,
+        string? since,
+        int limit = 100)
+    {
+        var sink = http.RequestServices.GetService<IAgentLogSink>();
+        if (sink is null)
+            return Results.Problem(
+                title: "Agent log sink not configured",
+                detail: "Call AddAgentLogSink() to enable agent stdout capture.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:agent-log-sink-not-configured");
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        var limitClamped = Math.Clamp(limit, 1, 1000);
+
+        var items = sink.GetLogs(id, sinceDto, limitClamped);
+        return Results.Ok(items.Select(e => new AgentLogEntryDto(
+            e.EntryId, e.AgentId, e.RunId, e.At, e.Level, e.Message, e.Source)).ToArray());
+    }
 
     private static async Task<IResult> GraphListRunsAsync(
         string id,
@@ -1974,6 +2005,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        group.MapGet("/mcp-gateways/{id}/events", McpGatewayListEventsAsync)
+            .WithName("McpGateways.ListEvents")
+            .WithSummary("List MCP tool-call events for a gateway. Requires AddMcpGatewayEventStore().")
+            .WithDescription("Query params: since (ISO 8601), until (ISO 8601), toolName, kind (call.completed | call.failed | call.blocked | cache.hit), limit (default 50). Returns 503 when store not configured.")
+            .Produces<McpGatewayEventDto[]>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -2129,6 +2167,35 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
         }
+    }
+
+    private static async Task<IResult> McpGatewayListEventsAsync(
+        HttpContext http,
+        string id,
+        string? since,
+        string? until,
+        string? toolName,
+        string? kind,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IMcpGatewayEventStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "MCP gateway event store not configured",
+                detail: "Call AddMcpGatewayEventStore() to enable MCP gateway tool-call event history.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:mcp-gateway-event-store-not-configured");
+
+        DateTimeOffset? sinceDto = DateTimeOffset.TryParse(since, out var s) ? s : null;
+        DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
+        var limitClamped = Math.Clamp(limit, 1, 500);
+
+        var items = await store.ListAsync(id, sinceDto, untilDto, toolName, kind, limitClamped, ct)
+            .ConfigureAwait(false);
+        return Results.Ok(items.Select(e => new McpGatewayEventDto(
+            e.EventId, e.GatewayId, e.ToolName, e.EventKind, e.DurationMs,
+            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
     }
 
     // ── MCP server handlers (v0.20) ───────────────────────────────────────────

@@ -173,3 +173,27 @@ export interface McpEventDto {
   correlationId: string | null
   runId: string | null
 }
+
+export interface McpGatewayEventDto {
+  eventId: string
+  gatewayId: string
+  toolName: string
+  eventKind: string
+  durationMs: number | null
+  cacheHit: boolean
+  blockedReason: string | null
+  errorType: string | null
+  at: string
+  correlationId: string | null
+  runId: string | null
+}
+
+export interface AgentLogEntryDto {
+  entryId: string
+  agentId: string
+  runId: string | null
+  at: string
+  level: string
+  message: string
+  source: 'grain' | 'python'
+}

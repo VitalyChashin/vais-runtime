@@ -4,8 +4,10 @@ import { YamlTab } from './YamlTab'
 import { RefsTab } from './RefsTab'
 import { LogsTab } from './LogsTab'
 import { AgentRunsTab } from './AgentRunsTab'
+import { AgentLogsTab } from './AgentLogsTab'
 import { GatewayEventsTab } from './GatewayEventsTab'
 import { McpEventsTab } from './McpEventsTab'
+import { McpGatewayEventsTab } from './McpGatewayEventsTab'
 import { AgentTestPanel } from '../TestPane/AgentTestPanel'
 import { ProbeStub } from '../TestPane/ProbeStub'
 import { usePlugins } from '../../plugins/usePlugins'
@@ -50,8 +52,10 @@ export function DetailPane() {
     { key: 'test',  label: 'Test',       isPlugin: false },
     ...(kind === 'graphs' ? [{ key: 'logs', label: 'Logs', isPlugin: false }] : []),
     ...(kind === 'agents' ? [{ key: 'runs', label: 'Runs', isPlugin: false }] : []),
+    ...(kind === 'agents' ? [{ key: 'agent-logs', label: 'Logs', isPlugin: false }] : []),
     ...(kind === 'llm-gateways' ? [{ key: 'events', label: 'Events', isPlugin: false }] : []),
     ...(kind === 'mcp-servers' ? [{ key: 'tool-logs', label: 'Tool Logs', isPlugin: false }] : []),
+    ...(kind === 'mcp-gateways' ? [{ key: 'gw-tool-logs', label: 'Tool Logs', isPlugin: false }] : []),
   ]
   const pluginTabs = matchingPlugins.map(p => ({
     key: `plugin:${p.tabLabel}`,
@@ -81,8 +85,10 @@ export function DetailPane() {
         {tab === 'refs' && <RefsTab kind={kind} id={id} />}
         {tab === 'logs' && <LogsTab id={id} />}
         {tab === 'runs' && <AgentRunsTab id={id} />}
+        {tab === 'agent-logs' && <AgentLogsTab id={id} />}
         {tab === 'events' && <GatewayEventsTab id={id} />}
         {tab === 'tool-logs' && <McpEventsTab id={id} />}
+        {tab === 'gw-tool-logs' && <McpGatewayEventsTab id={id} />}
         {tab === 'test' && (
           kind === 'agents' || kind === 'graphs'
             ? <AgentTestPanel kind={kind} id={id} />

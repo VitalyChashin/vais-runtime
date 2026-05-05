@@ -1,0 +1,48 @@
+#nullable enable
+override Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.Equals(object? obj) -> bool
+override Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.GetHashCode() -> int
+override Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.ToString() -> string!
+static Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.operator !=(Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent? left, Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent? right) -> bool
+static Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.operator ==(Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent? left, Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent? right) -> bool
+static Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreExtensions.AddMcpGatewayEventStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore
+Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore.DeleteOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore.ListAsync(string! gatewayId, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, string? toolName = null, string? kind = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent!>!>!
+Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore.RecordAsync(Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent! evt, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.<Clone>$() -> Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.At.get -> System.DateTimeOffset
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.At.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.BlockedReason.get -> string?
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.BlockedReason.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.CacheHit.get -> bool
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.CacheHit.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.CorrelationId.get -> string?
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.CorrelationId.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.Deconstruct(out string! EventId, out string! GatewayId, out string! ToolName, out string! EventKind, out long? DurationMs, out bool CacheHit, out string? BlockedReason, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId) -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.DurationMs.get -> long?
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.DurationMs.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.Equals(Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent? other) -> bool
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.ErrorType.get -> string?
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.ErrorType.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.EventId.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.EventId.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.EventKind.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.EventKind.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.GatewayId.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.GatewayId.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.McpGatewayEvent(string! EventId, string! GatewayId, string! ToolName, string! EventKind, long? DurationMs, bool CacheHit, string? BlockedReason, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId) -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.RunId.get -> string?
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.RunId.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.ToolName.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEvent.ToolName.init -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreExtensions
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.GatewayId.get -> string!
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.GatewayId.set -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.McpGatewayEventStoreOptions() -> void
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.McpGatewayEventStore.McpGatewayEventStoreOptions.RetentionDays.set -> void

@@ -1,0 +1,12 @@
+#nullable enable
+Vais.Agents.Observability.AgentLogs.AgentGrainLoggerProvider
+Vais.Agents.Observability.AgentLogs.AgentGrainLoggerProvider.AgentGrainLoggerProvider(Vais.Agents.IAgentLogSink! sink) -> void
+Vais.Agents.Observability.AgentLogs.AgentGrainLoggerProvider.CreateLogger(string! categoryName) -> Microsoft.Extensions.Logging.ILogger!
+Vais.Agents.Observability.AgentLogs.AgentGrainLoggerProvider.Dispose() -> void
+Vais.Agents.Observability.AgentLogs.AgentGrainLoggerProvider.SetScopeProvider(Microsoft.Extensions.Logging.IExternalScopeProvider! scopeProvider) -> void
+Vais.Agents.Observability.AgentLogs.AgentLogSinkExtensions
+static Vais.Agents.Observability.AgentLogs.AgentLogSinkExtensions.AddAgentLogSink(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.AgentLogs.AgentLogSinkOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.AgentLogs.AgentLogSinkOptions
+Vais.Agents.Observability.AgentLogs.AgentLogSinkOptions.AgentLogSinkOptions() -> void
+Vais.Agents.Observability.AgentLogs.AgentLogSinkOptions.BufferLinesPerAgent.get -> int
+Vais.Agents.Observability.AgentLogs.AgentLogSinkOptions.BufferLinesPerAgent.set -> void

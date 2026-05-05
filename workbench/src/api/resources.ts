@@ -42,7 +42,7 @@ export const createMcpServer = (c: VaisClient, body: unknown) => c.post<McpServe
 export const validateMcpServer = (c: VaisClient, body: unknown) => c.post<ValidateResult>('/v1/mcp-servers/validate', body)
 export const deleteMcpServer = (c: VaisClient, id: string) => c.delete(`/v1/mcp-servers/${id}`)
 
-import type { AnyManifest, ResourceKind, RunListResponse, NodeExecution, AgentRunDto, GatewayEventDto, McpEventDto } from './types'
+import type { AnyManifest, ResourceKind, RunListResponse, NodeExecution, AgentRunDto, GatewayEventDto, McpEventDto, McpGatewayEventDto, AgentLogEntryDto } from './types'
 
 export const listAgentRuns = (c: VaisClient, agentId: string, limit = 20) =>
   c.get<AgentRunDto[]>(`/v1/agents/${agentId}/runs?limit=${limit}`)
@@ -52,6 +52,12 @@ export const listGatewayEvents = (c: VaisClient, gatewayId: string, limit = 50) 
 
 export const listMcpEvents = (c: VaisClient, serverId: string, limit = 50) =>
   c.get<McpEventDto[]>(`/v1/mcp-servers/${serverId}/events?limit=${limit}`)
+
+export const listMcpGatewayEvents = (c: VaisClient, gatewayId: string, limit = 50) =>
+  c.get<McpGatewayEventDto[]>(`/v1/mcp-gateways/${gatewayId}/events?limit=${limit}`)
+
+export const listAgentLogs = (c: VaisClient, agentId: string, limit = 100) =>
+  c.get<AgentLogEntryDto[]>(`/v1/agents/${agentId}/logs?limit=${limit}`)
 
 export const listRuns = (c: VaisClient, graphId: string, limit = 20) =>
   c.get<RunListResponse>(`/v1/graphs/${graphId}/runs?limit=${limit}`)

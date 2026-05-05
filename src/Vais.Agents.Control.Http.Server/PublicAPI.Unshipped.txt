@@ -528,3 +528,59 @@ override Vais.Agents.Control.Http.McpEventDto.GetHashCode() -> int
 override Vais.Agents.Control.Http.McpEventDto.ToString() -> string!
 static Vais.Agents.Control.Http.McpEventDto.operator !=(Vais.Agents.Control.Http.McpEventDto? left, Vais.Agents.Control.Http.McpEventDto? right) -> bool
 static Vais.Agents.Control.Http.McpEventDto.operator ==(Vais.Agents.Control.Http.McpEventDto? left, Vais.Agents.Control.Http.McpEventDto? right) -> bool
+Vais.Agents.Control.Http.McpGatewayEventDto
+Vais.Agents.Control.Http.McpGatewayEventDto.<Clone>$() -> Vais.Agents.Control.Http.McpGatewayEventDto!
+Vais.Agents.Control.Http.McpGatewayEventDto.McpGatewayEventDto(string! EventId, string! GatewayId, string! ToolName, string! EventKind, long? DurationMs, bool CacheHit, string? BlockedReason, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId) -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.Deconstruct(out string! EventId, out string! GatewayId, out string! ToolName, out string! EventKind, out long? DurationMs, out bool CacheHit, out string? BlockedReason, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId) -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.Equals(Vais.Agents.Control.Http.McpGatewayEventDto? other) -> bool
+Vais.Agents.Control.Http.McpGatewayEventDto.EventId.get -> string!
+Vais.Agents.Control.Http.McpGatewayEventDto.EventId.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.GatewayId.get -> string!
+Vais.Agents.Control.Http.McpGatewayEventDto.GatewayId.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.ToolName.get -> string!
+Vais.Agents.Control.Http.McpGatewayEventDto.ToolName.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.EventKind.get -> string!
+Vais.Agents.Control.Http.McpGatewayEventDto.EventKind.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.DurationMs.get -> long?
+Vais.Agents.Control.Http.McpGatewayEventDto.DurationMs.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.CacheHit.get -> bool
+Vais.Agents.Control.Http.McpGatewayEventDto.CacheHit.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.BlockedReason.get -> string?
+Vais.Agents.Control.Http.McpGatewayEventDto.BlockedReason.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.ErrorType.get -> string?
+Vais.Agents.Control.Http.McpGatewayEventDto.ErrorType.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.At.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.McpGatewayEventDto.At.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.CorrelationId.get -> string?
+Vais.Agents.Control.Http.McpGatewayEventDto.CorrelationId.init -> void
+Vais.Agents.Control.Http.McpGatewayEventDto.RunId.get -> string?
+Vais.Agents.Control.Http.McpGatewayEventDto.RunId.init -> void
+override Vais.Agents.Control.Http.McpGatewayEventDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.McpGatewayEventDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.McpGatewayEventDto.ToString() -> string!
+static Vais.Agents.Control.Http.McpGatewayEventDto.operator !=(Vais.Agents.Control.Http.McpGatewayEventDto? left, Vais.Agents.Control.Http.McpGatewayEventDto? right) -> bool
+static Vais.Agents.Control.Http.McpGatewayEventDto.operator ==(Vais.Agents.Control.Http.McpGatewayEventDto? left, Vais.Agents.Control.Http.McpGatewayEventDto? right) -> bool
+Vais.Agents.Control.Http.AgentLogEntryDto
+Vais.Agents.Control.Http.AgentLogEntryDto.<Clone>$() -> Vais.Agents.Control.Http.AgentLogEntryDto!
+Vais.Agents.Control.Http.AgentLogEntryDto.AgentId.get -> string!
+Vais.Agents.Control.Http.AgentLogEntryDto.AgentId.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.AgentLogEntryDto(string! EntryId, string! AgentId, string? RunId, System.DateTimeOffset At, string! Level, string! Message, string! Source) -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.At.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.AgentLogEntryDto.At.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.Deconstruct(out string! EntryId, out string! AgentId, out string? RunId, out System.DateTimeOffset At, out string! Level, out string! Message, out string! Source) -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.EntryId.get -> string!
+Vais.Agents.Control.Http.AgentLogEntryDto.EntryId.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.Equals(Vais.Agents.Control.Http.AgentLogEntryDto? other) -> bool
+Vais.Agents.Control.Http.AgentLogEntryDto.Level.get -> string!
+Vais.Agents.Control.Http.AgentLogEntryDto.Level.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.Message.get -> string!
+Vais.Agents.Control.Http.AgentLogEntryDto.Message.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.RunId.get -> string?
+Vais.Agents.Control.Http.AgentLogEntryDto.RunId.init -> void
+Vais.Agents.Control.Http.AgentLogEntryDto.Source.get -> string!
+Vais.Agents.Control.Http.AgentLogEntryDto.Source.init -> void
+override Vais.Agents.Control.Http.AgentLogEntryDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentLogEntryDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentLogEntryDto.ToString() -> string!
+static Vais.Agents.Control.Http.AgentLogEntryDto.operator !=(Vais.Agents.Control.Http.AgentLogEntryDto? left, Vais.Agents.Control.Http.AgentLogEntryDto? right) -> bool
+static Vais.Agents.Control.Http.AgentLogEntryDto.operator ==(Vais.Agents.Control.Http.AgentLogEntryDto? left, Vais.Agents.Control.Http.AgentLogEntryDto? right) -> bool

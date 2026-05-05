@@ -48,8 +48,9 @@ public static class PythonPluginServiceCollectionExtensions
             var loggerFactory = sp.GetService<ILoggerFactory>();
             var handlerRegistry = sp.GetService<IPluginHandlerRegistry>();
             var secretResolver = sp.GetService<ISecretResolver>();
+            var logSink = sp.GetService<IAgentLogSink>();
             return new PythonPluginHostService(opts, loggerFactory, handlerRegistry: handlerRegistry,
-                secretResolver: secretResolver);
+                secretResolver: secretResolver, logSink: logSink);
         });
 
         if (!alreadyRegistered)

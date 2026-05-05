@@ -28,6 +28,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     private readonly Func<PythonPluginDescriptor, PythonSubprocessSupervisor> _supervisorFactory;
     private readonly IPluginHandlerRegistry? _handlerRegistry;
     private readonly ISecretResolver? _secretResolver;
+    private readonly IAgentLogSink? _logSink;
 
     // Keyed by plugin name for O(1) lookup during hot-reload.
     private readonly Dictionary<string, PythonSubprocessSupervisor> _supervisors =
@@ -37,8 +38,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         PythonPluginLoaderOptions? options = null,
         ILoggerFactory? loggerFactory = null,
         IPluginHandlerRegistry? handlerRegistry = null,
-        ISecretResolver? secretResolver = null)
-        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry, secretResolver) { }
+        ISecretResolver? secretResolver = null,
+        IAgentLogSink? logSink = null)
+        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry, secretResolver, logSink) { }
 
     // Test constructor — inject a custom supervisor factory (handlerRegistry optional).
     internal PythonPluginHostService(
@@ -46,15 +48,17 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         ILoggerFactory? loggerFactory,
         Func<PythonPluginDescriptor, PythonSubprocessSupervisor>? supervisorFactory,
         IPluginHandlerRegistry? handlerRegistry = null,
-        ISecretResolver? secretResolver = null)
+        ISecretResolver? secretResolver = null,
+        IAgentLogSink? logSink = null)
     {
         _options = options ?? new PythonPluginLoaderOptions();
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<PythonPluginHostService>();
         _handlerRegistry = handlerRegistry;
         _secretResolver = secretResolver;
+        _logSink = logSink;
         _supervisorFactory = supervisorFactory
-            ?? (d => new PythonSubprocessSupervisor(d, _loggerFactory));
+            ?? (d => new PythonSubprocessSupervisor(d, _loggerFactory, _logSink));
     }
 
     // -------------------------------------------------------------------------

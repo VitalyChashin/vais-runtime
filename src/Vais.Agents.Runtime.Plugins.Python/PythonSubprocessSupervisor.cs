@@ -29,6 +29,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly Func<PythonPluginDescriptor, ISubprocessHandle> _handleFactory;
+    private readonly IAgentLogSink? _logSink;
 
     // _liveDescriptor is updated on each successful hot-reload cycle.
     // All spawning paths read this field rather than _descriptor so the new
@@ -96,8 +97,9 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     internal Task<bool> InitialHandshakeTask => _currentHandshakeTcs.Task;
 
     // Production constructor — uses RealSubprocessHandle
-    internal PythonSubprocessSupervisor(PythonPluginDescriptor descriptor, ILoggerFactory? loggerFactory = null)
-        : this(descriptor, loggerFactory, static d => new RealSubprocessHandle(d), backoffDelays: null)
+    internal PythonSubprocessSupervisor(PythonPluginDescriptor descriptor, ILoggerFactory? loggerFactory = null,
+        IAgentLogSink? logSink = null)
+        : this(descriptor, loggerFactory, static d => new RealSubprocessHandle(d), backoffDelays: null, logSink: logSink)
     {
     }
 
@@ -106,7 +108,8 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         PythonPluginDescriptor descriptor,
         ILoggerFactory? loggerFactory,
         Func<PythonPluginDescriptor, ISubprocessHandle> handleFactory,
-        TimeSpan[]? backoffDelays = null)
+        TimeSpan[]? backoffDelays = null,
+        IAgentLogSink? logSink = null)
     {
         _descriptor = descriptor;
         _liveDescriptor = descriptor;
@@ -114,6 +117,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         _logger = _loggerFactory.CreateLogger<PythonSubprocessSupervisor>();
         _handleFactory = handleFactory;
         _backoffDelays = backoffDelays ?? DefaultBackoffDelays;
+        _logSink = logSink;
     }
 
     /// <summary>
@@ -681,6 +685,15 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             {
                 using (_logger.BeginScope(new Dictionary<string, object?> { ["plugin"] = pluginName }))
                     _logger.LogInformation("{Line}", line);
+
+                _logSink?.Add(new AgentLogEntry(
+                    Guid.NewGuid().ToString("N"),
+                    pluginName,
+                    null,
+                    DateTimeOffset.UtcNow,
+                    "Information",
+                    line,
+                    "python"));
 
                 _stderrTail.Enqueue(line);
                 while (_stderrTail.Count > 20)

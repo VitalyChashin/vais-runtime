@@ -165,3 +165,45 @@ public sealed record McpEventDto(
     DateTimeOffset At,
     string? CorrelationId,
     string? RunId);
+
+/// <summary>DTO for a single MCP tool-call event returned by <c>GET /v1/mcp-gateways/{id}/events</c>.</summary>
+/// <param name="EventId">Unique identifier for this event.</param>
+/// <param name="GatewayId">Identifier of the MCP gateway that produced this event.</param>
+/// <param name="ToolName">Name of the tool that was called.</param>
+/// <param name="EventKind">Event type: <c>call.completed</c>, <c>call.failed</c>, <c>call.blocked</c>, or <c>cache.hit</c>.</param>
+/// <param name="DurationMs">Wall-clock duration in milliseconds; <see langword="null"/> when not measured.</param>
+/// <param name="CacheHit"><see langword="true"/> when served from cache.</param>
+/// <param name="BlockedReason">Reason the call was blocked; <see langword="null"/> when not blocked.</param>
+/// <param name="ErrorType">Exception type name when <paramref name="EventKind"/> is <c>call.failed</c>; otherwise <see langword="null"/>.</param>
+/// <param name="At">UTC timestamp when the event occurred.</param>
+/// <param name="CorrelationId">Ambient correlation ID; <see langword="null"/> when not set.</param>
+/// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+public sealed record McpGatewayEventDto(
+    string EventId,
+    string GatewayId,
+    string ToolName,
+    string EventKind,
+    long? DurationMs,
+    bool CacheHit,
+    string? BlockedReason,
+    string? ErrorType,
+    DateTimeOffset At,
+    string? CorrelationId,
+    string? RunId);
+
+/// <summary>DTO for a single agent log entry returned by <c>GET /v1/agents/{id}/logs</c>.</summary>
+/// <param name="EntryId">Unique identifier for this log entry.</param>
+/// <param name="AgentId">Identifier of the agent that produced this entry.</param>
+/// <param name="RunId">Correlation ID or graph run ID when available; <see langword="null"/> otherwise.</param>
+/// <param name="At">UTC timestamp when the line was captured.</param>
+/// <param name="Level">Log level: <c>Debug</c>, <c>Information</c>, <c>Warning</c>, <c>Error</c>, or <c>Critical</c>.</param>
+/// <param name="Message">The formatted log message text.</param>
+/// <param name="Source">Origin: <c>grain</c> (Orleans agent grain) or <c>python</c> (Python subprocess).</param>
+public sealed record AgentLogEntryDto(
+    string EntryId,
+    string AgentId,
+    string? RunId,
+    DateTimeOffset At,
+    string Level,
+    string Message,
+    string Source);

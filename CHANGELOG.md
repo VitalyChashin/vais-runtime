@@ -7,6 +7,34 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.55.0-preview] — 2026-05-05
+
+### Added
+
+- **MCP gateway tool-call event log** (`src/Vais.Agents.Observability.McpGatewayEventStore/`). New `Vais.Agents.Observability.McpGatewayEventStore` package mirrors `McpEventStore` at the gateway level — every tool dispatch that passes through the MCP gateway middleware stack is persisted to Postgres and exposed via `GET /v1/mcp-gateways/{id}/events`.
+
+  - `IMcpGatewayEventStore` / `McpGatewayEvent` / `PostgresMcpGatewayEventStore` — same structure as `McpEventStore` but keyed by `GatewayId`; table `vais_mcp_gateway_events`.
+  - `McpGatewayEventMiddleware : ToolGatewayMiddleware` — fire-and-forget recording after every tool call; records `call.completed` or `call.failed` with wall-clock duration, error type, and ambient correlation/run IDs.
+  - `AddMcpGatewayEventStore(Action<McpGatewayEventStoreOptions>)` DI extension; `McpGatewayEventStoreInitializer` applies schema and prunes old rows on startup.
+  - `RuntimeOptions` — new `VAIS_MCP_GATEWAY_EVENT_STORE_CONNECTION` + `VAIS_MCP_GATEWAY_ID` env vars; `local-dev/docker-compose.dev.yml` pre-wired to `research-mcp-gateway`.
+  - HTTP: `GET /v1/mcp-gateways/{id}/events` added to `MapMcpGatewayControlPlane`; query params `since`, `until`, `toolName`, `kind`, `limit` (max 500). Returns 503 when store not configured.
+  - `McpGatewayEventDto` added to `GraphContracts.cs`.
+  - Workbench: `McpGatewayEventDto` in `types.ts`, `listMcpGatewayEvents` in `resources.ts`, new `McpGatewayEventsTab.tsx` (10 s auto-refresh, expandable rows), "Tool Logs" tab on MCP gateway detail pane.
+
+- **Agent stdout log sink** (`src/Vais.Agents.Observability.AgentLogs/`, `src/Vais.Agents.Abstractions/`). New `Vais.Agents.Observability.AgentLogs` package captures per-agent log lines from both .NET grain loggers and Python subprocess stderr into an in-memory ring buffer, exposed via `GET /v1/agents/{id}/logs`.
+
+  - `IAgentLogSink` / `AgentLogEntry` abstractions added to `Vais.Agents.Abstractions`.
+  - `InMemoryAgentLogSink` — `ConcurrentDictionary` of per-agent ring buffers; oldest entries evicted when cap is reached. Buffer size configurable via `VAIS_AGENT_LOG_BUFFER_LINES` (default 500).
+  - `AgentGrainLoggerProvider : ILoggerProvider, ISupportExternalScope` — intercepts Orleans grain log scopes to extract `AgentId` and forward lines into `IAgentLogSink` tagged `source: grain`.
+  - `AddAgentLogSink()` DI extension registers both the sink and the logger provider.
+  - `PythonSubprocessSupervisor` — `ForwardStderrAsync` now forwards each line to `IAgentLogSink` tagged `source: python`.
+  - `PythonPluginHostService` / `PythonPluginServiceCollectionExtensions` — resolve `IAgentLogSink` from DI and pass to supervisor.
+  - HTTP: `GET /v1/agents/{id}/logs?since=&limit=` added to agent control-plane endpoints. Returns 503 when sink not registered.
+  - `AgentLogEntryDto` added to `GraphContracts.cs`.
+  - Workbench: `AgentLogEntryDto` in `types.ts`, `listAgentLogs` in `resources.ts`, new `AgentLogsTab.tsx` (5 s auto-refresh, level colour coding), "Logs" tab on agent detail pane.
+
+---
+
 ## [0.54.0-preview] — 2026-05-05
 
 ### Added

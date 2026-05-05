@@ -21,10 +21,12 @@ using Vais.Agents.Core.PowerFx;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Protocols.A2A;
 using Vais.Agents.Hosting.InMemory;
+using Vais.Agents.Observability.AgentLogs;
 using Vais.Agents.Observability.AgentRunStore;
 using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.McpEventStore;
+using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.OpenTelemetry;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Persistence.Postgres;
@@ -368,6 +370,11 @@ internal static class CompositionRoot
             });
         }
 
+        // 5. Agent log sink — in-memory ring buffer for agent grain and Python subprocess stdout.
+        //    Always registered; no connection string required. Buffer cap configurable via
+        //    VAIS_AGENT_LOG_BUFFER_LINES (default 500). HTTP endpoint returns entries from sink.
+        services.AddAgentLogSink(o => o.BufferLinesPerAgent = options.AgentLogBufferLines);
+
         // 5. Optional run store — Postgres-backed graph run history. Off-by-default; set
         //    VAIS_RUN_STORE_CONNECTION to an Npgsql connection string to enable. HTTP endpoints
         //    return 503 when not configured. Schema is created on first run automatically.
@@ -398,6 +405,16 @@ internal static class CompositionRoot
                 o.ConnectionString = options.McpEventStoreConnection;
                 if (!string.IsNullOrWhiteSpace(options.McpServerId))
                     o.ServerId = options.McpServerId;
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.McpGatewayEventStoreConnection))
+        {
+            services.AddMcpGatewayEventStore(o =>
+            {
+                o.ConnectionString = options.McpGatewayEventStoreConnection;
+                if (!string.IsNullOrWhiteSpace(options.McpGatewayId))
+                    o.GatewayId = options.McpGatewayId;
             });
         }
 

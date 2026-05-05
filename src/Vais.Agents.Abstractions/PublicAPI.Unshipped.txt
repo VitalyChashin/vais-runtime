@@ -429,3 +429,30 @@ override Vais.Agents.NodeAgentInvoked.GetHashCode() -> int
 override Vais.Agents.NodeAgentInvoked.ToString() -> string!
 static Vais.Agents.NodeAgentInvoked.operator !=(Vais.Agents.NodeAgentInvoked? left, Vais.Agents.NodeAgentInvoked? right) -> bool
 static Vais.Agents.NodeAgentInvoked.operator ==(Vais.Agents.NodeAgentInvoked? left, Vais.Agents.NodeAgentInvoked? right) -> bool
+Vais.Agents.AgentLogEntry
+Vais.Agents.AgentLogEntry.<Clone>$() -> Vais.Agents.AgentLogEntry!
+Vais.Agents.AgentLogEntry.AgentId.get -> string!
+Vais.Agents.AgentLogEntry.AgentId.init -> void
+Vais.Agents.AgentLogEntry.AgentLogEntry(string! EntryId, string! AgentId, string? RunId, System.DateTimeOffset At, string! Level, string! Message, string! Source) -> void
+Vais.Agents.AgentLogEntry.At.get -> System.DateTimeOffset
+Vais.Agents.AgentLogEntry.At.init -> void
+Vais.Agents.AgentLogEntry.Deconstruct(out string! EntryId, out string! AgentId, out string? RunId, out System.DateTimeOffset At, out string! Level, out string! Message, out string! Source) -> void
+Vais.Agents.AgentLogEntry.EntryId.get -> string!
+Vais.Agents.AgentLogEntry.EntryId.init -> void
+Vais.Agents.AgentLogEntry.Equals(Vais.Agents.AgentLogEntry? other) -> bool
+Vais.Agents.AgentLogEntry.Level.get -> string!
+Vais.Agents.AgentLogEntry.Level.init -> void
+Vais.Agents.AgentLogEntry.Message.get -> string!
+Vais.Agents.AgentLogEntry.Message.init -> void
+Vais.Agents.AgentLogEntry.RunId.get -> string?
+Vais.Agents.AgentLogEntry.RunId.init -> void
+Vais.Agents.AgentLogEntry.Source.get -> string!
+Vais.Agents.AgentLogEntry.Source.init -> void
+override Vais.Agents.AgentLogEntry.Equals(object? obj) -> bool
+override Vais.Agents.AgentLogEntry.GetHashCode() -> int
+override Vais.Agents.AgentLogEntry.ToString() -> string!
+static Vais.Agents.AgentLogEntry.operator !=(Vais.Agents.AgentLogEntry? left, Vais.Agents.AgentLogEntry? right) -> bool
+static Vais.Agents.AgentLogEntry.operator ==(Vais.Agents.AgentLogEntry? left, Vais.Agents.AgentLogEntry? right) -> bool
+Vais.Agents.IAgentLogSink
+Vais.Agents.IAgentLogSink.Add(Vais.Agents.AgentLogEntry! entry) -> void
+Vais.Agents.IAgentLogSink.GetLogs(string! agentId, System.DateTimeOffset? since = null, int limit = 100) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentLogEntry!>!
