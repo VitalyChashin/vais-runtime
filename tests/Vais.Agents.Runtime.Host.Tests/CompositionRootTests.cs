@@ -5,6 +5,7 @@ using A2A;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Orleans;
@@ -481,5 +482,65 @@ public class CompositionRootTests
 
         translator.Should().NotBeNull();
         providers.Should().ContainSingle(because: "both translator and provider must resolve from the same root — confirms AddPythonPlugins preceded AddAgentManifestInstantiator.");
+    }
+
+    [Fact]
+    public void Composition_BootManifestApplyService_Registered_When_Directory_Set()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-boot-manifests-test-{Guid.NewGuid():N}");
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { BootManifestsDirectory = tempRoot });
+
+        using var sp = services.BuildServiceProvider();
+        var hostedServices = sp.GetServices<IHostedService>();
+
+        hostedServices.Should().ContainSingle(
+            s => s is BootManifestApplyService,
+            because: "a non-empty BootManifestsDirectory must register BootManifestApplyService as a hosted service.");
+    }
+
+    [Fact]
+    public void Composition_BootManifestApplyService_Not_Registered_When_Directory_Null()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { BootManifestsDirectory = null });
+
+        using var sp = services.BuildServiceProvider();
+        var hostedServices = sp.GetServices<IHostedService>();
+
+        hostedServices.Should().NotContain(
+            s => s is BootManifestApplyService,
+            because: "null BootManifestsDirectory disables boot-apply — BootManifestApplyService must not be registered.");
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Reads_BootManifestsDirectory()
+    {
+        Environment.SetEnvironmentVariable("VAIS_BOOT_MANIFESTS_DIRECTORY", "/var/lib/vais/manifests");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.BootManifestsDirectory.Should().Be("/var/lib/vais/manifests");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_BOOT_MANIFESTS_DIRECTORY", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_BootManifestsDirectory_Null_When_Unset()
+    {
+        Environment.SetEnvironmentVariable("VAIS_BOOT_MANIFESTS_DIRECTORY", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.BootManifestsDirectory.Should().BeNull(
+                because: "unset VAIS_BOOT_MANIFESTS_DIRECTORY disables boot-apply.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_BOOT_MANIFESTS_DIRECTORY", null);
+        }
     }
 }

@@ -115,6 +115,17 @@ internal sealed record RuntimeOptions
     /// </summary>
     public string? RunStoreConnection { get; init; }
 
+    /// <summary>
+    /// Directory containing manifest files (YAML/JSON) applied to the registry on every runtime
+    /// start. All five resource kinds are supported: <c>Agent</c>, <c>AgentGraph</c>,
+    /// <c>LlmGatewayConfig</c>, <c>McpGatewayConfig</c>, <c>McpServer</c>. Files are processed
+    /// in ordinal filename order; multi-document YAML (<c>---</c>) and mixed-kind files are
+    /// supported (same format as <c>vais apply -f</c>). Null or empty ⇒ feature disabled.
+    /// Non-existent directory logs a warning and is skipped.
+    /// Set via <c>VAIS_BOOT_MANIFESTS_DIRECTORY</c>.
+    /// </summary>
+    public string? BootManifestsDirectory { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -140,6 +151,7 @@ internal sealed record RuntimeOptions
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
+            BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
         };
 
         static string? Env(string name)

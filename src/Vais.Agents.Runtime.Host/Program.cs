@@ -16,7 +16,7 @@ CompositionRoot.ConfigureServices(builder.Services, options, builder.Configurati
 var app = builder.Build();
 
 app.Logger.LogInformation(
-    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt}",
+    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests}",
     options.Mode,
     options.Mode == "clustered" ? options.ClusteringBackend : "n/a",
     string.IsNullOrWhiteSpace(options.OpaBaseUrl) ? "disabled (AllowAll)" : $"enabled ({options.OpaFailMode})",
@@ -29,7 +29,8 @@ app.Logger.LogInformation(
     string.IsNullOrWhiteSpace(options.LangfuseProject) ? "disabled" : "enabled",
     string.IsNullOrWhiteSpace(options.JwtAuthority)
         ? "disabled"
-        : options.UseSaPrincipalMapper ? $"enabled+sa-mapper ({options.JwtAuthority})" : $"enabled ({options.JwtAuthority})");
+        : options.UseSaPrincipalMapper ? $"enabled+sa-mapper ({options.JwtAuthority})" : $"enabled ({options.JwtAuthority})",
+    string.IsNullOrWhiteSpace(options.BootManifestsDirectory) ? "disabled" : options.BootManifestsDirectory);
 
 app.UseAgentControlPlaneIdempotency();
 

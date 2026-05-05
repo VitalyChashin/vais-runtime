@@ -378,10 +378,22 @@ internal static class CompositionRoot
         services.AddHealthChecks()
             .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"]);
 
-        // 9. Startup consistency check — walks every registered agent manifest and verifies
-        //    that Handler.TypeName entries resolve to a loaded plugin. Logs LogError (no throw)
-        //    for misses so mis-deployed plugins surface at host start, not at first invocation.
+        // 9. Startup hosted services — run once on StartAsync, after Orleans becomes active.
+        //    PluginManifestConsistencyCheck walks registered manifests and verifies handlers.
+        //    BootManifestApplyService applies manifest files from VAIS_BOOT_MANIFESTS_DIRECTORY.
         services.AddHostedService<PluginManifestConsistencyCheck>();
+
+        if (!string.IsNullOrWhiteSpace(options.BootManifestsDirectory))
+        {
+            services.AddHostedService(sp => new BootManifestApplyService(
+                options.BootManifestsDirectory,
+                sp.GetRequiredService<IAgentLifecycleManager>(),
+                sp.GetRequiredService<IAgentGraphLifecycleManager>(),
+                sp.GetRequiredService<ILlmGatewayConfigLifecycleManager>(),
+                sp.GetRequiredService<IMcpGatewayConfigLifecycleManager>(),
+                sp.GetRequiredService<IMcpServerLifecycleManager>(),
+                sp.GetService<ILogger<BootManifestApplyService>>() ?? NullLogger<BootManifestApplyService>.Instance));
+        }
 
         // 10. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
         //    any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.
