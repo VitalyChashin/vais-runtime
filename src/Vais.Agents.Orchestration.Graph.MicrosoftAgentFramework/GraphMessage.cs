@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
 
@@ -39,6 +40,15 @@ public sealed record GraphMessage(
     /// null) on every outgoing <see cref="GraphMessage"/> so only the targeted executor skips.
     /// </summary>
     public string? ResumeFromNodeId { get; init; }
+
+    /// <summary>
+    /// OTEL <see cref="ActivityContext"/> of the <c>graph.fanout</c> span opened by the fork
+    /// source. Branch executors use this as parent for their <c>graph.node</c> span so Langfuse
+    /// renders concurrent branches nested under the fanout marker. Cleared by
+    /// <see cref="GraphJoinNodeExecutor"/> before delegating to the base body so the join node
+    /// and all downstream nodes are parented to the root <c>graph.run</c> span instead.
+    /// </summary>
+    internal ActivityContext? FanoutContext { get; init; }
 }
 
 /// <summary>

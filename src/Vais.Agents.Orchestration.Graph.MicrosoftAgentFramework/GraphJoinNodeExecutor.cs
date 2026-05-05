@@ -65,7 +65,7 @@ internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
             _receivedCount++;
             isLastBranch = _receivedCount >= _incomingBranchCount;
             mergedMessage = isLastBranch
-                ? message with { State = new Dictionary<string, JsonElement>(_accumulated, StringComparer.Ordinal) }
+                ? message with { State = new Dictionary<string, JsonElement>(_accumulated, StringComparer.Ordinal), FanoutContext = null }
                 : message;
         }
         finally

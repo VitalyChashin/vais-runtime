@@ -170,7 +170,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         // (the interrupt's outgoing edges are all we evaluate).
         if (!skipBody)
         {
-            using var nodeActivity = _activitySource.StartActivity("graph.node", ActivityKind.Internal, _graphContext);
+            using var nodeActivity = _activitySource.StartActivity("graph.node", ActivityKind.Internal, message.FanoutContext ?? _graphContext);
             nodeActivity?.SetTag("graph.run_id", message.RunId);
             nodeActivity?.SetTag("graph.node.id", _node.Id);
             nodeActivity?.SetTag("graph.node.kind", _node.Kind);
@@ -234,7 +234,17 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         // the executor drives delivery via SendMessageAsync (one per branch).
         if (_isForkSource)
         {
-            var forkBase = baseOutgoing with { SuperStep = message.SuperStep + 1, SourceNodeId = _node.Id };
+            using var fanoutActivity = _activitySource.StartActivity("graph.fanout", ActivityKind.Internal, _graphContext);
+            fanoutActivity?.SetTag("graph.node.id", _node.Id);
+            fanoutActivity?.SetTag("graph.run_id", message.RunId);
+            var fanoutCtx = fanoutActivity?.Context ?? _graphContext;
+
+            var forkBase = baseOutgoing with
+            {
+                SuperStep = message.SuperStep + 1,
+                SourceNodeId = _node.Id,
+                FanoutContext = fanoutCtx,
+            };
             foreach (var edge in _manifest.Edges.Where(e =>
                 e.Concurrent && string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
             {
