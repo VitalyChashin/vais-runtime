@@ -7,6 +7,37 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.54.0-preview] — 2026-05-05
+
+### Added
+
+- **Workbench — interactive graph topology diagram** (`workbench/`). A new **Graph** tab appears in the DetailPane for graph resources, rendering the pre-run manifest topology as an interactive DAG (pan, zoom).
+
+  - Nodes are laid out automatically via Dagre (`rankdir: TB`). Node kind is indicated by border colour: Agent = teal, End = green, Interrupt = amber, Code = neutral. The entry node has an accent left-border stripe.
+  - Concurrent (fan-out) edges are rendered as dashed teal lines; sequential edges as solid dim lines — matching the `graph.fanout` / `graph.node` OTEL span topology.
+  - Tab order for graphs: YAML · **Graph** · References · Test · Logs.
+  - Components: `graphLayout.ts` (pure Dagre helper, 6 unit tests), `GraphNode.tsx` (custom node renderer), `GraphTab.tsx` (React Query fetch + ReactFlow canvas), `graphTab.css` (design-token overrides for React Flow chrome).
+  - Dependencies added: `@xyflow/react`, `@dagrejs/dagre`.
+  - Architecture note: the `GraphTab` is read-only today (`nodesDraggable/nodesConnectable/elementsSelectable` all false). A future live-execution overlay can be added via an optional `runId` prop that highlights active nodes — no layout changes needed.
+
+- **Langfuse tracing — `graph.fanout` span for fan-out topology visibility** (`src/Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework/`). Concurrent branch nodes now appear nested under a `graph.fanout` parent span in the Langfuse trace waterfall, making the fan-out/fan-in pipeline shape visible without post-processing.
+
+  - Fork-source executors open a `graph.fanout` activity (tagged with `graph.node.id` and `graph.run_id`), capture its `ActivityContext`, then close it immediately. The context is forwarded to branch nodes via the new `internal ActivityContext? FanoutContext` field on `GraphMessage`.
+  - Branch `graph.node` spans use `FanoutContext` as their OTEL parent instead of `graph.run`, producing correct hierarchy in Langfuse.
+  - `GraphJoinNodeExecutor` clears `FanoutContext` before delegating to the base body, so the join node (e.g. synthesizer) remains a child of `graph.run` rather than of `graph.fanout`.
+  - Resulting Langfuse trace shape for a `planner → [researcher | analyst] → synthesizer → end` graph:
+
+    ```
+    graph.run
+    ├── planner       (graph.node)
+    ├── graph.fanout
+    │   ├── researcher (graph.node)
+    │   └── analyst    (graph.node)
+    └── synthesizer   (graph.node)
+    ```
+
+---
+
 ## [0.53.0-preview] — 2026-05-05
 
 ### Added
