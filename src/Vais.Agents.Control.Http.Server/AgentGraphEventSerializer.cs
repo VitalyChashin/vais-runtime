@@ -24,6 +24,7 @@ internal static class AgentGraphEventSerializer
             NodeCompleted nc     => ("node.completed",    JsonSerializer.Serialize(nc, JsonOptions)),
             EdgeTraversed et     => ("edge.traversed",    JsonSerializer.Serialize(et, JsonOptions)),
             StateUpdated su      => ("state.updated",     JsonSerializer.Serialize(su, JsonOptions)),
+            NodeAgentInvoked nai => ("node.agent_invoked",  JsonSerializer.Serialize(nai, JsonOptions)),
             GraphInterrupted gi  => ("graph.interrupted", JsonSerializer.Serialize(gi, JsonOptions)),
             GraphResumed gr      => ("graph.resumed",     JsonSerializer.Serialize(gr, JsonOptions)),
             GraphCompleted gc    => ("graph.completed",   JsonSerializer.Serialize(gc, JsonOptions)),

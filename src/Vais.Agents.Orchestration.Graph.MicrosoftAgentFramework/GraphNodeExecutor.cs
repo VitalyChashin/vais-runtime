@@ -280,7 +280,9 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             throw new InvalidOperationException($"Agent-kind node '{_node.Id}' has no Ref.");
         }
 
-        var text = BuildAgentInputText(state);
+        var filteredInput = FilterByInputBinding(state, _node.StateBindings);
+        var text = BuildAgentInputText(filteredInput);
+        var metadata = BuildMetadata(filteredInput, _node.StateBindings);
         AgentInvocationResult result;
 
         if (_node.Ref.RuntimeUrl is { } runtimeUrl)
@@ -294,7 +296,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             result = await _remoteInvoker.InvokeAsync(
                 runtimeUrl,
                 remoteHandle,
-                new AgentInvocationRequest(text, _context.UserId),
+                new AgentInvocationRequest(text, _context.UserId, metadata),
                 _bearerToken,
                 cancellationToken).ConfigureAwait(false);
         }
@@ -324,7 +326,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
             result = await _lifecycle.InvokeAsync(
                 handle,
-                new AgentInvocationRequest(text, _context.UserId),
+                new AgentInvocationRequest(text, _context.UserId, metadata),
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -354,7 +356,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         return updates;
     }
 
-    private static string BuildAgentInputText(IDictionary<string, JsonElement> state)
+    private static string BuildAgentInputText(IReadOnlyDictionary<string, JsonElement> state)
     {
         // Same fallback chain as InProcessGraphOrchestrator.
         if (state.TryGetValue(GraphStateReducers.WellKnownKey.Messages, out var messages) &&
@@ -390,6 +392,21 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             if (state.TryGetValue(key, out var value)) result[key] = value;
         }
         return result;
+    }
+
+    private static IReadOnlyDictionary<string, string>? BuildMetadata(
+        IReadOnlyDictionary<string, JsonElement> state,
+        GraphStateBindings? bindings)
+    {
+        if (bindings?.Input is not { Count: > 0 } keys)
+            return null;
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            if (state.TryGetValue(key, out var value))
+                metadata[key] = value.ValueKind == JsonValueKind.String ? value.GetString()! : value.GetRawText();
+        }
+        return metadata.Count == 0 ? null : metadata;
     }
 
     private static IReadOnlyDictionary<string, JsonElement> FilterByOutputBinding(
