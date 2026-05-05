@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Core.PowerFx</RootNamespace>
+    <AssemblyName>Vais.Agents.Core.PowerFx</AssemblyName>
+    <Description>Optional PowerFx expression evaluator for Vais.Agents graph edge predicates. Enables inline '=...' PowerFx conditions in graph manifests without registering C# IGraphEdgePredicate handlers.</Description>
+    <PackageTags>agents;ai;llm;graph;powerfx;expressions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.PowerFx.Interpreter" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Core.PowerFx.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -7,6 +7,33 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [0.53.0-preview] — 2026-05-05
+
+### Added
+
+- **PowerFx inline edge predicates** (`src/Vais.Agents.Core.PowerFx/`, `src/Vais.Agents.Core/`, `src/Vais.Agents.Abstractions/`). Graph manifest authors can now write boolean PowerFx expressions directly on `when:` edge slots instead of registering a C# `IGraphEdgePredicate` class for every simple condition.
+
+  ```yaml
+  edges:
+    - from: planner
+      to: analyst
+      when: "=Not(IsBlank(Local.research_plan))"
+    - from: planner
+      to: end
+      when: "=IsBlank(Local.research_plan)"
+  ```
+
+  - New `GraphEdgePredicate.Expression(string Expr)` sealed record in `Vais.Agents.Abstractions` — JSON/YAML manifest loaders map any `when: "=..."` string to this type.
+  - New `IGraphExpressionEvaluator` interface in `Vais.Agents.Core` — pluggable evaluator used by `GraphPredicateEvaluator.EvaluateAsync`. Null means `Expression` predicates throw with a message directing to `AddPowerFxExpressionEvaluator()`.
+  - New `Vais.Agents.Core.PowerFx` package — `PowerFxGraphExpressionEvaluator` backed by `Microsoft.PowerFx.Interpreter` 1.8.1. State keys exposed under `Local.*` (hyphens normalised to underscores); `Local.lastMessage` shortcut for the last `messages` array entry.
+  - `AddPowerFxExpressionEvaluator()` DI extension registers the evaluator as the singleton `IGraphExpressionEvaluator`.
+  - `expressionEvaluator` parameter threaded through `InProcessGraphOrchestrator`, `MafGraphOrchestrator`, `MafGraphBuilder`, and `GraphNodeExecutor`.
+  - `Vais.Agents.Runtime.Host` wired: `AddPowerFxExpressionEvaluator()` called in `CompositionRoot` so any graph deployed to the runtime can use inline expressions without extra configuration.
+  - Docs: `docs/reference/graph-predicate-operators.md` updated — new `Expression` subtype row, inline expression guide, updated .NET API shape.
+  - Docs: `docs/reference/packages.md` — `Vais.Agents.Core.PowerFx` row added; package count updated to 40.
+
+---
+
 ## [0.52.0-preview] — 2026-05-03
 
 ### Added

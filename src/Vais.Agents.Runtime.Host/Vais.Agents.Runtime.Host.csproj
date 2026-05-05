@@ -18,6 +18,7 @@
   <ItemGroup Label="Agent-runtime library references">
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core.PowerFx\Vais.Agents.Core.PowerFx.csproj" />
     <ProjectReference Include="..\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework\Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework.csproj" />
     <ProjectReference Include="..\Vais.Agents.Protocols.A2A\Vais.Agents.Protocols.A2A.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />

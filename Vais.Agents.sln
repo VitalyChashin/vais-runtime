@@ -169,6 +169,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Observability.R
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Observability.RunStore.Tests", "tests\Vais.Agents.Observability.RunStore.Tests\Vais.Agents.Observability.RunStore.Tests.csproj", "{62809FF5-9580-4ED8-A3F4-E5D84C4CF029}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Core.PowerFx", "src\Vais.Agents.Core.PowerFx\Vais.Agents.Core.PowerFx.csproj", "{0F56679D-9A92-40C1-8F20-B782793CE094}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Core.PowerFx.Tests", "tests\Vais.Agents.Core.PowerFx.Tests\Vais.Agents.Core.PowerFx.Tests.csproj", "{D594D543-0E12-488E-95AD-B7FC78B0315D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -502,6 +506,14 @@ Global
 		{62809FF5-9580-4ED8-A3F4-E5D84C4CF029}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62809FF5-9580-4ED8-A3F4-E5D84C4CF029}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62809FF5-9580-4ED8-A3F4-E5D84C4CF029}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F56679D-9A92-40C1-8F20-B782793CE094}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F56679D-9A92-40C1-8F20-B782793CE094}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F56679D-9A92-40C1-8F20-B782793CE094}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F56679D-9A92-40C1-8F20-B782793CE094}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D594D543-0E12-488E-95AD-B7FC78B0315D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD34E4A-0E3B-4483-BECB-2595E8E209A7} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
@@ -585,5 +597,7 @@ Global
 		{9BC95346-0CF7-43C3-A474-F3B6BE060014} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 		{ACD8C19C-A14C-4F5A-A854-817565719F4A} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
 		{62809FF5-9580-4ED8-A3F4-E5D84C4CF029} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
+		{0F56679D-9A92-40C1-8F20-B782793CE094} = {74BCF12D-6EAD-41AF-B590-751FAEAD6C97}
+		{D594D543-0E12-488E-95AD-B7FC78B0315D} = {50B4C7D8-FC48-4932-9958-A7EEA04E8DA7}
 	EndGlobalSection
 EndGlobal

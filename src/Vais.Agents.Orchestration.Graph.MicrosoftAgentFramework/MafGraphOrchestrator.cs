@@ -70,6 +70,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly IAgentRemoteInvoker? _remoteInvoker;
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
+    private readonly IGraphExpressionEvaluator? _expressionEvaluator;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -94,6 +95,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes (<see cref="GraphAgentRef.RuntimeUrl"/>). Null means runtime-url nodes throw at runtime.</param>
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes (<see cref="GraphAgentRef.A2AUrl"/>). Null means A2A-url nodes throw at runtime.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
+    /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -107,7 +109,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         IAgentGraphEventBus? graphEventBus = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
+        string? bearerToken = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -125,6 +128,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _remoteInvoker = remoteInvoker;
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
+        _expressionEvaluator = expressionEvaluator;
     }
 
     /// <inheritdoc />
@@ -262,6 +266,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             remoteInvoker: _remoteInvoker,
             a2aInvoker: _a2aInvoker,
             bearerToken: _bearerToken,
+            expressionEvaluator: _expressionEvaluator,
             checkpointer: _checkpointer);
         var workflow = buildResult.Workflow;
         var portIdToNodeId = buildResult.PortIdToNodeId;
@@ -415,6 +420,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             remoteInvoker: _remoteInvoker,
             a2aInvoker: _a2aInvoker,
             bearerToken: _bearerToken,
+            expressionEvaluator: _expressionEvaluator,
             startNodeId: resumeFromNodeId,
             checkpointer: _checkpointer);
 
@@ -606,8 +612,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         IAgentGraphEventBus? graphEventBus = null,
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
-        string? bearerToken = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken)
+        string? bearerToken = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator)
     {
     }
 }

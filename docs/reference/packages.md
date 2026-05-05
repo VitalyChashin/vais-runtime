@@ -1,6 +1,6 @@
 # Reference: packages
 
-All **39 packages** under the `Vais.Agents.*` prefix — 33 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
+All **40 packages** under the `Vais.Agents.*` prefix — 33 libraries plus the `Vais.Agents.Cli` dotnet tool. Target framework: `net9.0`. Version: `0.20.0-preview` (not yet published to nuget.org). This page is the canonical list — every shipped package with one-line purpose, key entry points, and install guidance.
 
 Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that builds the `vais-agents-runtime` container image (v0.16 Pillar A). Not a NuGet; ships as the Dockerfile + docker-compose recipes + Helm chart under [`deploy/`](../../deploy/). See the [Runtime container](#runtime-container-v016) row at the bottom of this page.
 
@@ -16,6 +16,7 @@ Plus one **in-repo composition project** — `Vais.Agents.Runtime.Host` — that
 | Package | Purpose | Key entry points | Install when… |
 |---|---|---|---|
 | `Vais.Agents.Core` | Default `StatefulAiAgent` + execution loop + in-process defaults + diagnostics constants + `InProcessGraphOrchestrator` (zero-MAF-dep) + `InMemoryCheckpointer`. | `StatefulAiAgent`, `StatefulAgentOptions`, `DefaultToolCallDispatcher`, `InProcessGraphOrchestrator<TState>`, `AgenticDiagnostics`, `AgenticTags` | Any scenario that builds or runs an agent. |
+| `Vais.Agents.Core.PowerFx` | PowerFx expression evaluator for inline `=...` edge predicates in graph manifests. Depends on `Vais.Agents.Core` + `Microsoft.PowerFx.Interpreter`. State keys exposed under `Local.*`; `Local.lastMessage` shortcut for the last messages-array entry. | `PowerFxGraphExpressionEvaluator`, `AddPowerFxExpressionEvaluator` | Any graph that uses `when: "=<expr>"` PowerFx predicates. The runtime container wires this automatically. |
 
 ## Gateway plugins
 
@@ -163,7 +164,7 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 - **Tool result caching** — any of the above + `Gateways.McpCache`. Exclude side-effectful tools via the `excludedTools` list.
 - **Multi-tenant tool governance** — any of the above + `Gateways.McpGovernance`. One `ToolRateLimitMiddleware` per tenant key; `ToolWorkspacePolicyMiddleware` enforces per-workspace allow/deny rules.
 - **Tool security hardening** — any of the above + `Gateways.McpSecurity`. `ToolArgumentValidationMiddleware` before `ToolOutputLengthGuard`.
-- **Graph orchestration** *(v0.9)* — any of the above + `Core` (ships `InProcessGraphOrchestrator`) + `Control.Manifests.Yaml` for YAML-authored graphs + optional `Orchestration.Graph.MicrosoftAgentFramework` for the MAF-Workflows adapter. Pair with `Hosting.Orleans` + `AddOrleansGraphCheckpointer` for durable interrupt/resume.
+- **Graph orchestration** *(v0.9)* — any of the above + `Core` (ships `InProcessGraphOrchestrator`) + `Control.Manifests.Yaml` for YAML-authored graphs + optional `Orchestration.Graph.MicrosoftAgentFramework` for the MAF-Workflows adapter. Pair with `Hosting.Orleans` + `AddOrleansGraphCheckpointer` for durable interrupt/resume. Add `Core.PowerFx` + `AddPowerFxExpressionEvaluator()` to enable inline `when: "=..."` PowerFx edge predicates.
 - **HTTP control plane with idempotency + OpenAPI** *(v0.6 + v0.11)* — `Control.InProcess` + `Control.Http.Server` + `AddAgentControlPlaneIdempotency` + `AddAgentControlPlaneOpenApi`. Pair with `Hosting.Orleans` + `AddOrleansIdempotencyStore` for durable deduplication across silo restart.
 - **HTTP streaming invoke** *(v0.12)* — `Control.Http.Server` (exposes `/v1/agents/{id}/invoke/stream` SSE route) + `Control.Http.Client` (`InvokeStreamEventsAsync` / `InvokeStreamAsync`). Agent must implement `IStreamingAiAgent` (`StatefulAiAgent` does out of the box).
 - **Kubernetes-native deployment** *(v0.13)* — `Control.KubernetesOperator` + in-repo `KubernetesOperator.Host` container + `deploy/helm/vais-agents-operator/` chart + `deploy/crds/vais.io_agents.yaml`. Pair with your `Control.Http.Server`-hosted runtime reachable from cluster pods.

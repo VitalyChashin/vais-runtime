@@ -215,7 +215,7 @@ Typical billing-path output:
 ## Where to from here
 
 - [Run resumable graphs on Orleans](run-resumable-graphs-on-orleans.md) — persist checkpoints across silo restart with `OrleansCheckpointer` + wire the `Interrupt` kind for durable HITL.
-- [Graph predicate operators reference](../reference/graph-predicate-operators.md) — the full ten-operator vocabulary + `allOf` / `anyOf` / `not` combinators + the `HandlerRef` escape.
+- [Graph predicate operators reference](../reference/graph-predicate-operators.md) — the full ten-operator vocabulary + `allOf` / `anyOf` / `not` combinators + inline PowerFx `=...` expressions + the `HandlerRef` escape.
 - [Graph orchestration concept](../concepts/graph-orchestration.md) — node + edge + predicate model, orchestrator trade-offs, choose-your-orchestrator decision table.
 - [Events reference](../reference/events.md) — `AgentGraphEvent` closed hierarchy + SSE wire-event-name mapping.
 - `samples/AgentGraphInProcess` + `samples/AgentGraphYamlLoader` — runnable walkthroughs (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).

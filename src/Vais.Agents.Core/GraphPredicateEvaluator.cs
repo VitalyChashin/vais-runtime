@@ -21,7 +21,8 @@ internal static class GraphPredicateEvaluator
         GraphEdgePredicate? predicate,
         IReadOnlyDictionary<string, JsonElement> state,
         Func<GraphHandlerRef, IGraphEdgePredicate>? handlerResolver,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IGraphExpressionEvaluator? expressionEvaluator = null)
     {
         if (predicate is null || predicate is GraphEdgePredicate.Always)
         {
@@ -36,7 +37,7 @@ internal static class GraphPredicateEvaluator
             case GraphEdgePredicate.AllOf a:
                 foreach (var p in a.Predicates)
                 {
-                    if (!await EvaluateAsync(p, state, handlerResolver, cancellationToken).ConfigureAwait(false))
+                    if (!await EvaluateAsync(p, state, handlerResolver, cancellationToken, expressionEvaluator).ConfigureAwait(false))
                     {
                         return false;
                     }
@@ -46,7 +47,7 @@ internal static class GraphPredicateEvaluator
             case GraphEdgePredicate.AnyOf a:
                 foreach (var p in a.Predicates)
                 {
-                    if (await EvaluateAsync(p, state, handlerResolver, cancellationToken).ConfigureAwait(false))
+                    if (await EvaluateAsync(p, state, handlerResolver, cancellationToken, expressionEvaluator).ConfigureAwait(false))
                     {
                         return true;
                     }
@@ -54,7 +55,7 @@ internal static class GraphPredicateEvaluator
                 return false;
 
             case GraphEdgePredicate.Not n:
-                return !await EvaluateAsync(n.Predicate, state, handlerResolver, cancellationToken).ConfigureAwait(false);
+                return !await EvaluateAsync(n.Predicate, state, handlerResolver, cancellationToken, expressionEvaluator).ConfigureAwait(false);
 
             case GraphEdgePredicate.HandlerRef h:
                 if (handlerResolver is null)
@@ -64,6 +65,15 @@ internal static class GraphPredicateEvaluator
                 }
                 var handler = handlerResolver(h.Handler);
                 return await handler.EvaluateAsync(state, cancellationToken).ConfigureAwait(false);
+
+            case GraphEdgePredicate.Expression e:
+                if (expressionEvaluator is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Edge predicate is a PowerFx expression ('{e.Expr}') but no IGraphExpressionEvaluator " +
+                        "was registered. Call AddPowerFxExpressionEvaluator() or provide a custom implementation.");
+                }
+                return await expressionEvaluator.EvaluatePredicateAsync(e.Expr, state, cancellationToken).ConfigureAwait(false);
 
             default:
                 throw new NotSupportedException($"Unknown predicate subtype '{predicate.GetType().Name}'.");

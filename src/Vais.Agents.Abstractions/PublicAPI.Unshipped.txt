@@ -398,6 +398,19 @@ Vais.Agents.NodeAgentInvoked.InputTokens.init -> void
 Vais.Agents.NodeAgentInvoked.OutputTokens.get -> int
 Vais.Agents.NodeAgentInvoked.OutputTokens.init -> void
 Vais.Agents.IResumableAgentGraph<TState>.ResumeStreamAsync(Vais.Agents.GraphCheckpoint! checkpoint, TState? resumePayload, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentGraphEvent!>!
+Vais.Agents.GraphEdgePredicate.Expression
+Vais.Agents.GraphEdgePredicate.Expression.Deconstruct(out string! Expr) -> void
+Vais.Agents.GraphEdgePredicate.Expression.Equals(Vais.Agents.GraphEdgePredicate.Expression? other) -> bool
+Vais.Agents.GraphEdgePredicate.Expression.Expr.get -> string!
+Vais.Agents.GraphEdgePredicate.Expression.Expr.init -> void
+Vais.Agents.GraphEdgePredicate.Expression.Expression(string! Expr) -> void
+override Vais.Agents.GraphEdgePredicate.Expression.<Clone>$() -> Vais.Agents.GraphEdgePredicate.Expression!
+override Vais.Agents.GraphEdgePredicate.Expression.Equals(object? obj) -> bool
+override Vais.Agents.GraphEdgePredicate.Expression.GetHashCode() -> int
+override Vais.Agents.GraphEdgePredicate.Expression.ToString() -> string!
+override sealed Vais.Agents.GraphEdgePredicate.Expression.Equals(Vais.Agents.GraphEdgePredicate? other) -> bool
+static Vais.Agents.GraphEdgePredicate.Expression.operator !=(Vais.Agents.GraphEdgePredicate.Expression? left, Vais.Agents.GraphEdgePredicate.Expression? right) -> bool
+static Vais.Agents.GraphEdgePredicate.Expression.operator ==(Vais.Agents.GraphEdgePredicate.Expression? left, Vais.Agents.GraphEdgePredicate.Expression? right) -> bool
 Vais.Agents.GraphStateReducer.FirstWriteWins
 Vais.Agents.GraphStateReducer.FirstWriteWins.FirstWriteWins() -> void
 Vais.Agents.GraphStateReducer.FirstWriteWins.Equals(Vais.Agents.GraphStateReducer.FirstWriteWins? other) -> bool

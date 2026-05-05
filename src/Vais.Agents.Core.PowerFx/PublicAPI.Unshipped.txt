@@ -1,0 +1,6 @@
+#nullable enable
+Vais.Agents.Core.PowerFx.PowerFxGraphExpressionEvaluator
+Vais.Agents.Core.PowerFx.PowerFxGraphExpressionEvaluator.PowerFxGraphExpressionEvaluator() -> void
+Vais.Agents.Core.PowerFx.PowerFxGraphExpressionEvaluator.EvaluatePredicateAsync(string! expression, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>! state, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Core.PowerFx.ServiceCollectionExtensions
+static Vais.Agents.Core.PowerFx.ServiceCollectionExtensions.AddPowerFxExpressionEvaluator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

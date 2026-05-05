@@ -17,6 +17,7 @@ using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
+using Vais.Agents.Core.PowerFx;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Protocols.A2A;
 using Vais.Agents.Hosting.InMemory;
@@ -279,6 +280,7 @@ internal static class CompositionRoot
             services.AddAgentRemoteInvoker();
         }
         services.AddA2AGraphNodeInvoker();
+        services.AddPowerFxExpressionEvaluator();
         services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
         {
             var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
@@ -312,7 +314,8 @@ internal static class CompositionRoot
                         a2aInvoker: sp.GetService<IA2AGraphNodeInvoker>(),
                         bearerToken: accessor?.HttpContext?.Request.Headers.Authorization.ToString() is string authHeader
                             && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                            ? authHeader[7..] : null));
+                            ? authHeader[7..] : null,
+                        expressionEvaluator: sp.GetService<IGraphExpressionEvaluator>()));
         });
 
         // v0.20 Gateway config lifecycle managers (GCF-17).

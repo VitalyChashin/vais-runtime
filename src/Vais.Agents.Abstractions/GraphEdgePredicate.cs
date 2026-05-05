@@ -9,11 +9,14 @@ namespace Vais.Agents;
 /// Predicate guarding an <see cref="GraphEdge"/>. Closed hierarchy — the declarative
 /// vocabulary ships <see cref="PropertyMatcher"/> + <see cref="AllOf"/> + <see cref="AnyOf"/>
 /// + <see cref="Not"/> + <see cref="Always"/>; the <see cref="HandlerRef"/> escape hatch
-/// covers anything richer via a DI-resolved <see cref="IGraphEdgePredicate"/>.
+/// covers anything richer via a DI-resolved <see cref="IGraphEdgePredicate"/>;
+/// <see cref="Expression"/> allows inline PowerFx boolean conditions.
 /// </summary>
 /// <remarks>
 /// Kubernetes-style matchers. Same idiom as <c>matchExpressions</c> on a PodSelector —
-/// familiar surface for operators and YAML-authored graphs. No expression DSL.
+/// familiar surface for operators and YAML-authored graphs.
+/// Use <see cref="Expression"/> for inline PowerFx conditions as an alternative to
+/// registering a <see cref="HandlerRef"/> handler.
 /// </remarks>
 public abstract record GraphEdgePredicate
 {
@@ -45,6 +48,17 @@ public abstract record GraphEdgePredicate
 
     /// <summary>Dispatches to a DI-resolved <see cref="IGraphEdgePredicate"/> implementation.</summary>
     public sealed record HandlerRef(GraphHandlerRef Handler) : GraphEdgePredicate;
+
+    /// <summary>
+    /// Evaluates a PowerFx expression against graph state. The expression must return a boolean.
+    /// The leading <c>=</c> (MAF declarative YAML convention) is stripped before evaluation.
+    /// State keys are accessible under the <c>Local</c> namespace: <c>Local.key_name</c>.
+    /// Hyphens in key names are normalised to underscores (<c>research-plan</c> → <c>Local.research_plan</c>).
+    /// The well-known <c>Local.lastMessage</c> shortcut exposes the last entry of the
+    /// <c>messages</c> array as a record (<c>Local.lastMessage.text</c>, <c>Local.lastMessage.role</c>).
+    /// Requires an <c>IGraphExpressionEvaluator</c> to be registered; throws at evaluation time if none is provided.
+    /// </summary>
+    public sealed record Expression(string Expr) : GraphEdgePredicate;
 }
 
 /// <summary>

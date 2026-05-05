@@ -40,6 +40,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
     private readonly IGraphCheckpointer? _checkpointer;
+    private readonly IGraphExpressionEvaluator? _expressionEvaluator;
 
     private readonly string? _hitlPortId;
     private readonly bool _isForkSource;
@@ -58,6 +59,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IGraphCheckpointer? checkpointer = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null,
         string? executorId = null,
         string? hitlPortId = null,
         bool isForkSource = false)
@@ -76,6 +78,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
         _checkpointer = checkpointer;
+        _expressionEvaluator = expressionEvaluator;
         _hitlPortId = hitlPortId;
         _isForkSource = isForkSource;
     }
@@ -235,7 +238,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             string.Equals(e.From, _node.Id, StringComparison.Ordinal)))
         {
             var matches = await GraphPredicateEvaluator.EvaluateAsync(
-                edge.When, AsReadOnly(state), _predicateResolver, cancellationToken).ConfigureAwait(false);
+                edge.When, AsReadOnly(state), _predicateResolver, cancellationToken, _expressionEvaluator).ConfigureAwait(false);
             if (matches)
             {
                 matchedEdge = edge;

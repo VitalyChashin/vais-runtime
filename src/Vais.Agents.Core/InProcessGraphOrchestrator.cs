@@ -45,6 +45,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
     private readonly IAgentGraphEventBus _graphEventBus;
+    private readonly IGraphExpressionEvaluator? _expressionEvaluator;
 
     /// <summary>Construct the orchestrator.</summary>
     /// <param name="manifest">Graph to run. Validated eagerly on first invocation.</param>
@@ -60,6 +61,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation. Typically extracted from the inbound HTTP request by the caller.</param>
     /// <param name="graphEventBus">Bus to fan out graph lifecycle events to. Null uses <see cref="NullAgentGraphEventBus"/>.</param>
+    /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     public InProcessGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -73,7 +75,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
-        IAgentGraphEventBus? graphEventBus = null)
+        IAgentGraphEventBus? graphEventBus = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -92,6 +95,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
         _graphEventBus = graphEventBus ?? NullAgentGraphEventBus.Instance;
+        _expressionEvaluator = expressionEvaluator;
     }
 
     /// <inheritdoc />
@@ -490,7 +494,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             foreach (var edge in _manifest.Edges.Where(e => string.Equals(e.From, currentNodeId, StringComparison.Ordinal)))
             {
                 var matches = await GraphPredicateEvaluator.EvaluateAsync(
-                    edge.When, AsReadOnly(state), _predicateResolver, cancellationToken).ConfigureAwait(false);
+                    edge.When, AsReadOnly(state), _predicateResolver, cancellationToken, _expressionEvaluator).ConfigureAwait(false);
                 if (!matches)
                 {
                     continue;
@@ -798,8 +802,9 @@ public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDic
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
-        IAgentGraphEventBus? graphEventBus = null)
-        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken, graphEventBus)
+        IAgentGraphEventBus? graphEventBus = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken, graphEventBus, expressionEvaluator)
     {
     }
 }

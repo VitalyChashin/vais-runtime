@@ -1350,4 +1350,91 @@ public sealed class AgentGraphManifestLoaderTests
 
         graphs.Should().ContainSingle("well-known keys 'messages' and 'lastAssistantText' are always exempt");
     }
+
+    // ── P3: inline PowerFx expression edge predicates ─────────────────────────
+
+    [Fact]
+    public async Task When_EqualSignString_Parses_As_Expression_Predicate()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: pfx-graph, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+                  when: "=Not(IsBlank(Local.research_plan))"
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        var edge = graphs[0].Edges.Single(e => e.From == "step" && e.To == "end");
+        var predicate = edge.When.Should().BeOfType<GraphEdgePredicate.Expression>().Subject;
+        predicate.Expr.Should().Be("=Not(IsBlank(Local.research_plan))");
+    }
+
+    [Fact]
+    public async Task When_EqualSignString_Json_Parses_As_Expression_Predicate()
+    {
+        var json = """
+            [
+              {
+                "apiVersion": "vais.agents/v1",
+                "kind": "AgentGraph",
+                "metadata": { "id": "pfx-json", "version": "1.0" },
+                "spec": {
+                  "entry": "step",
+                  "nodes": [
+                    { "id": "step", "kind": "Agent", "ref": { "id": "agent-x", "version": "1.0" } },
+                    { "id": "end",  "kind": "End" }
+                  ],
+                  "edges": [{ "from": "step", "to": "end", "when": "=Local.quality >= 0.8" }]
+                }
+              }
+            ]
+            """;
+
+        var loader = new JsonAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(json);
+
+        var edge = graphs[0].Edges.Single(e => e.From == "step" && e.To == "end");
+        edge.When.Should().BeOfType<GraphEdgePredicate.Expression>()
+            .Which.Expr.Should().Be("=Local.quality >= 0.8");
+    }
+
+    [Fact]
+    public async Task When_InvalidString_Not_Always_And_Not_EqualSign_IsValidationError()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: bad-graph, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: agent-x }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+                  when: "not-a-valid-predicate"
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var act = async () => await loader.LoadFromStringAsync(yaml);
+        await act.Should().ThrowAsync<AgentManifestValidationException>()
+            .WithMessage("*'=' (PowerFx expression)*");
+    }
 }

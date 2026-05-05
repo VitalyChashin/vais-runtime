@@ -473,13 +473,17 @@ public sealed class JsonAgentGraphManifestLoader
     {
         if (el.ValueKind == JsonValueKind.String)
         {
-            return string.Equals(el.GetString(), "always", StringComparison.Ordinal)
-                ? new GraphEdgePredicate.Always()
-                : null;
+            var s = el.GetString()!;
+            if (string.Equals(s, "always", StringComparison.Ordinal))
+                return new GraphEdgePredicate.Always();
+            if (s.StartsWith('='))
+                return new GraphEdgePredicate.Expression(s);
+            errors.Add($"{prefix}string predicate must be 'always' or start with '=' (PowerFx expression)");
+            return null;
         }
         if (el.ValueKind != JsonValueKind.Object)
         {
-            errors.Add($"{prefix}must be an object or the string 'always'");
+            errors.Add($"{prefix}must be an object, the string 'always', or a '=...' PowerFx expression string");
             return null;
         }
 

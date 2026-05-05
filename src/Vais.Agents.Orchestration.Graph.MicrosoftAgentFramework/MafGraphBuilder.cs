@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Agents.AI.Workflows;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
@@ -35,6 +36,7 @@ public static class MafGraphBuilder
     /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.RuntimeUrl"/> set.</param>
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes. Required when the graph manifest contains nodes with <see cref="GraphAgentRef.A2AUrl"/> set.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
+    /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     /// <param name="startNodeId">
     /// Override the workflow entry executor. Null (the default) uses <see cref="AgentGraphManifest.Entry"/>.
     /// Pass the interrupt node's id on resume so <see cref="InProcessExecution"/> delivers
@@ -57,6 +59,7 @@ public static class MafGraphBuilder
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null,
         string? startNodeId = null,
         IGraphCheckpointer? checkpointer = null)
     {
@@ -73,6 +76,7 @@ public static class MafGraphBuilder
                 node, manifest, registry, lifecycle,
                 predicateResolver, effectResolver, codeNodeResolver,
                 reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                expressionEvaluator: expressionEvaluator,
                 isForkSource: IsForkSource(node.Id, manifest));
         }
 
@@ -195,6 +199,7 @@ public static class MafGraphBuilder
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
+        IGraphExpressionEvaluator? expressionEvaluator = null,
         IGraphCheckpointer? checkpointer = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -219,6 +224,7 @@ public static class MafGraphBuilder
                     node, manifest, registry, lifecycle,
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                    expressionEvaluator: expressionEvaluator,
                     hitlPortId: portId);
 
                 var port = RequestPort.Create<GraphMessage, GraphMessage>(portId);
@@ -229,6 +235,7 @@ public static class MafGraphBuilder
                     node, manifest, registry, lifecycle,
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                    expressionEvaluator: expressionEvaluator,
                     executorId: resumeId);
             }
             else
@@ -236,7 +243,8 @@ public static class MafGraphBuilder
                 executors[node.Id] = new GraphNodeExecutor(
                     node, manifest, registry, lifecycle,
                     predicateResolver, effectResolver, codeNodeResolver,
-                    reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer);
+                    reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
+                    expressionEvaluator: expressionEvaluator);
             }
         }
 

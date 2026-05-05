@@ -22,6 +22,9 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.1.0" />
   </ItemGroup>
+  <ItemGroup Label="PowerFx expression evaluator (Vais.Agents.Core.PowerFx only — optional)">
+    <PackageVersion Include="Microsoft.PowerFx.Interpreter" Version="1.8.1" />
+  </ItemGroup>
   <ItemGroup Label="MCP (Vais.Agents.Protocols.Mcp + Vais.Agents.Protocols.Mcp.Server). ModelContextProtocol.Core is minimal for outbound; ModelContextProtocol.AspNetCore pulls DI + Map extensions for inbound HTTP.">
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.2.0" />
     <PackageVersion Include="ModelContextProtocol" Version="1.2.0" />

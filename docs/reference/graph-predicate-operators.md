@@ -1,8 +1,8 @@
 # Reference: graph predicate operators
 
-`GraphEdgePredicate` is the closed vocabulary used on every `GraphEdge.When` slot. Six subtypes, one ten-value `GraphPredicateOperator` enum, one escape hatch.
+`GraphEdgePredicate` is the closed vocabulary used on every `GraphEdge.When` slot. Seven subtypes, one ten-value `GraphPredicateOperator` enum, two escape hatches.
 
-Parallel to Kubernetes `matchExpressions` on a `PodSelector` — deliberately familiar for operators and YAML-authored graphs. No expression DSL; no arbitrary lambda predicates in-manifest.
+Parallel to Kubernetes `matchExpressions` on a `PodSelector` — deliberately familiar for operators and YAML-authored graphs. Inline [PowerFx](https://learn.microsoft.com/en-us/power-platform/power-fx/overview) expressions (`=...`) are also supported for simple conditions that the `PropertyMatcher` vocabulary can't cover.
 
 ## Subtype summary
 
@@ -13,6 +13,7 @@ Parallel to Kubernetes `matchExpressions` on a `PodSelector` — deliberately fa
 | `AllOf` | True when every nested predicate matches. | `when: { allOf: [ … ] }` |
 | `AnyOf` | True when at least one nested predicate matches. | `when: { anyOf: [ … ] }` |
 | `Not` | Inversion. | `when: { not: { … } }` |
+| `Expression` | Inline PowerFx boolean expression. State keys exposed as `Local.*`. | `when: "=<expr>"` |
 | `HandlerRef` | Dispatch to a DI-resolved `IGraphEdgePredicate`. Escape hatch for predicates beyond the matcher vocabulary. | `when: { handlerRef: { typeName, assemblyName? } }` |
 
 Edges from the same source node are evaluated in **manifest order**; first match wins. At least one `Always` (or unguarded) edge per source node is the convention for guaranteed reachability of `End`.
@@ -136,6 +137,36 @@ Inversion — route to fallback when the standard classifier didn't produce a ca
 
 Combinators nest freely. `AllOf` / `AnyOf` take an empty array too — `AllOf: []` matches (vacuously true); `AnyOf: []` does not match (vacuously false).
 
+### `Expression` — inline PowerFx
+
+Use when a `PropertyMatcher` combination would be awkward — "compare two state properties", "check for blank vs. absent", "combine multiple conditions in one expression":
+
+```yaml
+- from: planner
+  to: analyst
+  when: "=Not(IsBlank(Local.research_plan))"
+
+- from: planner
+  to: end
+  when: "=IsBlank(Local.research_plan)"
+```
+
+Expressions start with `=` (identical to PowerFx / Power Apps convention). Everything after `=` is the formula.
+
+**State namespace** — every state key is available as `Local.<key>`. Hyphens in key names are normalised to underscores (`research-plan` → `Local.research_plan`). Well-known shortcut: `Local.lastMessage` exposes the last entry of the `messages` array as a record (`Local.lastMessage.text`, `Local.lastMessage.role`).
+
+**Opt-in at the host** — PowerFx evaluation requires the `Vais.Agents.Core.PowerFx` package:
+
+```csharp
+services.AddPowerFxExpressionEvaluator();   // registers IGraphExpressionEvaluator
+```
+
+Without this registration, an `Expression` predicate throws `InvalidOperationException` at traversal time with a message directing to `AddPowerFxExpressionEvaluator()`. The runtime container wires this automatically.
+
+**Validation** — the manifest loader validates that `=`-prefixed strings are accepted; it does **not** type-check the PowerFx formula at load time. Formula errors surface as `InvalidOperationException` when the edge is first evaluated.
+
+**What PowerFx can express** — boolean functions (`IsBlank`, `Not`, `And`, `Or`), comparison (`=`, `<>`, `<`, `<=`, `>`, `>=`), string functions (`StartsWith`, `EndsWith`, `Len`, `Find`), arithmetic. Numbers use `>= 3` style integer comparisons; decimal literals may require `Decimal()` or `Float()` wrappers in some locales. For cross-property comparisons, regex, or external-config lookups, prefer `HandlerRef`.
+
 ### `HandlerRef` — escape hatch
 
 Use when the literal matcher vocabulary runs out — e.g. "compare two state properties", "regex match", "evaluate against external config":
@@ -207,6 +238,7 @@ public abstract record GraphEdgePredicate
     public sealed record AllOf(IReadOnlyList<GraphEdgePredicate> Predicates) : GraphEdgePredicate;
     public sealed record AnyOf(IReadOnlyList<GraphEdgePredicate> Predicates) : GraphEdgePredicate;
     public sealed record Not(GraphEdgePredicate Predicate) : GraphEdgePredicate;
+    public sealed record Expression(string Expr) : GraphEdgePredicate;
     public sealed record HandlerRef(GraphHandlerRef Handler) : GraphEdgePredicate;
 }
 
@@ -219,9 +251,21 @@ public interface IGraphEdgePredicate
 {
     ValueTask<bool> EvaluateAsync(IReadOnlyDictionary<string, JsonElement> state, CancellationToken cancellationToken = default);
 }
+
+// In Vais.Agents.Core:
+public interface IGraphExpressionEvaluator
+{
+    ValueTask<bool> EvaluatePredicateAsync(
+        string expression,
+        IReadOnlyDictionary<string, JsonElement> state,
+        CancellationToken cancellationToken = default);
+}
+
+// In Vais.Agents.Core.PowerFx:
+// services.AddPowerFxExpressionEvaluator();
 ```
 
-Closed hierarchy — the private `GraphEdgePredicate()` ctor prevents consumer-authored subclasses. Richer predicates go through `HandlerRef`; new literal subtypes are an **unshipped** addition to Abstractions per the `PublicAPI.Shipped.txt` discipline.
+Closed hierarchy — the private `GraphEdgePredicate()` ctor prevents consumer-authored subclasses. Complex predicates go through `HandlerRef`; `Expression` covers the inline-formula middle ground.
 
 ## See also
 
