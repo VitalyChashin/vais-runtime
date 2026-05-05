@@ -7,6 +7,17 @@ using Vais.Agents.Runtime.Plugins;
 namespace Vais.Agents.Runtime.Host;
 
 /// <summary>
+/// Grain storage backend for <c>localhost</c> mode.
+/// </summary>
+internal enum LocalhostPersistenceMode
+{
+    /// <summary>In-process memory storage — default, no external deps.</summary>
+    Memory,
+    /// <summary>Postgres via ADO.NET / Npgsql — requires <c>VAIS_POSTGRES_CONNECTION</c>.</summary>
+    Postgres,
+}
+
+/// <summary>
 /// Runtime-host composition inputs — derived from env vars at startup, or
 /// constructed directly by unit tests. Keeping this a record lets tests
 /// exercise <see cref="CompositionRoot"/> without touching process env state.
@@ -116,6 +127,25 @@ internal sealed record RuntimeOptions
     public string? RunStoreConnection { get; init; }
 
     /// <summary>
+    /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <see cref="AiAgentGrain.StorageName"/>
+    /// (the store used by every agent, registry, checkpoint, idempotency, and session grain).
+    /// <see cref="LocalhostPersistenceMode.Postgres"/> makes API-deployed agents and graphs survive
+    /// runtime restarts without requiring a manifest directory. Ignored in <c>clustered</c> mode.
+    /// Requires <c>VAIS_POSTGRES_CONNECTION</c>. Set via <c>VAIS_LOCALHOST_PERSISTENCE=postgres</c>.
+    /// </summary>
+    public LocalhostPersistenceMode LocalhostPersistence { get; init; } = LocalhostPersistenceMode.Memory;
+
+    /// <summary>
+    /// Grain storage backend for the Orleans pub/sub store (<c>PubSubStore</c>) in
+    /// <c>localhost</c> mode. Defaults to <see cref="LocalhostPersistenceMode.Memory"/>; set to
+    /// <see cref="LocalhostPersistenceMode.Postgres"/> to make stream subscriptions durable.
+    /// Independent of <see cref="LocalhostPersistence"/> — but Postgres pub-sub without Postgres
+    /// main storage is an unusual combination. Ignored in <c>clustered</c> mode.
+    /// Requires <c>VAIS_POSTGRES_CONNECTION</c>. Set via <c>VAIS_LOCALHOST_PUBSUB_PERSISTENCE=postgres</c>.
+    /// </summary>
+    public LocalhostPersistenceMode LocalhostPubSubPersistence { get; init; } = LocalhostPersistenceMode.Memory;
+
+    /// <summary>
     /// Directory containing manifest files (YAML/JSON) applied to the registry on every runtime
     /// start. All five resource kinds are supported: <c>Agent</c>, <c>AgentGraph</c>,
     /// <c>LlmGatewayConfig</c>, <c>McpGatewayConfig</c>, <c>McpServer</c>. Files are processed
@@ -152,6 +182,8 @@ internal sealed record RuntimeOptions
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
             BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
+            LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
+            LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),
         };
 
         static string? Env(string name)
@@ -181,6 +213,11 @@ internal sealed record RuntimeOptions
             !string.IsNullOrWhiteSpace(raw) && Enum.TryParse<ReloadPolicy>(raw, ignoreCase: true, out var parsed)
                 ? parsed
                 : ReloadPolicy.Disabled;
+
+        static LocalhostPersistenceMode ParsePersistenceMode(string? raw) =>
+            string.Equals(raw, "postgres", StringComparison.OrdinalIgnoreCase)
+                ? LocalhostPersistenceMode.Postgres
+                : LocalhostPersistenceMode.Memory;
     }
 
     /// <summary>
@@ -195,6 +232,19 @@ internal sealed record RuntimeOptions
         {
             throw new InvalidOperationException(
                 $"VAIS_HOSTING_MODE must be 'localhost' or 'clustered'; got '{Mode}'.");
+        }
+
+        if (Mode == "localhost")
+        {
+            var needsPostgres = LocalhostPersistence == LocalhostPersistenceMode.Postgres
+                             || LocalhostPubSubPersistence == LocalhostPersistenceMode.Postgres;
+            if (needsPostgres && string.IsNullOrWhiteSpace(PostgresConnection))
+            {
+                throw new InvalidOperationException(
+                    "VAIS_POSTGRES_CONNECTION is required when VAIS_LOCALHOST_PERSISTENCE or "
+                    + "VAIS_LOCALHOST_PUBSUB_PERSISTENCE is set to 'postgres'. "
+                    + "Set it to an Npgsql connection string and retry.");
+            }
         }
 
         if (Mode == "clustered")

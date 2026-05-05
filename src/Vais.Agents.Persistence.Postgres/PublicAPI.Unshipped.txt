@@ -1,1 +1,2 @@
 #nullable enable
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! name, string! connectionString) -> Orleans.Hosting.ISiloBuilder!

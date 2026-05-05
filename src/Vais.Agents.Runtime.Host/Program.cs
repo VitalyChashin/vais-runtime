@@ -16,9 +16,11 @@ CompositionRoot.ConfigureServices(builder.Services, options, builder.Configurati
 var app = builder.Build();
 
 app.Logger.LogInformation(
-    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests}",
+    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} persistence={Persistence} pubsub={PubSub} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests}",
     options.Mode,
     options.Mode == "clustered" ? options.ClusteringBackend : "n/a",
+    options.Mode == "localhost" ? options.LocalhostPersistence.ToString().ToLowerInvariant() : "n/a",
+    options.Mode == "localhost" ? options.LocalhostPubSubPersistence.ToString().ToLowerInvariant() : "n/a",
     string.IsNullOrWhiteSpace(options.OpaBaseUrl) ? "disabled (AllowAll)" : $"enabled ({options.OpaFailMode})",
     (options.OtelEndpoint, options.OtelConsole) switch
     {

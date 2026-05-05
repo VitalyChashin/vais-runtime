@@ -75,7 +75,7 @@ public static class AgenticPostgresPersistenceExtensions
     /// <see cref="AiAgentGrain.StorageName"/> — the name <see cref="AiAgentGrain"/>
     /// reads via its <c>[PersistentState("state", AiAgentGrain.StorageName)]</c>
     /// facet. Consumers that want additional grain storage names should call
-    /// <c>AddAdoNetGrainStorage(name, ...)</c> directly from Orleans.
+    /// <see cref="AddAgenticPostgresGrainStorage(ISiloBuilder, string, string)"/>.
     /// </summary>
     public static ISiloBuilder AddAgenticPostgresGrainStorage(
         this ISiloBuilder siloBuilder,
@@ -86,6 +86,30 @@ public static class AgenticPostgresPersistenceExtensions
 
         return siloBuilder.AddAdoNetGrainStorage(
             AiAgentGrain.StorageName,
+            options =>
+            {
+                options.Invariant = NpgsqlInvariant;
+                options.ConnectionString = connectionString;
+            });
+    }
+
+    /// <summary>
+    /// Register a Postgres-backed grain storage provider under an arbitrary
+    /// <paramref name="name"/>. Use this to add providers beyond
+    /// <see cref="AiAgentGrain.StorageName"/> — for example <c>"PubSubStore"</c> when
+    /// durable stream subscriptions are required in localhost mode.
+    /// </summary>
+    public static ISiloBuilder AddAgenticPostgresGrainStorage(
+        this ISiloBuilder siloBuilder,
+        string name,
+        string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(siloBuilder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        return siloBuilder.AddAdoNetGrainStorage(
+            name,
             options =>
             {
                 options.Invariant = NpgsqlInvariant;

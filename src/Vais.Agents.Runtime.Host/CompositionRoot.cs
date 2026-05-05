@@ -85,9 +85,23 @@ internal static class CompositionRoot
         if (options.Mode == "localhost")
         {
             silo.UseLocalhostClustering();
+
+            // "Default" is a safety net for any grain that omits a storage-name in
+            // [PersistentState]; no current grain uses it. Always in-memory.
             silo.AddMemoryGrainStorage("Default");
-            silo.AddMemoryGrainStorage(AiAgentGrain.StorageName);
-            silo.AddMemoryGrainStorage("PubSubStore"); // required by AddMemoryStreams pub-sub
+
+            // Primary grain store — registry, agents, checkpoints, idempotency, sessions.
+            if (options.LocalhostPersistence == LocalhostPersistenceMode.Postgres)
+                silo.AddAgenticPostgresGrainStorage(options.PostgresConnection!);
+            else
+                silo.AddMemoryGrainStorage(AiAgentGrain.StorageName);
+
+            // PubSubStore — required by AddMemoryStreams pub-sub.
+            if (options.LocalhostPubSubPersistence == LocalhostPersistenceMode.Postgres)
+                silo.AddAgenticPostgresGrainStorage("PubSubStore", options.PostgresConnection!);
+            else
+                silo.AddMemoryGrainStorage("PubSubStore");
+
             silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
             // LLM-backed grains (plan + summarize) routinely exceed the 30-second default.
             silo.Configure<SiloMessagingOptions>(o => o.ResponseTimeout = TimeSpan.FromMinutes(2));

@@ -485,6 +485,102 @@ public class CompositionRootTests
     }
 
     [Fact]
+    public void Options_LocalhostPersistence_Postgres_Requires_PostgresConnection()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "localhost",
+            LocalhostPersistence = LocalhostPersistenceMode.Postgres,
+            PostgresConnection = null,
+        };
+
+        var act = () => options.EnsureValid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_POSTGRES_CONNECTION*required*",
+                because: "localhost Postgres persistence without a connection string must fail loudly at startup.");
+    }
+
+    [Fact]
+    public void Options_LocalhostPubSubPersistence_Postgres_Requires_PostgresConnection()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "localhost",
+            LocalhostPubSubPersistence = LocalhostPersistenceMode.Postgres,
+            PostgresConnection = null,
+        };
+
+        var act = () => options.EnsureValid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_POSTGRES_CONNECTION*required*",
+                because: "localhost Postgres pub-sub persistence without a connection string must fail loudly at startup.");
+    }
+
+    [Fact]
+    public void Options_LocalhostPersistence_Memory_Does_Not_Require_PostgresConnection()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "localhost",
+            LocalhostPersistence = LocalhostPersistenceMode.Memory,
+            LocalhostPubSubPersistence = LocalhostPersistenceMode.Memory,
+            PostgresConnection = null,
+        };
+
+        var act = () => options.EnsureValid();
+
+        act.Should().NotThrow(because: "memory persistence is the default and needs no external deps.");
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Reads_LocalhostPersistence()
+    {
+        Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PERSISTENCE", "postgres");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.LocalhostPersistence.Should().Be(LocalhostPersistenceMode.Postgres);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PERSISTENCE", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_LocalhostPersistence_Defaults_To_Memory()
+    {
+        Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PERSISTENCE", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.LocalhostPersistence.Should().Be(LocalhostPersistenceMode.Memory,
+                because: "unset VAIS_LOCALHOST_PERSISTENCE defaults to memory — no behaviour change for existing deployments.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PERSISTENCE", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_Reads_LocalhostPubSubPersistence()
+    {
+        Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PUBSUB_PERSISTENCE", "postgres");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.LocalhostPubSubPersistence.Should().Be(LocalhostPersistenceMode.Postgres);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_LOCALHOST_PUBSUB_PERSISTENCE", null);
+        }
+    }
+
+    [Fact]
     public void Composition_BootManifestApplyService_Registered_When_Directory_Set()
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-boot-manifests-test-{Guid.NewGuid():N}");
