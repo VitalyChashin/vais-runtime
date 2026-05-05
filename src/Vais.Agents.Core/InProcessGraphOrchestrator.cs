@@ -668,7 +668,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             messages.ValueKind == JsonValueKind.Array && messages.GetArrayLength() > 0)
         {
             var last = messages[messages.GetArrayLength() - 1];
-            if (last.ValueKind == JsonValueKind.Object && last.TryGetProperty("Text", out var textProp))
+            if (last.ValueKind == JsonValueKind.Object &&
+                (last.TryGetProperty("Text", out var textProp) || last.TryGetProperty("text", out textProp)))
             {
                 var text = textProp.GetString();
                 if (!string.IsNullOrEmpty(text))

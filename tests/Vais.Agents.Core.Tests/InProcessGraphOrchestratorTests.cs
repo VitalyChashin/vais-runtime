@@ -596,6 +596,46 @@ public sealed class InProcessGraphOrchestratorTests
     { MaxSteps = 50 };
 
     [Fact]
+    public async Task BuildAgentInputText_Handles_CamelCase_Text_Property_In_Messages()
+    {
+        // Regression: InProcessGraphOrchestrator.BuildAgentInputText only checked "Text"
+        // (PascalCase). If messages arrive with lowercase "text" (e.g. camelCase serializer
+        // options in the runtime), it would silently fall back to "query".
+        var inputs = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var (registry, lifecycle) = BuildHarness(req =>
+        {
+            inputs.Add(req.History.LastOrDefault()?.Text ?? "");
+            return new CompletionResponse("ok");
+        });
+        await lifecycle.CreateAsync(ManifestFor("node-b"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "camel-text", Version: "1.0", Entry: "b",
+            Nodes: new[]
+            {
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("node-b")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("b", "end") });
+
+        // Seed with a message whose property key is lowercase "text" (camelCase serialization).
+        var camelMsg = JsonSerializer.SerializeToElement(
+            new { role = "assistant", text = "from-camel-serializer" });
+        var initial = new Dictionary<string, JsonElement>
+        {
+            ["query"] = JsonSerializer.SerializeToElement("initial request"),
+            [GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { camelMsg }),
+        };
+
+        var orchestrator = new InProcessGraphOrchestrator(manifest, registry, lifecycle, new InMemoryCheckpointer());
+        await foreach (var _ in orchestrator.StreamAsync(initial, new AgentContext())) { }
+
+        inputs.Should().ContainSingle()
+            .Which.Should().Be("from-camel-serializer",
+                "BuildAgentInputText must handle lowercase 'text' property, not fall back to 'query'");
+    }
+
+    [Fact]
     public async Task GraphEventBus_Receives_Exactly_The_Same_Events_As_The_Enumerator()
     {
         int callCount = 0;
