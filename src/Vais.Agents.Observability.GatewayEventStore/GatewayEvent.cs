@@ -16,6 +16,8 @@ namespace Vais.Agents.Observability.GatewayEventStore;
 /// <param name="At">UTC timestamp when the event occurred.</param>
 /// <param name="CorrelationId">Ambient correlation ID from the agent context at the time of the call; <see langword="null"/> when not set.</param>
 /// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+/// <param name="InputJson">JSON-serialized <c>CompletionRequest.History</c> (full conversation sent to the model), truncated at 32 KB; <see langword="null"/> when not captured.</param>
+/// <param name="OutputJson">Assistant response text, truncated at 32 KB; <see langword="null"/> when not captured or on failure.</param>
 public sealed record GatewayEvent(
     string EventId,
     string GatewayId,
@@ -28,4 +30,6 @@ public sealed record GatewayEvent(
     string? ErrorType,
     DateTimeOffset At,
     string? CorrelationId,
-    string? RunId);
+    string? RunId,
+    string? InputJson = null,
+    string? OutputJson = null);

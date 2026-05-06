@@ -20,7 +20,7 @@ Vais.Agents.Observability.McpEventStore.McpEvent.CacheHit.get -> bool
 Vais.Agents.Observability.McpEventStore.McpEvent.CacheHit.init -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.CorrelationId.get -> string?
 Vais.Agents.Observability.McpEventStore.McpEvent.CorrelationId.init -> void
-Vais.Agents.Observability.McpEventStore.McpEvent.Deconstruct(out string! EventId, out string! ServerId, out string! ToolName, out string! EventKind, out long? DurationMs, out bool CacheHit, out string? BlockedReason, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId) -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.Deconstruct(out string! EventId, out string! ServerId, out string! ToolName, out string! EventKind, out long? DurationMs, out bool CacheHit, out string? BlockedReason, out string? ErrorType, out System.DateTimeOffset At, out string? CorrelationId, out string? RunId, out string? InputJson, out string? OutputJson) -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.DurationMs.get -> long?
 Vais.Agents.Observability.McpEventStore.McpEvent.DurationMs.init -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.Equals(Vais.Agents.Observability.McpEventStore.McpEvent? other) -> bool
@@ -30,7 +30,11 @@ Vais.Agents.Observability.McpEventStore.McpEvent.EventId.get -> string!
 Vais.Agents.Observability.McpEventStore.McpEvent.EventId.init -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.EventKind.get -> string!
 Vais.Agents.Observability.McpEventStore.McpEvent.EventKind.init -> void
-Vais.Agents.Observability.McpEventStore.McpEvent.McpEvent(string! EventId, string! ServerId, string! ToolName, string! EventKind, long? DurationMs, bool CacheHit, string? BlockedReason, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId) -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.InputJson.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.InputJson.init -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.McpEvent(string! EventId, string! ServerId, string! ToolName, string! EventKind, long? DurationMs, bool CacheHit, string? BlockedReason, string? ErrorType, System.DateTimeOffset At, string? CorrelationId, string? RunId, string? InputJson = null, string? OutputJson = null) -> void
+Vais.Agents.Observability.McpEventStore.McpEvent.OutputJson.get -> string?
+Vais.Agents.Observability.McpEventStore.McpEvent.OutputJson.init -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.RunId.get -> string?
 Vais.Agents.Observability.McpEventStore.McpEvent.RunId.init -> void
 Vais.Agents.Observability.McpEventStore.McpEvent.ServerId.get -> string!

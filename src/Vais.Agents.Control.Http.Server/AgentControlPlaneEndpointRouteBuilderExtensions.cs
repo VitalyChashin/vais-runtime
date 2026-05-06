@@ -1967,7 +1967,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         return Results.Ok(items.Select(e => new GatewayEventDto(
             e.EventId, e.GatewayId, e.EventKind, e.ModelId,
             e.InputTokens, e.OutputTokens, e.DurationMs, e.CacheHit,
-            e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
+            e.ErrorType, e.At, e.CorrelationId, e.RunId,
+            e.InputJson, e.OutputJson)).ToArray());
     }
 
     // ── MCP gateway config handlers (v0.20) ───────────────────────────────────
@@ -2220,7 +2221,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ConfigureAwait(false);
         return Results.Ok(items.Select(e => new McpGatewayEventDto(
             e.EventId, e.GatewayId, e.ToolName, e.EventKind, e.DurationMs,
-            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
+            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId,
+            e.InputJson, e.OutputJson)).ToArray());
     }
 
     // ── MCP server handlers (v0.20) ───────────────────────────────────────────
@@ -2478,7 +2480,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ConfigureAwait(false);
         return Results.Ok(items.Select(e => new McpEventDto(
             e.EventId, e.ServerId, e.ToolName, e.EventKind, e.DurationMs,
-            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId)).ToArray());
+            e.CacheHit, e.BlockedReason, e.ErrorType, e.At, e.CorrelationId, e.RunId,
+            e.InputJson, e.OutputJson)).ToArray());
     }
 
     // ── GCF-18: gateway ref validation helpers ────────────────────────────────

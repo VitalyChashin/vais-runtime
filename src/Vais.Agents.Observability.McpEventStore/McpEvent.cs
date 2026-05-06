@@ -15,6 +15,8 @@ namespace Vais.Agents.Observability.McpEventStore;
 /// <param name="At">UTC timestamp when the event occurred.</param>
 /// <param name="CorrelationId">Ambient correlation ID from the agent context; <see langword="null"/> when not set.</param>
 /// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+/// <param name="InputJson">Tool arguments as a JSON string, truncated at 32 KB; <see langword="null"/> when not captured.</param>
+/// <param name="OutputJson">Tool result string, truncated at 32 KB; <see langword="null"/> when not captured or on failure.</param>
 public sealed record McpEvent(
     string EventId,
     string ServerId,
@@ -26,4 +28,6 @@ public sealed record McpEvent(
     string? ErrorType,
     DateTimeOffset At,
     string? CorrelationId,
-    string? RunId);
+    string? RunId,
+    string? InputJson = null,
+    string? OutputJson = null);

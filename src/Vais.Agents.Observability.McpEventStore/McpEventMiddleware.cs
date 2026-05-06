@@ -32,27 +32,30 @@ internal sealed class McpEventMiddleware : Vais.Agents.ToolGatewayMiddleware
         CancellationToken cancellationToken = default)
     {
         var at = DateTimeOffset.UtcNow;
+        var inputJson = Truncate(context.Arguments.GetRawText());
         var sw = Stopwatch.StartNew();
         try
         {
             var outcome = await next().ConfigureAwait(false);
             sw.Stop();
+            var outputJson = Truncate(outcome.Error ?? outcome.Result);
             _ = TryRecordAsync(at, sw.ElapsedMilliseconds, context,
                 outcome.Error is null ? "call.completed" : "call.failed",
-                errorType: outcome.Error);
+                errorType: outcome.Error, inputJson: inputJson, outputJson: outputJson);
             return outcome;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             _ = TryRecordAsync(at, sw.ElapsedMilliseconds, context,
-                "call.failed", errorType: ex.GetType().Name);
+                "call.failed", errorType: ex.GetType().Name, inputJson: inputJson, outputJson: null);
             throw;
         }
     }
 
     private async Task TryRecordAsync(DateTimeOffset at, long durationMs,
-        Vais.Agents.ToolGatewayContext context, string eventKind, string? errorType)
+        Vais.Agents.ToolGatewayContext context, string eventKind, string? errorType,
+        string? inputJson, string? outputJson)
     {
         try
         {
@@ -67,7 +70,9 @@ internal sealed class McpEventMiddleware : Vais.Agents.ToolGatewayMiddleware
                 ErrorType: errorType,
                 At: at,
                 CorrelationId: context.AgentContext.CorrelationId,
-                RunId: _ctx.Current.RunId);
+                RunId: _ctx.Current.RunId,
+                InputJson: inputJson,
+                OutputJson: outputJson);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -75,4 +80,7 @@ internal sealed class McpEventMiddleware : Vais.Agents.ToolGatewayMiddleware
             _logger.LogWarning(ex, "Failed to record {EventKind} event for {ServerId} — best-effort, continuing", eventKind, _serverId);
         }
     }
+
+    private static string? Truncate(string? s, int max = 32 * 1024) =>
+        s is null || s.Length <= max ? s : s[..max] + "[truncated]";
 }

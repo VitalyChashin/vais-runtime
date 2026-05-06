@@ -29,6 +29,8 @@ internal sealed class PostgresGatewayEventStore : IGatewayEventStore
         CREATE INDEX IF NOT EXISTS idx_vais_gateway_events_gateway_id ON vais_gateway_events(gateway_id, at DESC);
         CREATE INDEX IF NOT EXISTS idx_vais_gateway_events_run_id     ON vais_gateway_events(run_id) WHERE run_id IS NOT NULL;
         CREATE INDEX IF NOT EXISTS idx_vais_gateway_events_created_at ON vais_gateway_events(created_at);
+        ALTER TABLE vais_gateway_events ADD COLUMN IF NOT EXISTS input_json  TEXT;
+        ALTER TABLE vais_gateway_events ADD COLUMN IF NOT EXISTS output_json TEXT;
         """;
 
     public PostgresGatewayEventStore(string connectionString, ILogger<PostgresGatewayEventStore> logger)
@@ -53,8 +55,9 @@ internal sealed class PostgresGatewayEventStore : IGatewayEventStore
         cmd.CommandText = """
             INSERT INTO vais_gateway_events
                 (event_id, gateway_id, event_kind, model_id, input_tokens, output_tokens,
-                 duration_ms, cache_hit, error_type, at, correlation_id, run_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                 duration_ms, cache_hit, error_type, at, correlation_id, run_id,
+                 input_json, output_json)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (event_id) DO NOTHING
             """;
         cmd.Parameters.AddWithValue(evt.EventId);
@@ -69,6 +72,8 @@ internal sealed class PostgresGatewayEventStore : IGatewayEventStore
         cmd.Parameters.AddWithValue(evt.At);
         cmd.Parameters.AddWithValue((object?)evt.CorrelationId ?? DBNull.Value);
         cmd.Parameters.AddWithValue((object?)evt.RunId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue((object?)evt.InputJson ?? DBNull.Value);
+        cmd.Parameters.AddWithValue((object?)evt.OutputJson ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
 
@@ -87,7 +92,8 @@ internal sealed class PostgresGatewayEventStore : IGatewayEventStore
 
         cmd.CommandText = $"""
             SELECT event_id, gateway_id, event_kind, model_id, input_tokens, output_tokens,
-                   duration_ms, cache_hit, error_type, at, correlation_id, run_id
+                   duration_ms, cache_hit, error_type, at, correlation_id, run_id,
+                   input_json, output_json
             FROM vais_gateway_events
             WHERE {string.Join(" AND ", conditions)}
             ORDER BY at DESC
@@ -135,5 +141,7 @@ internal sealed class PostgresGatewayEventStore : IGatewayEventStore
             r.IsDBNull(8) ? null : r.GetString(8),
             r.GetFieldValue<DateTimeOffset>(9),
             r.IsDBNull(10) ? null : r.GetString(10),
-            r.IsDBNull(11) ? null : r.GetString(11));
+            r.IsDBNull(11) ? null : r.GetString(11),
+            r.IsDBNull(12) ? null : r.GetString(12),
+            r.IsDBNull(13) ? null : r.GetString(13));
 }

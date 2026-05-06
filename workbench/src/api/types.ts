@@ -141,6 +141,8 @@ export interface GatewayEventDto {
   at: string
   correlationId: string | null
   runId: string | null
+  inputJson: string | null
+  outputJson: string | null
 }
 
 export interface AgentRunDto {
@@ -173,6 +175,8 @@ export interface McpEventDto {
   at: string
   correlationId: string | null
   runId: string | null
+  inputJson: string | null
+  outputJson: string | null
 }
 
 export interface McpGatewayEventDto {
@@ -187,6 +191,8 @@ export interface McpGatewayEventDto {
   at: string
   correlationId: string | null
   runId: string | null
+  inputJson: string | null
+  outputJson: string | null
 }
 
 export interface AgentLogEntryDto {

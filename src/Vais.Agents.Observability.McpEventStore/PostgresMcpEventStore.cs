@@ -29,6 +29,8 @@ internal sealed class PostgresMcpEventStore : IMcpEventStore
         CREATE INDEX IF NOT EXISTS idx_vais_mcp_events_tool_name  ON vais_mcp_events(tool_name);
         CREATE INDEX IF NOT EXISTS idx_vais_mcp_events_run_id     ON vais_mcp_events(run_id) WHERE run_id IS NOT NULL;
         CREATE INDEX IF NOT EXISTS idx_vais_mcp_events_created_at ON vais_mcp_events(created_at);
+        ALTER TABLE vais_mcp_events ADD COLUMN IF NOT EXISTS input_json  TEXT;
+        ALTER TABLE vais_mcp_events ADD COLUMN IF NOT EXISTS output_json TEXT;
         """;
 
     public PostgresMcpEventStore(string connectionString, ILogger<PostgresMcpEventStore> logger)
@@ -53,8 +55,9 @@ internal sealed class PostgresMcpEventStore : IMcpEventStore
         cmd.CommandText = """
             INSERT INTO vais_mcp_events
                 (event_id, server_id, tool_name, event_kind, duration_ms, cache_hit,
-                 blocked_reason, error_type, at, correlation_id, run_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 blocked_reason, error_type, at, correlation_id, run_id,
+                 input_json, output_json)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             ON CONFLICT (event_id) DO NOTHING
             """;
         cmd.Parameters.AddWithValue(evt.EventId);
@@ -68,6 +71,8 @@ internal sealed class PostgresMcpEventStore : IMcpEventStore
         cmd.Parameters.AddWithValue(evt.At);
         cmd.Parameters.AddWithValue((object?)evt.CorrelationId ?? DBNull.Value);
         cmd.Parameters.AddWithValue((object?)evt.RunId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue((object?)evt.InputJson ?? DBNull.Value);
+        cmd.Parameters.AddWithValue((object?)evt.OutputJson ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
 
@@ -88,7 +93,8 @@ internal sealed class PostgresMcpEventStore : IMcpEventStore
 
         cmd.CommandText = $"""
             SELECT event_id, server_id, tool_name, event_kind, duration_ms, cache_hit,
-                   blocked_reason, error_type, at, correlation_id, run_id
+                   blocked_reason, error_type, at, correlation_id, run_id,
+                   input_json, output_json
             FROM vais_mcp_events
             WHERE {string.Join(" AND ", conditions)}
             ORDER BY at DESC
@@ -135,5 +141,7 @@ internal sealed class PostgresMcpEventStore : IMcpEventStore
             r.IsDBNull(7) ? null : r.GetString(7),
             r.GetFieldValue<DateTimeOffset>(8),
             r.IsDBNull(9) ? null : r.GetString(9),
-            r.IsDBNull(10) ? null : r.GetString(10));
+            r.IsDBNull(10) ? null : r.GetString(10),
+            r.IsDBNull(11) ? null : r.GetString(11),
+            r.IsDBNull(12) ? null : r.GetString(12));
 }

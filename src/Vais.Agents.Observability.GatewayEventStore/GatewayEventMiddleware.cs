@@ -3,6 +3,8 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Vais.Agents.Observability.GatewayEventStore;
@@ -37,6 +39,7 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
         CancellationToken cancellationToken)
     {
         var at = DateTimeOffset.UtcNow;
+        var inputJson = SerializeHistory(request);
         var sw = Stopwatch.StartNew();
         try
         {
@@ -44,14 +47,16 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
             sw.Stop();
             _ = TryRecordAsync(at, sw.ElapsedMilliseconds, response.ModelId,
                 response.PromptTokens ?? 0, response.CompletionTokens ?? 0,
-                "completion.completed", null);
+                "completion.completed", null,
+                inputJson: inputJson, outputJson: Truncate(response.Text));
             return response;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             _ = TryRecordAsync(at, sw.ElapsedMilliseconds, null, 0, 0,
-                "completion.failed", ex.GetType().Name);
+                "completion.failed", ex.GetType().Name,
+                inputJson: inputJson, outputJson: null);
             throw;
         }
     }
@@ -60,31 +65,37 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
         Vais.Agents.CompletionRequest request,
         Func<Vais.Agents.CompletionRequest, CancellationToken, IAsyncEnumerable<Vais.Agents.CompletionUpdate>> next,
         CancellationToken cancellationToken)
-        => StreamAndRecordAsync(next(request, cancellationToken), cancellationToken);
+        => StreamAndRecordAsync(next(request, cancellationToken), SerializeHistory(request), cancellationToken);
 
     private async IAsyncEnumerable<Vais.Agents.CompletionUpdate> StreamAndRecordAsync(
         IAsyncEnumerable<Vais.Agents.CompletionUpdate> source,
+        string? inputJson,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var at = DateTimeOffset.UtcNow;
         var sw = Stopwatch.StartNew();
         string? modelId = null;
         int promptTokens = 0, completionTokens = 0;
+        var output = new StringBuilder();
         await foreach (var update in source.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             modelId ??= update.ModelId;
             promptTokens = update.PromptTokens ?? promptTokens;
             completionTokens = update.CompletionTokens ?? completionTokens;
+            if (update.TextDelta is { Length: > 0 } delta)
+                output.Append(delta);
             yield return update;
         }
         sw.Stop();
         _ = TryRecordAsync(at, sw.ElapsedMilliseconds, modelId, promptTokens, completionTokens,
-            "completion.completed", null);
+            "completion.completed", null,
+            inputJson: inputJson, outputJson: Truncate(output.ToString()));
     }
 
     private async Task TryRecordAsync(DateTimeOffset at, long durationMs,
         string? modelId, int inputTokens, int outputTokens,
-        string eventKind, string? errorType)
+        string eventKind, string? errorType,
+        string? inputJson, string? outputJson)
     {
         try
         {
@@ -100,7 +111,9 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
                 ErrorType: errorType,
                 At: at,
                 CorrelationId: _ctx.Current.CorrelationId,
-                RunId: _ctx.Current.RunId);
+                RunId: _ctx.Current.RunId,
+                InputJson: inputJson,
+                OutputJson: outputJson);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -108,4 +121,19 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
             _logger.LogWarning(ex, "Failed to record {EventKind} event for {GatewayId} — best-effort, continuing", eventKind, _gatewayId);
         }
     }
+
+    private string? SerializeHistory(Vais.Agents.CompletionRequest request)
+    {
+        try
+        {
+            return Truncate(JsonSerializer.Serialize(request.History));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? Truncate(string? s, int max = 32 * 1024) =>
+        s is null || s.Length <= max ? s : s[..max] + "[truncated]";
 }

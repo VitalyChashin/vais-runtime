@@ -90,6 +90,8 @@ public sealed record RunListResponse(IReadOnlyList<PipelineRunDto> Items);
 /// <param name="At">UTC timestamp when the event occurred.</param>
 /// <param name="CorrelationId">Ambient correlation ID; <see langword="null"/> when not set.</param>
 /// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+/// <param name="InputJson">JSON-serialized conversation history sent to the model; <see langword="null"/> when not captured.</param>
+/// <param name="OutputJson">Assistant response text; <see langword="null"/> when not captured.</param>
 public sealed record GatewayEventDto(
     string EventId,
     string GatewayId,
@@ -102,7 +104,9 @@ public sealed record GatewayEventDto(
     string? ErrorType,
     DateTimeOffset At,
     string? CorrelationId,
-    string? RunId);
+    string? RunId,
+    string? InputJson = null,
+    string? OutputJson = null);
 
 /// <summary>
 /// A single entry in the agent run history list returned by <c>GET /v1/agents/{id}/runs</c>.
@@ -153,6 +157,8 @@ public sealed record AgentRunDto(
 /// <param name="At">UTC timestamp when the event occurred.</param>
 /// <param name="CorrelationId">Ambient correlation ID; <see langword="null"/> when not set.</param>
 /// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+/// <param name="InputJson">Tool arguments as a JSON string; <see langword="null"/> when not captured.</param>
+/// <param name="OutputJson">Tool result string; <see langword="null"/> when not captured.</param>
 public sealed record McpEventDto(
     string EventId,
     string ServerId,
@@ -164,7 +170,9 @@ public sealed record McpEventDto(
     string? ErrorType,
     DateTimeOffset At,
     string? CorrelationId,
-    string? RunId);
+    string? RunId,
+    string? InputJson = null,
+    string? OutputJson = null);
 
 /// <summary>DTO for a single MCP tool-call event returned by <c>GET /v1/mcp-gateways/{id}/events</c>.</summary>
 /// <param name="EventId">Unique identifier for this event.</param>
@@ -178,6 +186,8 @@ public sealed record McpEventDto(
 /// <param name="At">UTC timestamp when the event occurred.</param>
 /// <param name="CorrelationId">Ambient correlation ID; <see langword="null"/> when not set.</param>
 /// <param name="RunId">Graph run ID when the call originated inside a graph run; otherwise <see langword="null"/>.</param>
+/// <param name="InputJson">Tool arguments as a JSON string; <see langword="null"/> when not captured.</param>
+/// <param name="OutputJson">Tool result string; <see langword="null"/> when not captured.</param>
 public sealed record McpGatewayEventDto(
     string EventId,
     string GatewayId,
@@ -189,7 +199,9 @@ public sealed record McpGatewayEventDto(
     string? ErrorType,
     DateTimeOffset At,
     string? CorrelationId,
-    string? RunId);
+    string? RunId,
+    string? InputJson = null,
+    string? OutputJson = null);
 
 /// <summary>DTO for a single agent log entry returned by <c>GET /v1/agents/{id}/logs</c>.</summary>
 /// <param name="EntryId">Unique identifier for this log entry.</param>

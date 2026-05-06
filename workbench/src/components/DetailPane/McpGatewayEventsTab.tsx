@@ -38,11 +38,26 @@ function ChevronRight({ className, style }: { className: string; style?: React.C
   )
 }
 
+function prettyJson(s: string): string {
+  try { return JSON.stringify(JSON.parse(s), null, 2) } catch { return s }
+}
+
+function PayloadBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <div className="lognode__section-label">{label}</div>
+      <pre style={{ margin: '2px 0 6px', padding: '6px 8px', background: 'var(--color-surface, #1e1e1e)', borderRadius: 4, fontSize: 11, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 300 }}>
+        {prettyJson(value)}
+      </pre>
+    </>
+  )
+}
+
 function McpGatewayEventRow({ evt }: { evt: McpGatewayEventDto }) {
   const [open, setOpen] = useState(false)
   const failed = evt.eventKind === 'call.failed'
   const blocked = evt.eventKind === 'call.blocked'
-  const hasDetail = !!(evt.errorType || evt.blockedReason || evt.correlationId || evt.runId)
+  const hasDetail = !!(evt.errorType || evt.blockedReason || evt.correlationId || evt.runId || evt.inputJson || evt.outputJson)
 
   const statusColor = failed || blocked ? 'var(--color-error)' : 'var(--color-success)'
   const statusLabel = failed ? 'failed' : blocked ? 'blocked' : 'ok'
@@ -84,6 +99,8 @@ function McpGatewayEventRow({ evt }: { evt: McpGatewayEventDto }) {
               <div className="lognode__error">{evt.errorType}</div>
             </>
           )}
+          {evt.inputJson && <PayloadBlock label="Input" value={evt.inputJson} />}
+          {evt.outputJson && <PayloadBlock label="Output" value={evt.outputJson} />}
           {evt.correlationId && (
             <div className="lognode__edges">correlation: {evt.correlationId}</div>
           )}
