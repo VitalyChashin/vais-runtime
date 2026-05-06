@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Control;
 using Vais.Agents.Core;
 using Vais.Agents.Gateways.McpGovernance;
@@ -27,6 +29,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IMcpServerRegistry? _mcpServerRegistry;
     private readonly ILlmGatewayMiddlewareFactory? _llmGatewayFactory;
     private readonly IToolGatewayMiddlewareFactory? _toolGatewayFactory;
+    private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
     public AgentManifestTranslator(
@@ -44,7 +47,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IMcpGatewayConfigRegistry? mcpGatewayConfigRegistry = null,
         IMcpServerRegistry? mcpServerRegistry = null,
         ILlmGatewayMiddlewareFactory? llmGatewayFactory = null,
-        IToolGatewayMiddlewareFactory? toolGatewayFactory = null)
+        IToolGatewayMiddlewareFactory? toolGatewayFactory = null,
+        ILogger<AgentManifestTranslator>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(providerPool);
@@ -65,6 +69,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _mcpServerRegistry = mcpServerRegistry;
         _llmGatewayFactory = llmGatewayFactory;
         _toolGatewayFactory = toolGatewayFactory;
+        _logger = logger ?? NullLogger<AgentManifestTranslator>.Instance;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
         foreach (var factory in guardrailFactories)
@@ -231,6 +236,12 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             ToolGatewayMiddleware = toolGatewayMiddleware,
             UsageSink = _serviceProvider.GetService<IUsageSink>(),
         };
+
+        _logger.LogDebug(
+            "Translated agent {AgentId}: llm-middleware=[{LlmMiddleware}] tool-middleware=[{ToolMiddleware}]",
+            agentId,
+            string.Join(", ", gatewayMiddleware.Select(m => m.GetType().Name)),
+            string.Join(", ", toolGatewayMiddleware.Select(m => m.GetType().Name)));
 
         // First-writer-wins: concurrent TranslateAsync calls for the same id
         // do redundant work but converge on a single cached entry.

@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace Vais.Agents.Observability.GatewayEventStore;
 
@@ -16,15 +17,18 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
     private readonly IGatewayEventStore _store;
     private readonly Vais.Agents.IAgentContextAccessor _ctx;
     private readonly string _gatewayId;
+    private readonly ILogger<GatewayEventMiddleware> _logger;
 
     internal GatewayEventMiddleware(
         IGatewayEventStore store,
         Vais.Agents.IAgentContextAccessor ctx,
-        string gatewayId)
+        string gatewayId,
+        ILogger<GatewayEventMiddleware> logger)
     {
         _store = store;
         _ctx = ctx;
         _gatewayId = gatewayId;
+        _logger = logger;
     }
 
     protected override async Task<Vais.Agents.CompletionResponse> InvokeAsync(
@@ -99,6 +103,9 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
                 RunId: null);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record {EventKind} event for {GatewayId} — best-effort, continuing", eventKind, _gatewayId);
+        }
     }
 }

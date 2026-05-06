@@ -57,7 +57,8 @@ public static class AgentManifestInstantiatorServiceCollectionExtensions
             sp.GetService<IMcpGatewayConfigRegistry>(),
             sp.GetService<IMcpServerRegistry>(),
             sp.GetService<ILlmGatewayMiddlewareFactory>(),
-            sp.GetService<IToolGatewayMiddlewareFactory>()));
+            sp.GetService<IToolGatewayMiddlewareFactory>(),
+            sp.GetService<Microsoft.Extensions.Logging.ILogger<AgentManifestTranslator>>()));
 
         // Alias — AgentLifecycleManager (Control.InProcess) depends on the narrower
         // IAgentManifestInvalidator contract; point it at the translator singleton

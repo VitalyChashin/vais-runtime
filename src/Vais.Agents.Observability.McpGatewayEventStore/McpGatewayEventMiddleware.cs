@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Vais.Agents.Observability.McpGatewayEventStore;
 
@@ -14,11 +15,13 @@ internal sealed class McpGatewayEventMiddleware : Vais.Agents.ToolGatewayMiddlew
 {
     private readonly IMcpGatewayEventStore _store;
     private readonly string _gatewayId;
+    private readonly ILogger<McpGatewayEventMiddleware> _logger;
 
-    internal McpGatewayEventMiddleware(IMcpGatewayEventStore store, string gatewayId)
+    internal McpGatewayEventMiddleware(IMcpGatewayEventStore store, string gatewayId, ILogger<McpGatewayEventMiddleware> logger)
     {
         _store = store;
         _gatewayId = gatewayId;
+        _logger = logger;
     }
 
     public override async Task<Vais.Agents.ToolCallOutcome> InvokeAsync(
@@ -65,6 +68,9 @@ internal sealed class McpGatewayEventMiddleware : Vais.Agents.ToolGatewayMiddlew
                 RunId: null);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record {EventKind} event for {GatewayId} — best-effort, continuing", eventKind, _gatewayId);
+        }
     }
 }

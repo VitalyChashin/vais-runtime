@@ -83,7 +83,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             : null;
         activity?.SetTag(AgenticTags.AgentName, _agentId);
 
-        _logger.LogDebug("Grain activating");
+        _logger.LogDebug("Grain activating — agentId={AgentId}", _agentId);
 
         var sw = Stopwatch.StartNew();
         StatefulAgentOptions supplied;
@@ -116,7 +116,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             {
                 carrier.OpaqueState = blob;
             }
-            _logger.LogInformation("Grain activated in {ElapsedMs}ms, mode=plugin", sw.ElapsedMilliseconds);
+            _logger.LogInformation("Grain activated — agentId={AgentId} mode=plugin elapsedMs={ElapsedMs}", _agentId, sw.ElapsedMilliseconds);
             await base.OnActivateAsync(cancellationToken);
             return;
         }
@@ -141,12 +141,29 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             OutputGuardrails = supplied.OutputGuardrails,
             ToolGuardrails = supplied.ToolGuardrails,
             Budget = supplied.Budget,
+            GatewayMiddleware = supplied.GatewayMiddleware,
+            ToolGatewayMiddleware = supplied.ToolGatewayMiddleware,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
         };
 
+        if (_state.State.History.Count > 0)
+            _logger.LogDebug("Grain rehydrated history — agentId={AgentId} turns={Turns}", _agentId, _state.State.History.Count);
+
         _agent = new StatefulAiAgent(provider, seeded, _loggerFactory.CreateLogger<StatefulAiAgent>());
-        _logger.LogInformation("Grain activated in {ElapsedMs}ms, mode=declarative", sw.ElapsedMilliseconds);
+        _logger.LogInformation(
+            "Grain activated — agentId={AgentId} mode=declarative elapsedMs={ElapsedMs} gateway-middleware=[{GatewayMiddleware}] tool-middleware=[{ToolMiddleware}]",
+            _agentId,
+            sw.ElapsedMilliseconds,
+            string.Join(", ", seeded.GatewayMiddleware?.Select(m => m.GetType().Name) ?? Array.Empty<string>()),
+            string.Join(", ", seeded.ToolGatewayMiddleware?.Select(m => m.GetType().Name) ?? Array.Empty<string>()));
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Grain deactivating — agentId={AgentId} reason={Reason}", _agentId, reason.ReasonCode);
+        return base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -158,12 +175,23 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         using var activity = OrleansDiagnostics.ActivitySource.StartActivity(
             "grain.ask", ActivityKind.Internal, parentCtx);
         activity?.SetTag(AgenticTags.AgentName, _agentId);
-        if (ActivityPropagation.ReadGraphRunId() is { } runId)
+        var runId = ActivityPropagation.ReadGraphRunId();
+        if (runId is not null)
             activity?.SetTag("graph.run_id", runId);
         activity?.SetTag("gen_ai.prompt", userMessage);
 
+        _logger.LogDebug("Turn starting — agentId={AgentId} runId={RunId} messageLen={MessageLen}", _agentId, runId, userMessage.Length);
         var sw = Stopwatch.StartNew();
-        var reply = await agent.AskAsync(userMessage);
+        string reply;
+        try
+        {
+            reply = await agent.AskAsync(userMessage);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Turn failed — agentId={AgentId} runId={RunId} elapsedMs={ElapsedMs}", _agentId, runId, sw.ElapsedMilliseconds);
+            throw;
+        }
         activity?.SetTag("gen_ai.completion", reply);
 
         _state.State.History = agent.History.ToList();
@@ -172,7 +200,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             _state.State.OpaqueState = carrier.OpaqueState;
         await _state.WriteStateAsync();
 
-        _logger.LogDebug("AskAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+        _logger.LogDebug("Turn completed — agentId={AgentId} runId={RunId} elapsedMs={ElapsedMs}", _agentId, runId, sw.ElapsedMilliseconds);
         return reply;
     }
 
@@ -192,6 +220,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                 $"Agent grain '{_agentId}' does not support streaming — the inner agent " +
                 $"({agent.GetType().Name}) does not implement IStreamingAiAgent.");
 
+        _logger.LogDebug("Turn starting (streaming) — agentId={AgentId} messageLen={MessageLen}", _agentId, userMessage.Length);
         var sw = Stopwatch.StartNew();
         await foreach (var evt in streamingAgent.StreamAsync(userMessage, context, cancellationToken))
         {
@@ -211,11 +240,14 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                     _logger.LogError(ex, "Failed to persist agent state after streaming turn");
                 }
                 if (evt is TurnFailed)
+                {
                     activity?.SetStatus(ActivityStatusCode.Error);
+                    _logger.LogError("Turn failed (streaming) — agentId={AgentId} elapsedMs={ElapsedMs}", _agentId, sw.ElapsedMilliseconds);
+                }
             }
             yield return evt;
         }
-        _logger.LogDebug("StreamAgentAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+        _logger.LogDebug("Turn completed (streaming) — agentId={AgentId} elapsedMs={ElapsedMs}", _agentId, sw.ElapsedMilliseconds);
     }
 
     /// <inheritdoc />

@@ -13,8 +13,9 @@ public static class McpGatewayEventStoreExtensions
     /// <summary>
     /// Registers the Postgres-backed <see cref="IMcpGatewayEventStore"/>, a
     /// <see cref="Microsoft.Extensions.Hosting.IHostedService"/> that initialises the schema and applies
-    /// retention on startup, and a <see cref="Vais.Agents.ToolGatewayMiddleware"/> that records
-    /// every MCP tool dispatch event for the gateway.
+    /// retention on startup, a <see cref="Vais.Agents.ToolGatewayMiddleware"/> singleton (used by agents
+    /// without an explicit <c>mcpGatewayRef</c>), and a named middleware factory under the key
+    /// <c>"McpGatewayLogging"</c> (used by agents whose gateway manifest lists that middleware name).
     /// </summary>
     public static IServiceCollection AddMcpGatewayEventStore(
         this IServiceCollection services,
@@ -32,12 +33,25 @@ public static class McpGatewayEventStoreExtensions
             return new PostgresMcpGatewayEventStore(opts.ConnectionString, logger);
         });
 
+        // Fallback path: agents without mcpGatewayRef get this singleton injected via GetServices<ToolGatewayMiddleware>.
         services.AddSingleton<Vais.Agents.ToolGatewayMiddleware>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<McpGatewayEventStoreOptions>>().Value;
             var store = sp.GetRequiredService<IMcpGatewayEventStore>();
-            return new McpGatewayEventMiddleware(store, opts.GatewayId);
+            var mwLogger = sp.GetRequiredService<ILogger<McpGatewayEventMiddleware>>();
+            return new McpGatewayEventMiddleware(store, opts.GatewayId, mwLogger);
         });
+
+        // Named path: agents whose mcpGatewayRef manifest includes "McpGatewayLogging" use this factory.
+        services.AddSingleton(sp => new NamedToolGatewayMiddlewareRegistration(
+            "McpGatewayLogging",
+            (_, svcs) =>
+            {
+                var opts = svcs.GetRequiredService<IOptions<McpGatewayEventStoreOptions>>().Value;
+                var store = svcs.GetRequiredService<IMcpGatewayEventStore>();
+                var mwLogger = svcs.GetRequiredService<ILogger<McpGatewayEventMiddleware>>();
+                return new McpGatewayEventMiddleware(store, opts.GatewayId, mwLogger);
+            }));
 
         services.AddHostedService<McpGatewayEventStoreInitializer>();
 
