@@ -9,6 +9,17 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Added
+
+- **Input/output payload capture in all three gateway event stores.** `GatewayEvent`, `McpGatewayEvent`, and `McpEvent` records now carry optional `InputJson` and `OutputJson` fields (up to 32 KB each, truncated with a `[truncated]` suffix). Schema migration uses `ADD COLUMN IF NOT EXISTS` so existing rows are unaffected.
+
+  - `GatewayEventMiddleware` serializes `request.History` as input JSON and accumulates streaming text deltas (or reads `response.Text` for non-streaming) as output JSON.
+  - `McpGatewayEventMiddleware` captures `context.Arguments.GetRawText()` as input and `outcome.Result ?? outcome.Error` as output.
+  - `McpEventMiddleware` applies the same capture pattern as `McpGatewayEventMiddleware`.
+  - All three Postgres stores extend their `INSERT` and `SELECT` statements for the new columns.
+  - `GatewayEventDto`, `McpEventDto`, `McpGatewayEventDto` in `GraphContracts.cs` expose `InputJson` and `OutputJson`; HTTP responses include both fields.
+  - Workbench gateway/MCP event tabs render expandable **Input** and **Output** payload blocks (pretty-printed JSON, `max-height: 300px`).
+
 ### Fixed
 
 - **`run_id` null in all gateway event stores.** `OrleansAgentContextAccessor.Current` now reads `ActivityPropagation.ReadGraphRunId()` from Orleans `RequestContext` and exposes it as `AgentContext.RunId`. `GatewayEventMiddleware`, `McpGatewayEventMiddleware`, and `McpEventMiddleware` now write `RunId: _ctx.Current.RunId` instead of `null`.
