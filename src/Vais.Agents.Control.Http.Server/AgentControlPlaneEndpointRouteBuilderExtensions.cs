@@ -932,11 +932,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         var agentRunStore = http.RequestServices.GetService<IAgentRunStore>();
         var agentRunId = Guid.NewGuid().ToString("N");
-        var principal = http.User?.Identity?.IsAuthenticated == true
+        var principal = (http.User?.Identity?.IsAuthenticated == true
             ? new AgentContext(
                 UserId: http.User.FindFirst("sub")?.Value,
                 TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
-            : AgentContext.Empty;
+            : AgentContext.Empty)
+            with { CorrelationId = ResolveCorrelationId(http) };
+        using var _ = http.RequestServices.GetService<IAgentContextSetter>()?.Push(principal);
         var runStarted = false;
 
         try
@@ -971,6 +973,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.Invoke);
         }
     }
+
+    private static string ResolveCorrelationId(HttpContext http) =>
+        http.Request.Headers.TryGetValue("X-Correlation-Id", out var cid) && cid.Count > 0
+            ? cid.ToString()
+            : Guid.NewGuid().ToString("N");
 
     private static string? TruncateText(string? text, int maxChars = 8192) =>
         text is null ? null :
@@ -1103,11 +1110,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         // Agent producer task — drives StreamEventsCore, serialises each event to SSE,
         // writes to the channel. Terminates on completion or on cancellation.
-        var principal = http.User?.Identity?.IsAuthenticated == true
+        var principal = (http.User?.Identity?.IsAuthenticated == true
             ? new AgentContext(
                 UserId: http.User.FindFirst("sub")?.Value,
                 TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
-            : AgentContext.Empty;
+            : AgentContext.Empty)
+            with { CorrelationId = ResolveCorrelationId(http) };
+        using var _ctxScope = http.RequestServices.GetService<IAgentContextSetter>()?.Push(principal);
 
         var agentRunStore = http.RequestServices.GetService<IAgentRunStore>();
         var agentRunId = Guid.NewGuid().ToString("N");
@@ -1463,6 +1472,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return Results.BadRequest(new { error = "request body is required" });
         }
 
+        var graphPrincipal = (http.User?.Identity?.IsAuthenticated == true
+            ? new AgentContext(
+                UserId: http.User.FindFirst("sub")?.Value,
+                TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
+            : AgentContext.Empty)
+            with { CorrelationId = ResolveCorrelationId(http) };
+        using var _gCtx = http.RequestServices.GetService<IAgentContextSetter>()?.Push(graphPrincipal);
+
         try
         {
             var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
@@ -1504,6 +1521,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             await http.Response.WriteAsJsonAsync(new { error = "request body is required" }, ct).ConfigureAwait(false);
             return;
         }
+
+        var graphStreamPrincipal = (http.User?.Identity?.IsAuthenticated == true
+            ? new AgentContext(
+                UserId: http.User.FindFirst("sub")?.Value,
+                TenantId: http.User.FindFirst("tenant_id")?.Value ?? http.User.FindFirst("tid")?.Value)
+            : AgentContext.Empty)
+            with { CorrelationId = ResolveCorrelationId(http) };
+        using var _gsCtx = http.RequestServices.GetService<IAgentContextSetter>()?.Push(graphStreamPrincipal);
 
         var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
         if (resolvedVersion is null)

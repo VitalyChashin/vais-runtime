@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
@@ -124,8 +125,20 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         }
 
         _opaqueState = response.NewState;
+        IReadOnlyList<ToolCallRequest>? toolCalls = null;
+        if (response.Journal is { Count: > 0 } journal)
+        {
+            var calls = new List<ToolCallRequest>(journal.Count);
+            for (var i = 0; i < journal.Count; i++)
+            {
+                var entry = journal[i];
+                using var doc = JsonDocument.Parse(entry.InputJson ?? "{}");
+                calls.Add(new ToolCallRequest(entry.ToolName, doc.RootElement.Clone(), $"jrn-{i}"));
+            }
+            toolCalls = calls;
+        }
         await Session.AppendAsync(
-            new ChatTurn(AgentChatRole.Assistant, response.AssistantMessage), cancellationToken)
+            new ChatTurn(AgentChatRole.Assistant, response.AssistantMessage, ToolCalls: toolCalls), cancellationToken)
             .ConfigureAwait(false);
 
         return response.AssistantMessage;

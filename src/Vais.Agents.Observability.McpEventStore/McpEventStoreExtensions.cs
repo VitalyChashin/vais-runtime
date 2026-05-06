@@ -43,8 +43,9 @@ public static class McpEventStoreExtensions
         {
             var opts = sp.GetRequiredService<IOptions<McpEventStoreOptions>>().Value;
             var store = sp.GetRequiredService<IMcpEventStore>();
+            var ctx = sp.GetRequiredService<Vais.Agents.IAgentContextAccessor>();
             var mwLogger = sp.GetRequiredService<ILogger<McpEventMiddleware>>();
-            return new McpEventMiddleware(store, opts.ServerId, mwLogger);
+            return new McpEventMiddleware(store, ctx, opts.ServerId, mwLogger);
         });
 
         // Named path: agents whose mcpGatewayRef manifest includes "McpServerLogging" use this factory.
@@ -54,8 +55,9 @@ public static class McpEventStoreExtensions
             {
                 var opts = svcs.GetRequiredService<IOptions<McpEventStoreOptions>>().Value;
                 var store = svcs.GetRequiredService<IMcpEventStore>();
+                var ctx = svcs.GetRequiredService<Vais.Agents.IAgentContextAccessor>();
                 var mwLogger = svcs.GetRequiredService<ILogger<McpEventMiddleware>>();
-                return new McpEventMiddleware(store, opts.ServerId, mwLogger);
+                return new McpEventMiddleware(store, ctx, opts.ServerId, mwLogger);
             }));
 
         services.AddHostedService<McpEventStoreInitializer>();

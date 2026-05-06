@@ -144,6 +144,9 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
             Temperature = request.Temperature ?? 0.2f,
         };
 
+        chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+        chatOptions.AdditionalProperties["stream_options"] = new { include_usage = true };
+
         if (request.Tools is { Count: > 0 } tools)
         {
             chatOptions.Tools = MafToolBinder.BuildTools(tools);

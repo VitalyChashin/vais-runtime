@@ -8,6 +8,8 @@ metadata:
     limit, and response truncation on every tool call.
 spec:
   middleware:
+    - name: McpGatewayLogging
+    - name: McpServerLogging
     - name: ToolOtel
     - name: ToolRateLimit
       params:

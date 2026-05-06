@@ -10,6 +10,7 @@ class ResearchState(BaseModel):
     search_results: list[str] = []
     summary: Optional[str] = None
     turn_count: int = 0
+    tool_journal: list[dict] = []
 
     def is_planned(self) -> bool:
         return self.plan is not None

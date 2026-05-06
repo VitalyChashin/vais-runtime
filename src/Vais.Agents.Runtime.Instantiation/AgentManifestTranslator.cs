@@ -132,11 +132,13 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                     ex);
             }
 
+            var pluginToolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
             var pluginOptions = new StatefulAgentOptions
             {
                 AgentName = manifest.Id,
                 Agent = pluginAgent,
                 Budget = manifest.Budget,
+                ToolGatewayMiddleware = pluginToolGatewayMiddleware,
             };
 
             _cache.TryAdd(agentId, pluginOptions);

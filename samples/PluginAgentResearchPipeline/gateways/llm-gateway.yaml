@@ -8,6 +8,7 @@ metadata:
     and Prometheus metrics on every LLM call.
 spec:
   middleware:
+    - name: LlmGatewayLogging
     - name: LlmLogging
     - name: LlmOtel
     - name: Prometheus

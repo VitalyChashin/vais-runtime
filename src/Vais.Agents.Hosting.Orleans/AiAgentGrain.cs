@@ -41,10 +41,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly IPersistentState<AiAgentGrainState> _state;
     private readonly ICompletionProvider? _defaultProvider;
     private readonly Func<string, CancellationToken, ValueTask<StatefulAgentOptions>> _optionsFactory;
+    private readonly IAgentContextAccessor? _contextAccessor;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<AiAgentGrain> _logger;
     private string? _agentId;
     private IAiAgent? _agent;
+    // Non-null only in plugin mode — signals that AskAsync should record tool calls from history delta.
+    private ToolGatewayMiddleware[]? _pluginToolGatewayMiddleware;
 
     /// <summary>
     /// Grain constructor. Dependencies resolved from silo DI.
@@ -61,12 +64,14 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         [PersistentState("state", StorageName)] IPersistentState<AiAgentGrainState> state,
         ICompletionProvider? provider = null,
         Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>? optionsFactory = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IAgentContextAccessor? contextAccessor = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         _state = state;
         _defaultProvider = provider;
         _optionsFactory = optionsFactory ?? ((id, _) => ValueTask.FromResult(new StatefulAgentOptions { AgentName = id }));
+        _contextAccessor = contextAccessor;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<AiAgentGrain>();
     }
@@ -107,6 +112,9 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         if (supplied.Agent is not null)
         {
             _agent = supplied.Agent;
+            _pluginToolGatewayMiddleware = supplied.ToolGatewayMiddleware.Count > 0
+                ? supplied.ToolGatewayMiddleware.ToArray()
+                : null;
             if (_state.State.SystemPrompt is { } persistedPrompt)
             {
                 _agent.SystemPrompt = persistedPrompt;
@@ -182,6 +190,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
         _logger.LogDebug("Turn starting — agentId={AgentId} runId={RunId} messageLen={MessageLen}", _agentId, runId, userMessage.Length);
         var sw = Stopwatch.StartNew();
+        var prevHistoryCount = _pluginToolGatewayMiddleware is not null ? agent.History.Count : 0;
         string reply;
         try
         {
@@ -193,6 +202,9 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             throw;
         }
         activity?.SetTag("gen_ai.completion", reply);
+
+        if (_pluginToolGatewayMiddleware is { } mw && mw.Length > 0)
+            RecordPluginToolCalls(agent.History, prevHistoryCount, mw);
 
         _state.State.History = agent.History.ToList();
         _state.State.SystemPrompt = agent.SystemPrompt;
@@ -214,6 +226,11 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
         using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.stream");
         activity?.SetTag(AgenticTags.AgentName, _agentId);
+
+        // Bridge HTTP-injected CorrelationId into Orleans RequestContext so gateway middleware
+        // can read it via OrleansAgentContextAccessor (which reads RequestContext, not the context parameter).
+        if (context.CorrelationId is not null && RequestContext.Get(AgenticTags.CorrelationId) is null)
+            RequestContext.Set(AgenticTags.CorrelationId, context.CorrelationId);
 
         if (agent is not IStreamingAiAgent streamingAgent)
             throw new NotSupportedException(
@@ -293,4 +310,30 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
     private IAiAgent EnsureAgent() =>
         _agent ?? throw new InvalidOperationException("Grain is not activated.");
+
+    private void RecordPluginToolCalls(
+        IReadOnlyList<ChatTurn> history,
+        int prevCount,
+        ToolGatewayMiddleware[] middleware)
+    {
+        var agentCtx = _contextAccessor?.Current ?? AgentContext.Empty;
+        for (var i = prevCount; i < history.Count; i++)
+        {
+            var turn = history[i];
+            if (turn.ToolCalls is not { Count: > 0 } calls)
+                continue;
+            foreach (var call in calls)
+            {
+                var gwCtx = new ToolGatewayContext(call.ToolName, call.CallId, call.Arguments, agentCtx);
+                Func<Task<ToolCallOutcome>> chain = () => Task.FromResult(new ToolCallOutcome(call.CallId, string.Empty));
+                for (var j = middleware.Length - 1; j >= 0; j--)
+                {
+                    var mw = middleware[j];
+                    var inner = chain;
+                    chain = () => mw.InvokeAsync(gwCtx, inner, CancellationToken.None);
+                }
+                _ = chain();
+            }
+        }
+    }
 }

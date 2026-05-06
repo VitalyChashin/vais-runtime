@@ -54,6 +54,8 @@ internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
                 ctx.AllowedTools is ImmutableHashSet<string> hs ? hs : ctx.AllowedTools.ToImmutableHashSet());
         if (ctx.MaxChainDepth is not null)
             RequestContext.Set(AgenticTags.MaxChainDepth, ctx.MaxChainDepth);
+        if (ctx.CorrelationId is not null)
+            RequestContext.Set(AgenticTags.CorrelationId, ctx.CorrelationId);
 
         await context.Invoke();
     }

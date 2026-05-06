@@ -76,6 +76,7 @@ export interface McpServerManifest {
   id: string
   name: string
   virtual?: boolean
+  mcpGatewayRef?: string
 }
 
 export type AnyManifest =

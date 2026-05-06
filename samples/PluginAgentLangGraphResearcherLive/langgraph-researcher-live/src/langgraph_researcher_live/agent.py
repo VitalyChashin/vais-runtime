@@ -1,7 +1,7 @@
 """ResearcherAgent — bridges vais-agent-sdk to the live LangGraph graph."""
 from __future__ import annotations
 
-from vais_agent_sdk import AgentRequest, AgentResponse, AgentUsage
+from vais_agent_sdk import AgentJournalEntry, AgentRequest, AgentResponse, AgentUsage
 from langgraph_researcher_live.graph import _MODEL, run_graph
 from langgraph_researcher_live.state import ResearchState
 
@@ -23,8 +23,14 @@ async def invoke(request: AgentRequest) -> AgentResponse:
             output_tokens=tracker.output_tokens,
         )]
 
+    journal = [
+        AgentJournalEntry(toolName=e["toolName"], inputJson=e["inputJson"], outputJson=e["outputJson"])
+        for e in state.tool_journal
+    ] or None
+
     return AgentResponse(
         assistantMessage=state.summary or "No summary produced.",
         newState=state.to_json(),
         usage=usage,
+        journal=journal,
     )

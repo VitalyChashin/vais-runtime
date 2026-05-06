@@ -14,12 +14,14 @@ namespace Vais.Agents.Observability.McpEventStore;
 internal sealed class McpEventMiddleware : Vais.Agents.ToolGatewayMiddleware
 {
     private readonly IMcpEventStore _store;
+    private readonly Vais.Agents.IAgentContextAccessor _ctx;
     private readonly string _serverId;
     private readonly ILogger<McpEventMiddleware> _logger;
 
-    internal McpEventMiddleware(IMcpEventStore store, string serverId, ILogger<McpEventMiddleware> logger)
+    internal McpEventMiddleware(IMcpEventStore store, Vais.Agents.IAgentContextAccessor ctx, string serverId, ILogger<McpEventMiddleware> logger)
     {
         _store = store;
+        _ctx = ctx;
         _serverId = serverId;
         _logger = logger;
     }
@@ -65,7 +67,7 @@ internal sealed class McpEventMiddleware : Vais.Agents.ToolGatewayMiddleware
                 ErrorType: errorType,
                 At: at,
                 CorrelationId: context.AgentContext.CorrelationId,
-                RunId: null);
+                RunId: _ctx.Current.RunId);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)

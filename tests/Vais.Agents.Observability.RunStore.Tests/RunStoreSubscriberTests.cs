@@ -36,6 +36,7 @@ public sealed class RunStoreSubscriberTests
         public Task<PipelineRun?> GetRunAsync(string runId, CancellationToken ct = default) => Task.FromResult<PipelineRun?>(null);
         public Task<IReadOnlyList<NodeExecution>> GetNodesAsync(string runId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<NodeExecution>>([]);
         public Task<NodeExecution?> GetNodeAsync(string runId, string nodeId, CancellationToken ct = default) => Task.FromResult<NodeExecution?>(null);
+        public Task<IReadOnlyList<NodeExecution>> ListNodeExecutionsByAgentAsync(string agentId, DateTimeOffset? since = null, DateTimeOffset? until = null, int limit = 20, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<NodeExecution>>([]);
     }
 
     private static (RunStoreSubscriber Subscriber, InMemoryRunStore Store, InMemoryAgentGraphEventBus Bus) BuildSut(int retentionDays = 30)

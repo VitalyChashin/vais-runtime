@@ -56,6 +56,13 @@ function buildOutboundRows(kind: ResourceKind, resource: Record<string, unknown>
       .filter(n => n.ref?.id)
       .map(n => ({ field: `nodes.${n.id}`, targetKind: 'agents' as ResourceKind, id: n.ref!.id }))
   }
+  if (kind === 'mcp-servers') {
+    return [
+      typeof resource.mcpGatewayRef === 'string'
+        ? { field: 'mcpGatewayRef', targetKind: 'mcp-gateways' as ResourceKind, id: resource.mcpGatewayRef }
+        : { field: 'mcpGatewayRef', targetKind: null, id: null },
+    ]
+  }
   return []
 }
 

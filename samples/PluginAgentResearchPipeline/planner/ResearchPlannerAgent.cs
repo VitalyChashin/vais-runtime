@@ -35,11 +35,18 @@ public sealed class ResearchPlannerAgent : IAiAgent
         """;
 
     private readonly InMemoryAgentSession _session;
-    private readonly HttpClient _http = new();
+    private readonly ICompletionProvider? _provider;
+    private readonly LlmGatewayMiddleware[] _middleware;
+    private readonly HttpClient? _http;
 
-    public ResearchPlannerAgent()
+    public ResearchPlannerAgent(
+        ICompletionProvider? provider = null,
+        IEnumerable<LlmGatewayMiddleware>? middleware = null)
     {
         _session = new InMemoryAgentSession(agentId: "research-planner", sessionId: Guid.NewGuid().ToString("N"));
+        _provider = provider;
+        _middleware = middleware?.ToArray() ?? [];
+        _http = _provider is null ? new HttpClient() : null;
     }
 
     /// <inheritdoc />
@@ -56,6 +63,30 @@ public sealed class ResearchPlannerAgent : IAiAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
 
+        if (_provider is not null)
+            return await AskViaGatewayAsync(userMessage, cancellationToken);
+
+        return await AskViaHttpAsync(userMessage, cancellationToken);
+    }
+
+    private async Task<string> AskViaGatewayAsync(string userMessage, CancellationToken cancellationToken)
+    {
+        var history = new List<ChatTurn>(_session.History)
+        {
+            new(AgentChatRole.User, userMessage),
+        };
+        var request = new CompletionRequest(
+            History: history,
+            SystemPrompt: SystemPrompt ?? DefaultSystemPrompt);
+
+        var response = await LlmGatewayPipeline.InvokeAsync(request, _provider!, _middleware, cancellationToken);
+        var reply = response.Text;
+        await RecordAsync(userMessage, reply, cancellationToken);
+        return reply;
+    }
+
+    private async Task<string> AskViaHttpAsync(string userMessage, CancellationToken cancellationToken)
+    {
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -66,7 +97,7 @@ public sealed class ResearchPlannerAgent : IAiAgent
             return stub;
         }
 
-        var client = _http;
+        var client = _http!;
         client.DefaultRequestHeaders.Authorization = new("Bearer", apiKey);
 
         var body = new
@@ -82,7 +113,7 @@ public sealed class ResearchPlannerAgent : IAiAgent
         var response = await client.PostAsJsonAsync(OpenAiEndpoint, body, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadFromJsonAsync<CompletionResponse>(
+        var json = await response.Content.ReadFromJsonAsync<OpenAiCompletionResponse>(
             JsonSerializerOptions.Default, cancellationToken)
             ?? throw new InvalidOperationException("Null response from OpenAI");
 
@@ -100,12 +131,12 @@ public sealed class ResearchPlannerAgent : IAiAgent
         await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, assistant), ct);
     }
 
-    private sealed record CompletionResponse(
-        [property: JsonPropertyName("choices")] List<Choice> Choices);
+    private sealed record OpenAiCompletionResponse(
+        [property: JsonPropertyName("choices")] List<OpenAiChoice> Choices);
 
-    private sealed record Choice(
-        [property: JsonPropertyName("message")] MessageContent Message);
+    private sealed record OpenAiChoice(
+        [property: JsonPropertyName("message")] OpenAiMessage Message);
 
-    private sealed record MessageContent(
+    private sealed record OpenAiMessage(
         [property: JsonPropertyName("content")] string Content);
 }

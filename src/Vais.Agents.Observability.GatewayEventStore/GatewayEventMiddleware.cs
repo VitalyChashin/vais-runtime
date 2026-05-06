@@ -100,7 +100,7 @@ internal sealed class GatewayEventMiddleware : Vais.Agents.LlmGatewayMiddleware
                 ErrorType: errorType,
                 At: at,
                 CorrelationId: _ctx.Current.CorrelationId,
-                RunId: null);
+                RunId: _ctx.Current.RunId);
             await _store.RecordAsync(evt, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)

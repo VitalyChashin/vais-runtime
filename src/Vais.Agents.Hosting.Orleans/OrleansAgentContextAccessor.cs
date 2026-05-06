@@ -35,5 +35,6 @@ public sealed class OrleansAgentContextAccessor : IAgentContextAccessor
         AutonomyLevel  = RequestContext.Get(AgenticTags.AutonomyLevel)  is int a ? (AutonomyLevel)a  : null,
         AllowedTools   = RequestContext.Get(AgenticTags.AllowedTools) as ImmutableHashSet<string>,
         MaxChainDepth  = RequestContext.Get(AgenticTags.MaxChainDepth) as int?,
+        RunId          = ActivityPropagation.ReadGraphRunId(),
     };
 }

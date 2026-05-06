@@ -7,6 +7,28 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`run_id` null in all gateway event stores.** `OrleansAgentContextAccessor.Current` now reads `ActivityPropagation.ReadGraphRunId()` from Orleans `RequestContext` and exposes it as `AgentContext.RunId`. `GatewayEventMiddleware`, `McpGatewayEventMiddleware`, and `McpEventMiddleware` now write `RunId: _ctx.Current.RunId` instead of `null`.
+
+- **Streaming token counts always zero.** `MafCompletionProvider.StreamAsync` now sets `chatOptions.AdditionalProperties["stream_options"] = new { include_usage = true }`, instructing the OpenAI MEAI bridge to include usage data on the final streaming chunk.
+
+- **`correlation_id` never propagated across grain boundaries.** `OrleansOutgoingActivityFilter` now writes `CorrelationId` to Orleans `RequestContext` (alongside the existing RCB fields) on each outgoing grain call. HTTP ingress handlers (`InvokeAsync`, `InvokeStreamAsync`, `GraphInvokeAsync`, `GraphInvokeStreamAsync`) now resolve the `X-Correlation-Id` header (or auto-generate a GUID) and inject it on the `AgentContext` principal; `AiAgentGrain.StreamAgentAsync` bridges the context parameter's `CorrelationId` into `RequestContext` at grain entry.
+
+- **Plugin .NET agents emit no LLM gateway events.** `ResearchPlannerAgent` now accepts optional DI-injected `ICompletionProvider` and `IEnumerable<LlmGatewayMiddleware>` via its constructor. When the provider is present, LLM calls route through `LlmGatewayPipeline.InvokeAsync` so `GatewayEventMiddleware` records them; the raw-HTTP path is retained as a fallback when no provider is available.
+
+- **Plugin .NET agents emit no tool gateway events.** `AgentManifestTranslator` now resolves the DI-fallback `ToolGatewayMiddleware` array and sets it on the plugin branch of `StatefulAgentOptions`. `AiAgentGrain` stores the middleware array at activation and, after each `AskAsync` turn in plugin mode, scans the history delta for `ToolCallRequest` entries and invokes the middleware chain (with a no-op inner delegate) to record each tool call to `McpGatewayEventStore`. Duration is recorded as 0 ms (calls are not individually timed).
+
+- **Gateway event tabs empty when agent uses a named gateway ref.** `GatewayEventMiddleware`, `McpEventMiddleware`, and `McpGatewayEventMiddleware` were registered only as DI singletons, which `AgentManifestTranslator` bypasses when building a named-gateway pipeline. Each event-store extension now also registers a `NamedLlmGatewayMiddlewareRegistration` / `NamedToolGatewayMiddlewareRegistration` (`"LlmGatewayLogging"`, `"McpGatewayLogging"`, `"McpServerLogging"`). The research-pipeline gateway YAML manifests (`llm-gateway.yaml`, `mcp-gateway.yaml`) include those names so events are captured regardless of whether the agent manifest carries a gateway ref.
+
+- **MCP server shows no outbound references in Workbench.** `RefsTab.tsx` `buildOutboundRows()` had no `mcp-servers` case, so the `mcpGatewayRef` field on `mcp-tavily` was invisible. Added the case to display `mcpGatewayRef` as a clickable outbound link. `McpServerManifest` in `types.ts` now includes `mcpGatewayRef?: string`.
+
+- **Gateway middleware dropped for declarative agents.** `AiAgentGrain.OnActivateAsync` was rebuilding `StatefulAgentOptions` from the translator-supplied options but omitting `GatewayMiddleware` and `ToolGatewayMiddleware`. The `StatefulAiAgent` therefore ran with an empty filter chain, so `GatewayEventMiddleware` / `McpEventMiddleware` / `McpGatewayEventMiddleware` were never invoked and no events were written to Postgres. Fixed by forwarding both fields in the `seeded` options.
+
+---
+
 ## [0.55.0-preview] — 2026-05-05
 
 ### Added

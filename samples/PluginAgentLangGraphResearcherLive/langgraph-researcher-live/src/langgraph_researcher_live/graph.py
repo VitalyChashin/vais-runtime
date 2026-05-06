@@ -96,11 +96,18 @@ async def _node_search(state: ResearchState) -> dict[str, Any]:
         return {"search_results": []}
 
     results: list[str] = []
+    tool_journal: list[dict] = []
     for question in questions:
-        raw = await search_tool.ainvoke({"query": question, "max_results": 3})
+        input_args = {"query": question, "max_results": 3}
+        raw = await search_tool.ainvoke(input_args)
         results.append(str(raw))
+        tool_journal.append({
+            "toolName": search_tool.name,
+            "inputJson": json.dumps(input_args),
+            "outputJson": str(raw),
+        })
 
-    return {"search_results": results}
+    return {"search_results": results, "tool_journal": tool_journal}
 
 
 def _node_summarize(state: ResearchState) -> dict[str, Any]:
@@ -159,7 +166,13 @@ async def run_graph(
 ) -> tuple[ResearchState, "_TokenUsageCallback"]:
     """Execute the graph for one turn; return updated state and token usage."""
     tracker = _TokenUsageCallback()
-    updated = state.model_copy(update={"user_input": new_user_input})
+    updated = state.model_copy(update={
+        "user_input": new_user_input,
+        "plan": None,
+        "search_results": [],
+        "summary": None,
+        "tool_journal": [],
+    })
     result = await _compiled.ainvoke(updated, config={"callbacks": [tracker]})
     if not isinstance(result, ResearchState):
         result = ResearchState.model_validate(result)
