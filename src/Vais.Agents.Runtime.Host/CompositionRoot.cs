@@ -381,11 +381,17 @@ internal static class CompositionRoot
         if (!string.IsNullOrWhiteSpace(options.RunStoreConnection))
         {
             services.AddRunStore(o => o.ConnectionString = options.RunStoreConnection);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-run-store", options.RunStoreConnection,
+                "SELECT COUNT(*) FROM vais_graph_runs LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.AgentRunStoreConnection))
         {
             services.AddAgentRunStore(o => o.ConnectionString = options.AgentRunStoreConnection);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-agent-run-store", options.AgentRunStoreConnection,
+                "SELECT COUNT(*) FROM vais_agent_runs LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.GatewayEventStoreConnection))
@@ -396,6 +402,9 @@ internal static class CompositionRoot
                 if (!string.IsNullOrWhiteSpace(options.GatewayId))
                     o.GatewayId = options.GatewayId;
             });
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-gateway-event-store", options.GatewayEventStoreConnection,
+                "SELECT COUNT(*) FROM vais_gateway_events LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.McpEventStoreConnection))
@@ -406,6 +415,9 @@ internal static class CompositionRoot
                 if (!string.IsNullOrWhiteSpace(options.McpServerId))
                     o.ServerId = options.McpServerId;
             });
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-mcp-event-store", options.McpEventStoreConnection,
+                "SELECT COUNT(*) FROM vais_mcp_events LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.McpGatewayEventStoreConnection))
@@ -416,11 +428,37 @@ internal static class CompositionRoot
                 if (!string.IsNullOrWhiteSpace(options.McpGatewayId))
                     o.GatewayId = options.McpGatewayId;
             });
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-mcp-gateway-event-store", options.McpGatewayEventStoreConnection,
+                "SELECT COUNT(*) FROM vais_mcp_gateway_events LIMIT 1"));
         }
 
         // 6. Optional observability. Off unless either the OTel endpoint env var or the
         //    console-exporter toggle is set; off-by-default keeps hello-world overhead zero.
         ConfigureObservability(services, options);
+
+        // Self-check: infrastructure service probes registered after stores so all
+        // AddXxx calls above have already registered their own initializer services.
+        if (!string.IsNullOrWhiteSpace(options.PostgresConnection))
+        {
+            var isRequired = (options.Mode == "localhost" &&
+                              (options.LocalhostPersistence == LocalhostPersistenceMode.Postgres
+                               || options.LocalhostPubSubPersistence == LocalhostPersistenceMode.Postgres))
+                          || (options.Mode == "clustered" && options.ClusteringBackend == "postgres");
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-orleans", options.PostgresConnection, "SELECT 1", isRequired));
+        }
+        if (!string.IsNullOrWhiteSpace(options.RedisConnection))
+            services.AddSingleton<ISelfCheckProbe>(new RedisSelfCheckProbe(options.RedisConnection));
+        if (!string.IsNullOrWhiteSpace(options.OtelEndpoint)
+            && Uri.TryCreate(options.OtelEndpoint, UriKind.Absolute, out var otelUri))
+        {
+            services.AddSingleton<ISelfCheckProbe>(new HttpSelfCheckProbe(
+                "otel", $"{otelUri.Scheme}://{otelUri.Host}:{otelUri.Port}/healthz"));
+        }
+        if (!string.IsNullOrWhiteSpace(options.LangfuseHost))
+            services.AddSingleton<ISelfCheckProbe>(new HttpSelfCheckProbe(
+                "langfuse", options.LangfuseHost.TrimEnd('/') + "/api/health"));
 
         // 7. Optional OPA policy engine. Off-by-default → NullAgentPolicyEngine.Instance
         //    (AllowAll) wins. AddOpaPolicyEngine uses TryAddSingleton<IAgentPolicyEngine>,
@@ -442,8 +480,10 @@ internal static class CompositionRoot
         // 8. Health checks. Liveness (/healthz) maps to the default "catch-all" set; readiness
         //    (/readyz) filters on the "ready" tag and gates on the co-hosted silo reaching
         //    SiloStatus.Active. Probe tuning lives in the Helm chart (60s failure threshold).
+        services.AddSingleton<SelfCheckResultsStore>();
         services.AddHealthChecks()
-            .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"]);
+            .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"])
+            .AddCheck<SelfCheckHealthCheck>("self-check", tags: ["ready"]);
 
         // 9. Startup hosted services — run once on StartAsync, after Orleans becomes active.
         //    PluginManifestConsistencyCheck walks registered manifests and verifies handlers.
@@ -461,6 +501,9 @@ internal static class CompositionRoot
                 sp.GetRequiredService<IMcpServerLifecycleManager>(),
                 sp.GetService<ILogger<BootManifestApplyService>>() ?? NullLogger<BootManifestApplyService>.Instance));
         }
+
+        // RuntimeSelfCheckService runs LAST — after all initializers have created their schemas.
+        services.AddHostedService<RuntimeSelfCheckService>();
 
         // 10. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
         //    any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.

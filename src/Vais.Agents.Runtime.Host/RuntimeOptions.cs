@@ -119,6 +119,13 @@ internal sealed record RuntimeOptions
     public string? CorsOrigins { get; init; }
 
     /// <summary>
+    /// Optional base URL of the Langfuse instance (e.g. <c>http://langfuse-web:3000</c>).
+    /// When set, the startup self-check probes <c>{LangfuseHost}/api/health</c>.
+    /// Set via <c>VAIS_LANGFUSE_HOST</c>.
+    /// </summary>
+    public string? LangfuseHost { get; init; }
+
+    /// <summary>
     /// Postgres connection string for the run store (<see cref="Vais.Agents.Observability.RunStore.IRunStore"/>).
     /// When set, graph run history is persisted and exposed via the control-plane REST surface.
     /// Null ⇒ run store disabled (HTTP endpoints return 503).
@@ -232,6 +239,7 @@ internal sealed record RuntimeOptions
             OtelHeaders = Env("OTEL_EXPORTER_OTLP_HEADERS"),
             OtelConsole = string.Equals(Env("VAIS_OTEL_CONSOLE"), "true", StringComparison.OrdinalIgnoreCase),
             LangfuseProject = Env("VAIS_LANGFUSE_PROJECT"),
+            LangfuseHost = Env("VAIS_LANGFUSE_HOST"),
             OpaBaseUrl = Env("VAIS_OPA_BASEURL"),
             OpaFailMode = ParseFailMode(Env("VAIS_OPA_FAILMODE")),
             OpaDataPath = Env("VAIS_OPA_DATAPATH"),
