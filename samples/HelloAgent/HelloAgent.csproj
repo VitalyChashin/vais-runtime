@@ -5,10 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Ai.SemanticKernel" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Ai.MicrosoftAgentFramework" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Ai.SemanticKernel" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Ai.MicrosoftAgentFramework" Version="0.15.0-preview" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.74.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.74.0" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.5.0" />

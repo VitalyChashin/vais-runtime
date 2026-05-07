@@ -1,0 +1,23 @@
+apiVersion: vais.io/v1
+kind: Config
+currentContext: staging   # active context — change to "prod" to promote
+
+clusters:
+  - name: staging-cluster
+    server: https://vais.staging.internal
+  - name: prod-cluster
+    server: https://vais.prod.internal
+
+users:
+  - name: staging-user
+    token: "staging-bearer-token"   # replace with real token / use tokenFile
+  - name: prod-user
+    token: "prod-bearer-token"
+
+contexts:
+  - name: staging
+    cluster: staging-cluster
+    user: staging-user
+  - name: prod
+    cluster: prod-cluster
+    user: prod-user

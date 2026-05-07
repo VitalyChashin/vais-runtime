@@ -3,8 +3,8 @@
     <AssemblyName>HandoffBetweenAgents</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Hosting.InMemory" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Hosting.InMemory" Version="0.15.0-preview" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,8 @@ schema documented at
 | [`tenant-scoped-allow.rego`](tenant-scoped-allow.rego) | Invoke / Signal / Query | Multi-tenant cluster; deny cross-tenant access to an agent |
 | [`model-provider-allowlist.rego`](model-provider-allowlist.rego) | Create / Update | Platform team controls approved LLM vendors |
 | [`budget-cap.rego`](budget-cap.rego) | Create / Update | Deny manifests whose run-budget fields exceed operator caps |
+| [`time-window.rego`](time-window.rego) | Invoke | Allow invocations only during business hours (09:00–17:00 UTC Mon–Fri) |
+| [`max-concurrent-runs.rego`](max-concurrent-runs.rego) | Invoke | Deny when tenant's active-run count meets or exceeds a configured cap |
 
 ## Installing
 

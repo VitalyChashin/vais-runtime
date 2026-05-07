@@ -1,6 +1,6 @@
 # Vais.Agents — samples
 
-29 runnable samples. Each is a standalone .NET 9 console app or YAML-only configuration directory, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
+52 runnable samples. Each is a standalone .NET 9 console app or YAML-only configuration directory, consumes `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed (see `NuGet.config`), and targets one scenario.
 
 Run any sample with:
 
@@ -25,6 +25,13 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [AgentManifestAndRegistry](AgentManifestAndRegistry) | `AgentManifest` + `InMemoryAgentRegistry` | Abstractions, Core | ~70 | — | [control plane](../docs/concepts/control-plane.md) |
 | [HelloStreaming](HelloStreaming) | basic `StreamAsync` with scripted deltas | Abstractions, Core | ~55 | — | [execution loop](../docs/concepts/execution-loop.md) |
 | [HelloStreamingTools](HelloStreamingTools) | v0.4.1 tool-using streaming | Abstractions, Core, Hosting.InMemory | ~100 | — | [stream-with-tools](../docs/guides/stream-with-tools.md) |
+| [StreamingFilterTypingIndicator](StreamingFilterTypingIndicator) | v0.10 `IStreamingAgentFilter` — `InvokeAsync` around-provider, `OnStreamDeltaAsync` per-delta, `OnStreamCompleteAsync` | Abstractions, Core | ~85 | — | [streaming-filters](../docs/concepts/streaming-filters.md) |
+| [StreamingResiliencePolly](StreamingResiliencePolly) | v0.10 `StatefulAgentOptions.StreamingResiliencePipeline` — Polly retry before first delta | Abstractions, Core, Microsoft.Extensions.Resilience | ~70 | — | [resilience](../docs/concepts/resilience.md) |
+| [HttpStreamingInvoke](HttpStreamingInvoke) | v0.12 `MapAgentControlPlane` SSE endpoint + `AgentControlPlaneClient.InvokeStreamEventsAsync` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Http.Server, Control.Http.Client | ~90 | — | [stream-invocations-over-http](../docs/guides/stream-invocations-over-http.md) |
+| [HttpStreamingCancellation](HttpStreamingCancellation) | v0.12 SSE cancellation — `CancellationTokenSource` fires mid-stream, server stops on `RequestAborted` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Http.Server, Control.Http.Client | ~85 | — | [stream-invocations-over-http](../docs/guides/stream-invocations-over-http.md) |
+| [HttpIdempotencyInMemory](HttpIdempotencyInMemory) | v0.11 `AddAgentControlPlaneIdempotency()` + `UseAgentControlPlaneIdempotency()`; same-key replay returns `Idempotency-Replayed: true`; agent invoked once | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Http.Server, Control.Http.Client | ~85 | — | [idempotency](../docs/concepts/idempotency.md) |
+| [OpenApiSpecExplorer](OpenApiSpecExplorer) | v0.11 `AddAgentControlPlaneOpenApi()` + `MapAgentControlPlaneOpenApi()`; fetch `/openapi/v1.json`, print paths + `x-vais-type-urns` extension per error response | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Http.Server | ~80 | — | [openapi-spec](../docs/guides/openapi-spec.md) |
+| [OpaPolicyGateLocal](OpaPolicyGateLocal) | v0.14 `AddOpaPolicyEngine()` + `LoggerAuditLog`; two `CreateAsync` calls — allowed provider passes, denied provider throws `AgentPolicyDeniedException`; audit entries logged; requires local `opa run --server` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Policy.Opa | ~85 | — + OPA | [policy](../docs/concepts/policy.md) |
 | [SequentialOrchestration](SequentialOrchestration) | `SequentialOrchestrator` pipeline | Abstractions, Core | ~45 | — | [orchestration](../docs/concepts/orchestration.md) |
 | [RoundRobinOrchestration](RoundRobinOrchestration) | `RoundRobinOrchestrator` + termination predicate | Abstractions, Core | ~45 | — | [orchestration](../docs/concepts/orchestration.md) |
 | [HandoffBetweenAgents](HandoffBetweenAgents) | `Handoff` + `HandoffRequested` event | Abstractions, Core, Hosting.InMemory | ~65 | — | [orchestration](../docs/concepts/orchestration.md) |
@@ -45,6 +52,22 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [graph-code-authored](graph-code-authored) | v0.20 Phase 3 — multi-agent graph authored in C# with InProcessGraphOrchestrator + typed state + streaming events | Abstractions, Core | ~70 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
 | [graph-yaml-authored](graph-yaml-authored) | v0.20 Phase 3 — multi-agent graph as a YAML AgentGraph manifest (`vais apply`, `vais invoke-graph`, `--stream`) | — (YAML only) | 0 | `OPENAI_API_KEY` | [from-zero-to-graph-in-20-minutes](../docs/tutorials/from-zero-to-graph-in-20-minutes.md) |
 | [graph-cross-runtime](graph-cross-runtime) | v0.20 Phase 3 — graph with `ref.runtimeUrl` that fans a node out to a second runtime container | — (YAML only) | 0 | `OPENAI_API_KEY` | [cross-runtime-graphs](../docs/concepts/cross-runtime-graphs.md) |
+| [declarative-agent-mcp-gateways](declarative-agent-mcp-gateways) | v0.40 — declarative LLM + MCP gateway pipelines; zero C# — LLM fallback, semantic cache, OTel, tool rate-limit, response truncation all via YAML manifests | — (YAML only) | 0 | `OPENAI_API_KEY` | [gateway-config-control-plane](../docs/concepts/gateway-config-control-plane.md) |
+| [LlmGatewayMiddleware](LlmGatewayMiddleware) | v0.40 `StatefulAgentOptions.GatewayMiddleware` — `LlmFallbackMiddleware` (pool fallback), `LlmSemanticCacheMiddleware` (same-text cache hit), `LlmJsonOutputMiddleware<T>` (JSON validation); gateway packages `0.0.1-alpha` (pack first) | Abstractions, Core, Gateways.Fallback, Gateways.SemanticCache, Gateways.StructuredOutput | ~110 | — | [llm-gateway](../docs/concepts/llm-gateway.md) |
+| [McpGatewayMiddleware](McpGatewayMiddleware) | v0.40 `StatefulAgentOptions.ToolGatewayMiddleware` — `ToolRetryMiddleware` (retry on transient error), `ToolResultCacheMiddleware` (cache hit on identical args), `ToolArgumentValidationMiddleware` (ToolDenied on missing arg); pipeline composed directly without agent loop | Abstractions, Core, Gateways.McpReliability, Gateways.McpCache, Gateways.McpSecurity | ~100 | — | [mcp-gateway](../docs/concepts/mcp-gateway.md) |
+| [OpenAiCompatGateway](OpenAiCompatGateway) | v0.40 `AddOpenAiCompatGateway()` + `MapOpenAiCompat()` — expose a scripted `ICompletionProvider` as `POST /v1/chat/completions` + `GET /v1/models`; `AddInMemoryModelRouter` routes `gpt-4o-mini` alias; client calls non-streaming and SSE streaming paths; gateway package `0.0.1-alpha` (pack first) | Abstractions, Core, Gateways.OpenAiCompat | ~130 | — | [openai-compat-gateway](../docs/guides/openai-compat-gateway.md) |
+| [GraphHitlLiveMode](GraphHitlLiveMode) | v0.42 `IHitlAgentGraph<TState>.StreamWithHitlAsync` — live-mode HITL on `MafGraphOrchestrator`; inline `Func<GraphInterrupted, CancellationToken, ValueTask<TState?>>` handler approves (non-null) or aborts (null → `GraphHitlAbortedException`); contrast with halt-mode `AgentGraphResumeOnOrleans` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Orchestration.Graph.MicrosoftAgentFramework | ~95 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [GraphPowerFxPredicates](GraphPowerFxPredicates) | v0.53 `PowerFxGraphExpressionEvaluator` — inline `=Not(IsBlank(Local.research_plan))` PowerFx edge predicates in YAML manifest; two runs show both branches; `Vais.Agents.Core.PowerFx` package `0.15.0-preview` (pack first) | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Manifests.Yaml, Core.PowerFx | ~80 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [KubernetesOperatorQuickstart](KubernetesOperatorQuickstart) | v0.13 — `helm install` operator + apply `sample-agent.yaml` CR; watch reconcile → Ready; update spec; finalizer-based delete | — (YAML only) | 0 | — + K8s + Helm | [kubernetes-operator](../docs/concepts/kubernetes-operator.md) |
+| [CliCookbook](CliCookbook) | v0.15 — shell recipes: CI/CD apply with exit-code branching, rollback-on-failure, `vais logs` tailing + filtering, multi-context staging→prod promotion; three starter config files | — (scripts only) | 0 | — | [cli](../docs/concepts/cli.md) |
+| [McpServerStdio](McpServerStdio) | v0.7 — host an agent as an MCP tool over stdio; `AddMcpAgentServerStdio()` + `StdioAgentServerHost`; Claude Desktop config example | Abstractions, Core, Hosting.InMemory, Control.InProcess, Protocols.Mcp.Server | ~90 | — | [host-agents-as-mcp-tools](../docs/guides/host-agents-as-mcp-tools.md) |
+| [McpServerHttp](McpServerHttp) | v0.7 — host an agent as an MCP tool over streamable-HTTP; `AddMcpAgentServerHttp()` + `MapMcpAgentServer()`; co-located `McpClient` exercises tools/list, tools/call, resources/list | Abstractions, Core, Hosting.InMemory, Control.InProcess, Protocols.Mcp.Server + ModelContextProtocol.Core | ~110 | — | [host-agents-as-mcp-tools](../docs/guides/host-agents-as-mcp-tools.md) |
+| [A2AServerBasics](A2AServerBasics) | v0.8 — host an agent as an A2A endpoint; `AddA2AAgentServer()` + `MapA2AAgentServer()`; `AgentCard` auto-derived; co-located `A2AClient` exercises card discovery + message round-trip | Abstractions, Core, Hosting.InMemory, Control.InProcess, Protocols.A2A.Server + A2A + A2A.AspNetCore | ~100 | — | [host-agents-as-an-a2a-endpoint](../docs/guides/host-agents-as-an-a2a-endpoint.md) |
+| [A2AInterruptResumeOrleans](A2AInterruptResumeOrleans) | v0.8 — `OrleansTaskStore` backing A2A task state; `IToolGuardrail` interrupt → `Task(InputRequired)` → resume via `message.TaskId` → `Task(Completed)` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Protocols.A2A.Server, Hosting.Orleans + A2A + A2A.AspNetCore + Orleans | ~180 | — | [host-agents-as-an-a2a-endpoint](../docs/guides/host-agents-as-an-a2a-endpoint.md) |
+| [AgentGraphInProcess](AgentGraphInProcess) | v0.9 — code-first `AgentGraphManifest` + `InProcessGraphOrchestrator<TState>`; `StreamAsync` events + `InvokeAsync`; typed `PipelineState` round-trip; `PropertyMatcher` conditional routing | Abstractions, Core, Hosting.InMemory, Control.InProcess | ~105 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [AgentGraphYamlLoader](AgentGraphYamlLoader) | v0.9 — `YamlAgentGraphManifestLoader.LoadFromFileAsync`; bag-state `InProcessGraphOrchestrator`; same triage graph defined in `triage-graph.yaml` | Abstractions, Core, Hosting.InMemory, Control.InProcess, Control.Manifests.Yaml | ~75 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [AgentGraphMaf](AgentGraphMaf) | v0.9 — `MafGraphOrchestrator` (MAF Workflows backend); proves cross-stack parity with `AgentGraphInProcess`; same manifest, same output, fan-out/fan-in unlocked | Abstractions, Core, Hosting.InMemory, Control.InProcess, Orchestration.Graph.MicrosoftAgentFramework | ~95 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
+| [AgentGraphResumeOnOrleans](AgentGraphResumeOnOrleans) | v0.9 — `Interrupt`-kind node + `OrleansCheckpointer`; interrupt → `GraphInterrupted` → `LoadAsync` → `ResumeStreamAsync`; in-process Orleans silo, no Docker | Abstractions, Core, Hosting.InMemory, Control.InProcess, Hosting.Orleans + Orleans | ~145 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
 
 ## Suggested learning path
 
@@ -52,23 +75,54 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 2. **ToolFromFunc** → **PromptComposer** → **InputOutputGuardrails** → **ToolGuardrailsAndInterrupt** — core pillars.
 3. **CustomMemoryStore** → **ContextProviderRag** → **VectorDataRag** — memory + RAG.
 4. **BudgetEnforcement** — safety rails.
-5. **HelloStreaming** → **HelloStreamingTools** — streaming.
-6. **SequentialOrchestration** → **RoundRobinOrchestration** → **HandoffBetweenAgents** — multi-agent.
-7. **OrleansSilo** → **OrleansRedisPersistence** / **OrleansPostgresPersistence** — durable hosting.
-8. **ObservabilityOtelConsole** — instrument everything.
-9. **McpToolSourceExample** → **A2ARemoteAgentExample** — interop.
-10. **AgentManifestAndRegistry** — control plane shape.
-11. **runtime-docker-compose** → **declarative-agent-yaml** → **graph-yaml-authored** → **graph-cross-runtime** — Phase 3 runtime path.
+5. **HelloStreaming** → **HelloStreamingTools** → **StreamingFilterTypingIndicator** → **StreamingResiliencePolly** — streaming + filters + resilience.
+6. **HttpStreamingInvoke** → **HttpStreamingCancellation** → **HttpIdempotencyInMemory** → **OpenApiSpecExplorer** → **OpaPolicyGateLocal** — HTTP control plane surface + policy gate.
+7. **SequentialOrchestration** → **RoundRobinOrchestration** → **HandoffBetweenAgents** — multi-agent.
+8. **OrleansSilo** → **OrleansRedisPersistence** / **OrleansPostgresPersistence** — durable hosting.
+9. **ObservabilityOtelConsole** — instrument everything.
+10. **McpToolSourceExample** → **A2ARemoteAgentExample** — interop.
+11. **AgentManifestAndRegistry** — control plane shape.
+12. **runtime-docker-compose** → **declarative-agent-yaml** → **graph-yaml-authored** → **graph-cross-runtime** → **KubernetesOperatorQuickstart** — Phase 3 runtime path + Kubernetes operator.
+13. **McpServerStdio** → **McpServerHttp** — MCP server hosting.
+14. **A2AServerBasics** → **A2AInterruptResumeOrleans** — A2A protocol.
+15. **AgentGraphInProcess** → **AgentGraphYamlLoader** → **AgentGraphMaf** → **AgentGraphResumeOnOrleans** → **GraphHitlLiveMode** → **GraphPowerFxPredicates** — graph orchestration deepdive: in-process, YAML, MAF, durable resume, live HITL, PowerFx predicates.
+16. **CliCookbook** — CLI recipes: CI/CD apply, rollback, log tailing, multi-context deploy.
+
+## Tooling-only samples
+
+These directories contain no .NET code to compile — they are configuration, policy, or script artifacts that are read or applied by external tools:
+
+| Directory | Contents | Tool |
+|---|---|---|
+| [opa-policies](opa-policies) | Rego policy files: model-provider allowlist, time-window gate, max-concurrent-runs cap | `opa run --server <policy.rego>` |
+| [KubernetesOperatorQuickstart](KubernetesOperatorQuickstart) | `sample-agent.yaml` CRD + Helm walkthrough README | `kubectl apply` + `helm install` |
+| [CliCookbook](CliCookbook) | Shell recipes (CI/CD apply, rollback, log tailing, multi-context deploy) + `~/.vais/config.yaml` starters | `vais` CLI |
 
 ## Build all
 
 ```bash
-dotnet build samples/HelloAgent samples/PromptComposer samples/CustomMemoryStore samples/ContextProviderRag \
+# deterministic samples (no API key, no Docker)
+dotnet build samples/PromptComposer samples/CustomMemoryStore samples/ContextProviderRag \
   samples/InputOutputGuardrails samples/ToolGuardrailsAndInterrupt samples/BudgetEnforcement \
   samples/ToolFromFunc samples/AgentManifestAndRegistry samples/HelloStreaming samples/HelloStreamingTools \
   samples/SequentialOrchestration samples/RoundRobinOrchestration samples/HandoffBetweenAgents \
-  samples/OrleansSilo samples/OrleansRedisPersistence samples/OrleansPostgresPersistence \
-  samples/ObservabilityOtelConsole samples/VectorDataRag samples/McpToolSourceExample samples/A2ARemoteAgentExample
+  samples/ObservabilityOtelConsole samples/VectorDataRag samples/McpToolSourceExample \
+  samples/A2ARemoteAgentExample samples/McpServerStdio samples/McpServerHttp \
+  samples/A2AServerBasics samples/AgentGraphInProcess samples/AgentGraphYamlLoader samples/AgentGraphMaf \
+  samples/StreamingFilterTypingIndicator samples/StreamingResiliencePolly \
+  samples/HttpIdempotencyInMemory samples/OpenApiSpecExplorer \
+  samples/HttpStreamingInvoke samples/HttpStreamingCancellation \
+  samples/LlmGatewayMiddleware samples/McpGatewayMiddleware samples/OpenAiCompatGateway \
+  samples/GraphHitlLiveMode samples/GraphPowerFxPredicates
+
+# in-process Orleans (no Docker)
+dotnet build samples/A2AInterruptResumeOrleans samples/AgentGraphResumeOnOrleans
+
+# Docker-backed Orleans
+dotnet build samples/OrleansSilo samples/OrleansRedisPersistence samples/OrleansPostgresPersistence
+
+# OPA required: opa run --server samples/OpaPolicyGateLocal/policy.rego
+dotnet build samples/OpaPolicyGateLocal
 ```
 
-Or run the [`build-all.ps1`](build-all.ps1) / [`build-all.sh`](build-all.sh) helper.
+Or run the [`build-all.ps1`](build-all.ps1) / [`build-all.sh`](build-all.sh) helper (supports `-RunDeterministic` / `RUN_DETERMINISTIC=1` to execute all deterministic samples in sequence).

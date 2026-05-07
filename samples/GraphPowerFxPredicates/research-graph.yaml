@@ -1,0 +1,30 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: research-graph
+  version: "1.0"
+  description: "Research pipeline: PowerFx edge predicates route based on plan content."
+spec:
+  entry: planner
+  nodes:
+    - id: planner
+      kind: Agent
+      ref:
+        id: planner-agent
+      stateBindings:
+        output: [research_plan]
+    - id: analyst
+      kind: Agent
+      ref:
+        id: analyst-agent
+    - id: end
+      kind: End
+  edges:
+    - from: planner
+      to: analyst
+      when: "=Not(IsBlank(Local.research_plan))"
+    - from: planner
+      to: end
+      when: "=IsBlank(Local.research_plan)"
+    - from: analyst
+      to: end

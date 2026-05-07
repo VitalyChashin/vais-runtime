@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <AssemblyName>HttpIdempotencyInMemory</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions"            Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core"                    Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Hosting.InMemory"        Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Control.InProcess"       Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Control.Http.Server"     Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Control.Http.Client"     Version="0.15.0-preview" />
+  </ItemGroup>
+</Project>

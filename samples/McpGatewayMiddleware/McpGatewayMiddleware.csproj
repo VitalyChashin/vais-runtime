@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>McpGatewayMiddleware</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions"             Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core"                     Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Gateways.McpReliability"  Version="0.0.1-alpha" />
+    <PackageReference Include="Vais.Agents.Gateways.McpCache"        Version="0.0.1-alpha" />
+    <PackageReference Include="Vais.Agents.Gateways.McpSecurity"     Version="0.0.1-alpha" />
+  </ItemGroup>
+</Project>

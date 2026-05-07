@@ -1,0 +1,17 @@
+apiVersion: vais.io/v1
+kind: Config
+currentContext: local
+
+clusters:
+  - name: local
+    server: http://localhost:5080
+    insecureSkipTlsVerify: false
+
+users:
+  - name: local
+    token: "dev-token"   # replace with a real bearer token
+
+contexts:
+  - name: local
+    cluster: local
+    user: local

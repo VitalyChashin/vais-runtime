@@ -11,6 +11,25 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **31 new runnable samples and 3 doc-only sample directories** covering all post-v0.6 pillars. Samples are deterministic (scripted providers, no API key) unless noted.
+
+  - v0.7 MCP inbound: `McpServerStdio` (`AddMcpAgentServerStdio` + `--demo` mode), `McpServerHttp` (live `McpClient` round-trip).
+  - v0.8 A2A inbound: `A2AServerBasics` (card discovery + message round-trip), `A2AInterruptResumeOrleans` (`OrleansTaskStore` + interrupt → resume).
+  - v0.9 graph orchestration: `AgentGraphInProcess` (typed state + `PropertyMatcher` routing), `AgentGraphYamlLoader` (YAML manifest), `AgentGraphMaf` (`MafGraphOrchestrator`), `AgentGraphResumeOnOrleans` (`OrleansCheckpointer` halt-mode HITL).
+  - v0.10 streaming: `StreamingFilterTypingIndicator` (`IStreamingAgentFilter` around-provider + per-delta hooks), `StreamingResiliencePolly` (Polly retry before first delta).
+  - v0.11 HTTP polish: `HttpIdempotencyInMemory` (`AddAgentControlPlaneIdempotency` + replay header), `OpenApiSpecExplorer` (`AddAgentControlPlaneOpenApi` + `x-vais-type-urns` extension).
+  - v0.12 HTTP streaming: `HttpStreamingInvoke` (SSE over `MapAgentControlPlane`), `HttpStreamingCancellation` (mid-stream `CancellationTokenSource`).
+  - v0.13 Kubernetes operator: `KubernetesOperatorQuickstart` (doc-only — Helm walkthrough + `vais.io/v1alpha1` Agent CR).
+  - v0.14 OPA: `OpaPolicyGateLocal` (`AddOpaPolicyEngine` + `LoggerAuditLog`; requires local `opa run --server`). `opa-policies/` extended with `time-window.rego` and `max-concurrent-runs.rego`.
+  - v0.15 CLI: `CliCookbook` (doc-only — 4 shell recipes + 3 config starters).
+  - v0.40 LLM gateway middleware: `LlmGatewayMiddleware` (`LlmFallbackMiddleware` + `LlmSemanticCacheMiddleware` + `LlmJsonOutputMiddleware<T>`).
+  - v0.40 MCP gateway middleware: `McpGatewayMiddleware` (`ToolRetryMiddleware` + `ToolResultCacheMiddleware` + `ToolArgumentValidationMiddleware`).
+  - v0.40 OpenAI-compat gateway: `OpenAiCompatGateway` (`AddOpenAiCompatGateway` + `MapOpenAiCompat`; non-streaming and SSE streaming).
+  - v0.42 live-mode HITL: `GraphHitlLiveMode` (`IHitlAgentGraph<TState>.StreamWithHitlAsync` inline handler on `MafGraphOrchestrator`).
+  - v0.53 PowerFx edge predicates: `GraphPowerFxPredicates` (`PowerFxGraphExpressionEvaluator` + `=Not(IsBlank(Local.research_plan))` YAML edge predicates).
+  - `samples/README.md`: count updated (21 → 52 runnable), index table extended, learning path extended to 16 steps, `Build all` block updated (40 projects across 5 categories), "Tooling-only samples" section added.
+  - `samples/build-all.ps1` / `samples/build-all.sh`: extended with all new runnable samples; added `$orleans` category (in-process silo, no Docker) and `$opa` category (external OPA server required).
+
 - **Input/output payload capture in all three gateway event stores.** `GatewayEvent`, `McpGatewayEvent`, and `McpEvent` records now carry optional `InputJson` and `OutputJson` fields (up to 32 KB each, truncated with a `[truncated]` suffix). Schema migration uses `ADD COLUMN IF NOT EXISTS` so existing rows are unaffected.
 
   - `GatewayEventMiddleware` serializes `request.History` as input JSON and accumulates streaming text deltas (or reads `response.Text` for non-streaming) as output JSON.

@@ -3,10 +3,10 @@
     <AssemblyName>OrleansPostgresPersistence</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Hosting.Orleans" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Persistence.Postgres" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Hosting.Orleans" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Persistence.Postgres" Version="0.15.0-preview" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.6" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.1.0" />
   </ItemGroup>

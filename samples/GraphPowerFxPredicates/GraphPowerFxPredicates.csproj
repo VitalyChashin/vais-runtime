@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>GraphPowerFxPredicates</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions"             Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core"                     Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Hosting.InMemory"         Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Control.InProcess"        Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Control.Manifests.Yaml"   Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core.PowerFx"             Version="0.15.0-preview" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="research-graph.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

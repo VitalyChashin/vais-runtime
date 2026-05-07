@@ -3,9 +3,9 @@
     <AssemblyName>McpToolSourceExample</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
-    <PackageReference Include="Vais.Agents.Protocols.Mcp" Version="0.4.0-preview" />
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Protocols.Mcp" Version="0.15.0-preview" />
     <PackageReference Include="ModelContextProtocol.Core" Version="1.2.0" />
   </ItemGroup>
 </Project>

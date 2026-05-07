@@ -1,0 +1,19 @@
+apiVersion: vais.io/v1
+kind: Config
+currentContext: prod
+
+clusters:
+  - name: prod-cluster
+    server: https://vais.prod.internal
+
+users:
+  - name: prod-sa
+    # tokenFile is re-read on every CLI invocation — no restart needed after rotation.
+    # An external process (Vault agent, Kubernetes projected SA token, cert-manager)
+    # writes the fresh token to this path; the CLI picks it up transparently.
+    tokenFile: /var/run/secrets/vais/token
+
+contexts:
+  - name: prod
+    cluster: prod-cluster
+    user: prod-sa

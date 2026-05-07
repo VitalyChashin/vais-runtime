@@ -2,7 +2,7 @@
 
   <!--
     Shared sample defaults. Samples act as external consumers of the Vais.Agents.*
-    0.4.0-preview packages — no ProjectReferences into src/. See NuGet.config for the
+    0.15.0-preview packages — no ProjectReferences into src/. See NuGet.config for the
     local-feed mapping, and Directory.Packages.props for the CPM opt-out.
   -->
 

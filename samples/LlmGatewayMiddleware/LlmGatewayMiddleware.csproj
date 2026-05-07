@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>LlmGatewayMiddleware</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Vais.Agents.Abstractions"              Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Core"                      Version="0.15.0-preview" />
+    <PackageReference Include="Vais.Agents.Gateways.Fallback"         Version="0.0.1-alpha" />
+    <PackageReference Include="Vais.Agents.Gateways.SemanticCache"    Version="0.0.1-alpha" />
+    <PackageReference Include="Vais.Agents.Gateways.StructuredOutput" Version="0.0.1-alpha" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+apiVersion: vais.io/v1alpha1
+kind: Agent
+metadata:
+  name: weather
+  namespace: default
+  annotations:
+    vais.io/tenant-id: demo
+spec:
+  agentId: weather
+  version: "1.0"
+  handler:
+    typeName: MyApp.Agents.WeatherAgent
+  protocols:
+    - kind: Http
+  tools:
+    - name: get_current_weather
+    - name: get_forecast
+  description: Answers weather questions. Demonstrates the Vais.Agents Kubernetes operator.

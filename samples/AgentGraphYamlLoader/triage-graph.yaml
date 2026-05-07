@@ -1,0 +1,38 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: triage-graph
+  version: "1.0"
+  description: "Triage graph: classify → support or sales branch."
+spec:
+  entry: classify
+  nodes:
+    - id: classify
+      kind: Agent
+      ref:
+        id: classifier
+      stateBindings:
+        output: [category]
+    - id: support-reply
+      kind: Agent
+      ref:
+        id: support
+    - id: sales-reply
+      kind: Agent
+      ref:
+        id: sales
+    - id: end
+      kind: End
+  edges:
+    - from: classify
+      to: support-reply
+      when:
+        property: category
+        operator: Eq
+        value: "support"
+    - from: classify
+      to: sales-reply
+    - from: support-reply
+      to: end
+    - from: sales-reply
+      to: end
