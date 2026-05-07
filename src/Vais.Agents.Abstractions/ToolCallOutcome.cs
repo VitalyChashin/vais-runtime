@@ -9,6 +9,6 @@ namespace Vais.Agents;
 /// adjust its plan.
 /// </summary>
 /// <param name="CallId">The id from the originating <see cref="ToolCallRequest.CallId"/>; preserved end-to-end.</param>
-/// <param name="Result">Tool output as a string. When <paramref name="Error"/> is non-null, this holds the formatted error message for the model to read.</param>
+/// <param name="Result">Tool output as a string, or <see langword="null"/> when the tool failed and produced no formatted message. When <paramref name="Error"/> is non-null and <paramref name="Result"/> is also non-null, <paramref name="Result"/> holds the formatted error text fed back to the model.</param>
 /// <param name="Error">Error type name when the tool threw. Null on success. Observability-only — the model sees the formatted <paramref name="Result"/>, not this field.</param>
-public sealed record ToolCallOutcome(string CallId, string Result, string? Error = null);
+public sealed record ToolCallOutcome(string CallId, string? Result, string? Error = null);

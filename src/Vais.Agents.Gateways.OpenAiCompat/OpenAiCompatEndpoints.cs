@@ -20,6 +20,12 @@ public static class OpenAiCompatEndpoints
     /// <summary>
     /// Maps <c>POST /v1/chat/completions</c> and <c>GET /v1/models</c>.
     /// </summary>
+    /// <remarks>
+    /// <b>Streaming.</b> Requests with <c>stream: true</c> require the registered
+    /// <see cref="ICompletionProvider"/> to implement <see cref="IStreamingCompletionProvider"/>.
+    /// If it does not, the endpoint returns HTTP 422 with error type
+    /// <c>streaming_not_supported</c> rather than hanging or returning garbled output.
+    /// </remarks>
     public static IEndpointRouteBuilder MapOpenAiCompat(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/v1");

@@ -317,9 +317,15 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             if (wfEvent is RequestInfoEvent reqInfo &&
                 portIdToNodeId.TryGetValue(reqInfo.Request.PortInfo.PortId, out var hitlNodeId))
             {
-                var interruptedEvt = pendingInterrupted
+                // Extract accumulated graph state before calling the handler so it can
+                // be surfaced via GraphInterrupted.CurrentState for approval prompts.
+                reqInfo.Request.TryGetDataAs<GraphMessage>(out var blockedMsg);
+                var currentState = (IReadOnlyDictionary<string, JsonElement>)(blockedMsg?.State ?? state);
+
+                var interruptedEvt = (pendingInterrupted
                     ?? new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
-                        hitlNodeId, Guid.NewGuid().ToString("N"), Reason: null);
+                        hitlNodeId, Guid.NewGuid().ToString("N"), Reason: null))
+                    with { CurrentState = currentState };
                 pendingInterrupted = null;
 
                 var handlerResult = await handleInterrupt(interruptedEvt, cancellationToken).ConfigureAwait(false);
@@ -336,9 +342,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 }
 
                 // Merge handler result under "hitl.response" and emit StateUpdated.
-                reqInfo.Request.TryGetDataAs<GraphMessage>(out var blockedMsg);
-                var mergedState = new Dictionary<string, JsonElement>(
-                    blockedMsg?.State ?? state, StringComparer.Ordinal);
+                var mergedState = new Dictionary<string, JsonElement>(currentState, StringComparer.Ordinal);
                 mergedState["hitl.response"] = JsonSerializer.SerializeToElement(handlerResult);
                 var stateEvt = new StateUpdated(
                     DateTimeOffset.UtcNow, context, runId, superStep,

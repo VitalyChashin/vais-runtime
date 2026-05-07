@@ -8,6 +8,7 @@ Vais.Agents.Core.InProcessGraphOrchestrator<TState>.InProcessGraphOrchestrator(V
 Vais.Agents.Core.LlmGatewayServiceCollectionExtensions
 Vais.Agents.Core.StatefulAgentOptions.GatewayMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayMiddleware!>!
 Vais.Agents.Core.StatefulAgentOptions.GatewayMiddleware.init -> void
+Vais.Agents.Core.StatefulAiAgent.InvokeAsync(string! userMessage, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddLlmGatewayMiddleware<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Core.LlmLoggingMiddleware
 Vais.Agents.Core.LlmLoggingMiddleware.LlmLoggingMiddleware(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.LlmLoggingMiddleware!>! logger) -> void

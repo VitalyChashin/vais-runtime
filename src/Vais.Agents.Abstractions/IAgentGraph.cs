@@ -41,9 +41,14 @@ public interface IAgentGraph<TState>
     /// <summary>
     /// Run the graph and stream the full <see cref="AgentGraphEvent"/> taxonomy —
     /// start / node-start / node-complete / edge-traversal / state-update / interrupt
-    /// / resume / complete / fail. Events are emitted in the order they're observed
-    /// by the orchestrator.
+    /// / resume / complete / fail.
     /// </summary>
+    /// <remarks>
+    /// <b>Event ordering contract.</b> For each node execution, <see cref="NodeCompleted"/>
+    /// is emitted before any <see cref="StateUpdated"/> events produced by that node's
+    /// output bindings. All <see cref="IAgentGraph{TState}"/> implementations must honor
+    /// this ordering so consumers can correlate state changes to the node that caused them.
+    /// </remarks>
     IAsyncEnumerable<AgentGraphEvent> StreamAsync(
         TState initial,
         AgentContext context,

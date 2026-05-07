@@ -136,6 +136,13 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     public Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
         => AskAsyncCore(userMessage, runIdOverride: null, cancellationToken);
 
+    /// <summary>
+    /// Alias for <see cref="AskAsync"/>. Matches the <c>InvokeAsync</c> naming convention
+    /// used by <see cref="IAgentGraph{TState}"/> and the A2A/MCP server invoke paths.
+    /// </summary>
+    public Task<string> InvokeAsync(string userMessage, CancellationToken cancellationToken = default)
+        => AskAsyncCore(userMessage, runIdOverride: null, cancellationToken);
+
     private async Task<string> AskAsyncCore(string userMessage, string? runIdOverride, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
@@ -256,7 +263,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     var outcome = await _toolCallDispatcher.DispatchAsync(toolCall, context, cancellationToken).ConfigureAwait(false);
                     workingHistory.Add(new ChatTurn(
                         AgentChatRole.Tool,
-                        outcome.Result,
+                        outcome.Result ?? string.Empty,
                         ToolCallId: outcome.CallId));
                 }
             }
@@ -987,7 +994,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     Duration: DateTimeOffset.UtcNow - dispatchStartedAt);
                 workingHistory.Add(new ChatTurn(
                     AgentChatRole.Tool,
-                    outcome.Result,
+                    outcome.Result ?? string.Empty,
                     ToolCallId: outcome.CallId));
             }
 

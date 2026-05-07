@@ -26,7 +26,7 @@ public sealed partial class ToolHtmlToMarkdownMiddleware : ToolGatewayMiddleware
         CancellationToken cancellationToken)
     {
         var outcome = await next().ConfigureAwait(false);
-        if (outcome.Error is not null) return outcome;
+        if (outcome.Error is not null || outcome.Result is null) return outcome;
         if (!LooksLikeHtml(outcome.Result)) return outcome;
         var stripped = HtmlTagPattern().Replace(outcome.Result, string.Empty);
         var decoded = WebUtility.HtmlDecode(stripped);

@@ -361,7 +361,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     NextNodeId: currentNodeId, SuperStepIndex: superStep, PendingInterruptId: interruptId,
                     IsComplete: false, CreatedAt: DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
                 var interruptedEvt = new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
-                    currentNodeId, interruptId, node.InterruptReason);
+                    currentNodeId, interruptId, node.InterruptReason) { CurrentState = (IReadOnlyDictionary<string, JsonElement>)state };
                 await _graphEventBus.PublishAsync(interruptedEvt, cancellationToken).ConfigureAwait(false);
                 yield return interruptedEvt;
 
@@ -436,10 +436,11 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 if (nodeActivity != null) Activity.Current = nodeActivity;
                 var nodeWatch = Stopwatch.StartNew();
                 IReadOnlyDictionary<string, JsonElement>? nodeOutput = null;
+                NodeAgentInvoked? agentInvokedEvt = null;
                 Exception? nodeFailure = null;
                 try
                 {
-                    nodeOutput = await ExecuteNodeAsync(node, state, context, runId, superStep, cancellationToken).ConfigureAwait(false);
+                    (nodeOutput, agentInvokedEvt) = await ExecuteNodeAsync(node, state, context, runId, superStep, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -457,6 +458,10 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 }
                 nodeWatch.Stop();
                 nodeActivity?.SetStatus(ActivityStatusCode.Ok);
+                if (agentInvokedEvt is not null)
+                {
+                    yield return agentInvokedEvt;
+                }
                 if (nodeActivity != null &&
                     nodeOutput is { Count: > 0 } &&
                     nodeOutput.TryGetValue("lastAssistantText", out var lastText) &&
@@ -533,7 +538,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         }
     }
 
-    private async ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteNodeAsync(
+    private async ValueTask<(IReadOnlyDictionary<string, JsonElement> Output, NodeAgentInvoked? AgentInvoked)> ExecuteNodeAsync(
         GraphNode node,
         IDictionary<string, JsonElement> state,
         AgentContext context,
@@ -612,6 +617,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             var invokedEvt = new NodeAgentInvoked(DateTimeOffset.UtcNow, context, runId, superStep,
                 node.Id, agentId, TruncateText(text), TruncateText(result.Text ?? string.Empty), 0, 0);
             await _graphEventBus.PublishAsync(invokedEvt, cancellationToken).ConfigureAwait(false);
+            // invokedEvt is returned to the caller for yield return in the streaming loop.
 
             // Project the agent's reply into state: raw text under "lastAssistantText",
             // plus parsed structured output if the reply is JSON (StateBindings.Output
@@ -625,8 +631,11 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             var turnJson = JsonSerializer.SerializeToElement(new ChatTurn(AgentChatRole.Assistant, result.Text ?? string.Empty));
             updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
-            // Project output binding: prefer structured JSON extraction; fall back to mapping
-            // the entire reply text to the first declared output key for plain-text agents.
+            // Project output binding. Two modes:
+            //   1. JSON object response → extract each property by name into state (keys must match).
+            //   2. Plain-text response → map the full text to the first declared output key.
+            // Agents that need multi-key extraction must respond with a JSON object containing
+            // the declared keys. Plain-text responses always land in outKeys[0] only.
             if (node.StateBindings?.Output is { Count: > 0 } outKeys)
             {
                 if (TryParseJsonObject(result.Text ?? string.Empty, out var parsed))
@@ -639,7 +648,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     updates[outKeys[0]] = JsonSerializer.SerializeToElement(result.Text);
                 }
             }
-            return updates;
+            return (updates, invokedEvt);
         }
 
         if (string.Equals(node.Kind, "Code", StringComparison.Ordinal))
@@ -655,7 +664,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             }
             var handler = _codeNodeResolver(node.HandlerRef);
             var input = FilterByInputBinding(state, node.StateBindings);
-            return await handler.ExecuteAsync(input, context, cancellationToken).ConfigureAwait(false);
+            return (await handler.ExecuteAsync(input, context, cancellationToken).ConfigureAwait(false), null);
         }
 
         throw new NotSupportedException($"Unknown node kind '{node.Kind}' on node '{node.Id}'.");

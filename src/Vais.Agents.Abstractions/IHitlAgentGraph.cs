@@ -14,10 +14,14 @@ namespace Vais.Agents;
 /// <remarks>
 /// <para>
 /// <b>Handler semantics.</b> For each <see cref="GraphInterrupted"/> event the handler
-/// is awaited before the graph advances. Returning a non-null <typeparamref name="TState"/>
-/// merges the value under the well-known <c>"hitl.response"</c> state key and continues
-/// evaluation of the interrupt node's outgoing edges. Returning <see langword="null"/>
-/// aborts the run: <see cref="GraphFailed"/> is emitted and
+/// is awaited before the graph advances. The event includes
+/// <see cref="GraphInterrupted.CurrentState"/> — the accumulated graph state at interruption
+/// time — so handlers can incorporate prior computed values (e.g., a generated draft) in the
+/// human-facing prompt.
+/// Returning a non-null <typeparamref name="TState"/> provides the <em>HITL response payload</em>:
+/// it is serialised and merged under the well-known <c>"hitl.response"</c> state key, then
+/// evaluation of the interrupt node's outgoing edges continues.
+/// Returning <see langword="null"/> aborts the run: <see cref="GraphFailed"/> is emitted and
 /// <see cref="GraphHitlAbortedException"/> is thrown.
 /// </para>
 /// <para>

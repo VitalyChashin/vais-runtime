@@ -113,7 +113,17 @@ public sealed record GraphInterrupted(
     string NodeId,
     string InterruptId,
     string? Reason)
-    : AgentGraphEvent(At, Context, RunId, SuperStep);
+    : AgentGraphEvent(At, Context, RunId, SuperStep)
+{
+    /// <summary>
+    /// Snapshot of the accumulated graph state at the time of interruption.
+    /// Available to HITL handlers so they can include prior computed values
+    /// (e.g., a generated draft) in the human-facing prompt.
+    /// <see langword="null"/> when the orchestrator backend does not have the
+    /// current state available at interrupt-emission time.
+    /// </summary>
+    public IReadOnlyDictionary<string, JsonElement>? CurrentState { get; init; }
+}
 
 /// <summary>Emitted when a previously-interrupted graph resumes from a checkpoint.</summary>
 public sealed record GraphResumed(

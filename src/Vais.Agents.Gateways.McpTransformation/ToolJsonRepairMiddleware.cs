@@ -22,7 +22,7 @@ public sealed class ToolJsonRepairMiddleware : ToolGatewayMiddleware
         CancellationToken cancellationToken)
     {
         var outcome = await next().ConfigureAwait(false);
-        if (outcome.Error is not null) return outcome;
+        if (outcome.Error is not null || outcome.Result is null) return outcome;
         try
         {
             JsonDocument.Parse(outcome.Result);

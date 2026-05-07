@@ -456,3 +456,11 @@ static Vais.Agents.AgentLogEntry.operator ==(Vais.Agents.AgentLogEntry? left, Va
 Vais.Agents.IAgentLogSink
 Vais.Agents.IAgentLogSink.Add(Vais.Agents.AgentLogEntry! entry) -> void
 Vais.Agents.IAgentLogSink.GetLogs(string! agentId, System.DateTimeOffset? since = null, int limit = 100) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentLogEntry!>!
+Vais.Agents.GraphInterrupted.CurrentState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
+Vais.Agents.GraphInterrupted.CurrentState.init -> void
+*REMOVED*Vais.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string! Result, string? Error = null) -> void
+*REMOVED*Vais.Agents.ToolCallOutcome.Result.get -> string!
+*REMOVED*Vais.Agents.ToolCallOutcome.Deconstruct(out string! CallId, out string! Result, out string? Error) -> void
+Vais.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string? Result, string? Error = null) -> void
+Vais.Agents.ToolCallOutcome.Result.get -> string?
+Vais.Agents.ToolCallOutcome.Deconstruct(out string! CallId, out string? Result, out string? Error) -> void

@@ -21,7 +21,7 @@ public sealed class ToolOutputLengthGuard(int maxCharacters) : ToolGatewayMiddle
         CancellationToken cancellationToken)
     {
         var outcome = await next().ConfigureAwait(false);
-        if (outcome.Error is null && outcome.Result.Length > maxCharacters)
+        if (outcome.Error is null && outcome.Result?.Length > maxCharacters)
             return new ToolCallOutcome(
                 context.CallId,
                 Result: $"Tool '{context.ToolName}' response exceeded {maxCharacters} characters and was rejected.",

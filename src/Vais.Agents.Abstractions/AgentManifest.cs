@@ -49,7 +49,8 @@ public sealed record AgentManifest(
     string? Description = null,
     IReadOnlyDictionary<string, string>? Labels = null)
 {
-    /// <summary>LLM model binding for declarative agents. Null when <see cref="Handler"/> carries custom behaviour.</summary>
+    /// <summary>LLM model binding for declarative agents. Null when <see cref="Handler"/> carries custom behaviour.
+    /// Set via object-initializer syntax: <c>new AgentManifest(...) { Model = new ModelSpec(...) }</c>.</summary>
     public ModelSpec? Model { get; init; }
 
     /// <summary>System prompt — inline text, template reference, or file reference. Exactly one shape set when non-null.</summary>

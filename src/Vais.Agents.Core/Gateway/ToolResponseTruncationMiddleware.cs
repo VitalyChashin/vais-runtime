@@ -25,7 +25,7 @@ public sealed class ToolResponseTruncationMiddleware(int maxCharacters = 4096)
     {
         var outcome = await next().ConfigureAwait(false);
 
-        if (outcome.Error is not null || outcome.Result.Length <= maxCharacters)
+        if (outcome.Error is not null || outcome.Result is null || outcome.Result.Length <= maxCharacters)
             return outcome;
 
         var truncated = string.Concat(
