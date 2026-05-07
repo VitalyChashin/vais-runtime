@@ -30,7 +30,7 @@ Both share the same runtime — `InProcessGraphOrchestrator<TState>` implements 
 | `GraphEdgeEffect` | `{Kind, Property, Value?, HandlerRef?}`. Effects: `Set`, `Increment`, `Append`, `HandlerRef`. |
 | `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` | DI hooks for `HandlerRef` escapes. |
 | `IGraphCheckpointer` | Persist / load / delete `GraphCheckpoint { RunId, GraphId, SuperStep, NextNodeId?, State }` records keyed by `runId`. `InMemoryCheckpointer` in Core; `OrleansCheckpointer` in Hosting.Orleans. |
-| `AgentGraphEvent` | Closed hierarchy, 9 subtypes — `GraphStarted`, `NodeStarted`, `NodeCompleted`, `EdgeTraversed`, `StateUpdated`, `GraphInterrupted`, `GraphResumed`, `GraphCompleted`, `GraphFailed`. See [events reference](../reference/events.md). |
+| `AgentGraphEvent` | Closed hierarchy, 10 subtypes — `GraphStarted`, `NodeStarted`, `NodeAgentInvoked`, `NodeCompleted`, `EdgeTraversed`, `StateUpdated`, `GraphInterrupted`, `GraphResumed`, `GraphCompleted`, `GraphFailed`. See [events reference](../reference/events.md). |
 
 ## Orchestrators
 
@@ -166,7 +166,7 @@ Register with `AddOrleansGraphCheckpointer()`. Runs across silo restart, node mi
 
 ## Events
 
-`StreamAsync` yields the full `AgentGraphEvent` taxonomy — nine subtypes covering graph start, node start/end, edge traversal, state mutation, interrupt/resume, and terminal success/failure. Every event carries `{RunId, SuperStep}` so consumers correlate against the checkpoint timeline.
+`StreamAsync` yields the full `AgentGraphEvent` taxonomy — ten subtypes covering graph start, node start/invocation/end, edge traversal, state mutation, interrupt/resume, and terminal success/failure. Every event carries `{RunId, SuperStep}` so consumers correlate against the checkpoint timeline. `NodeAgentInvoked` appears after `NodeStarted` and before `NodeCompleted` for every `Agent`-kind node; it carries `InputText`, `OutputText`, and token counts. `StateUpdated` always follows `NodeCompleted`.
 
 See the [events reference](../reference/events.md) for the full table + wire names.
 
@@ -192,7 +192,6 @@ All four are resolved from DI at invocation time by the orchestrator's construct
 
 ## v0.9 limitations
 
-- **`MafGraphOrchestrator` doesn't implement `IResumableAgentGraph<TState>`.** MAF native checkpointing lands in a later pillar. Use `InProcessGraphOrchestrator` for durable resume.
 - **Predicate values are scalar only.** `Gt` / `Gte` / `Lt` / `Lte` require numeric `Value`; `Contains` / `NotContains` operate on strings or arrays of scalars. Complex structural predicates go through `HandlerRef`.
 - **No branching nodes yet.** `Kind` is a fixed set of four; `Fork` / `Join` for fan-out/fan-in aren't declarative in v0.9. Use `MafGraphBuilder.Build` + raw MAF for native fan-out.
 - **No sub-graphs** (`GraphInGraph` kind). Compose manually by invoking one graph from a `Code` node in another.

@@ -14,6 +14,7 @@ dotnet run --project samples/AgentGraphYamlLoader
 == streaming run ==
   ► GraphStarted   entry=classify
     NodeStarted    [Agent] classify
+    NodeAgentInvoked
     NodeCompleted  classify
     StateUpdated   keys=[lastAssistantText, messages, category]
     EdgeTraversed  classify → support-reply

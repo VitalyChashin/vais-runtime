@@ -49,7 +49,7 @@ sequenceDiagram
 namespace Vais.Agents;
 
 public sealed record ToolCallRequest(string ToolName, JsonElement Arguments, string CallId);
-public sealed record ToolCallOutcome(string CallId, string Result, string? Error = null);
+public sealed record ToolCallOutcome(string CallId, string? Result, string? Error = null);
 
 public interface IToolCallDispatcher
 {

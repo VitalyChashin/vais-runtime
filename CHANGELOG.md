@@ -11,6 +11,18 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **`StatefulAiAgent.InvokeAsync(userMessage, ct)`** — convenience alias for `AskAsync`; removes the awkward pattern of calling `AskAsync` when the name reads as a question rather than an action. Both methods delegate to the same core path.
+
+- **`GraphInterrupted.CurrentState`** (`IReadOnlyDictionary<string, JsonElement>?`) — exposes the live graph state bag at the time the interrupt fired. `InProcessGraphOrchestrator` and `MafGraphOrchestrator` both populate it. HITL handler delegates can now read `interrupted.CurrentState` to build approval prompts without independently reloading the checkpoint.
+
+### Fixed
+
+- **`ToolCallOutcome.Result` is now nullable (`string? Result`).** Tool implementations that signal failure via `Error` have no meaningful `Result` to supply; the previous non-nullable signature forced callers to pass `string.Empty` to satisfy the compiler. Null guards added in `ToolResponseTruncationMiddleware`, `ToolOutputLengthGuard`, `ToolHtmlToMarkdownMiddleware`, `ToolJsonRepairMiddleware`, and `StatefulAiAgent`. **Breaking change:** `ToolCallOutcome(callId, result, error)` call sites that pass `string.Empty` for `result` on the error path should change to `null`.
+
+- **`NodeAgentInvoked` stream/bus symmetry in `InProcessGraphOrchestrator`.** The event was being published to `IAgentGraphEventBus` inside `ExecuteNodeAsync` but the streaming loop never yielded it, so `StreamAsync` consumers received one fewer event per agent-kind node than the bus. Fixed by changing `ExecuteNodeAsync` to return a `(Output, NodeAgentInvoked?)` tuple; the main loop yields the event (when non-null) before `NodeCompleted`. `MafGraphOrchestrator` was unaffected — it translates `NodeAgentInvokedEvent` from the MAF infrastructure and was already symmetric.
+
+### Added (continued)
+
 - **31 new runnable samples and 3 doc-only sample directories** covering all post-v0.6 pillars. Samples are deterministic (scripted providers, no API key) unless noted.
 
   - v0.7 MCP inbound: `McpServerStdio` (`AddMcpAgentServerStdio` + `--demo` mode), `McpServerHttp` (live `McpClient` round-trip).

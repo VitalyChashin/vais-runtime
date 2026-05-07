@@ -14,9 +14,10 @@ dotnet run --project samples/GraphHitlLiveMode
 == run 1 — approved ==
   ► GraphStarted    entry=draft
     NodeStarted     [Agent] draft
-    StateUpdated    keys=[draft]
-    NodeCompleted   draft
+    NodeAgentInvoked
+    StateUpdated    keys=[lastAssistantText, messages, draft]
     EdgeTraversed   draft → review
+    NodeCompleted   draft
     NodeStarted     [Interrupt] review
     GraphInterrupted nodeId=review  reason="Pending editorial review"
   [handler] reason="Pending editorial review" → approving
@@ -24,15 +25,18 @@ dotnet run --project samples/GraphHitlLiveMode
     NodeCompleted   review
     EdgeTraversed   review → publish
     NodeStarted     [Agent] publish
-    StateUpdated    keys=[published]
-    NodeCompleted   publish
+    NodeAgentInvoked
+    StateUpdated    keys=[lastAssistantText, messages, published]
     EdgeTraversed   publish → end
+    NodeCompleted   publish
   ✓ GraphCompleted
 
 == run 2 — aborted ==
   ► GraphStarted    entry=draft
     NodeStarted     [Agent] draft
-    StateUpdated    keys=[draft]
+    NodeAgentInvoked
+    StateUpdated    keys=[lastAssistantText, messages, draft]
+    EdgeTraversed   draft → review
     NodeCompleted   draft
     EdgeTraversed   draft → review
     NodeStarted     [Interrupt] review
@@ -47,7 +51,7 @@ Done.
 ## What it demonstrates
 
 - `IHitlAgentGraph<TState>.StreamWithHitlAsync(initial, context, handleInterrupt, ct)` — streams graph events and calls `handleInterrupt` inline at every `Interrupt`-kind node; contrast with `IResumableAgentGraph<TState>` which pauses and requires a later `ResumeStreamAsync` call.
-- Handler delegate `Func<GraphInterrupted, CancellationToken, ValueTask<TState?>>` — receives the `GraphInterrupted` event (with `NodeId`, `InterruptId`, `Reason`) and returns updated state to continue, or `null` to abort.
+- Handler delegate `Func<GraphInterrupted, CancellationToken, ValueTask<TState?>>` — receives the `GraphInterrupted` event (with `NodeId`, `InterruptId`, `Reason`, and `CurrentState` — the live state bag at interrupt time) and returns updated state to continue, or `null` to abort.
 - Handler return non-null → state merged under `"hitl.response"` key via `StateUpdated`, graph continues from the interrupt node's outgoing edge without re-executing the node body.
 - Handler return null → `GraphFailed` yielded, then `GraphHitlAbortedException(nodeId)` thrown; caller wraps the `await foreach` in `try/catch` to handle it.
 - `GraphNode("review", "Interrupt", InterruptReason: "...")` — `Interrupt`-kind node requires no `Ref` or `HandlerRef`; `InterruptReason` is surfaced on the event's `Reason` property.

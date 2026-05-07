@@ -47,7 +47,7 @@ Done.
 - `ToolResultCacheMiddleware(IToolResultCache, excludedTools?)` — caches successful outcomes (null `Error`) keyed on `(toolName, arguments)`. On cache hit returns the stored outcome with the current call's `CallId`. `InMemoryToolResultCache` is a zero-config in-process store.
 - `ToolArgumentValidationMiddleware(IReadOnlyDictionary<string, IReadOnlyList<string>>)` — validates required argument names are present in `context.Arguments` before calling `next`. Returns `ToolCallOutcome { Error = "ToolDenied" }` on violation without calling `next`. The sentinel `"ToolDenied"` error causes `ToolRetryMiddleware` (if upstream) to stop retrying immediately.
 - `ToolGatewayContext(toolName, callId, arguments, agentContext)` — immutable record passed to every middleware. `AgentContext.Empty` is a no-op for samples that don't need tenant/correlation context.
-- `ToolCallOutcome(CallId, Result, Error?)` — `Error == null` signals success; non-null `Error` signals failure with a reason string.
+- `ToolCallOutcome(CallId, Result?, Error?)` — `Error == null` signals success; non-null `Error` signals failure with a reason string. `Result` is nullable — error outcomes may omit it.
 
 ## Docs
 

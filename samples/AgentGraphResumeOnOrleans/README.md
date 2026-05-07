@@ -14,6 +14,7 @@ dotnet run --project samples/AgentGraphResumeOnOrleans
 == phase 1: run until interrupt ==
   ► GraphStarted   entry=classify
     NodeStarted    [Agent] classify
+    NodeAgentInvoked
     NodeCompleted  classify
     StateUpdated   keys=[lastAssistantText, messages, category]
     EdgeTraversed  classify → approve
@@ -29,6 +30,7 @@ dotnet run --project samples/AgentGraphResumeOnOrleans
   ► GraphResumed   from=approve
     EdgeTraversed  approve → reply
     NodeStarted    [Agent] reply
+    NodeAgentInvoked
     NodeCompleted  reply
     StateUpdated   keys=[lastAssistantText, messages]
     EdgeTraversed  reply → end

@@ -22,19 +22,23 @@ dotnet run --project samples/GraphPowerFxPredicates
 == run 1 — non-blank plan → analyst ==
   ► GraphStarted   entry=planner
     NodeStarted    [Agent] planner
-    StateUpdated   keys=[research_plan]
+    NodeAgentInvoked
     NodeCompleted  planner
+    StateUpdated   keys=[lastAssistantText, messages, research_plan]
     EdgeTraversed  planner → analyst
     NodeStarted    [Agent] analyst
+    NodeAgentInvoked
     NodeCompleted  analyst
+    StateUpdated   keys=[lastAssistantText, messages]
     EdgeTraversed  analyst → end
   ✓ GraphCompleted
 
 == run 2 — blank plan → end (analyst skipped) ==
   ► GraphStarted   entry=planner
     NodeStarted    [Agent] planner
-    StateUpdated   keys=[research_plan]
+    NodeAgentInvoked
     NodeCompleted  planner
+    StateUpdated   keys=[lastAssistantText, messages, research_plan]
     EdgeTraversed  planner → end
   ✓ GraphCompleted
 

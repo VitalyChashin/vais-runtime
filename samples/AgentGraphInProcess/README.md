@@ -14,10 +14,12 @@ dotnet run --project samples/AgentGraphInProcess
 == streaming run ==
   ► GraphStarted   entry=classify
     NodeStarted    [Agent] classify
+    NodeAgentInvoked
     NodeCompleted  classify
     StateUpdated   keys=[lastAssistantText, messages, category]
     EdgeTraversed  classify → support-reply
     NodeStarted    [Agent] support-reply
+    NodeAgentInvoked
     NodeCompleted  support-reply
     StateUpdated   keys=[lastAssistantText, messages]
     EdgeTraversed  support-reply → end
@@ -33,7 +35,7 @@ dotnet run --project samples/AgentGraphInProcess
 - `AgentGraphManifest` — code-first graph definition with `GraphNode` (Agent / End kinds) and `GraphEdge` with `GraphEdgePredicate.PropertyMatcher`.
 - `GraphStateBindings` — `Output: ["category"]` extracts a named field from the classifier's JSON response into graph state.
 - `InProcessGraphOrchestrator<TState>` — runs the graph in-process; the typed `PipelineState` record round-trips through `ToBag`/`FromBag` via `System.Text.Json`.
-- `StreamAsync` — yields `GraphStarted`, `NodeStarted`, `NodeCompleted`, `EdgeTraversed`, `StateUpdated`, `GraphCompleted` events.
+- `StreamAsync` — yields `GraphStarted`, `NodeStarted`, `NodeAgentInvoked` (per Agent-kind node, before `NodeCompleted`), `NodeCompleted`, `EdgeTraversed`, `StateUpdated`, `GraphCompleted` events.
 - `InvokeAsync` — unary variant that returns the final typed state.
 - Scripted classifier returns `{"category":"support"}` JSON; output binding extracts `category`; `PropertyMatcher` routes to the correct branch.
 

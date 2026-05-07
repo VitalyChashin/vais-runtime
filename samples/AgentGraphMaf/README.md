@@ -14,6 +14,7 @@ dotnet run --project samples/AgentGraphMaf
 == streaming run ==
   ► GraphStarted   entry=classify
     NodeStarted    [classify] classify
+    NodeAgentInvoked
     StateUpdated   keys=[lastAssistantText, messages, category]
     EdgeTraversed  classify → support-reply
     NodeCompleted  classify
