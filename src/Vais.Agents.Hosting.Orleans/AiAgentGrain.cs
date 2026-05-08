@@ -124,6 +124,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             {
                 carrier.OpaqueState = blob;
             }
+            if (_agent is IAgentGrainStateConsumer consumer)
+            {
+                consumer.SetGrainState(_state.State);
+            }
             _logger.LogInformation("Grain activated — agentId={AgentId} mode=plugin elapsedMs={ElapsedMs}", _agentId, sw.ElapsedMilliseconds);
             await base.OnActivateAsync(cancellationToken);
             return;

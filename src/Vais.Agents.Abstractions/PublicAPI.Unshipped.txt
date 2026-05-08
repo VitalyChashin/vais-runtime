@@ -460,6 +460,8 @@ Vais.Agents.IAgentGrainStateView
 Vais.Agents.IAgentGrainStateView.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
 Vais.Agents.IAgentGrainStateView.OpaqueState.get -> string?
 Vais.Agents.IAgentGrainStateView.SystemPrompt.get -> string?
+Vais.Agents.IAgentGrainStateConsumer
+Vais.Agents.IAgentGrainStateConsumer.SetGrainState(Vais.Agents.IAgentGrainStateView! grainState) -> void
 Vais.Agents.IAgentPreprocessor
 Vais.Agents.IAgentPreprocessor.Order.get -> int
 Vais.Agents.IAgentPreprocessor.ProcessAsync(Vais.Agents.AgentPreprocessorContext! context, System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! messages, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>

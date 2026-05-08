@@ -128,6 +128,10 @@
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Docker client (Vais.Agents.Runtime.Plugins.Container). Docker.DotNet provides container lifecycle management.">
+    <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
+  </ItemGroup>
+
   <ItemGroup Label="ASP.NET Core TestHost — integration tests for the HTTP control plane.">
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />

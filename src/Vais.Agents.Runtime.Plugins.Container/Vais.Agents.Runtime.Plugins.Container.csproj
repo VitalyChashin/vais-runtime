@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Runtime.Plugins.Container</RootNamespace>
+    <AssemblyName>Vais.Agents.Runtime.Plugins.Container</AssemblyName>
+    <Description>Container plugin runtime for Vais.Agents. Manages Docker-image-based agent plugins via the IP-1 HTTP protocol (v0.24 container pillar).</Description>
+    <PackageTags>agents;ai;llm;plugins;container;docker;runtime;vais</PackageTags>
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Docker.DotNet" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.Net.ServerSentEvents" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Plugins.Container.Tests" />
+  </ItemGroup>
+
+</Project>

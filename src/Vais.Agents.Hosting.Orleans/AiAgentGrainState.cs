@@ -8,7 +8,7 @@ namespace Vais.Agents.Hosting.Orleans;
 /// <see cref="IAiAgent"/> that must survive grain deactivation.
 /// </summary>
 [GenerateSerializer]
-public sealed class AiAgentGrainState
+public sealed class AiAgentGrainState : IAgentGrainStateView
 {
     /// <summary>
     /// Last known system prompt. When null, the grain falls back to the value
@@ -32,4 +32,7 @@ public sealed class AiAgentGrainState
     /// </summary>
     [Id(2)]
     public string? OpaqueState { get; set; }
+
+    // IAgentGrainStateView — explicit to avoid ambiguity with the mutable List<ChatTurn> property.
+    IReadOnlyList<ChatTurn> IAgentGrainStateView.History => History;
 }
