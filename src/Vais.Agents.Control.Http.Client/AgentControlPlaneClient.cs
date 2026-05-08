@@ -568,6 +568,24 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<PluginImageUpdateResponse> PushPluginImageAsync(
+        string pluginName,
+        string image,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync(
+            $"/v1/plugins/{Uri.EscapeDataString(pluginName)}/image",
+            new PluginImageUpdateRequest(image),
+            JsonOptions,
+            cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content
+            .ReadFromJsonAsync<PluginImageUpdateResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from PushPluginImageAsync.");
+    }
+
+    /// <inheritdoc />
     public async Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(manifest);

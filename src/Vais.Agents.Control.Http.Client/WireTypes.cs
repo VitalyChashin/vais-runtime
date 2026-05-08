@@ -71,6 +71,8 @@ public enum PluginKind
     Assembly = 0,
     /// <summary>Python subprocess plugin.</summary>
     Python = 1,
+    /// <summary>Container image plugin served over the IP-1 HTTP protocol.</summary>
+    Container = 2,
 }
 
 /// <summary>Client-side mirror of <c>PluginState</c> from the server package.</summary>
@@ -110,6 +112,8 @@ public sealed record PluginInfo(
     public IReadOnlyList<string>? ToolNames { get; init; }
     /// <summary>Last stderr lines from the subprocess (Python plugins); <see langword="null"/> otherwise.</summary>
     public string? LastErrorSnippet { get; init; }
+    /// <summary>Container image reference (container plugins); <see langword="null"/> otherwise.</summary>
+    public string? Image { get; init; }
 }
 
 /// <summary>Client-side wire type for <c>GET /v1/plugins</c>.</summary>
@@ -140,6 +144,30 @@ public sealed record PluginSourcePushResponse(
     PluginSourcePushStatus Status,
     int? ProcessId,
     string? ErrorMessage);
+
+/// <summary>Client-side mirror of <c>PluginImageUpdateStatus</c> from the server package.</summary>
+public enum PluginImageUpdateStatus
+{
+    /// <summary>Container replaced and health check passed.</summary>
+    Success = 0,
+    /// <summary>Container could not be started.</summary>
+    StartFailed = 1,
+    /// <summary>Container started but health check timed out.</summary>
+    HandshakeFailed = 2,
+    /// <summary>The new image declares a different handler type name. Silo restart required.</summary>
+    HandlerTypeNameChanged = 3,
+    /// <summary>No supervisor found for this plugin name.</summary>
+    NoSupervisor = 4,
+}
+
+/// <summary>Client-side wire type for <c>POST /v1/plugins/{name}/image</c>.</summary>
+public sealed record PluginImageUpdateRequest(string Image);
+
+/// <summary>Client-side wire type for <c>POST /v1/plugins/{name}/image</c> response.</summary>
+public sealed record PluginImageUpdateResponse(
+    string PluginName,
+    PluginImageUpdateStatus Status,
+    string? FailureUrn);
 
 /// <summary>
 /// Client-side wire type for <c>POST /v1/graphs/validate</c> (v0.38).

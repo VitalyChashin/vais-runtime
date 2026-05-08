@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Preprocessing;
 
@@ -25,7 +27,13 @@ public static class ContainerPluginServiceCollectionExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
         services.AddSingleton<ICallTokenService, HmacCallTokenService>();
-        services.AddHostedService<ContainerPluginHostService>();
+        services.AddSingleton<ContainerPluginHostService>();
+        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ContainerPluginHostService>());
+        services.AddSingleton<IContainerPluginHost>(sp => sp.GetRequiredService<ContainerPluginHostService>());
+        services.AddSingleton<IContainerPluginReloader>(sp =>
+            new DefaultContainerPluginReloader(
+                sp.GetRequiredService<ContainerPluginHostService>(),
+                sp.GetService<ILogger<DefaultContainerPluginReloader>>()));
         services.AddSingleton<IAgentPreprocessor, HistoryAssembler>();
         services.AddSingleton<IAgentPreprocessor>(sp => new SystemPromptInjector(
             sp.GetService<IPromptTemplateRegistry>(),

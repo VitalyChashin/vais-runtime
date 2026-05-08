@@ -19,6 +19,7 @@ using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Runtime.Plugins;
+using Vais.Agents.Runtime.Plugins.Container;
 using Vais.Agents.Runtime.Plugins.Python;
 
 namespace Vais.Agents.Control.Http;
@@ -258,6 +259,16 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<PluginSourcePushResponse>(StatusCodes.Status404NotFound)
             .Produces<PluginSourcePushResponse>(StatusCodes.Status422UnprocessableEntity)
             .Produces<PluginSourcePushResponse>(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /plugins/{name}/image — Container image hot-reload
+        plugins.MapPost("/plugins/{name}/image", PushPluginImageAsync)
+            .WithName("Plugins.PushImage")
+            .WithSummary("Update a container plugin to a new image and trigger a drain/replace hot-reload.")
+            .Accepts<PluginImageUpdateRequest>("application/json")
+            .Produces<PluginImageUpdateResponse>(StatusCodes.Status200OK)
+            .Produces<PluginImageUpdateResponse>(StatusCodes.Status404NotFound)
+            .Produces<PluginImageUpdateResponse>(StatusCodes.Status422UnprocessableEntity)
+            .Produces<PluginImageUpdateResponse>(StatusCodes.Status503ServiceUnavailable);
 
         return builder;
     }
@@ -590,10 +601,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     private static async Task<IResult> PushPluginSourceAsync(
         string name,
         HttpContext http,
-        IPythonPluginReloader? reloader,
-        IPythonPluginHost? host,
         CancellationToken ct)
     {
+        var reloader = http.RequestServices.GetService<IPythonPluginReloader>();
+        var host = http.RequestServices.GetService<IPythonPluginHost>();
+
         if (reloader is null)
             return Results.Json(
                 new PluginSourcePushResponse(name, PluginSourcePushStatus.ReloadDisabled, null,
@@ -645,6 +657,44 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             }
         }
     }
+
+    private static async Task<IResult> PushPluginImageAsync(
+        string name,
+        PluginImageUpdateRequest request,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var reloader = http.RequestServices.GetService<IContainerPluginReloader>();
+
+        if (reloader is null)
+            return Results.Json(
+                new PluginImageUpdateResponse(name, PluginImageUpdateStatus.NoSupervisor, null),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var result = await reloader.ReloadAsync(name, request.Image, ct).ConfigureAwait(false);
+        return MapImageUpdateResult(result);
+    }
+
+    private static IResult MapImageUpdateResult(ContainerPluginReloadResult result) =>
+        result.Status switch
+        {
+            ContainerPluginReloadStatus.Success =>
+                Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.Success, null)),
+            ContainerPluginReloadStatus.HandlerTypeNameChanged =>
+                Results.Json(
+                    new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.HandlerTypeNameChanged, result.FailureUrn),
+                    statusCode: StatusCodes.Status422UnprocessableEntity),
+            ContainerPluginReloadStatus.NoSupervisor =>
+                Results.Json(
+                    new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.NoSupervisor, result.FailureUrn),
+                    statusCode: StatusCodes.Status404NotFound),
+            ContainerPluginReloadStatus.HandshakeFailed =>
+                Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.HandshakeFailed, result.FailureUrn)),
+            ContainerPluginReloadStatus.StartFailed =>
+                Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.StartFailed, result.FailureUrn)),
+            _ =>
+                Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.HandshakeFailed, result.FailureUrn)),
+        };
 
     private static IResult MapReloadResult(PythonPluginReloadResult result, IPythonPluginHost? host, string pluginName)
     {
@@ -716,6 +766,31 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                         ? p.Descriptor.DeclaredTools
                         : null,
                     LastErrorSnippet = p.LastErrorSnippet,
+                });
+            }
+        }
+
+        var containerHost = http.RequestServices.GetService<IContainerPluginHost>();
+        if (containerHost is not null)
+        {
+            foreach (var p in containerHost.LoadedPlugins)
+            {
+                items.Add(new PluginInfo(
+                    Name: p.Name,
+                    AssemblyPath: string.Empty,
+                    TargetApiVersion: p.TargetApiVersion,
+                    Handlers: string.IsNullOrEmpty(p.HandlerTypeName) ? [] : [p.HandlerTypeName],
+                    LoadedViaAttribute: false)
+                {
+                    Kind = PluginKind.Container,
+                    State = p.Status switch
+                    {
+                        ContainerPluginStatus.Ready    => PluginState.Ready,
+                        ContainerPluginStatus.Starting => PluginState.Loading,
+                        ContainerPluginStatus.Created  => PluginState.Loading,
+                        _                              => PluginState.Unavailable,
+                    },
+                    Image = p.Image,
                 });
             }
         }

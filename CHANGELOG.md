@@ -62,6 +62,22 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   - `samples/README.md`: count updated (21 → 52 runnable), index table extended, learning path extended to 16 steps, `Build all` block updated (40 projects across 5 categories), "Tooling-only samples" section added.
   - `samples/build-all.ps1` / `samples/build-all.sh`: extended with all new runnable samples; added `$orleans` category (in-process silo, no Docker) and `$opa` category (external OPA server required).
 
+- **CLI and deployment endpoint for container plugins (IP-5).** End-to-end tooling for building, pushing, and hot-reloading Docker-image-based plugins.
+
+  - `IContainerPluginReloader` / `DefaultContainerPluginReloader` — public interface and default implementation for runtime-side hot-reload. `DefaultContainerPluginReloader` looks up the plugin's `ContainerSupervisor` by name and calls `DrainAndReplaceAsync`; returns a structured `ContainerPluginReloadResult` covering `Success`, `NoSupervisor`, `HandlerTypeNameChanged`, `PullFailed`, `StartFailed`, `HandshakeFailed`, and `DrainTimeout`.
+  - `ContainerPluginReloadStatus` enum + `ContainerPluginReloadResult` record + `ContainerPluginUrns` additions (`NoSupervisor`, `HandlerTypeNameChanged`) — public contracts in `Vais.Agents.Runtime.Plugins.Container`.
+  - `IContainerPluginHost` — public interface exposing `IReadOnlyList<LoadedContainerPlugin> LoadedPlugins`; implemented by `ContainerPluginHostService`.
+  - `POST /v1/plugins/{name}/image` — new endpoint in the control plane. Returns 200 on success, 404 when the plugin is not supervised, 422 when the new image declares a different `handlerTypeName` (silo restart required), 503 when `IContainerPluginReloader` is not registered.
+  - `GET /v1/plugins` extended to include container plugins with `kind: Container` and `image` fields.
+  - `PluginKind.Container = 2` added to `PluginContracts`; `PluginInfo.Image` property added (null for assembly/Python plugins).
+  - `PluginImageUpdateRequest` / `PluginImageUpdateResponse` / `PluginImageUpdateStatus` — new HTTP contracts.
+  - `AgentControlPlaneClient.PushPluginImageAsync` — typed client method for the new endpoint.
+  - `AddContainerPlugins` updated to register `IContainerPluginReloader` as a singleton.
+  - `vais plugin-build` — new CLI command. Reads `spec.image` from `plugin.yaml` (overridable via `--image`), runs `docker build -t <image> <context>`, optionally runs `docker push` with `--push` flag.
+  - `vais plugin-init` — new CLI command. Scaffolds `plugin.yaml` + `Dockerfile` for a new container plugin; `--runtime python|dotnet` selects the SDK-specific Dockerfile template.
+  - `vais plugin push` extended with image-push mode: positional arg containing `/` or `:`, or explicit `--image` flag, triggers `docker push` + `POST /v1/plugins/{name}/image` instead of source tar.gz upload.
+  - `vais plugin-status` updated to show `IMAGE` column for container plugins alongside KIND and STATE.
+
 - **Input/output payload capture in all three gateway event stores.** `GatewayEvent`, `McpGatewayEvent`, and `McpEvent` records now carry optional `InputJson` and `OutputJson` fields (up to 32 KB each, truncated with a `[truncated]` suffix). Schema migration uses `ADD COLUMN IF NOT EXISTS` so existing rows are unaffected.
 
   - `GatewayEventMiddleware` serializes `request.History` as input JSON and accumulates streaming text deltas (or reads `response.Text` for non-streaming) as output JSON.

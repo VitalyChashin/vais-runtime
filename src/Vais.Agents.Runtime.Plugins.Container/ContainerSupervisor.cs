@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Net.Http.Json;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.Extensions.Logging;
@@ -114,7 +115,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
         _status = ContainerPluginStatus.Stopped;
     }
 
-    internal async Task<bool> DrainAndReplaceAsync(string? newImage, CancellationToken ct)
+    internal async Task<ContainerReplaceResult> DrainAndReplaceAsync(string? newImage, CancellationToken ct)
     {
         await _replaceLock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -137,14 +138,54 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
             if (newImage is not null)
                 _descriptor.Image = newImage;
 
-            await StartAsync(ct).ConfigureAwait(false);
+            try
+            {
+                await StartAsync(ct).ConfigureAwait(false);
+            }
+            catch (TimeoutException ex)
+            {
+                return new ContainerReplaceResult(ContainerReplaceOutcome.HandshakeFailed, ex.Message);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return new ContainerReplaceResult(ContainerReplaceOutcome.StartFailed, ex.Message);
+            }
+
+            // Re-verify handler type name has not changed (ABI invariant).
+            var prevTypeName = _descriptor.HandlerTypeName;
+            if (!string.IsNullOrEmpty(prevTypeName))
+            {
+                try
+                {
+                    using var resp = await _healthClient.GetAsync("/v1/metadata", ct).ConfigureAwait(false);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var meta = await resp.Content
+                            .ReadFromJsonAsync<PluginMetadataResponse>(ContainerJsonOptions.Default, ct)
+                            .ConfigureAwait(false);
+                        if (meta is not null && !string.IsNullOrEmpty(meta.HandlerTypeName)
+                            && !string.Equals(meta.HandlerTypeName, prevTypeName, StringComparison.Ordinal))
+                        {
+                            // Restore old type name and fail — silo restart required.
+                            _descriptor.HandlerTypeName = prevTypeName;
+                            return new ContainerReplaceResult(
+                                ContainerReplaceOutcome.HandlerTypeNameChanged,
+                                $"HandlerTypeName changed from '{prevTypeName}' to '{meta.HandlerTypeName}'.");
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "Could not verify metadata after replace for '{Name}'", _descriptor.Name);
+                }
+            }
 
             lock (_stateLock)
             {
                 _draining = false;
                 _drainSignal = null;
             }
-            return true;
+            return new ContainerReplaceResult(ContainerReplaceOutcome.Success);
         }
         finally
         {
@@ -223,4 +264,14 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
     }
 }
 
-internal enum ContainerPluginStatus { Created, Starting, Ready, Stopping, Stopped, Failed }
+internal enum ContainerReplaceOutcome
+{
+    Success = 0,
+    StartFailed = 1,
+    HandshakeFailed = 2,
+    HandlerTypeNameChanged = 3,
+}
+
+internal sealed record ContainerReplaceResult(
+    ContainerReplaceOutcome Outcome,
+    string? ErrorDetail = null);

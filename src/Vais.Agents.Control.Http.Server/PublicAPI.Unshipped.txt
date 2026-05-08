@@ -54,9 +54,46 @@ Vais.Agents.Control.Http.PluginInfo.ToolNames.get -> System.Collections.Generic.
 Vais.Agents.Control.Http.PluginInfo.ToolNames.init -> void
 Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.get -> string?
 Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.init -> void
+Vais.Agents.Control.Http.PluginInfo.Image.get -> string?
+Vais.Agents.Control.Http.PluginInfo.Image.init -> void
 Vais.Agents.Control.Http.PluginKind
 Vais.Agents.Control.Http.PluginKind.Assembly = 0 -> Vais.Agents.Control.Http.PluginKind
 Vais.Agents.Control.Http.PluginKind.Python = 1 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginKind.Container = 2 -> Vais.Agents.Control.Http.PluginKind
+Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.Success = 0 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.StartFailed = 1 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.HandshakeFailed = 2 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.HandlerTypeNameChanged = 3 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.NoSupervisor = 4 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateRequest
+Vais.Agents.Control.Http.PluginImageUpdateRequest.PluginImageUpdateRequest(string! Image) -> void
+Vais.Agents.Control.Http.PluginImageUpdateRequest.Image.get -> string!
+Vais.Agents.Control.Http.PluginImageUpdateRequest.Image.init -> void
+override Vais.Agents.Control.Http.PluginImageUpdateRequest.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginImageUpdateRequest.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginImageUpdateRequest.ToString() -> string!
+static Vais.Agents.Control.Http.PluginImageUpdateRequest.operator !=(Vais.Agents.Control.Http.PluginImageUpdateRequest? left, Vais.Agents.Control.Http.PluginImageUpdateRequest? right) -> bool
+static Vais.Agents.Control.Http.PluginImageUpdateRequest.operator ==(Vais.Agents.Control.Http.PluginImageUpdateRequest? left, Vais.Agents.Control.Http.PluginImageUpdateRequest? right) -> bool
+Vais.Agents.Control.Http.PluginImageUpdateRequest.Equals(Vais.Agents.Control.Http.PluginImageUpdateRequest? other) -> bool
+Vais.Agents.Control.Http.PluginImageUpdateRequest.Deconstruct(out string! Image) -> void
+Vais.Agents.Control.Http.PluginImageUpdateRequest.<Clone>$() -> Vais.Agents.Control.Http.PluginImageUpdateRequest!
+Vais.Agents.Control.Http.PluginImageUpdateResponse
+Vais.Agents.Control.Http.PluginImageUpdateResponse.PluginImageUpdateResponse(string! PluginName, Vais.Agents.Control.Http.PluginImageUpdateStatus Status, string? FailureUrn) -> void
+Vais.Agents.Control.Http.PluginImageUpdateResponse.PluginName.get -> string!
+Vais.Agents.Control.Http.PluginImageUpdateResponse.PluginName.init -> void
+Vais.Agents.Control.Http.PluginImageUpdateResponse.Status.get -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateResponse.Status.init -> void
+Vais.Agents.Control.Http.PluginImageUpdateResponse.FailureUrn.get -> string?
+Vais.Agents.Control.Http.PluginImageUpdateResponse.FailureUrn.init -> void
+override Vais.Agents.Control.Http.PluginImageUpdateResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginImageUpdateResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginImageUpdateResponse.ToString() -> string!
+static Vais.Agents.Control.Http.PluginImageUpdateResponse.operator !=(Vais.Agents.Control.Http.PluginImageUpdateResponse? left, Vais.Agents.Control.Http.PluginImageUpdateResponse? right) -> bool
+static Vais.Agents.Control.Http.PluginImageUpdateResponse.operator ==(Vais.Agents.Control.Http.PluginImageUpdateResponse? left, Vais.Agents.Control.Http.PluginImageUpdateResponse? right) -> bool
+Vais.Agents.Control.Http.PluginImageUpdateResponse.Equals(Vais.Agents.Control.Http.PluginImageUpdateResponse? other) -> bool
+Vais.Agents.Control.Http.PluginImageUpdateResponse.Deconstruct(out string! PluginName, out Vais.Agents.Control.Http.PluginImageUpdateStatus Status, out string? FailureUrn) -> void
+Vais.Agents.Control.Http.PluginImageUpdateResponse.<Clone>$() -> Vais.Agents.Control.Http.PluginImageUpdateResponse!
 Vais.Agents.Control.Http.PluginState
 Vais.Agents.Control.Http.PluginState.Loading = 0 -> Vais.Agents.Control.Http.PluginState
 Vais.Agents.Control.Http.PluginState.Ready = 1 -> Vais.Agents.Control.Http.PluginState

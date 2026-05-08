@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Container\Vais.Agents.Runtime.Plugins.Container.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.RunStore\Vais.Agents.Observability.RunStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.AgentRunStore\Vais.Agents.Observability.AgentRunStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.GatewayEventStore\Vais.Agents.Observability.GatewayEventStore.csproj" />

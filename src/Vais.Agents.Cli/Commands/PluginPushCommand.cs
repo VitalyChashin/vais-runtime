@@ -9,18 +9,43 @@ using Vais.Agents.Control.Http;
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
-/// Packs a Python plugin source directory into a tar.gz archive and pushes it to the runtime
-/// via <c>POST /v1/plugins/{name}/source</c>, triggering a DrainAndSwap reload.
+/// Two modes depending on arguments:
+/// <list type="bullet">
+/// <item>
+///   <term>Source push (default)</term>
+///   <description>Packs a Python plugin source directory and hot-reloads via
+///   <c>POST /v1/plugins/{name}/source</c>.</description>
+/// </item>
+/// <item>
+///   <term>Image push</term>
+///   <description>When <c>--image</c> is supplied, or the positional argument
+///   looks like an image reference (contains <c>/</c> or <c>:</c>), runs
+///   <c>docker push</c> then notifies the runtime via
+///   <c>POST /v1/plugins/{name}/image</c>.</description>
+/// </item>
+/// </list>
 /// </summary>
 internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Settings>
 {
+    internal static Func<string, CancellationToken, Task<int>> DockerRun = DockerRunner.RunAsync;
+
     public sealed class Settings : CommandSettings
     {
-        [Description("Name of the Python plugin to reload.")]
-        [CommandArgument(0, "<plugin-name>")]
-        public string PluginName { get; init; } = "";
+        [Description("Plugin name (source mode) or image reference (image mode). " +
+                     "Image mode is inferred when this value contains '/' or ':'.")]
+        [CommandArgument(0, "<plugin-or-image>")]
+        public string PluginOrImage { get; init; } = "";
 
-        [Description("Directory to pack and push. Defaults to ./src")]
+        [Description("Explicit image reference. Forces image push mode.")]
+        [CommandOption("--image")]
+        public string? Image { get; init; }
+
+        [Description("Plugin name in the runtime (image mode). " +
+                     "When omitted, inferred from the image name.")]
+        [CommandOption("--plugin")]
+        public string? Plugin { get; init; }
+
+        [Description("Source directory to pack and push (source mode). Defaults to ./src")]
         [CommandOption("--source")]
         public string? Source { get; init; }
 
@@ -35,6 +60,61 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
+        var isImageMode = settings.Image is not null
+            || settings.PluginOrImage.Contains('/', StringComparison.Ordinal)
+            || settings.PluginOrImage.Contains(':', StringComparison.Ordinal);
+
+        return isImageMode
+            ? await ExecuteImagePushAsync(settings, cancellationToken)
+            : await ExecuteSourcePushAsync(settings, cancellationToken);
+    }
+
+    private static async Task<int> ExecuteImagePushAsync(Settings settings, CancellationToken cancellationToken)
+    {
+        var image = settings.Image ?? settings.PluginOrImage;
+        var pluginName = settings.Plugin ?? InferPluginName(image);
+
+        AnsiConsole.MarkupLine($"Pushing image [bold]{Markup.Escape(image)}[/]");
+        var dockerExit = await DockerRun($"push {image}", cancellationToken);
+        if (dockerExit != 0)
+        {
+            AnsiConsole.MarkupLine($"[red]✗[/] docker push failed (exit {dockerExit})");
+            return ProblemDetailsParser.ExitApiError;
+        }
+
+        AnsiConsole.MarkupLine($"[green]✓[/] pushed {Markup.Escape(image)}");
+
+        var config = VaisConfigFile.LoadOrDefault();
+        var client = ClientFactory.Create(config, settings.Context, settings.Token);
+
+        try
+        {
+            PluginImageUpdateResponse? result = null;
+            await AnsiConsole.Status()
+                .StartAsync($"Notifying runtime for {pluginName}...", async _ =>
+                {
+                    result = await client.PushPluginImageAsync(pluginName, image, cancellationToken);
+                });
+
+            if (result!.Status == PluginImageUpdateStatus.Success)
+            {
+                AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(pluginName)} container replaced");
+                return ProblemDetailsParser.ExitSuccess;
+            }
+
+            var urn = result.FailureUrn ?? result.Status.ToString();
+            AnsiConsole.MarkupLine($"[red]✗[/] runtime update failed: {Markup.Escape(result.Status.ToString())} — {Markup.Escape(urn)}");
+            return ProblemDetailsParser.ExitApiError;
+        }
+        catch (AgentControlPlaneException ex)
+        {
+            return ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
+        }
+    }
+
+    private static async Task<int> ExecuteSourcePushAsync(Settings settings, CancellationToken cancellationToken)
+    {
+        var pluginName = settings.PluginOrImage;
         var sourceDir = Path.GetFullPath(settings.Source ?? Path.Combine(Directory.GetCurrentDirectory(), "src"));
         if (!Directory.Exists(sourceDir))
         {
@@ -49,16 +129,16 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
         {
             PluginSourcePushResponse? result = null;
             await AnsiConsole.Status()
-                .StartAsync($"Pushing {settings.PluginName}...", async _ =>
+                .StartAsync($"Pushing {pluginName}...", async _ =>
                 {
                     using var archive = PluginSourcePacker.Pack(sourceDir);
-                    result = await client.PushPluginSourceAsync(settings.PluginName, archive, cancellationToken);
+                    result = await client.PushPluginSourceAsync(pluginName, archive, cancellationToken);
                 });
 
             if (result!.Status == PluginSourcePushStatus.Success)
             {
                 var pid = result.ProcessId?.ToString() ?? "?";
-                AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(settings.PluginName)} reloaded (PID {pid})");
+                AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(pluginName)} reloaded (PID {pid})");
                 return ProblemDetailsParser.ExitSuccess;
             }
 
@@ -70,5 +150,19 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
         {
             return ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
         }
+    }
+
+    /// <summary>
+    /// Infers a plugin name from an image reference by stripping the registry
+    /// prefix and tag. For example <c>registry.io/my-plugin:1.0</c> → <c>my-plugin</c>.
+    /// </summary>
+    internal static string InferPluginName(string image)
+    {
+        var name = image;
+        var slash = name.LastIndexOf('/');
+        if (slash >= 0) name = name[(slash + 1)..];
+        var colon = name.IndexOf(':');
+        if (colon >= 0) name = name[..colon];
+        return name;
     }
 }

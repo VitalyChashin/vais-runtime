@@ -246,6 +246,17 @@ public interface IAgentControlPlaneClient
         => Task.FromResult(new PluginSourcePushResponse(
             pluginName, PluginSourcePushStatus.ReloadDisabled, null, "Not supported by this client."));
 
+    /// <summary>
+    /// POST /v1/plugins/{name}/image — replace a container plugin with a new image and trigger
+    /// a drain/replace hot-reload cycle. Returns 503 when container plugins are not configured.
+    /// </summary>
+    Task<PluginImageUpdateResponse> PushPluginImageAsync(
+        string pluginName,
+        string image,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new PluginImageUpdateResponse(
+            pluginName, PluginImageUpdateStatus.NoSupervisor, "Not supported by this client."));
+
     // ── LLM gateway config verbs (GCF-13) ──────────────────────────────────────
 
     /// <summary>POST /v1/llm-gateways — register a manifest, get a handle.</summary>

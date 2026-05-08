@@ -14,6 +14,9 @@ public enum PluginKind
 
     /// <summary>Python subprocess wired via MCP stdio.</summary>
     Python = 1,
+
+    /// <summary>Container image served over the IP-1 HTTP protocol.</summary>
+    Container = 2,
 }
 
 /// <summary>Current lifecycle state of a loaded plugin.</summary>
@@ -71,6 +74,11 @@ public sealed record PluginInfo(
     /// <see langword="null"/> for assembly plugins or when no output was captured.
     /// </summary>
     public string? LastErrorSnippet { get; init; }
+
+    /// <summary>
+    /// Container image reference (container plugins); <see langword="null"/> for assembly and Python plugins.
+    /// </summary>
+    public string? Image { get; init; }
 }
 
 /// <summary>Response body for <c>GET /v1/plugins</c>.</summary>
@@ -101,3 +109,27 @@ public sealed record PluginSourcePushResponse(
     PluginSourcePushStatus Status,
     int? ProcessId,
     string? ErrorMessage);
+
+/// <summary>Outcome of a <c>POST /v1/plugins/{name}/image</c> image-push request.</summary>
+public enum PluginImageUpdateStatus
+{
+    /// <summary>Container replaced and health check passed.</summary>
+    Success = 0,
+    /// <summary>Docker image could not be started.</summary>
+    StartFailed = 1,
+    /// <summary>Container started but health check timed out.</summary>
+    HandshakeFailed = 2,
+    /// <summary>The new image declares a different handler type name. Silo restart required.</summary>
+    HandlerTypeNameChanged = 3,
+    /// <summary>No supervisor found for this plugin name. The plugin was not loaded at startup.</summary>
+    NoSupervisor = 4,
+}
+
+/// <summary>Request body for <c>POST /v1/plugins/{name}/image</c>.</summary>
+public sealed record PluginImageUpdateRequest(string Image);
+
+/// <summary>Response body for <c>POST /v1/plugins/{name}/image</c>.</summary>
+public sealed record PluginImageUpdateResponse(
+    string PluginName,
+    PluginImageUpdateStatus Status,
+    string? FailureUrn);

@@ -72,6 +72,7 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
         var table = new Table()
             .AddColumn("NAME")
             .AddColumn("KIND")
+            .AddColumn("IMAGE")
             .AddColumn("STATE")
             .AddColumn("API VERSION")
             .AddColumn("HANDLERS / TOOLS")
@@ -88,15 +89,24 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
                 _ => p.State.ToString().ToLowerInvariant(),
             };
 
+            var kindLabel = p.Kind switch
+            {
+                PluginKind.Python => "python",
+                PluginKind.Container => "container",
+                _ => "assembly",
+            };
+
             var handlersOrTools = p.Kind == PluginKind.Python && p.ToolNames is { Count: > 0 }
                 ? string.Join(", ", p.ToolNames)
                 : string.Join(", ", p.Handlers);
 
             var pid = p.ProcessId?.ToString() ?? "-";
+            var image = p.Image is not null ? Markup.Escape(p.Image) : "[grey]-[/]";
 
             table.AddRow(
                 Markup.Escape(p.Name),
-                p.Kind == PluginKind.Python ? "python" : "assembly",
+                kindLabel,
+                image,
                 stateMarkup,
                 Markup.Escape(p.TargetApiVersion),
                 Markup.Escape(handlersOrTools),
@@ -105,7 +115,7 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
             if (!string.IsNullOrWhiteSpace(p.LastErrorSnippet))
             {
                 var snippet = Markup.Escape(p.LastErrorSnippet.Replace("\n", " ↵ "));
-                table.AddRow(string.Empty, string.Empty, "[dim]last error:[/]", $"[grey]{snippet}[/]", string.Empty, string.Empty);
+                table.AddRow(string.Empty, string.Empty, string.Empty, "[dim]last error:[/]", $"[grey]{snippet}[/]", string.Empty, string.Empty);
             }
         }
 

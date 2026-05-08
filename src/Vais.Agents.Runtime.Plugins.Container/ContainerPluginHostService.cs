@@ -14,7 +14,7 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 /// starts each container, validates ABI via <c>GET /v1/metadata</c>, and registers
 /// a <see cref="ContainerAgentShimFactory"/> for each successfully started plugin.
 /// </summary>
-internal sealed class ContainerPluginHostService : IHostedService
+internal sealed class ContainerPluginHostService : IHostedService, IContainerPluginHost
 {
     private static readonly int MaxParallelism = Math.Min(Environment.ProcessorCount, 4);
 
@@ -23,6 +23,30 @@ internal sealed class ContainerPluginHostService : IHostedService
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ContainerPluginHostService> _logger;
     private readonly List<ContainerSupervisor> _supervisors = new();
+
+    public IReadOnlyList<LoadedContainerPlugin> LoadedPlugins
+    {
+        get
+        {
+            lock (_supervisors)
+                return _supervisors.Select(s => new LoadedContainerPlugin(
+                    s.Descriptor.Name,
+                    s.Descriptor.Image,
+                    s.Descriptor.HandlerTypeName,
+                    s.Descriptor.TargetApiVersion,
+                    s.Status)).ToList();
+        }
+    }
+
+    internal bool TryGetSupervisor(string pluginName, out ContainerSupervisor? supervisor)
+    {
+        lock (_supervisors)
+        {
+            supervisor = _supervisors.FirstOrDefault(s =>
+                string.Equals(s.Descriptor.Name, pluginName, StringComparison.OrdinalIgnoreCase));
+            return supervisor is not null;
+        }
+    }
 
     public ContainerPluginHostService(
         ContainerPluginLoaderOptions options,

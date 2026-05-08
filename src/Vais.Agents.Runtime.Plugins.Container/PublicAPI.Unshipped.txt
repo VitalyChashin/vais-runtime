@@ -17,3 +17,58 @@ Vais.Agents.Runtime.Plugins.Container.ContainerGatewayEndpointRouteBuilderExtens
 static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddContainerPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Runtime.Plugins.Container.ContainerGatewayEndpointRouteBuilderExtensions.MapContainerGatewayEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddAgentPreprocessor<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Runtime.Plugins.Container.IContainerPluginHost
+Vais.Agents.Runtime.Plugins.Container.IContainerPluginHost.LoadedPlugins.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin!>!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.LoadedContainerPlugin(string! Name, string! Image, string! HandlerTypeName, string! TargetApiVersion, Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus Status) -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.<Clone>$() -> Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Deconstruct(out string! Name, out string! Image, out string! HandlerTypeName, out string! TargetApiVersion, out Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus Status) -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Equals(Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin? other) -> bool
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Name.get -> string!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Name.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Image.get -> string!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Image.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.HandlerTypeName.get -> string!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.HandlerTypeName.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.TargetApiVersion.get -> string!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.TargetApiVersion.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Status.get -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Status.init -> void
+override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.operator !=(Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin? left, Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin? right) -> bool
+static Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.operator ==(Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin? left, Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin? right) -> bool
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Created = 0 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Starting = 1 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Ready = 2 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Stopping = 3 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Stopped = 4 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Failed = 5 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.IContainerPluginReloader
+Vais.Agents.Runtime.Plugins.Container.IContainerPluginReloader.ReloadAsync(string! pluginName, string! newImage, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult!>!
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.HandshakeFailed = 1 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.StartFailed = 2 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.HandlerTypeNameChanged = 3 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.NoSupervisor = 4 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.ContainerPluginReloadResult(string! PluginName, Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus Status, string? FailureUrn, System.Exception? FailureException = null) -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult!
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.Deconstruct(out string! PluginName, out Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus Status, out string? FailureUrn, out System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.Equals(Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult? other) -> bool
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.PluginName.get -> string!
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.PluginName.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.Status.get -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.Status.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.FailureException.get -> System.Exception?
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.FailureException.init -> void
+override Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.operator !=(Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult? left, Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult? right) -> bool
+static Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult.operator ==(Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult? left, Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult? right) -> bool

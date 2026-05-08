@@ -78,10 +78,16 @@ app.Configure(config =>
         .WithDescription("List remote runtimes configured on the target host.");
 
     config.AddCommand<PluginStatusCommand>("plugin-status")
-        .WithDescription("List loaded plugins (assembly + Python) with their lifecycle state, handlers, and PID.");
+        .WithDescription("List loaded plugins (assembly, Python, container) with lifecycle state, image, handlers, and PID.");
 
     config.AddCommand<PluginPushCommand>("plugin-push")
-        .WithDescription("Pack a Python plugin's source directory and hot-reload it in the runtime.");
+        .WithDescription("Push a plugin to the runtime. Source mode: packs ./src and hot-reloads. Image mode: docker push + POST /v1/plugins/{name}/image.");
+
+    config.AddCommand<PluginBuildCommand>("plugin-build")
+        .WithDescription("Build a container plugin image via 'docker build'. Pass --push to also push to the registry.");
+
+    config.AddCommand<PluginInitCommand>("plugin-init")
+        .WithDescription("Scaffold a plugin.yaml (and Dockerfile for dotnet) in the current directory.");
 
     config.AddCommand<PluginWatchCommand>("plugin-watch")
         .WithDescription("Watch a Python plugin's source directory and hot-reload on every change.");
