@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Plugin.Sdk</RootNamespace>
+    <AssemblyName>Vais.Plugin.Sdk</AssemblyName>
+    <IsPackable>true</IsPackable>
+    <PackageId>Vais.Plugin.Sdk</PackageId>
+    <Description>SDK for building Vais.Agents container plugins. Implements the IP-1 container plugin protocol.</Description>
+    <PackageTags>agents;ai;llm;plugin;container</PackageTags>
+    <!-- IDE0005 mis-fires on FrameworkReference-backed extension method namespaces (same suppression as Vais.Agents.Control.Http.Server). -->
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
