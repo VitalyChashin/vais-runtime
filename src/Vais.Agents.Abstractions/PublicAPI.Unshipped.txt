@@ -456,6 +456,33 @@ static Vais.Agents.AgentLogEntry.operator ==(Vais.Agents.AgentLogEntry? left, Va
 Vais.Agents.IAgentLogSink
 Vais.Agents.IAgentLogSink.Add(Vais.Agents.AgentLogEntry! entry) -> void
 Vais.Agents.IAgentLogSink.GetLogs(string! agentId, System.DateTimeOffset? since = null, int limit = 100) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentLogEntry!>!
+Vais.Agents.IAgentGrainStateView
+Vais.Agents.IAgentGrainStateView.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
+Vais.Agents.IAgentGrainStateView.OpaqueState.get -> string?
+Vais.Agents.IAgentGrainStateView.SystemPrompt.get -> string?
+Vais.Agents.IAgentPreprocessor
+Vais.Agents.IAgentPreprocessor.Order.get -> int
+Vais.Agents.IAgentPreprocessor.ProcessAsync(Vais.Agents.AgentPreprocessorContext! context, System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! messages, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!>
+Vais.Agents.AgentPreprocessorContext
+Vais.Agents.AgentPreprocessorContext.<Clone>$() -> Vais.Agents.AgentPreprocessorContext!
+Vais.Agents.AgentPreprocessorContext.AgentId.get -> string!
+Vais.Agents.AgentPreprocessorContext.AgentId.init -> void
+Vais.Agents.AgentPreprocessorContext.AgentPreprocessorContext(string! AgentId, string! SessionId, Vais.Agents.AgentManifest! Manifest, Vais.Agents.IAgentGrainStateView! GrainState, Vais.Agents.AgentContext! OperationContext) -> void
+Vais.Agents.AgentPreprocessorContext.Deconstruct(out string! AgentId, out string! SessionId, out Vais.Agents.AgentManifest! Manifest, out Vais.Agents.IAgentGrainStateView! GrainState, out Vais.Agents.AgentContext! OperationContext) -> void
+Vais.Agents.AgentPreprocessorContext.Equals(Vais.Agents.AgentPreprocessorContext? other) -> bool
+Vais.Agents.AgentPreprocessorContext.GrainState.get -> Vais.Agents.IAgentGrainStateView!
+Vais.Agents.AgentPreprocessorContext.GrainState.init -> void
+Vais.Agents.AgentPreprocessorContext.Manifest.get -> Vais.Agents.AgentManifest!
+Vais.Agents.AgentPreprocessorContext.Manifest.init -> void
+Vais.Agents.AgentPreprocessorContext.OperationContext.get -> Vais.Agents.AgentContext!
+Vais.Agents.AgentPreprocessorContext.OperationContext.init -> void
+Vais.Agents.AgentPreprocessorContext.SessionId.get -> string!
+Vais.Agents.AgentPreprocessorContext.SessionId.init -> void
+override Vais.Agents.AgentPreprocessorContext.Equals(object? obj) -> bool
+override Vais.Agents.AgentPreprocessorContext.GetHashCode() -> int
+override Vais.Agents.AgentPreprocessorContext.ToString() -> string!
+static Vais.Agents.AgentPreprocessorContext.operator !=(Vais.Agents.AgentPreprocessorContext? left, Vais.Agents.AgentPreprocessorContext? right) -> bool
+static Vais.Agents.AgentPreprocessorContext.operator ==(Vais.Agents.AgentPreprocessorContext? left, Vais.Agents.AgentPreprocessorContext? right) -> bool
 Vais.Agents.GraphInterrupted.CurrentState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
 Vais.Agents.GraphInterrupted.CurrentState.init -> void
 *REMOVED*Vais.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string! Result, string? Error = null) -> void

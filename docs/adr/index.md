@@ -10,6 +10,7 @@ Short records of decisions that shape the public surface. Each ADR captures the 
 | [0002](0002-otel-genai-conventions.md) | OpenTelemetry GenAI semantic conventions | Accepted | 2026-04-17 |
 | [0003](0003-streaming-filter-contract.md) | Streaming filter contract — one DIM method, three override points | Accepted | 2026-04-20 |
 | [0004](0004-sse-event-taxonomy-on-wire.md) | SSE streams carry the full `AgentEvent` taxonomy | Accepted | 2026-04-20 |
+| [0005](0005-container-plugin-protocol.md) | Container plugin protocol design | Accepted | 2026-05-08 |
 
 ## Adding a new ADR
 
