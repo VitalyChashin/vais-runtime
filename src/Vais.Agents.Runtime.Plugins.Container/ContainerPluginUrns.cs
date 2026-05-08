@@ -11,4 +11,5 @@ internal static class ContainerPluginUrns
     public const string InvokeFailed = "urn:vais:container:invoke-failed";
     public const string HealthCheckFailed = "urn:vais:container:health-check-failed";
     public const string OpaqueStateDeserializationError = "urn:vais:container:opaque-state-deserialization-error";
+    public const string SystemPromptResolutionFailed = "urn:vais:container:system-prompt-resolution-failed";
 }
