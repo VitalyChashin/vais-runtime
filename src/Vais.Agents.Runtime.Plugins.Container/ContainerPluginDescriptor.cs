@@ -22,9 +22,11 @@ internal sealed class ContainerPluginDescriptor
     public ContainerRetryPolicy? RetryPolicy { get; init; }
     public IReadOnlyDictionary<string, string> SecretRefs { get; init; } =
         new Dictionary<string, string>();
+    public string InvokeBaseUrl { get; init; } = "";
+    public KubernetesPluginConfig? KubernetesConfig { get; init; }
 }
 
-internal enum ContainerTopology { Sidecar, Standalone }
+internal enum ContainerTopology { Sidecar, Standalone, Kubernetes }
 
 internal sealed record ContainerRetryPolicy(
     int MaxAttempts,

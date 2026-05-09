@@ -12,7 +12,7 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 /// Manages the Docker container lifecycle for one container plugin.
 /// States: Created → Starting → Ready → Stopping → Stopped / Failed.
 /// </summary>
-internal sealed class ContainerSupervisor : IAsyncDisposable
+internal sealed class DockerContainerSupervisor : IContainerSupervisor
 {
     private readonly ContainerPluginDescriptor _descriptor;
     private readonly IDockerClient _docker;
@@ -28,21 +28,21 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
     private readonly object _stateLock = new();
     private readonly SemaphoreSlim _replaceLock = new(1, 1);
 
-    internal ContainerPluginDescriptor Descriptor => _descriptor;
-    internal ContainerPluginStatus Status => _status;
+    public ContainerPluginDescriptor Descriptor => _descriptor;
+    public ContainerPluginStatus Status => _status;
 
-    internal ContainerSupervisor(
+    internal DockerContainerSupervisor(
         ContainerPluginDescriptor descriptor,
         IDockerClient docker,
         ILogger logger)
     {
         _descriptor = descriptor;
         _docker = docker;
-        _healthClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{descriptor.Port}") };
+        _healthClient = new HttpClient { BaseAddress = new Uri(descriptor.InvokeBaseUrl) };
         _logger = logger;
     }
 
-    internal async Task StartAsync(CancellationToken ct = default)
+    public async Task StartAsync(CancellationToken ct = default)
     {
         _status = ContainerPluginStatus.Starting;
         _logger.LogInformation(
@@ -91,7 +91,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
             "Container plugin '{Name}' is ready (containerId={ContainerId})", _descriptor.Name, _containerId);
     }
 
-    internal async Task StopAsync(CancellationToken ct = default)
+    public async Task StopAsync(CancellationToken ct = default)
     {
         if (_containerId is null) return;
         _status = ContainerPluginStatus.Stopping;
@@ -115,7 +115,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
         _status = ContainerPluginStatus.Stopped;
     }
 
-    internal async Task<ContainerReplaceResult> DrainAndReplaceAsync(string? newImage, CancellationToken ct)
+    public async Task<ContainerReplaceResult> DrainAndReplaceAsync(string? newImage, CancellationToken ct)
     {
         await _replaceLock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -193,7 +193,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
         }
     }
 
-    internal bool TryAcquireInvoke()
+    public bool TryAcquireInvoke()
     {
         lock (_stateLock)
         {
@@ -203,7 +203,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
         }
     }
 
-    internal void ReleaseInvoke()
+    public void ReleaseInvoke()
     {
         TaskCompletionSource? signal = null;
         lock (_stateLock)
@@ -215,7 +215,7 @@ internal sealed class ContainerSupervisor : IAsyncDisposable
         signal?.TrySetResult();
     }
 
-    internal async Task WaitForHealthAsync(CancellationToken ct)
+    public async Task WaitForHealthAsync(CancellationToken ct)
     {
         var deadline = DateTimeOffset.UtcNow.AddSeconds(_descriptor.StartupTimeoutSeconds);
         while (DateTimeOffset.UtcNow < deadline)
@@ -270,6 +270,7 @@ internal enum ContainerReplaceOutcome
     StartFailed = 1,
     HandshakeFailed = 2,
     HandlerTypeNameChanged = 3,
+    RolloutStarted = 4,
 }
 
 internal sealed record ContainerReplaceResult(

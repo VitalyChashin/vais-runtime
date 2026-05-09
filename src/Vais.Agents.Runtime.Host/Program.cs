@@ -81,7 +81,7 @@ app.MapHealthChecks("/readyz", new HealthCheckOptions
 static async Task WriteReadyzJsonAsync(HttpContext ctx, HealthReport report)
 {
     ctx.Response.ContentType = "application/json; charset=utf-8";
-    using var writer = new Utf8JsonWriter(ctx.Response.Body, new JsonWriterOptions { Indented = false });
+    await using var writer = new Utf8JsonWriter(ctx.Response.Body, new JsonWriterOptions { Indented = false });
     writer.WriteStartObject();
     writer.WriteString("status", report.Status.ToString());
     writer.WriteStartObject("results");

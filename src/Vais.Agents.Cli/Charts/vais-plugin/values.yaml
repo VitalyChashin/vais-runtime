@@ -1,0 +1,37 @@
+## Default values for vais-plugin.
+## Override with --set or -f <file>.
+
+## Plugin name — used as the Deployment/Service name and label selector.
+pluginName: my-plugin
+
+## Container image to deploy.
+image:
+  repository: my-registry/my-plugin
+  tag: latest
+  pullPolicy: IfNotPresent
+
+## Number of replicas.
+replicaCount: 1
+
+## Container port the plugin listens on (VAIS_PLUGIN_PORT).
+pluginPort: 8080
+
+## Resource limits and requests.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+## Extra environment variables passed to the container.
+env: []
+# - name: MY_SECRET
+#   valueFrom:
+#     secretKeyRef:
+#       name: my-secret
+#       key: value
+
+## Image pull secrets.
+imagePullSecrets: []

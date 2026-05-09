@@ -1,0 +1,45 @@
+# Builds the runtime image for the Kubernetes E2E suite.
+# Extends the base runtime with the echo-plugin ContainerPlugin manifest baked in.
+#
+# Build context: repo root
+#   docker build -f tests/e2e/kubernetes/Dockerfile.e2e -t vais-agents-runtime:e2e .
+
+ARG DOTNET_VERSION=9.0
+
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS build
+WORKDIR /src
+
+COPY Directory.Build.props Directory.Packages.props NuGet.config* ./
+COPY src/ src/
+
+RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
+
+RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj \
+        -c Release --no-restore -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-alpine AS runtime
+WORKDIR /app
+
+RUN addgroup -S -g 65532 vais \
+    && adduser -S -u 65532 -G vais vais \
+    && mkdir -p /var/lib/vais/plugins \
+    && mkdir -p /var/lib/vais/container-plugins/echo-plugin \
+    && chown -R vais:vais /var/lib/vais
+
+USER vais:vais
+
+COPY --from=build --chown=vais:vais /app/publish ./
+
+# Bake in the echo-plugin ContainerPlugin descriptor so the runtime loads it on startup.
+COPY --chown=vais:vais tests/e2e/kubernetes/plugin.yaml /var/lib/vais/container-plugins/echo-plugin/plugin.yaml
+
+ENV VAIS_PLUGINS_DIRECTORY=""
+ENV VAIS_CONTAINER_PLUGINS_DIRECTORY=/var/lib/vais/container-plugins
+
+VOLUME ["/var/lib/vais/plugins"]
+EXPOSE 8080
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=12 \
+    CMD wget -q -O- http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["dotnet", "Vais.Agents.Runtime.Host.dll"]

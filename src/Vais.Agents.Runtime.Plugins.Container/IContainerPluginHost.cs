@@ -31,7 +31,17 @@ public sealed record LoadedContainerPlugin(
     string Image,
     string HandlerTypeName,
     string TargetApiVersion,
-    ContainerPluginStatus Status);
+    ContainerPluginStatus Status)
+{
+    /// <summary>Deployment topology: "standalone", "sidecar", or "kubernetes".</summary>
+    public string Topology { get; init; } = "standalone";
+
+    /// <summary>Kubernetes Deployment name (kubernetes topology only).</summary>
+    public string? KubernetesDeploymentName { get; init; }
+
+    /// <summary>Kubernetes namespace (kubernetes topology only).</summary>
+    public string? KubernetesNamespace { get; init; }
+}
 
 /// <summary>Lifecycle states for a supervised container plugin.</summary>
 public enum ContainerPluginStatus

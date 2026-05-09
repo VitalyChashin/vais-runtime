@@ -79,6 +79,22 @@ public sealed record PluginInfo(
     /// Container image reference (container plugins); <see langword="null"/> for assembly and Python plugins.
     /// </summary>
     public string? Image { get; init; }
+
+    /// <summary>
+    /// Deployment topology of a container plugin: "standalone", "sidecar", or "kubernetes".
+    /// <see langword="null"/> for assembly and Python plugins.
+    /// </summary>
+    public string? Topology { get; init; }
+
+    /// <summary>
+    /// Kubernetes Deployment name (kubernetes topology only); <see langword="null"/> otherwise.
+    /// </summary>
+    public string? KubernetesDeploymentName { get; init; }
+
+    /// <summary>
+    /// Kubernetes namespace (kubernetes topology only); <see langword="null"/> otherwise.
+    /// </summary>
+    public string? KubernetesNamespace { get; init; }
 }
 
 /// <summary>Response body for <c>GET /v1/plugins</c>.</summary>
@@ -123,6 +139,8 @@ public enum PluginImageUpdateStatus
     HandlerTypeNameChanged = 3,
     /// <summary>No supervisor found for this plugin name. The plugin was not loaded at startup.</summary>
     NoSupervisor = 4,
+    /// <summary>Kubernetes deployment patched; rolling update started. Not an error.</summary>
+    RolloutStarted = 5,
 }
 
 /// <summary>Request body for <c>POST /v1/plugins/{name}/image</c>.</summary>

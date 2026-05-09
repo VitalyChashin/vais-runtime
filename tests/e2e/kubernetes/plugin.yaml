@@ -1,0 +1,13 @@
+apiVersion: v0.24
+kind: ContainerPlugin
+metadata:
+  name: echo-plugin
+spec:
+  runtime: container
+  image: vais-echo:test
+  port: 8080
+  durability: "kubernetes: managed by K8s rolling update; reachable via ClusterIP Service"
+  kubernetes:
+    serviceUrl: http://echo-plugin.vais-e2e.svc.cluster.local:8080
+    deploymentName: echo-plugin
+    namespace: vais-e2e

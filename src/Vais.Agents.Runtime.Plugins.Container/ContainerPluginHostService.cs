@@ -3,6 +3,7 @@
 
 using System.Net.Http.Json;
 using Docker.DotNet;
+using k8s;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Vais.Agents.Runtime.Plugins;
@@ -22,7 +23,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
     private readonly IPluginHandlerRegistry _registry;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ContainerPluginHostService> _logger;
-    private readonly List<ContainerSupervisor> _supervisors = new();
+    private readonly List<IContainerSupervisor> _supervisors = new();
 
     public IReadOnlyList<LoadedContainerPlugin> LoadedPlugins
     {
@@ -34,11 +35,21 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                     s.Descriptor.Image,
                     s.Descriptor.HandlerTypeName,
                     s.Descriptor.TargetApiVersion,
-                    s.Status)).ToList();
+                    s.Status)
+                {
+                    Topology = s.Descriptor.Topology switch
+                    {
+                        ContainerTopology.Kubernetes => "kubernetes",
+                        ContainerTopology.Sidecar    => "sidecar",
+                        _                            => "standalone",
+                    },
+                    KubernetesDeploymentName = s.Descriptor.KubernetesConfig?.DeploymentName,
+                    KubernetesNamespace      = s.Descriptor.KubernetesConfig?.Namespace,
+                }).ToList();
         }
     }
 
-    internal bool TryGetSupervisor(string pluginName, out ContainerSupervisor? supervisor)
+    internal bool TryGetSupervisor(string pluginName, out IContainerSupervisor? supervisor)
     {
         lock (_supervisors)
         {
@@ -89,9 +100,20 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
 
     private async ValueTask StartOneAsync(ContainerPluginDescriptor descriptor, CancellationToken ct)
     {
-        var docker = new DockerClientConfiguration().CreateClient();
-        var supervisor = new ContainerSupervisor(
-            descriptor, docker, _loggerFactory.CreateLogger<ContainerSupervisor>());
+        IContainerSupervisor supervisor;
+        if (descriptor.KubernetesConfig is not null)
+        {
+            var k8sCfg = KubernetesClientConfiguration.BuildDefaultConfig();
+            var k8sClient = new Kubernetes(k8sCfg);
+            supervisor = new KubernetesContainerSupervisor(
+                descriptor, k8sClient, _loggerFactory.CreateLogger<KubernetesContainerSupervisor>());
+        }
+        else
+        {
+            var docker = new DockerClientConfiguration().CreateClient();
+            supervisor = new DockerContainerSupervisor(
+                descriptor, docker, _loggerFactory.CreateLogger<DockerContainerSupervisor>());
+        }
 
         try
         {
@@ -102,31 +124,43 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             _logger.LogError(ex,
                 "Failed to start container plugin '{Name}' from image '{Image}'",
                 descriptor.Name, descriptor.Image);
-            docker.Dispose();
+            await supervisor.DisposeAsync().ConfigureAwait(false);
             return;
         }
 
         using var metaClient = new HttpClient
         {
-            BaseAddress = new Uri($"http://localhost:{descriptor.Port}"),
+            BaseAddress = new Uri(descriptor.InvokeBaseUrl),
             Timeout = TimeSpan.FromSeconds(10),
         };
 
-        PluginMetadataResponse? meta;
-        try
+        // K8s topology: deployment may not be ready at runtime startup — retry until reachable.
+        int metaRetrySeconds = descriptor.KubernetesConfig is not null ? descriptor.StartupTimeoutSeconds : 0;
+        var metaDeadline = DateTimeOffset.UtcNow.AddSeconds(metaRetrySeconds);
+
+        PluginMetadataResponse? meta = null;
+        while (true)
         {
-            var metaResp = await metaClient.GetAsync("/v1/metadata", ct).ConfigureAwait(false);
-            metaResp.EnsureSuccessStatusCode();
-            meta = await metaResp.Content.ReadFromJsonAsync<PluginMetadataResponse>(
-                ContainerJsonOptions.Default, ct).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "[{Urn}] Container plugin '{Name}': failed to fetch /v1/metadata",
-                ContainerPluginUrns.AbiFailed, descriptor.Name);
-            await supervisor.DisposeAsync().ConfigureAwait(false);
-            return;
+            try
+            {
+                var metaResp = await metaClient.GetAsync("/v1/metadata", ct).ConfigureAwait(false);
+                metaResp.EnsureSuccessStatusCode();
+                meta = await metaResp.Content.ReadFromJsonAsync<PluginMetadataResponse>(
+                    ContainerJsonOptions.Default, ct).ConfigureAwait(false);
+                break;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && DateTimeOffset.UtcNow < metaDeadline)
+            {
+                await Task.Delay(2000, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "[{Urn}] Container plugin '{Name}': failed to fetch /v1/metadata",
+                    ContainerPluginUrns.AbiFailed, descriptor.Name);
+                await supervisor.DisposeAsync().ConfigureAwait(false);
+                return;
+            }
         }
 
         if (meta is null || string.IsNullOrEmpty(meta.HandlerTypeName))
@@ -213,8 +247,35 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 continue;
             }
 
-            var topology = spec.Topology.Equals("sidecar", StringComparison.OrdinalIgnoreCase)
-                ? ContainerTopology.Sidecar : ContainerTopology.Standalone;
+            ContainerTopology topology;
+            KubernetesPluginConfig? k8sConfig = null;
+            string invokeBaseUrl;
+
+            if (spec.Kubernetes is { } k8sSpec)
+            {
+                if (string.IsNullOrEmpty(k8sSpec.ServiceUrl))
+                {
+                    _logger.LogWarning(
+                        "Container plugin in '{Dir}' has kubernetes section but no serviceUrl — skipping",
+                        pluginDir);
+                    continue;
+                }
+                topology = ContainerTopology.Kubernetes;
+                k8sConfig = new KubernetesPluginConfig(k8sSpec.ServiceUrl, k8sSpec.DeploymentName, k8sSpec.Namespace);
+                invokeBaseUrl = k8sSpec.ServiceUrl;
+            }
+            else
+            {
+                topology = spec.Topology.Equals("sidecar", StringComparison.OrdinalIgnoreCase)
+                    ? ContainerTopology.Sidecar : ContainerTopology.Standalone;
+                invokeBaseUrl = $"http://localhost:{spec.Port}";
+
+                if (topology == ContainerTopology.Standalone && string.IsNullOrEmpty(spec.Durability))
+                    _logger.LogWarning(
+                        "Container plugin in '{Dir}' uses standalone topology without a durability setting; " +
+                        "plugin state may be lost on silo restart",
+                        pluginDir);
+            }
 
             ContainerRetryPolicy? retryPolicy = null;
             if (spec.RetryPolicy is { } rp)
@@ -230,6 +291,8 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 InvokeTimeoutSeconds = spec.InvokeTimeoutSeconds,
                 RetryPolicy = retryPolicy,
                 SecretRefs = new Dictionary<string, string>(spec.Secrets),
+                InvokeBaseUrl = invokeBaseUrl,
+                KubernetesConfig = k8sConfig,
             };
             result.Add(descriptor);
         }

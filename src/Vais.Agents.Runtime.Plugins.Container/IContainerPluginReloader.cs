@@ -32,6 +32,8 @@ public enum ContainerPluginReloadStatus
     HandlerTypeNameChanged = 3,
     /// <summary>No supervisor is loaded for this plugin name.</summary>
     NoSupervisor = 4,
+    /// <summary>Kubernetes deployment patched; rolling update started. Not an error.</summary>
+    RolloutStarted = 5,
 }
 
 /// <summary>Result of a <see cref="IContainerPluginReloader.ReloadAsync"/> call.</summary>

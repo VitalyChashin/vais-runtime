@@ -22,7 +22,7 @@ internal sealed class ContainerAgentShim
     private static readonly ActivitySource _activitySource =
         new("Vais.Agents.Runtime.Plugins.Container", "1.0.0");
 
-    private readonly ContainerSupervisor _supervisor;
+    private readonly IContainerSupervisor _supervisor;
     private readonly HttpClient _invokeClient;
     private readonly IAgentPreprocessor[] _preprocessors;
     private readonly AgentManifest _manifest;
@@ -37,7 +37,7 @@ internal sealed class ContainerAgentShim
     private readonly List<ChatTurn> _history = new();
 
     internal ContainerAgentShim(
-        ContainerSupervisor supervisor,
+        IContainerSupervisor supervisor,
         HttpClient invokeClient,
         IAgentPreprocessor[] preprocessors,
         AgentManifest manifest,

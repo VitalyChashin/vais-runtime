@@ -37,6 +37,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Charts\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Vais.Agents.Cli.Tests" />
   </ItemGroup>
 

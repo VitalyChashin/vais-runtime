@@ -102,6 +102,14 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
                 return ProblemDetailsParser.ExitSuccess;
             }
 
+            if (result.Status == PluginImageUpdateStatus.RolloutStarted)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[green]✓[/] {Markup.Escape(pluginName)} Kubernetes rollout started — " +
+                    "use [bold]kubectl rollout status[/] to track progress");
+                return ProblemDetailsParser.ExitSuccess;
+            }
+
             var urn = result.FailureUrn ?? result.Status.ToString();
             AnsiConsole.MarkupLine($"[red]✗[/] runtime update failed: {Markup.Escape(result.Status.ToString())} — {Markup.Escape(urn)}");
             return ProblemDetailsParser.ExitApiError;

@@ -189,6 +189,12 @@ Vais.Agents.Control.Http.PluginInfo.Kind.get -> Vais.Agents.Control.Http.PluginK
 Vais.Agents.Control.Http.PluginInfo.Kind.init -> void
 Vais.Agents.Control.Http.PluginInfo.Image.get -> string?
 Vais.Agents.Control.Http.PluginInfo.Image.init -> void
+Vais.Agents.Control.Http.PluginInfo.Topology.get -> string?
+Vais.Agents.Control.Http.PluginInfo.Topology.init -> void
+Vais.Agents.Control.Http.PluginInfo.KubernetesDeploymentName.get -> string?
+Vais.Agents.Control.Http.PluginInfo.KubernetesDeploymentName.init -> void
+Vais.Agents.Control.Http.PluginInfo.KubernetesNamespace.get -> string?
+Vais.Agents.Control.Http.PluginInfo.KubernetesNamespace.init -> void
 Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.get -> string?
 Vais.Agents.Control.Http.PluginInfo.LastErrorSnippet.init -> void
 Vais.Agents.Control.Http.PluginInfo.LoadedViaAttribute.get -> bool
@@ -533,6 +539,7 @@ Vais.Agents.Control.Http.PluginImageUpdateStatus.StartFailed = 1 -> Vais.Agents.
 Vais.Agents.Control.Http.PluginImageUpdateStatus.HandshakeFailed = 2 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
 Vais.Agents.Control.Http.PluginImageUpdateStatus.HandlerTypeNameChanged = 3 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
 Vais.Agents.Control.Http.PluginImageUpdateStatus.NoSupervisor = 4 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
+Vais.Agents.Control.Http.PluginImageUpdateStatus.RolloutStarted = 5 -> Vais.Agents.Control.Http.PluginImageUpdateStatus
 Vais.Agents.Control.Http.PluginImageUpdateRequest
 Vais.Agents.Control.Http.PluginImageUpdateRequest.<Clone>$() -> Vais.Agents.Control.Http.PluginImageUpdateRequest!
 Vais.Agents.Control.Http.PluginImageUpdateRequest.Deconstruct(out string! Image) -> void

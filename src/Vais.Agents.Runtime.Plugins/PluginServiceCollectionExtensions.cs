@@ -15,6 +15,19 @@ namespace Vais.Agents.Runtime.Plugins;
 public static class PluginServiceCollectionExtensions
 {
     /// <summary>
+    /// Ensures <see cref="IPluginHandlerRegistry"/> is registered. Safe to call multiple
+    /// times — subsequent calls are no-ops because <c>TryAddSingleton</c> is idempotent.
+    /// Call this when you need the registry but do not want the assembly plugin loader
+    /// (e.g. the container-plugins pillar when <c>VAIS_PLUGINS_DIRECTORY</c> is not set).
+    /// </summary>
+    public static IServiceCollection EnsurePluginRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<IPluginHandlerRegistry>(new PluginHandlerRegistry());
+        return services;
+    }
+
+    /// <summary>
     /// Register the plugin loader + scan <paramref name="pluginsDirectory"/>
     /// at DI-build time. Loaded factories are registered in the singleton
     /// <see cref="IPluginHandlerRegistry"/>; the translator queries it

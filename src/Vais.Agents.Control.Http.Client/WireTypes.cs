@@ -114,6 +114,12 @@ public sealed record PluginInfo(
     public string? LastErrorSnippet { get; init; }
     /// <summary>Container image reference (container plugins); <see langword="null"/> otherwise.</summary>
     public string? Image { get; init; }
+    /// <summary>Deployment topology: "standalone", "sidecar", or "kubernetes" (container plugins); <see langword="null"/> otherwise.</summary>
+    public string? Topology { get; init; }
+    /// <summary>Kubernetes Deployment name (kubernetes topology only); <see langword="null"/> otherwise.</summary>
+    public string? KubernetesDeploymentName { get; init; }
+    /// <summary>Kubernetes namespace (kubernetes topology only); <see langword="null"/> otherwise.</summary>
+    public string? KubernetesNamespace { get; init; }
 }
 
 /// <summary>Client-side wire type for <c>GET /v1/plugins</c>.</summary>
@@ -158,6 +164,8 @@ public enum PluginImageUpdateStatus
     HandlerTypeNameChanged = 3,
     /// <summary>No supervisor found for this plugin name.</summary>
     NoSupervisor = 4,
+    /// <summary>Kubernetes deployment patched; rolling update started. Not an error.</summary>
+    RolloutStarted = 5,
 }
 
 /// <summary>Client-side wire type for <c>POST /v1/plugins/{name}/image</c>.</summary>

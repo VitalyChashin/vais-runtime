@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Preprocessing;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
@@ -23,6 +24,7 @@ public static class ContainerPluginServiceCollectionExtensions
         this IServiceCollection services,
         Action<ContainerPluginLoaderOptions>? configure = null)
     {
+        services.EnsurePluginRegistry();
         var options = new ContainerPluginLoaderOptions();
         configure?.Invoke(options);
         services.AddSingleton(options);

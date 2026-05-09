@@ -34,6 +34,12 @@ Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.TargetApiVersion.get
 Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.TargetApiVersion.init -> void
 Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Status.get -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
 Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Status.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Topology.get -> string!
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Topology.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.KubernetesDeploymentName.get -> string?
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.KubernetesDeploymentName.init -> void
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.KubernetesNamespace.get -> string?
+Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.KubernetesNamespace.init -> void
 override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.Equals(object? obj) -> bool
 override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.GetHashCode() -> int
 override Vais.Agents.Runtime.Plugins.Container.LoadedContainerPlugin.ToString() -> string!
@@ -46,6 +52,7 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Ready = 2 -> Vais.Ag
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Stopping = 3 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Stopped = 4 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus.Failed = 5 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginStatus
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus.RolloutStarted = 5 -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus
 Vais.Agents.Runtime.Plugins.Container.IContainerPluginReloader
 Vais.Agents.Runtime.Plugins.Container.IContainerPluginReloader.ReloadAsync(string! pluginName, string! newImage, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadResult!>!
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginReloadStatus

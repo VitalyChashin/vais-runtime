@@ -1,0 +1,9 @@
+apiVersion: v0.24
+kind: ContainerPlugin
+metadata:
+  name: echo-plugin
+spec:
+  runtime: container
+  image: vais-echo:test
+  port: 8080
+  durability: "standalone: managed by DockerContainerSupervisor on the local daemon"

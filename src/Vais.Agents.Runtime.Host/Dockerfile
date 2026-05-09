@@ -36,6 +36,7 @@ COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/Vais.Agents.Ai.MicrosoftAgentFra
 COPY src/Vais.Agents.Runtime.Instantiation/Vais.Agents.Runtime.Instantiation.csproj                   src/Vais.Agents.Runtime.Instantiation/
 COPY src/Vais.Agents.Runtime.Plugins/Vais.Agents.Runtime.Plugins.csproj                               src/Vais.Agents.Runtime.Plugins/
 COPY src/Vais.Agents.Runtime.Plugins.Python/Vais.Agents.Runtime.Plugins.Python.csproj                 src/Vais.Agents.Runtime.Plugins.Python/
+COPY src/Vais.Agents.Runtime.Plugins.Container/Vais.Agents.Runtime.Plugins.Container.csproj           src/Vais.Agents.Runtime.Plugins.Container/
 COPY src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj                                     src/Vais.Agents.Runtime.Host/
 
 RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
@@ -61,6 +62,7 @@ COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/         src/Vais.Agents.Ai.Micr
 COPY src/Vais.Agents.Runtime.Instantiation/              src/Vais.Agents.Runtime.Instantiation/
 COPY src/Vais.Agents.Runtime.Plugins/                    src/Vais.Agents.Runtime.Plugins/
 COPY src/Vais.Agents.Runtime.Plugins.Python/             src/Vais.Agents.Runtime.Plugins.Python/
+COPY src/Vais.Agents.Runtime.Plugins.Container/          src/Vais.Agents.Runtime.Plugins.Container/
 COPY src/Vais.Agents.Runtime.Host/                       src/Vais.Agents.Runtime.Host/
 
 RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj \

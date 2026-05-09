@@ -42,7 +42,8 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
 
             if (format == OutputFormat.Table)
             {
-                RenderTable(response.Items);
+                var replicas = await FetchKubernetesReplicasAsync(response.Items, cancellationToken);
+                RenderTable(response.Items, replicas);
             }
             else if (format == OutputFormat.Json)
             {
@@ -61,7 +62,27 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
         }
     }
 
-    private static void RenderTable(IReadOnlyList<PluginInfo> items)
+    private static async Task<Dictionary<string, string>> FetchKubernetesReplicasAsync(
+        IReadOnlyList<PluginInfo> items, CancellationToken ct)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tasks = items
+            .Where(p => p.Kind == PluginKind.Container
+                        && p.Topology == "kubernetes"
+                        && p.KubernetesDeploymentName is not null
+                        && p.KubernetesNamespace is not null)
+            .Select(async p =>
+            {
+                var args = $"get deployment {p.KubernetesDeploymentName} -n {p.KubernetesNamespace}" +
+                           " -o jsonpath={.status.readyReplicas}/{.spec.replicas}";
+                var output = await KubectlRunner.GetOutputAsync(args, ct);
+                result[p.Name] = output ?? "-";
+            });
+        await Task.WhenAll(tasks);
+        return result;
+    }
+
+    private static void RenderTable(IReadOnlyList<PluginInfo> items, Dictionary<string, string> replicas)
     {
         if (items.Count == 0)
         {
@@ -73,6 +94,8 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
             .AddColumn("NAME")
             .AddColumn("KIND")
             .AddColumn("IMAGE")
+            .AddColumn("TOPOLOGY")
+            .AddColumn("REPLICAS")
             .AddColumn("STATE")
             .AddColumn("API VERSION")
             .AddColumn("HANDLERS / TOOLS")
@@ -102,11 +125,15 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
 
             var pid = p.ProcessId?.ToString() ?? "-";
             var image = p.Image is not null ? Markup.Escape(p.Image) : "[grey]-[/]";
+            var topology = p.Topology is not null ? Markup.Escape(p.Topology) : "[grey]-[/]";
+            var replicaDisplay = replicas.TryGetValue(p.Name, out var r) ? r : "-";
 
             table.AddRow(
                 Markup.Escape(p.Name),
                 kindLabel,
                 image,
+                topology,
+                replicaDisplay,
                 stateMarkup,
                 Markup.Escape(p.TargetApiVersion),
                 Markup.Escape(handlersOrTools),
@@ -115,7 +142,9 @@ internal sealed class PluginStatusCommand : AsyncCommand<PluginStatusCommand.Set
             if (!string.IsNullOrWhiteSpace(p.LastErrorSnippet))
             {
                 var snippet = Markup.Escape(p.LastErrorSnippet.Replace("\n", " ↵ "));
-                table.AddRow(string.Empty, string.Empty, string.Empty, "[dim]last error:[/]", $"[grey]{snippet}[/]", string.Empty, string.Empty);
+                table.AddRow(
+                    string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
+                    "[dim]last error:[/]", $"[grey]{snippet}[/]", string.Empty, string.Empty);
             }
         }
 

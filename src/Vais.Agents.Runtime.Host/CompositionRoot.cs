@@ -36,6 +36,7 @@ using Vais.Agents.Runtime.Instantiation.Guardrails;
 using Vais.Agents.Runtime.Instantiation.ModelProviders;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
+using Vais.Agents.Runtime.Plugins.Container;
 using Vais.Agents.Gateways.Prometheus;
 using Vais.Agents.Gateways.Fallback;
 using Vais.Agents.Gateways.SemanticCache;
@@ -214,6 +215,12 @@ internal static class CompositionRoot
             });
             services.AddHealthChecks()
                 .AddCheck<PythonPluginsReadyCheck>("python-plugins", tags: ["ready"]);
+        }
+
+        // Container-plugins pillar — opt-in via VAIS_CONTAINER_PLUGINS_DIRECTORY.
+        if (!string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
+        {
+            services.AddContainerPlugins(o => o.PluginsDirectory = options.ContainerPluginsDirectory);
         }
 
         // GCF-20/21 — named middleware registrations + composite factories.

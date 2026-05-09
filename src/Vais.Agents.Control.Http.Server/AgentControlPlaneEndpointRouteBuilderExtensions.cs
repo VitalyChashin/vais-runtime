@@ -692,6 +692,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.HandshakeFailed, result.FailureUrn)),
             ContainerPluginReloadStatus.StartFailed =>
                 Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.StartFailed, result.FailureUrn)),
+            ContainerPluginReloadStatus.RolloutStarted =>
+                Results.Accepted(value: new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.RolloutStarted, null)),
             _ =>
                 Results.Ok(new PluginImageUpdateResponse(result.PluginName, PluginImageUpdateStatus.HandshakeFailed, result.FailureUrn)),
         };
@@ -791,6 +793,9 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                         _                              => PluginState.Unavailable,
                     },
                     Image = p.Image,
+                    Topology = p.Topology,
+                    KubernetesDeploymentName = p.KubernetesDeploymentName,
+                    KubernetesNamespace = p.KubernetesNamespace,
                 });
             }
         }

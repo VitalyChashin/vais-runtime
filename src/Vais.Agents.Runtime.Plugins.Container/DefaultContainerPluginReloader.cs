@@ -20,16 +20,18 @@ internal sealed class DefaultContainerPluginReloader(
 
         var status = result.Outcome switch
         {
-            ContainerReplaceOutcome.Success              => ContainerPluginReloadStatus.Success,
-            ContainerReplaceOutcome.StartFailed          => ContainerPluginReloadStatus.StartFailed,
-            ContainerReplaceOutcome.HandshakeFailed      => ContainerPluginReloadStatus.HandshakeFailed,
+            ContainerReplaceOutcome.Success                => ContainerPluginReloadStatus.Success,
+            ContainerReplaceOutcome.StartFailed            => ContainerPluginReloadStatus.StartFailed,
+            ContainerReplaceOutcome.HandshakeFailed        => ContainerPluginReloadStatus.HandshakeFailed,
             ContainerReplaceOutcome.HandlerTypeNameChanged => ContainerPluginReloadStatus.HandlerTypeNameChanged,
-            _                                            => ContainerPluginReloadStatus.HandshakeFailed,
+            ContainerReplaceOutcome.RolloutStarted         => ContainerPluginReloadStatus.RolloutStarted,
+            _                                              => ContainerPluginReloadStatus.HandshakeFailed,
         };
 
         var urn = result.Outcome switch
         {
             ContainerReplaceOutcome.Success                => (string?)null,
+            ContainerReplaceOutcome.RolloutStarted         => (string?)null,
             ContainerReplaceOutcome.StartFailed            => ContainerPluginUrns.StartFailed,
             ContainerReplaceOutcome.HandlerTypeNameChanged => ContainerPluginUrns.HandlerTypeNameChanged,
             _                                              => ContainerPluginUrns.HealthCheckFailed,

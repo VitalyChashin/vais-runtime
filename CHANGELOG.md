@@ -105,6 +105,41 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 - **Gateway middleware dropped for declarative agents.** `AiAgentGrain.OnActivateAsync` was rebuilding `StatefulAgentOptions` from the translator-supplied options but omitting `GatewayMiddleware` and `ToolGatewayMiddleware`. The `StatefulAiAgent` therefore ran with an empty filter chain, so `GatewayEventMiddleware` / `McpEventMiddleware` / `McpGatewayEventMiddleware` were never invoked and no events were written to Postgres. Fixed by forwarding both fields in the `seeded` options.
 
+- **`/readyz` threw `InvalidOperationException` in containerised Kestrel.** `Utf8JsonWriter.Dispose()` unconditionally calls `Flush()` synchronously, which Kestrel's Alpine response stream disallows. Changed `using var writer` to `await using var writer` in `WriteReadyzJsonAsync` so `DisposeAsync()` is used instead. Affected runtime pods running in Kubernetes (Docker topology was unaffected because the host Kestrel allowed sync IO in that environment).
+
+- **Kubernetes container plugin fails ABI check when plugin pod isn't ready at runtime startup.** `ContainerPluginHostService.StartOneAsync` previously called `GET /v1/metadata` once with a 10 s timeout. For Kubernetes topology the plugin deployment may not exist yet (runtime starts first). Added a retry loop for K8s descriptors: retries every 2 s for up to `StartupTimeoutSeconds` (default 30 s), falling through to a final hard failure only when the deadline expires.
+
+- **`IPluginHandlerRegistry` not registered when `VAIS_PLUGINS_DIRECTORY` is unset.** When the assembly-plugin loader is disabled (empty directory env var), `AddAgentPlugins` is never called, leaving `IPluginHandlerRegistry` absent from the DI container and causing `ContainerPluginHostService` to fail at resolution. Added `EnsurePluginRegistry(this IServiceCollection)` — an idempotent `TryAddSingleton` wrapper — and called it as the first statement in `AddContainerPlugins`.
+
+### Added (continued)
+
+- **Kubernetes standalone topology for container plugins (IP-6).** Container plugins can now run as Kubernetes Deployments instead of local Docker containers. The runtime monitors the existing K8s Deployment and delegates image rollouts via the Kubernetes API — it does not own the pod lifecycle.
+
+  - `IContainerSupervisor` — new interface extracted from `ContainerSupervisor` (now `DockerContainerSupervisor`). Declares `StartAsync`, `StopAsync`, `DrainAndReplaceAsync`, `WaitForHealthAsync`, `TryAcquireInvoke`, `ReleaseInvoke`, and `DisposeAsync`. Enables a clean seam for plugging in alternative topology implementations.
+  - `DockerContainerSupervisor` — renamed/refactored from the previous monolithic `ContainerSupervisor`. Manages Docker container lifecycle unchanged.
+  - `KubernetesContainerSupervisor` — new supervisor for K8s topology. At startup it waits up to `StartupTimeoutSeconds` for the plugin's ClusterIP Service `/health` to be reachable; on timeout it logs a warning and continues (K8s manages pod restart). `DrainAndReplaceAsync` issues a `PATCH apps/v1/namespaces/{ns}/deployments/{name}` merge-patch to update the container image and returns `RolloutStarted` immediately.
+  - `KubernetesPluginConfig` — record carrying `ServiceUrl`, `DeploymentName`, and `Namespace` parsed from the `kubernetes:` block in `plugin.yaml`.
+  - `ContainerPluginYamlDeserializer` — extended to deserialise the `kubernetes:` block (`serviceUrl`, `deploymentName`, `namespace`). When present, `ContainerPluginHostService` builds a `KubernetesContainerSupervisor` backed by an in-cluster `IKubernetes` client.
+  - `GET /v1/plugins` — response includes `topology` (`standalone` or `kubernetes`), `kubernetesDeploymentName`, and `kubernetesNamespace` fields for container plugins.
+  - `LoadedContainerPlugin` / `IContainerPluginHost` — `Topology`, `KubernetesDeploymentName`, and `KubernetesNamespace` properties added.
+  - `PluginInfo` wire type — `Topology`, `KubernetesDeploymentName`, `KubernetesNamespace` fields added; `vais plugin-status` renders them in the table and JSON output.
+  - Runtime Helm chart (`deploy/helm/vais-agents-runtime/`) — new `rbac.yaml` template adds a `ClusterRole` + `ClusterRoleBinding` giving the runtime ServiceAccount `get/list/watch/patch` on `apps/deployments` and `core/pods` when `rbac.pluginSupervision: true`. Controlled by the new `rbac.create` and `rbac.pluginSupervision` values.
+
+- **`vais plugin-deploy` CLI command.** Deploys a container plugin to Kubernetes using the built-in `vais-plugin` embedded Helm chart.
+
+  - `PluginDeployCommand` — `vais plugin-deploy <release-name> --image <image> [--namespace <ns>] [--replicas N] [--port N] [-f values.yaml] [--set k=v] [--dry-run]`. Extracts the embedded chart to a temp directory, builds `helm upgrade --install` args, and delegates to `HelmRunner.RunAsync`.
+  - `EmbeddedChartExtractor` — extracts `src/Vais.Agents.Cli/Charts/vais-plugin/` (embedded resource) to a temp folder on each invocation; caller is responsible for cleanup.
+  - Embedded `vais-plugin` Helm chart (`src/Vais.Agents.Cli/Charts/vais-plugin/`) — minimal Deployment + ClusterIP Service chart with `pluginName`, `image.*`, `replicaCount`, `pluginPort`, `env`, `resources`, and `imagePullSecrets` values; readiness/liveness probes target `GET /health`.
+  - `HelmRunner` / `KubectlRunner` — thin process wrappers that stream stdout/stderr and return the exit code; mockable via `static Func` for unit tests.
+
+- **E2E test suites** (`tests/e2e/`). Two end-to-end suites exercise the container plugin stack against real Docker and Kubernetes runtimes.
+
+  - `tests/e2e/shared/echo-plugin/` — minimal Python HTTP server implementing the full IP-1 contract (`/health`, `/v1/metadata`, `/v1/invoke`, `/v1/stream`). Returns `handlerTypeName: echo.EchoPlugin`, `targetApiVersion: 0.24`, and echoes the last user message.
+  - `tests/e2e/docker/run.ps1` — Docker topology suite (10 assertions). Publishes the runtime host, starts it with `VAIS_CONTAINER_PLUGINS_DIRECTORY` pointing at a temp plugin directory, waits for `/healthz`, asserts plugin reaches `Ready` state, hot-reloads the image via `POST /v1/plugins/{name}/image`, and verifies `plugin-status --output json`.
+  - `tests/e2e/kubernetes/run.ps1` — Kubernetes topology suite (8 assertions). Deploys the echo-plugin Deployment first (so the runtime can contact its Service at startup), installs the runtime via Helm with `--wait`, port-forwards the control-plane service, and asserts plugin `Ready`, topology fields, and `RolloutStarted` response from the reload endpoint.
+  - `tests/e2e/kubernetes/Dockerfile.e2e` — multi-stage build that compiles the runtime and bakes in the echo-plugin `plugin.yaml` descriptor; uses `COPY src/ src/` for the restore stage so no per-project maintenance is required.
+  - `tests/e2e/README.md` — prerequisites, step-by-step run instructions, and pass criteria for both suites.
+
 ---
 
 ## [0.55.0-preview] — 2026-05-05

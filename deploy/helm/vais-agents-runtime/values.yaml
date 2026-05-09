@@ -173,6 +173,13 @@ serviceAccount:
   annotations: {}
   name: ""
 
+# RBAC. pluginSupervision grants the runtime ServiceAccount `get` + `patch` on
+# apps/v1/deployments (cluster-wide) so KubernetesContainerSupervisor can
+# roll out new plugin images. Set create=false to manage RBAC externally.
+rbac:
+  create: true
+  pluginSupervision: false
+
 # Pod-level security context. Matches the Dockerfile's non-root uid/gid.
 podSecurityContext:
   runAsNonRoot: true

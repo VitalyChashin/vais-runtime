@@ -87,6 +87,14 @@ internal sealed record RuntimeOptions
     public ReloadPolicy PythonPluginsReloadPolicy { get; init; } = ReloadPolicy.Disabled;
 
     /// <summary>
+    /// Container-plugins pillar. Directory scanned for container plugin subfolders (each containing
+    /// <c>plugin.yaml</c> with <c>runtime: container</c>). Null or empty ⇒ container plugin
+    /// host disabled. Set <c>VAIS_CONTAINER_PLUGINS_DIRECTORY</c> in the container environment
+    /// to enable.
+    /// </summary>
+    public string? ContainerPluginsDirectory { get; init; }
+
+    /// <summary>
     /// v0.30 OIDC authority URL (e.g. <c>https://keycloak.example.com/realms/my-realm</c>).
     /// When set, the full JWT bearer-token authentication pipeline is wired on the runtime host.
     /// Null ⇒ auth pipeline disabled — existing localhost semantics unchanged.
@@ -247,6 +255,7 @@ internal sealed record RuntimeOptions
             PluginsHotReload = ParseReloadPolicy(Env("VAIS_PLUGINS_RELOAD_POLICY")),
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
+            ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),

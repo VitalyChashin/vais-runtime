@@ -36,10 +36,19 @@ internal sealed class ContainerPluginYamlSpec
     public string Image { get; set; } = "";
     public int Port { get; set; } = 8080;
     public string Topology { get; set; } = "standalone";
+    public string Durability { get; set; } = "";
     public int StartupTimeoutSeconds { get; set; } = 30;
     public int InvokeTimeoutSeconds { get; set; } = 60;
     public ContainerPluginYamlRetryPolicy? RetryPolicy { get; set; }
+    public ContainerPluginYamlKubernetesSpec? Kubernetes { get; set; }
     public Dictionary<string, string> Secrets { get; set; } = new();
+}
+
+internal sealed class ContainerPluginYamlKubernetesSpec
+{
+    public string ServiceUrl { get; set; } = "";
+    public string DeploymentName { get; set; } = "";
+    public string Namespace { get; set; } = "default";
 }
 
 internal sealed class ContainerPluginYamlRetryPolicy

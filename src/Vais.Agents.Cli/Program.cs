@@ -86,6 +86,9 @@ app.Configure(config =>
     config.AddCommand<PluginBuildCommand>("plugin-build")
         .WithDescription("Build a container plugin image via 'docker build'. Pass --push to also push to the registry.");
 
+    config.AddCommand<PluginDeployCommand>("plugin-deploy")
+        .WithDescription("Deploy a container plugin to Kubernetes using the built-in Helm chart (helm upgrade --install).");
+
     config.AddCommand<PluginInitCommand>("plugin-init")
         .WithDescription("Scaffold a plugin.yaml (and Dockerfile for dotnet) in the current directory.");
 

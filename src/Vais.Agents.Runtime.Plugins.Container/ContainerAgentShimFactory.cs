@@ -8,7 +8,7 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 
 internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
 {
-    private readonly ContainerSupervisor _supervisor;
+    private readonly IContainerSupervisor _supervisor;
     private readonly ContainerPluginDescriptor _descriptor;
     private readonly ContainerPluginLoaderOptions _options;
     private readonly ILoggerFactory _loggerFactory;
@@ -16,7 +16,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
     public string HandlerTypeName => _descriptor.HandlerTypeName;
 
     internal ContainerAgentShimFactory(
-        ContainerSupervisor supervisor,
+        IContainerSupervisor supervisor,
         ContainerPluginDescriptor descriptor,
         ContainerPluginLoaderOptions options,
         ILoggerFactory loggerFactory)
@@ -42,7 +42,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
 
         var invokeClient = new HttpClient
         {
-            BaseAddress = new Uri($"http://localhost:{_descriptor.Port}"),
+            BaseAddress = new Uri(_descriptor.InvokeBaseUrl),
             Timeout = TimeSpan.FromSeconds(_descriptor.InvokeTimeoutSeconds + 10),
         };
 
