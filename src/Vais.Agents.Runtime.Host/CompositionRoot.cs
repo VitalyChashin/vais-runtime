@@ -15,6 +15,7 @@ using Vais.Agents;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
+using Vais.Agents.Control.Mcp;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Core.PowerFx;
@@ -257,6 +258,7 @@ internal static class CompositionRoot
         services.AddDefaultToolGatewayMiddlewareFactory();
 
         services.AddAgentManifestInstantiator();
+        services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();
 

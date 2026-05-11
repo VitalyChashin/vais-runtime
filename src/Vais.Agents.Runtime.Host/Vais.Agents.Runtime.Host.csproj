@@ -37,6 +37,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.AgentLogs\Vais.Agents.Observability.AgentLogs.csproj" />
     <ProjectReference Include="..\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Mcp\Vais.Agents.Control.Mcp.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Container\Vais.Agents.Runtime.Plugins.Container.csproj" />
