@@ -213,7 +213,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         }
     }
 
-    private static async Task<bool> ApplyContainerPluginAsync(
+    internal static async Task<bool> ApplyContainerPluginAsync(
         IAgentControlPlaneClient client,
         ContainerPluginManifest manifest,
         string idempotencyKey,

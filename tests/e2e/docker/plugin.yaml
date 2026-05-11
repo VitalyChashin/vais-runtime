@@ -1,9 +1,9 @@
-apiVersion: v0.24
+apiVersion: vais.agents/v1
 kind: ContainerPlugin
 metadata:
-  name: echo-plugin
+  id: echo-plugin
+  version: "1.0"
+  description: Echo container plugin for Docker E2E tests.
 spec:
-  runtime: container
   image: vais-echo:test
   port: 8080
-  durability: "standalone: managed by DockerContainerSupervisor on the local daemon"

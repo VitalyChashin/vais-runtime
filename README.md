@@ -12,6 +12,8 @@
 
 Stack-neutral agent library for .NET — durable multi-tenant hosting with pluggable AI backends. Pick **Microsoft Agent Framework** or **Semantic Kernel** via DI; swap without rewriting your agent.
 
+> 🚀 **New here?** [**QUICKSTART.md**](QUICKSTART.md) takes you from `git clone` to a running multi-agent graph with MCP tools + observable LLM/MCP gateways in ~15 minutes.
+
 ## Why Vais.Agents?
 
 Most .NET agent libraries lock you to one AI stack. Start on Semantic Kernel; switching to Microsoft Agent Framework means rewriting. Ship a multi-tenant runtime; build durability yourself. Vais.Agents addresses both: a stack-neutral library that treats SK and MAF as swappable backends, paired with an Orleans-based virtual-actor host that gives every agent grain-level durability and per-session checkpointing without bespoke plumbing.
