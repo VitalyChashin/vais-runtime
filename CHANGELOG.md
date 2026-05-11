@@ -21,6 +21,10 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
   **Note:** `SseClientTransport` does not exist as a standalone class in `ModelContextProtocol.Core` 1.2.0. SSE is handled via `HttpClientTransport` with `TransportMode = HttpTransportMode.Sse`. Auth (`AuthRef`/`secret://`) and `stdio` transport are deferred to a follow-up.
 
+### Fixed
+
+- **`PhysicalMcpConnectionService` circular DI dependency** — a cycle between `PhysicalMcpConnectionService → McpTranslatorInvalidationHook → AgentManifestTranslator → INamedToolSourceProvider → PhysicalMcpConnectionService` prevented `GenericWebHostService` (Kestrel) from starting, silently leaving the HTTP control plane unbound while Orleans and OTEL continued running. Fixed by adding a second internal constructor that accepts `IServiceProvider` so hooks are resolved lazily at dispatch time rather than at construction. The existing `IEnumerable<IMcpServerConnectionChangedHook>` constructor is retained for unit tests.
+
 - **Container plugin runtime** (`src/Vais.Agents.Runtime.Plugins.Container/`). New `Vais.Agents.Runtime.Plugins.Container` package enables Docker-image-based plugins that speak the IP-1 HTTP protocol (`/v1/invoke`, `/v1/stream`, `/v1/metadata`, `/health`). A container image satisfying the protocol can be declared with `runtime: container` in `plugin.yaml` and the runtime handles the full lifecycle.
 
   - `ContainerPluginHostService : IHostedService` — scans the configured `PluginsDirectory` for `plugin.yaml` files with `runtime: container`, pulls and starts each container via Docker.DotNet, validates ABI (version range + `handlerTypeName` from `GET /v1/metadata`), and registers a `ContainerAgentShimFactory` per plugin. Non-fatal: a plugin that fails to start or fails ABI validation is logged and skipped; the service continues for the remaining plugins.
