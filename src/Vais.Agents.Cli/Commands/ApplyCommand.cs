@@ -17,9 +17,17 @@ namespace Vais.Agents.Cli.Commands;
 /// (agents + graphs in one <c>---</c>-separated YAML) via
 /// <see cref="JsonAgentGraphManifestLoader.LoadAllResourcesFromStringAsync"/> /
 /// <see cref="YamlAgentGraphManifestLoader.LoadAllResourcesFromStringAsync"/>.
+/// <para>
+/// For <c>ContainerPlugin</c> manifests with a <c>spec.build</c> block, the CLI
+/// runs <c>docker build</c> (and optionally <c>docker push</c>) before posting the
+/// manifest to the control plane. Pass <c>--no-build</c> to skip this step.
+/// </para>
 /// </summary>
 internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
 {
+    internal static Func<string, CancellationToken, Task<int>> DockerRun = DockerRunner.RunAsync;
+    internal static Func<string, CancellationToken, Task<bool>> DockerImageExists = DockerRunner.ImageExistsAsync;
+
     public sealed class Settings : CommandSettings
     {
         [Description("Path to the manifest file (.yaml / .yml / .json). Use '-' to read from stdin as YAML.")]
@@ -37,6 +45,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         [Description("Bearer token override (wins over VAIS_TOKEN + config).")]
         [CommandOption("--token")]
         public string? Token { get; init; }
+
+        [Description("Skip the local docker build step even when spec.build is present. The manifest is applied as-is.")]
+        [CommandOption("--no-build")]
+        public bool NoBuild { get; init; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -109,7 +121,9 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                         await ApplyMcpServerAsync(client, mcpServerCase.Server, idempotencyKey, cancellationToken);
                         break;
                     case ManifestResource.ContainerPluginCase containerPluginCase:
-                        await ApplyContainerPluginAsync(client, containerPluginCase.Manifest, idempotencyKey, cancellationToken);
+                        if (!await ApplyContainerPluginAsync(client, containerPluginCase.Manifest, idempotencyKey,
+                                settings.File, settings.NoBuild, cancellationToken))
+                            anyError = true;
                         break;
                     default:
                         AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
@@ -199,8 +213,56 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         }
     }
 
-    private static async Task ApplyContainerPluginAsync(IAgentControlPlaneClient client, ContainerPluginManifest manifest, string idempotencyKey, CancellationToken ct)
+    private static async Task<bool> ApplyContainerPluginAsync(
+        IAgentControlPlaneClient client,
+        ContainerPluginManifest manifest,
+        string idempotencyKey,
+        string manifestFilePath,
+        bool noBuild,
+        CancellationToken ct)
     {
+        if (manifest.Spec?.Build is { } build && !noBuild)
+        {
+            var manifestDir = manifestFilePath == "-"
+                ? Directory.GetCurrentDirectory()
+                : Path.GetDirectoryName(Path.GetFullPath(manifestFilePath)) ?? Directory.GetCurrentDirectory();
+
+            var contextPath = Path.GetFullPath(Path.Combine(manifestDir, build.Context));
+            var dockerfilePath = Path.GetFullPath(Path.Combine(contextPath, build.Dockerfile));
+
+            if (!await DockerImageExists(manifest.Spec.Image, ct))
+            {
+                AnsiConsole.MarkupLine($"Building [bold]{Markup.Escape(manifest.Spec.Image)}[/] from [grey]{Markup.Escape(contextPath)}[/]");
+
+                var buildArgsStr = build.Args is { Count: > 0 }
+                    ? string.Join(" ", build.Args.Select(kv => $"--build-arg {kv.Key}={kv.Value}"))
+                    : "";
+                var buildDockerArgs = string.IsNullOrEmpty(buildArgsStr)
+                    ? $"build -t {manifest.Spec.Image} -f {dockerfilePath} {contextPath}"
+                    : $"build -t {manifest.Spec.Image} -f {dockerfilePath} {buildArgsStr} {contextPath}";
+
+                var buildExit = await DockerRun(buildDockerArgs, ct);
+                if (buildExit != 0)
+                {
+                    AnsiConsole.MarkupLine($"[red]✗[/] docker build failed (exit {buildExit})");
+                    return false;
+                }
+                AnsiConsole.MarkupLine($"[green]✓[/] built {Markup.Escape(manifest.Spec.Image)}");
+
+                if (build.Push)
+                {
+                    AnsiConsole.MarkupLine($"Pushing [bold]{Markup.Escape(manifest.Spec.Image)}[/]");
+                    var pushExit = await DockerRun($"push {manifest.Spec.Image}", ct);
+                    if (pushExit != 0)
+                    {
+                        AnsiConsole.MarkupLine($"[red]✗[/] docker push failed (exit {pushExit})");
+                        return false;
+                    }
+                    AnsiConsole.MarkupLine($"[green]✓[/] pushed {Markup.Escape(manifest.Spec.Image)}");
+                }
+            }
+        }
+
         try
         {
             var handle = await client.CreateContainerPluginAsync(manifest, idempotencyKey, ct);
@@ -211,6 +273,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             var updated = await client.UpdateContainerPluginAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
             AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (container-plugin, version {updated.Version})");
         }
+        return true;
     }
 
     private static bool IsJson(string pathOrHint)

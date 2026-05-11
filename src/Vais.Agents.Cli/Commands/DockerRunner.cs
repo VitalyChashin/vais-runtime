@@ -27,4 +27,22 @@ internal static class DockerRunner
         await process.WaitForExitAsync(ct);
         return process.ExitCode;
     }
+
+    /// <summary>
+    /// Checks whether a local Docker image exists by running <c>docker image inspect</c>
+    /// with suppressed output. Returns <c>true</c> when the image is present (exit 0).
+    /// </summary>
+    internal static async Task<bool> ImageExistsAsync(string image, CancellationToken ct)
+    {
+        var psi = new ProcessStartInfo("docker", $"image inspect {image}")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        using var process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start docker process.");
+        await process.WaitForExitAsync(ct);
+        return process.ExitCode == 0;
+    }
 }
