@@ -5,13 +5,16 @@ using System.ComponentModel;
 using System.Text;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Vais.Agents.Control.Http;
 
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
 /// Deploys a container plugin to Kubernetes using <c>helm upgrade --install</c>
-/// with the built-in <c>vais-plugin</c> Helm chart.
-/// Wraps <c>helm upgrade --install &lt;release&gt; &lt;chart&gt; [overrides]</c>.
+/// with the built-in <c>vais-plugin</c> Helm chart, then registers the plugin
+/// with the running runtime via the control plane (create-or-update).
+/// Pass <c>--no-apply</c> to skip the control-plane step (e.g. when the runtime
+/// is not yet up during initial cluster bootstrap).
 /// </summary>
 internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Settings>
 {
@@ -39,6 +42,10 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         [CommandOption("--port")]
         public int Port { get; init; } = 8080;
 
+        [Description("Image pull policy passed to the Helm chart (e.g. Always, IfNotPresent, Never). Default: IfNotPresent.")]
+        [CommandOption("--image-pull-policy")]
+        public string ImagePullPolicy { get; init; } = "IfNotPresent";
+
         [Description("Path to a custom Helm values file. When omitted, uses the built-in chart defaults.")]
         [CommandOption("-f|--values")]
         public string? ValuesFile { get; init; }
@@ -50,6 +57,18 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         [Description("Dry-run mode: pass --dry-run to helm without installing.")]
         [CommandOption("--dry-run")]
         public bool DryRun { get; init; }
+
+        [Description("Skip registering the plugin with the runtime control plane after the Helm install.")]
+        [CommandOption("--no-apply")]
+        public bool NoApply { get; init; }
+
+        [Description("Override the active kubeconfig context for the vais runtime connection.")]
+        [CommandOption("--context")]
+        public string? Context { get; init; }
+
+        [Description("Bearer token for the vais runtime control plane. Overrides the token in the active context.")]
+        [CommandOption("--token")]
+        public string? Token { get; init; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -73,16 +92,39 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
             AnsiConsole.MarkupLine($"Running: [dim]helm {Markup.Escape(args)}[/]");
             var exit = await HelmRun(args, cancellationToken);
 
-            if (exit == 0)
+            if (exit != 0)
             {
-                if (!settings.DryRun)
-                    AnsiConsole.MarkupLine(
-                        $"[green]✓[/] {Markup.Escape(settings.ReleaseName)} deployed to namespace {Markup.Escape(settings.Namespace)}");
-                return ProblemDetailsParser.ExitSuccess;
+                AnsiConsole.MarkupLine($"[red]✗[/] helm exited with code {exit}");
+                return ProblemDetailsParser.ExitApiError;
             }
 
-            AnsiConsole.MarkupLine($"[red]✗[/] helm exited with code {exit}");
-            return ProblemDetailsParser.ExitApiError;
+            if (settings.DryRun)
+                return ProblemDetailsParser.ExitSuccess;
+
+            AnsiConsole.MarkupLine(
+                $"[green]✓[/] {Markup.Escape(settings.ReleaseName)} deployed to namespace {Markup.Escape(settings.Namespace)}");
+
+            if (settings.NoApply)
+                return ProblemDetailsParser.ExitSuccess;
+
+            var cfg = VaisConfigFile.LoadOrDefault();
+            var client = ClientFactory.Create(cfg, settings.Context, settings.Token);
+            var manifest = BuildManifest(settings);
+            var idempotencyKey = Guid.NewGuid().ToString("N");
+
+            AnsiConsole.MarkupLine("Registering plugin with runtime...");
+            try
+            {
+                var handle = await client.CreateContainerPluginAsync(manifest, idempotencyKey, cancellationToken);
+                AnsiConsole.MarkupLine($"{Markup.Escape(handle.Id)} [green]registered[/] (container-plugin, version {Markup.Escape(handle.Version)})");
+            }
+            catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+            {
+                var updated = await client.UpdateContainerPluginAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, cancellationToken);
+                AnsiConsole.MarkupLine($"{Markup.Escape(updated.Id)} [blue]updated[/] (container-plugin, version {Markup.Escape(updated.Version)})");
+            }
+
+            return ProblemDetailsParser.ExitSuccess;
         }
         finally
         {
@@ -103,6 +145,7 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         sb.Append($" --set pluginName={settings.ReleaseName}");
         sb.Append($" --set image.repository={ImageRepository(settings.Image)}");
         sb.Append($" --set image.tag={ImageTag(settings.Image)}");
+        sb.Append($" --set image.pullPolicy={settings.ImagePullPolicy}");
         sb.Append($" --set replicaCount={settings.Replicas}");
         sb.Append($" --set pluginPort={settings.Port}");
 
@@ -117,6 +160,26 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
             sb.Append(" --dry-run");
 
         return sb.ToString();
+    }
+
+    private static ContainerPluginManifest BuildManifest(Settings settings)
+    {
+        var serviceUrl = $"http://{settings.ReleaseName}.{settings.Namespace}.svc.cluster.local:{settings.Port}";
+        return new ContainerPluginManifest(settings.ReleaseName, Version: "1.0")
+        {
+            Spec = new ContainerPluginSpec
+            {
+                Image = settings.Image,
+                Port = settings.Port,
+                Topology = "kubernetes",
+                Kubernetes = new ContainerPluginKubernetesConfig
+                {
+                    ServiceUrl = serviceUrl,
+                    DeploymentName = settings.ReleaseName,
+                    Namespace = settings.Namespace,
+                },
+            },
+        };
     }
 
     private static string ImageRepository(string image)

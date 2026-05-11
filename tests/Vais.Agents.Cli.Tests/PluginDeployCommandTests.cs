@@ -18,6 +18,7 @@ public sealed class PluginDeployCommandTests
         string ns = "default",
         int replicas = 1,
         int port = 8080,
+        string imagePullPolicy = "IfNotPresent",
         string? valuesFile = null,
         string[]? setValues = null,
         bool dryRun = false) =>
@@ -28,6 +29,7 @@ public sealed class PluginDeployCommandTests
             Namespace = ns,
             Replicas = replicas,
             Port = port,
+            ImagePullPolicy = imagePullPolicy,
             ValuesFile = valuesFile,
             SetValues = setValues,
             DryRun = dryRun,
@@ -126,5 +128,22 @@ public sealed class PluginDeployCommandTests
         var args = PluginDeployCommand.BuildHelmArgs(DefaultSettings(), "/tmp/chart");
 
         args.Should().Contain("--create-namespace");
+    }
+
+    [Fact]
+    public void BuildHelmArgs_DefaultImagePullPolicy_IsIfNotPresent()
+    {
+        var args = PluginDeployCommand.BuildHelmArgs(DefaultSettings(), "/tmp/chart");
+
+        args.Should().Contain("--set image.pullPolicy=IfNotPresent");
+    }
+
+    [Fact]
+    public void BuildHelmArgs_CustomImagePullPolicy_IsPassedThrough()
+    {
+        var args = PluginDeployCommand.BuildHelmArgs(
+            DefaultSettings(imagePullPolicy: "Never"), "/tmp/chart");
+
+        args.Should().Contain("--set image.pullPolicy=Never");
     }
 }

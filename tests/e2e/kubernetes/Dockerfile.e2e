@@ -1,5 +1,6 @@
 # Builds the runtime image for the Kubernetes E2E suite.
-# Extends the base runtime with the echo-plugin ContainerPlugin manifest baked in.
+# The runtime starts with no baked-in plugins; the E2E test registers echo-plugin
+# via `vais plugin-deploy` after the runtime is up (validates the P11 CLI-publish path).
 #
 # Build context: repo root
 #   docker build -f tests/e2e/kubernetes/Dockerfile.e2e -t vais-agents-runtime:e2e .
@@ -23,18 +24,14 @@ WORKDIR /app
 RUN addgroup -S -g 65532 vais \
     && adduser -S -u 65532 -G vais vais \
     && mkdir -p /var/lib/vais/plugins \
-    && mkdir -p /var/lib/vais/container-plugins/echo-plugin \
     && chown -R vais:vais /var/lib/vais
 
 USER vais:vais
 
 COPY --from=build --chown=vais:vais /app/publish ./
 
-# Bake in the echo-plugin ContainerPlugin descriptor so the runtime loads it on startup.
-COPY --chown=vais:vais tests/e2e/kubernetes/plugin.yaml /var/lib/vais/container-plugins/echo-plugin/plugin.yaml
-
 ENV VAIS_PLUGINS_DIRECTORY=""
-ENV VAIS_CONTAINER_PLUGINS_DIRECTORY=/var/lib/vais/container-plugins
+ENV VAIS_CONTAINER_PLUGINS_DIRECTORY=""
 
 VOLUME ["/var/lib/vais/plugins"]
 EXPOSE 8080

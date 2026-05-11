@@ -1,8 +1,8 @@
 # E2E Kubernetes Suite — tests container plugin Kubernetes topology.
 #
 # Uses Docker Desktop Kubernetes (shared Docker daemon — imagePullPolicy: Never).
-# The runtime runs as a K8s Deployment (Helm); the echo plugin runs as a separate
-# K8s Deployment created by `vais plugin-deploy`.
+# The runtime runs as a K8s Deployment (Helm); the echo plugin is deployed and
+# registered with the running runtime via `vais plugin-deploy` (validates P11).
 #
 # Prerequisites:
 #   - Docker Desktop with Kubernetes enabled
@@ -54,35 +54,16 @@ function Wait-ForPlugin([string]$name, [string]$state = "Ready", [int]$timeoutSe
     return $null
 }
 
-function Wait-ForPods([string]$label, [int]$timeoutSec = 120) {
-    kubectl wait pod -n $Namespace -l $label `
-        --for=condition=Ready --timeout="${timeoutSec}s" 2>&1 | Out-Null
-}
-
 # ── Setup ─────────────────────────────────────────────────────────────────────
 Write-Host "`n=== E2E Kubernetes Suite ===" -ForegroundColor Cyan
 
-Write-Host "[1/8] Build images (imagePullPolicy: Never — Docker Desktop shared daemon)"
+Write-Host "[1/7] Build images (imagePullPolicy: Never — Docker Desktop shared daemon)"
 docker build -t vais-echo:test  "$e2eRoot\shared\echo-plugin" -q | Out-Null
 docker tag vais-echo:test vais-echo:test-v2
 docker build -t vais-agents-runtime:e2e "$repoRoot" -f "$here\Dockerfile.e2e" -q | Out-Null
 
-# Deploy echo-plugin BEFORE the runtime so the runtime can contact it at startup.
-# The plugin.yaml (baked into the runtime image) uses the echo-plugin ClusterIP service.
-Write-Host "[2/8] Create namespace + deploy echo plugin to K8s"
+Write-Host "[2/7] Create namespace + Helm install runtime"
 kubectl create namespace $Namespace --dry-run=client -o yaml | kubectl apply -f - | Out-Null
-& $VaisExe plugin-deploy echo-plugin `
-    --image vais-echo:test `
-    --namespace $Namespace `
-    --replicas 1
-
-Write-Host "[3/8] Patch imagePullPolicy → Never; wait for echo-plugin ready"
-# Strategic merge patch: updates only the named container's imagePullPolicy.
-kubectl patch deployment echo-plugin -n $Namespace `
-    -p '{"spec":{"template":{"spec":{"containers":[{"name":"echo-plugin","imagePullPolicy":"Never"}]}}}}'
-kubectl rollout status deployment/echo-plugin -n $Namespace --timeout=60s
-
-Write-Host "[4/8] Helm install runtime ($Namespace)"
 helm upgrade --install vais-runtime $chart `
     --namespace $Namespace --create-namespace `
     --set image.repository=vais-agents-runtime `
@@ -92,9 +73,8 @@ helm upgrade --install vais-runtime $chart `
     --set rbac.create=true `
     --set rbac.pluginSupervision=true `
     --wait --timeout 120s
-# Note: VAIS_CONTAINER_PLUGINS_DIRECTORY is baked into the Dockerfile.e2e image.
 
-Write-Host "[5/8] Port-forward runtime service → localhost:$RuntimePort"
+Write-Host "[3/7] Port-forward runtime service → localhost:$RuntimePort"
 $fwdProc = Start-Process kubectl `
     -ArgumentList "port-forward -n $Namespace svc/vais-runtime-vais-agents-runtime $RuntimePort`:8080" `
     -PassThru -WindowStyle Hidden
@@ -117,8 +97,15 @@ users: []
 "@ | Set-Content $tmpConfig
 $env:VAIS_CONFIG = $tmpConfig
 
+Write-Host "[4/7] Deploy + register echo plugin (Helm + control plane)"
+& $VaisExe plugin-deploy echo-plugin `
+    --image vais-echo:test `
+    --namespace $Namespace `
+    --image-pull-policy Never `
+    --replicas 1
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
-Write-Host "[6/8] Wait for echo-plugin to reach Ready"
+Write-Host "[5/7] Wait for echo-plugin to reach Ready"
 $plugin = Wait-ForPlugin "echo-plugin" "Ready" 120
 Assert "echo-plugin present"              ($null -ne $plugin)
 if ($null -ne $plugin) {
@@ -128,7 +115,7 @@ if ($null -ne $plugin) {
     Assert "namespace set"                    ($plugin.kubernetesNamespace -eq $Namespace)
 }
 
-Write-Host "[7/8] Push new image → expect RolloutStarted (HTTP 202)"
+Write-Host "[6/7] Push new image → expect RolloutStarted (HTTP 202)"
 # vais plugin-push would do `docker push` first, which fails for local-only images.
 # For E2E we call the runtime reload endpoint directly.
 $reloadResp = Invoke-RestMethod -Method Post `
@@ -137,7 +124,7 @@ $reloadResp = Invoke-RestMethod -Method Post `
     -ContentType "application/json" -ErrorAction SilentlyContinue
 Assert "reload returns RolloutStarted"    ($reloadResp.status -eq 5)
 
-Write-Host "[8/8] plugin-status JSON fields"
+Write-Host "[7/7] plugin-status JSON fields"
 $statusJson = & $VaisExe plugin-status --output json 2>$null | ConvertFrom-Json
 $ep = $statusJson.items | Where-Object { $_.name -eq "echo-plugin" }
 Assert "topology field in JSON"           ($ep.topology -eq "kubernetes")
