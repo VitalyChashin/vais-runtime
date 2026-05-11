@@ -218,4 +218,4 @@ Typical billing-path output:
 - [Graph predicate operators reference](../reference/graph-predicate-operators.md) — the full ten-operator vocabulary + `allOf` / `anyOf` / `not` combinators + inline PowerFx `=...` expressions + the `HandlerRef` escape.
 - [Graph orchestration concept](../concepts/graph-orchestration.md) — node + edge + predicate model, orchestrator trade-offs, choose-your-orchestrator decision table.
 - [Events reference](../reference/events.md) — `AgentGraphEvent` closed hierarchy + SSE wire-event-name mapping.
-- `samples/AgentGraphInProcess` + `samples/AgentGraphYamlLoader` — runnable walkthroughs (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/AgentGraphInProcess`](../../samples/AgentGraphInProcess) + [`samples/AgentGraphYamlLoader`](../../samples/AgentGraphYamlLoader) — runnable walkthroughs.

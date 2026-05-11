@@ -204,4 +204,4 @@ All four are resolved from DI at invocation time by the orchestrator's construct
 - [Events reference](../reference/events.md) — `AgentGraphEvent` closed hierarchy.
 - [Compose an agent graph (YAML) guide](../guides/compose-an-agent-graph-yaml.md)
 - [Run resumable graphs on Orleans guide](../guides/run-resumable-graphs-on-orleans.md)
-- `samples/AgentGraphInProcess` + `samples/AgentGraphYamlLoader` + `samples/AgentGraphMaf` + `samples/AgentGraphResumeOnOrleans` — runnable walkthroughs (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/AgentGraphInProcess`](../../samples/AgentGraphInProcess) + [`samples/AgentGraphYamlLoader`](../../samples/AgentGraphYamlLoader) + [`samples/AgentGraphMaf`](../../samples/AgentGraphMaf) + [`samples/AgentGraphResumeOnOrleans`](../../samples/AgentGraphResumeOnOrleans) — runnable walkthroughs.

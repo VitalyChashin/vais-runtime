@@ -20,6 +20,7 @@ packages/
 # OS
 Thumbs.db
 .DS_Store
+*.stackdump
 
 # docker-compose bind-mount data (Redis dump, Langfuse Postgres, etc.)
 deploy/compose/data/
@@ -33,10 +34,20 @@ deploy/compose/.env
 
 # CodeGraph generated index (tool artifact, never committed)
 .codegraph/
+.code-review-graph/
 
 # Python build artifacts
 __pycache__/
 *.pyc
 *.pyo
 .venv/
+*.egg-info/
+
+# Sample-local build / run output
+samples/**/publish/
+samples/**/logs/
+
+# Workspace-private trees (defence in depth — never committed to the OSS repo)
 plans/
+research/
+modules/

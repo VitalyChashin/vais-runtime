@@ -1,0 +1,7 @@
+# CODEOWNERS — auto-requests reviews from listed owners on PRs touching matching paths.
+# Syntax: <pattern> <owner1> <owner2> ...
+# Docs: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-security/customizing-your-repository/about-code-owners
+#
+# TODO: replace @<maintainer-handle> below with the real GitHub handle(s) once decided.
+
+* @<maintainer-handle>

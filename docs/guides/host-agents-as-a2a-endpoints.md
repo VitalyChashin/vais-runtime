@@ -160,4 +160,4 @@ Same mechanic as v0.7 MCP inbound + v0.6 control plane — all three use the `IA
 - [Delegate to an A2A remote agent](delegate-to-a2a-remote-agent.md) — v0.4 outbound counterpart.
 - [Host agents as MCP tools](host-agents-as-mcp-tools.md) — v0.7 MCP inbound (parallel shape).
 - [Run on Orleans locally](run-on-orleans-locally.md) — prerequisite for `OrleansTaskStore` durability.
-- `samples/A2AServerBasics` + `samples/A2AInterruptResumeOrleans` — runnable walkthroughs (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/A2AServerBasics`](../../samples/A2AServerBasics) + [`samples/A2AInterruptResumeOrleans`](../../samples/A2AInterruptResumeOrleans) — runnable walkthroughs.

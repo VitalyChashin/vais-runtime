@@ -291,17 +291,15 @@ green.
    two-or-three-commit bundle has landed).
 2. Draft a tag message summarising the pillar + PRs + key decisions + explicit
    "Deferred to next pillar" bullets. Model on the most recent entry in
-   [`../../plans/actor-agents-oss-milestone-log.md`](../../plans/actor-agents-oss-milestone-log.md).
+   [`../../CHANGELOG.md`](../../CHANGELOG.md).
 3. Create the tag locally: `git tag -a v0.X.0-preview <sha> -m "<message>"`.
 4. **Do not push** the tag unless the user explicitly asks. Tags are close to immutable;
    a pushed mistake is expensive.
-5. Append a dated entry to `plans/actor-agents-oss-milestone-log.md` with the version,
-   commit SHA, and deferred items.
-6. Update each deferred item's destination: add it to
+5. Update each deferred item's destination: add it to
    [`../roadmap/deferred-backlog.md`](../roadmap/deferred-backlog.md) under the right
    theme.
 
-**Report:** tag name + commit SHA + milestone-log entry link. Confirm tag was not pushed.
+**Report:** tag name + commit SHA + CHANGELOG entry link. Confirm tag was not pushed.
 
 ---
 
@@ -375,15 +373,14 @@ scope here — consistency of *relative* links is the goal.
 ### `/deferred` — append an entry to the deferred backlog
 
 **When:** any PR or milestone defers work. Per
-[`../../AGENTS.md`](../../AGENTS.md) §Agent etiquette rule 10, deferrals go into
+[`../../AGENTS.md`](../../AGENTS.md) §Agent etiquette rule 8, deferrals go into
 [`../roadmap/deferred-backlog.md`](../roadmap/deferred-backlog.md).
 
 **Recipe.** Open the backlog, find the matching theme (or add a new one if none fits),
 append a bullet:
 
 ```markdown
-- **<one-line item>.** Source: [<plan-doc>](../../plans/<file>.md) (YYYY-MM-DD).
-  Next step: <concrete follow-up>.
+- **<one-line item>.** Next step: <concrete follow-up>.
 ```
 
 **Report:** the theme hit + the one-line entry added.
@@ -406,15 +403,13 @@ or skill you wire up must respect them:
 4. **No `--no-verify` and no `--amend` of pushed commits.** Ever.
 5. **No destructive git operations** (`reset --hard`, `push --force`, branch / tag
    deletion) without explicit user authorisation for that specific operation.
-6. **Check `plans/` before starting work on a pillar.** If the pillar has a plan-doc
-   triplet (spike / findings / pillar plan), read them.
-7. **Public API analyzer is authoritative.** If RS0016 / RS0017 / RS0025 / RS0026 /
+6. **Public API analyzer is authoritative.** If RS0016 / RS0017 / RS0025 / RS0026 /
    RS0037 fires, the fix is to update `PublicAPI.Unshipped.txt` — not to edit
    `PublicAPI.Shipped.txt` or to suppress the diagnostic.
-8. **Every new public type needs XML docs.** CI will fail without them.
-9. **Ask before scope-expanding.** A one-line fix should not balloon into a refactor
+7. **Every new public type needs XML docs.** CI will fail without them.
+8. **Ask before scope-expanding.** A one-line fix should not balloon into a refactor
    unless the user asked for the refactor.
-10. **Record deferred work.** Use the `/deferred` skill above.
+9. **Record deferred work.** Use the `/deferred` skill above.
 
 ---
 

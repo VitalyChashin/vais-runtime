@@ -6,8 +6,8 @@ namespace Vais.Agents;
 /// <summary>
 /// A step in the platform-side preprocessing pipeline that runs inside the grain turn,
 /// before <c>ContainerAgentShim</c> constructs the <c>InvokeRequest</c>.
-/// Built-in Phase 1 implementations: <c>HistoryAssembler</c> (Order 0), <c>SystemPromptInjector</c> (Order 10).
-/// Phase 2 implementations (memory, policy enforcement) register via
+/// Built-in implementations: <c>HistoryAssembler</c> (Order 0), <c>SystemPromptInjector</c> (Order 10).
+/// Custom implementations (e.g. memory injection, policy enforcement) register via
 /// <c>services.AddAgentPreprocessor&lt;T&gt;()</c> without modifying the shim.
 /// </summary>
 public interface IAgentPreprocessor

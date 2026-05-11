@@ -93,7 +93,6 @@ Licence: **Apache-2.0**. Copyright is held by *VAIS contributors*. Every `.cs` f
 | `deploy/` | `compose/` (docker-compose recipes, bases + overlays), `helm/` (runtime + operator charts), `crds/` (standalone CRDs for non-Helm installs). |
 | `contracts/` | Versioned contract artefacts (JSON schemas, OPA input schema, OpenAPI) consumed by downstream repos. |
 | `artifacts/` | Build outputs, including `artifacts/packages/` — the local NuGet feed samples consume from. Gitignored. |
-| `plans/` | Phase / pillar planning docs, milestone log, findings. Append-only, time-stamped. |
 | `.github/workflows/` | CI definitions. `ci.yml` is the authoritative build + test recipe. |
 | `Directory.Build.props` | Global MSBuild defaults (target framework, analyzers, package metadata). |
 | `Directory.Packages.props` | Central Package Management (CPM) — every dependency version pinned here. |
@@ -259,14 +258,11 @@ Before adding a sample, check the table in `samples/README.md` — if the scenar
   - Breaking API changes must be listed under `Changed` with migration guidance (old signature → new signature, what callers must do).
   - At a milestone, rename `[Unreleased]` to the new version + date (e.g. `## [0.24.0-preview] — 2026-05-01`), add a fresh empty `## [Unreleased]` block above it.
 - At a milestone:
-  1. Tick every completed item in the current phase / pillar plan under `../plans/`.
-  2. Append a dated entry to `../plans/actor-agents-oss-milestone-log.md` summarising what shipped.
-  3. Rename `[Unreleased]` in `CHANGELOG.md` to the new version block; add a new empty `[Unreleased]` section above it.
-  4. Promote `PublicAPI.Unshipped.txt` → `PublicAPI.Shipped.txt` for every affected project.
-  5. Create the annotated tag.
-  6. Add a "Deferred to the next pillar" bullet to the milestone log for each item that slipped.
+  1. Rename `[Unreleased]` in `CHANGELOG.md` to the new version block; add a new empty `[Unreleased]` section above it.
+  2. Promote `PublicAPI.Unshipped.txt` → `PublicAPI.Shipped.txt` for every affected project.
+  3. Create the annotated tag.
 
-A "pillar" is a coherent feature set scoped to one preview version. A phase is a group of pillars pursuing one thematic goal (see `../plans/`).
+A "pillar" is a coherent feature set scoped to one preview version. A phase is a group of pillars pursuing one thematic goal.
 
 ---
 
@@ -290,7 +286,7 @@ Rules:
 - **Link from `docs/index.md`** — an unlinked doc is an unfindable doc.
 - **Concept page ↔ guide ↔ sample.** Cross-link so a reader can jump between design rationale, recipe, and runnable code.
 - **When to write an ADR vs. a concept page.** ADR = a single decision + its alternatives + its consequences, frozen in time. Concept page = the current state of a pillar, kept up to date. When a concept page starts describing "we tried X, it didn't work, we picked Y" — that belongs in an ADR the concept page links to.
-- **Planning docs live at the workspace level (`../plans/`).** Do not create a `plans/` folder inside `agentic/` — all planning content belongs at the workspace root, not in the OSS repo.
+
 ---
 
 ## Commits & pull requests
@@ -311,14 +307,12 @@ Guidance for AI assistants working in this repo:
 1. **Read before edit.** Open the file first; edit against actual content, not expected content.
 2. **Prefer `Edit` over `Write`** for existing files — preserves trailing newlines, file mode, and minimises diff churn.
 3. **Do not start dev servers proactively.** `dotnet run`, `docker compose up`, `helm install` — these are user-initiated. Print the command instead.
-4. **Respect the dual-repo boundary (if applicable).** If this workspace lives inside a parent repo as a git submodule or subtree, commit to the OSS repo (`oss/agentic/`) separately from the parent.
-5. **Trust the CI recipe.** If the CI workflow uses `dotnet build --configuration Release --no-restore`, don't invent `--force` or `--no-cache`.
-6. **Check existing plans before starting new work.** `../plans/actor-agents-oss-milestone-log.md` captures decisions made. If your task touches a pillar, open that pillar's triplet of plan + spike + findings docs at `../plans/`.
-7. **Use the Public API analyzer as your guide.** When it complains, it's right. Don't edit `PublicAPI.Shipped.txt` to silence it.
-8. **Every public type needs XML docs.** If you add one without a doc comment, CI will fail.
-9. **When in doubt about scope, ask.** Large unsolicited refactors are rejected on principle — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
-10. **Record deferred work.** If your PR defers something, add it to [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md) with a dated entry.
-11. **Update `CHANGELOG.md` for every notable change.** Add an entry under `## [Unreleased]` — `Added` for new features, `Changed` for behaviour or API changes (include migration guidance for breaking changes), `Fixed` for bug fixes. Do this in the same commit as the change, not as a follow-up.
+4. **Trust the CI recipe.** If the CI workflow uses `dotnet build --configuration Release --no-restore`, don't invent `--force` or `--no-cache`.
+5. **Use the Public API analyzer as your guide.** When it complains, it's right. Don't edit `PublicAPI.Shipped.txt` to silence it.
+6. **Every public type needs XML docs.** If you add one without a doc comment, CI will fail.
+7. **When in doubt about scope, ask.** Large unsolicited refactors are rejected on principle — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+8. **Record deferred work.** If your PR defers something, add it to [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md) with a dated entry.
+9. **Update `CHANGELOG.md` for every notable change.** Add an entry under `## [Unreleased]` — `Added` for new features, `Changed` for behaviour or API changes (include migration guidance for breaking changes), `Fixed` for bug fixes. Do this in the same commit as the change, not as a follow-up.
 
 ---
 
@@ -330,5 +324,4 @@ Guidance for AI assistants working in this repo:
 - [`docs/reference/packages.md`](docs/reference/packages.md) — per-package install guidance.
 - [`samples/README.md`](samples/README.md) — learning path through the 27 samples.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution workflow and ground rules.
-- `../plans/actor-agents-oss-milestone-log.md` — dated history of every release + what's deferred next (workspace-level, not in OSS repo).
 - [`docs/contributing/ai-assistants.md`](docs/contributing/ai-assistants.md) — recommended MCP integrations + skill categories for AI assistants working in this repo.

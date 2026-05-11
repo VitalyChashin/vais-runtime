@@ -21,6 +21,17 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
   **Note:** `SseClientTransport` does not exist as a standalone class in `ModelContextProtocol.Core` 1.2.0. SSE is handled via `HttpClientTransport` with `TransportMode = HttpTransportMode.Sse`. Auth (`AuthRef`/`secret://`) and `stdio` transport are deferred to a follow-up.
 
+### Added (OSS repository)
+
+- **Standard OSS repository scaffolding.** Adds the governance and automation files expected by GitHub-hosted open-source projects.
+
+  - `GOVERNANCE.md` — benevolent-dictator governance model for Phase 1 (pre-alpha): roles (maintainer / contributor), decision paths by change type, and a pointer to `docs/roadmap/deferred-backlog.md` for out-of-scope work.
+  - `.github/CODEOWNERS` — file-level ownership routing for GitHub review assignment.
+  - `.github/ISSUE_TEMPLATE/` — structured bug-report and feature-request issue forms (`bug_report.md`, `feature_request.md`, `config.yml`).
+  - `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist (description, test plan, breaking-change checklist, changelog reminder).
+  - `.github/dependabot.yml` — weekly Dependabot updates for NuGet and GitHub Actions.
+  - `.github/workflows/codeql.yml` — CodeQL static-analysis workflow (C#, scheduled weekly + on push/PR to `main`).
+
 ### Fixed
 
 - **`PhysicalMcpConnectionService` circular DI dependency** — a cycle between `PhysicalMcpConnectionService → McpTranslatorInvalidationHook → AgentManifestTranslator → INamedToolSourceProvider → PhysicalMcpConnectionService` prevented `GenericWebHostService` (Kestrel) from starting, silently leaving the HTTP control plane unbound while Orleans and OTEL continued running. Fixed by adding a second internal constructor that accepts `IServiceProvider` so hooks are resolved lazily at dispatch time rather than at construction. The existing `IEnumerable<IMcpServerConnectionChangedHook>` constructor is retained for unit tests.

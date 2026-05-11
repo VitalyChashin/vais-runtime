@@ -47,7 +47,7 @@ public static class ContainerPluginServiceCollectionExtensions
     /// Registers a custom <see cref="IAgentPreprocessor"/> implementation to run in the
     /// container plugin preprocessing pipeline. The built-in preprocessors always run first
     /// (Order 0 and 10); register custom preprocessors at Order &gt;= 100 to run after them.
-    /// Phase 2 use: memory injection, policy enforcement.
+    /// Typical use: memory injection, policy enforcement.
     /// </summary>
     public static IServiceCollection AddAgentPreprocessor<T>(
         this IServiceCollection services)

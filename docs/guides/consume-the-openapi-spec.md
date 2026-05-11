@@ -160,4 +160,4 @@ builder.Services.AddOpenApi("v1", options =>
 - [Control plane concept](../concepts/control-plane.md) — the verb set the spec covers.
 - [Enable HTTP idempotency](enable-http-idempotency.md) — the `Idempotency-Key` header the spec advertises.
 - [Problem-details URNs reference](../reference/problem-details-urns.md) — the authoritative URN list.
-- `samples/OpenApiGeneration` — runnable walkthrough (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/OpenApiSpecExplorer`](../../samples/OpenApiSpecExplorer) — runnable walkthrough.

@@ -152,4 +152,4 @@ stdio transport doesn't authenticate (the client spawned the process). HTTP tran
 - [Interop concept](../concepts/interop.md) — MCP inbound section + outbound `McpToolSource` symmetry.
 - [Delegate to an A2A remote agent](delegate-to-a2a-remote-agent.md) — v0.4 outbound A2A.
 - [Host agents as A2A endpoints](host-agents-as-a2a-endpoints.md) — v0.8 A2A inbound counterpart.
-- `samples/McpServerStdio` + `samples/McpServerHttp` — runnable walkthroughs (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/McpServerStdio`](../../samples/McpServerStdio) + [`samples/McpServerHttp`](../../samples/McpServerHttp) — runnable walkthroughs.

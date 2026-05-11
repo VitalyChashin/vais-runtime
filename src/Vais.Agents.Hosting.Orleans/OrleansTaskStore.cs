@@ -72,8 +72,7 @@ public sealed class OrleansTaskStore : ITaskStore
 
     /// <inheritdoc />
     /// <remarks>
-    /// v0.8 stub — returns an empty response. Full listing requires a context-index grain
-    /// (tracked in <c>actor-agents-oss-v0.8-a2a-inbound-pillar.md</c>).
+    /// v0.8 stub — returns an empty response. Full listing requires a context-index grain.
     /// </remarks>
     public Task<ListTasksResponse> ListTasksAsync(ListTasksRequest request, CancellationToken cancellationToken)
     {

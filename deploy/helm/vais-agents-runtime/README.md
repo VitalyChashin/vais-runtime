@@ -191,5 +191,3 @@ and the chart skips the sidecar + ConfigMap:
 - [`../vais-agents-operator/`](../vais-agents-operator/README.md) — v0.13
   Kubernetes operator chart, installed alongside for CRD-driven manifest
   reconciliation.
-- [`../../../plans/actor-agents-oss-v0.16-runtime-container-pillar.md`](../../../../../plans/actor-agents-oss-v0.16-runtime-container-pillar.md)
-  — pillar plan, decisions, acceptance criteria.

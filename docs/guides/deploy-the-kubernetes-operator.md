@@ -262,4 +262,4 @@ Dropping the CRD after the operator is uninstalled is intentional — removing t
 - [Enable HTTP idempotency](enable-http-idempotency.md) — v0.11 idempotency behaviour the operator depends on.
 - [Wire a sidecar OPA against the operator](wire-a-sidecar-opa-against-the-operator.md) — combined v0.13 + v0.14 policy deployment.
 - `deploy/README.md` + `deploy/helm/vais-agents-operator/README.md` — in-repo deployment notes.
-- `samples/KubernetesOperatorWalkthrough` — runnable walkthrough (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/KubernetesOperatorQuickstart`](../../samples/KubernetesOperatorQuickstart) — runnable walkthrough.

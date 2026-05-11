@@ -8,7 +8,7 @@ using Xunit;
 namespace Vais.Agents.Runtime.Plugins.Container.Tests;
 
 /// <summary>
-/// Validates the Phase 2 extensibility requirement: custom preprocessors can be added
+/// Validates the preprocessor extensibility contract: custom preprocessors can be added
 /// without modifying <c>ContainerAgentShim</c>.
 /// </summary>
 public sealed class PreprocessorChainExtensionPointTests

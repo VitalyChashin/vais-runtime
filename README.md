@@ -1,9 +1,22 @@
 # Vais.Agents
 
+<!-- TODO: replace every `<org>/<repo>` in this file once the GitHub org / repo names land. -->
+
+[![Build](https://github.com/<org>/<repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<org>/<repo>/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+[![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/download)
+[![NuGet status](https://img.shields.io/badge/NuGet-pre--alpha-orange.svg)](#)
+
 > **Status: Phase 1 — pre-alpha, pre-release.** API unstable. NuGet not yet published.
 > A trademark / NuGet-existing-package clearance pass is pending before any public push of the `Vais.Agents.*` package ids.
 
 Stack-neutral agent library for .NET — durable multi-tenant hosting with pluggable AI backends. Pick **Microsoft Agent Framework** or **Semantic Kernel** via DI; swap without rewriting your agent.
+
+## Why Vais.Agents?
+
+Most .NET agent libraries lock you to one AI stack. Start on Semantic Kernel; switching to Microsoft Agent Framework means rewriting. Ship a multi-tenant runtime; build durability yourself. Vais.Agents addresses both: a stack-neutral library that treats SK and MAF as swappable backends, paired with an Orleans-based virtual-actor host that gives every agent grain-level durability and per-session checkpointing without bespoke plumbing.
+
+Stack-neutral does not mean lowest-common-denominator. Each adapter exercises its stack's native machinery — SK's `IChatCompletionService`, MAF's `ChatClientAgent` — rather than collapsing both to a shared `IChatClient` shim. The same `StatefulAiAgent` class works against either; the choice is a single DI registration.
 
 ## What you get
 
@@ -62,15 +75,27 @@ Full docs live under **[`docs/`](docs/index.md)** — getting-started walkthroug
 
 ## Building
 
-- .NET 9 SDK (or newer).
-- Pinned deps resolve to SK 1.74, MAF 1.1, MEAI 10.5, Orleans 10.1, OpenAI 2.10.
-- `Microsoft.Extensions.VectorData.Abstractions` is held at 10.1.0 because the SK 1.74 InMemory preview connector (used in tests) was built against that surface; lift in lockstep with SK.Connectors.InMemory.
+Requires **.NET 9 SDK**.
+
+Run any sample end-to-end from a fresh clone:
+
+```bash
+git clone https://github.com/<org>/<repo>.git
+cd <repo>
+dotnet pack Vais.Agents.sln --configuration Release --output artifacts/packages
+OPENAI_API_KEY=sk-... dotnet run --project samples/HelloAgent
+```
+
+The `dotnet pack` step populates the local NuGet feed under `artifacts/packages/` that samples consume from via `NuGet.config`. Most samples use scripted fake completion providers and don't need `OPENAI_API_KEY`; the `HelloAgent` sample calls a real OpenAI endpoint so the key is required for that one.
+
+Standalone build + test:
 
 ```bash
 dotnet build Vais.Agents.sln
-dotnet test Vais.Agents.sln
-OPENAI_API_KEY=... dotnet run --project samples/HelloAgent
+dotnet test  Vais.Agents.sln
 ```
+
+Pinned deps resolve to SK 1.74, MAF 1.1, MEAI 10.5, Orleans 10.1, OpenAI 2.10. `Microsoft.Extensions.VectorData.Abstractions` is held at 10.1.0 because the SK 1.74 InMemory preview connector (used in tests) was built against that surface; lift in lockstep with SK.Connectors.InMemory.
 
 ## Contributing
 

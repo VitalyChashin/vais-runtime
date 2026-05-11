@@ -217,7 +217,7 @@ vais invoke weather --text "hi"
 #   detail: Manifest-driven agent instantiation ships with Pillar B (v0.17).
 ```
 
-This is **documented behaviour**, not a bug. The v0.16 runtime boots Orleans + the durability sidecars + the full HTTP control plane; it does not yet materialize an `IAiAgent` from `AgentManifest.Model + SystemPrompt`. Create / Get / Delete verbs + OpenAPI + idempotency all work today. See the [Pillar B spike](../../../plans/actor-agents-oss-phase-3-runtime-productisation.md) for the Pillar B roadmap.
+This is **documented behaviour**, not a bug. The v0.16 runtime boots Orleans + the durability sidecars + the full HTTP control plane; it does not yet materialize an `IAiAgent` from `AgentManifest.Model + SystemPrompt`. Create / Get / Delete verbs + OpenAPI + idempotency all work today.
 
 ## Known limitations (v0.16-preview)
 

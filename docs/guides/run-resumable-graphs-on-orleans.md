@@ -292,4 +292,4 @@ Both share the same `InMemoryCheckpointer` swap for unit tests as described in "
 - [Run on Orleans locally](run-on-orleans-locally.md) — silo wiring + persistence-provider configuration prerequisites.
 - [Graph orchestration concept](../concepts/graph-orchestration.md) — checkpoint + resume semantics, orchestrator decision table.
 - [Graph predicate operators reference](../reference/graph-predicate-operators.md) — the `allOf` combinator + `Gt` operator used in the approval edge.
-- `samples/AgentGraphResumeOnOrleans` — runnable walkthrough (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/AgentGraphResumeOnOrleans`](../../samples/AgentGraphResumeOnOrleans) — runnable walkthrough.

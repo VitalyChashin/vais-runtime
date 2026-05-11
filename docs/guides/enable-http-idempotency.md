@@ -176,4 +176,4 @@ Advance the `FakeTimeProvider` past `Ttl` to verify the store purges completed e
 - [Consume the OpenAPI spec](consume-the-openapi-spec.md) — URNs surface in the generated schema as `x-vais-type-urns` extensions.
 - [Problem-details URNs reference](../reference/problem-details-urns.md) — full URN table.
 - [Run on Orleans locally](run-on-orleans-locally.md) — prerequisite for the durable store.
-- `samples/IdempotencyReplay` — runnable walkthrough (pending — see [samples plan](../../plans/actor-agents-oss-housekeeping-samples-plan.md)).
+- [`samples/HttpIdempotencyInMemory`](../../samples/HttpIdempotencyInMemory) — runnable walkthrough.

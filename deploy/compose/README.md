@@ -165,7 +165,7 @@ runs. The `data/` tree is `.gitignore`d.
   Pillar B / v0.17 — `vais apply -f agent.yaml` followed by
   `vais invoke foo --text "hi"` returns
   `501 urn:vais-agents:agent-not-instantiable`. This is documented
-  behaviour, not a bug; see the pillar plan for the roadmap.
+  behaviour, not a bug.
 - **Scale>1 needs a port override.** Base file publishes `8080:8080`;
   drop it as shown above when scaling past one replica.
 - **Postgres clustering is not a compose recipe yet.** Redis is the default
@@ -185,5 +185,3 @@ runs. The `data/` tree is `.gitignore`d.
   chart (PR 3 of Pillar A; lands next).
 - [`../../samples/opa-policies/`](../../samples/opa-policies/) —
   production-grade Rego samples to swap in under `policies/`.
-- [`../../plans/actor-agents-oss-v0.16-runtime-container-pillar.md`](../../../../plans/actor-agents-oss-v0.16-runtime-container-pillar.md)
-  — pillar plan, decision log, acceptance criteria.

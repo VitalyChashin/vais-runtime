@@ -62,4 +62,4 @@ DI injection is only possible within the same process. The container model is in
 
 - IP-2: Python and C# SDK implementations of the gateway clients and request/response shapes.
 - IP-3: `ContainerAgentShim`, `ContainerPluginHostService`, `callToken` generation algorithm.
-- IP-7: Memory plugin as a Phase 2 `IAgentPreprocessor` (Order 20).
+- IP-7: Memory plugin as an `IAgentPreprocessor` (Order 20).

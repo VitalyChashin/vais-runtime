@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # NuGet dependency updates. Vais.Agents uses Central Package Management;
+  # all version pins live in Directory.Packages.props. Dependabot opens one PR
+  # per outdated package. Several version chains are load-bearing
+  # (SK ↔ MEAI ↔ OpenAI; Orleans 10.1 family; MCP 1.2 family) — see
+  # AGENTS.md §Dependency management. Maintainers triage on a per-bump basis;
+  # PRs that break the build get closed.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
