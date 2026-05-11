@@ -23,6 +23,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
     private readonly IPluginHandlerRegistry _registry;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ContainerPluginHostService> _logger;
+    private readonly IContainerPluginRegistry? _containerPluginRegistry;
     private readonly List<IContainerSupervisor> _supervisors = new();
 
     public IReadOnlyList<LoadedContainerPlugin> LoadedPlugins
@@ -62,12 +63,14 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
     public ContainerPluginHostService(
         ContainerPluginLoaderOptions options,
         IPluginHandlerRegistry registry,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IContainerPluginRegistry? containerPluginRegistry = null)
     {
         _options = options;
         _registry = registry;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<ContainerPluginHostService>();
+        _containerPluginRegistry = containerPluginRegistry;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -98,7 +101,61 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         }
     }
 
+    /// <inheritdoc />
+    public async ValueTask RegisterAsync(ContainerPluginManifest manifest, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var descriptor = ManifestToDescriptor(manifest);
+        await StartCoreAsync(descriptor, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask UnregisterAsync(string id, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        IContainerSupervisor? supervisor;
+        lock (_supervisors)
+        {
+            supervisor = _supervisors.FirstOrDefault(s =>
+                string.Equals(s.Descriptor.Name, id, StringComparison.OrdinalIgnoreCase));
+            if (supervisor is not null)
+                _supervisors.Remove(supervisor);
+        }
+        if (supervisor is null) return;
+        try
+        {
+            await supervisor.StopAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            await supervisor.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
     private async ValueTask StartOneAsync(ContainerPluginDescriptor descriptor, CancellationToken ct)
+    {
+        try
+        {
+            await StartCoreAsync(descriptor, ct).ConfigureAwait(false);
+            if (_containerPluginRegistry is not null)
+            {
+                try
+                {
+                    await _containerPluginRegistry.RegisterAsync(DescriptorToManifest(descriptor), ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to promote filesystem container plugin '{Name}' into registry", descriptor.Name);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start container plugin '{Name}'", descriptor.Name);
+        }
+    }
+
+    private async ValueTask StartCoreAsync(ContainerPluginDescriptor descriptor, CancellationToken ct)
     {
         IContainerSupervisor supervisor;
         if (descriptor.KubernetesConfig is not null)
@@ -121,11 +178,9 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to start container plugin '{Name}' from image '{Image}'",
-                descriptor.Name, descriptor.Image);
             await supervisor.DisposeAsync().ConfigureAwait(false);
-            return;
+            throw new InvalidOperationException(
+                $"Container plugin '{descriptor.Name}' failed to start: {ex.Message}", ex);
         }
 
         using var metaClient = new HttpClient
@@ -155,31 +210,24 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "[{Urn}] Container plugin '{Name}': failed to fetch /v1/metadata",
-                    ContainerPluginUrns.AbiFailed, descriptor.Name);
                 await supervisor.DisposeAsync().ConfigureAwait(false);
-                return;
+                throw new InvalidOperationException(
+                    $"[{ContainerPluginUrns.AbiFailed}] Container plugin '{descriptor.Name}': failed to fetch /v1/metadata", ex);
             }
         }
 
         if (meta is null || string.IsNullOrEmpty(meta.HandlerTypeName))
         {
-            _logger.LogError(
-                "[{Urn}] Container plugin '{Name}': /v1/metadata returned empty handlerTypeName",
-                ContainerPluginUrns.AbiFailed, descriptor.Name);
             await supervisor.DisposeAsync().ConfigureAwait(false);
-            return;
+            throw new InvalidOperationException(
+                $"[{ContainerPluginUrns.AbiFailed}] Container plugin '{descriptor.Name}': /v1/metadata returned empty handlerTypeName");
         }
 
         if (!IsVersionInRange(meta.TargetApiVersion, _options.SupportedApiVersionMin, _options.SupportedApiVersionMax))
         {
-            _logger.LogError(
-                "[{Urn}] Container plugin '{Name}': targetApiVersion '{Version}' not in supported range [{Min}, {Max}]",
-                ContainerPluginUrns.AbiFailed, descriptor.Name, meta.TargetApiVersion,
-                _options.SupportedApiVersionMin, _options.SupportedApiVersionMax);
             await supervisor.DisposeAsync().ConfigureAwait(false);
-            return;
+            throw new InvalidOperationException(
+                $"[{ContainerPluginUrns.AbiFailed}] Container plugin '{descriptor.Name}': targetApiVersion '{meta.TargetApiVersion}' not in supported range [{_options.SupportedApiVersionMin}, {_options.SupportedApiVersionMax}]");
         }
 
         descriptor.HandlerTypeName = meta.HandlerTypeName;
@@ -197,11 +245,87 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Failed to register container plugin '{Name}' handler '{TypeName}'",
-                descriptor.Name, descriptor.HandlerTypeName);
             await supervisor.DisposeAsync().ConfigureAwait(false);
+            throw new InvalidOperationException(
+                $"Failed to register container plugin '{descriptor.Name}' handler '{descriptor.HandlerTypeName}'", ex);
         }
+    }
+
+    private static ContainerPluginManifest DescriptorToManifest(ContainerPluginDescriptor descriptor)
+    {
+        ContainerPluginKubernetesConfig? k8s = null;
+        if (descriptor.KubernetesConfig is { } k8sCfg)
+            k8s = new ContainerPluginKubernetesConfig
+            {
+                ServiceUrl = k8sCfg.ServiceUrl,
+                DeploymentName = k8sCfg.DeploymentName,
+                Namespace = k8sCfg.Namespace,
+            };
+
+        return new ContainerPluginManifest(descriptor.Name, Version: "1.0")
+        {
+            Spec = new ContainerPluginSpec
+            {
+                Image = descriptor.Image,
+                Port = descriptor.Port,
+                Topology = descriptor.Topology switch
+                {
+                    ContainerTopology.Kubernetes => "kubernetes",
+                    ContainerTopology.Sidecar    => "sidecar",
+                    _                            => "standalone",
+                },
+                StartupTimeoutSeconds = descriptor.StartupTimeoutSeconds,
+                InvokeTimeoutSeconds = descriptor.InvokeTimeoutSeconds,
+                RetryPolicy = descriptor.RetryPolicy is { } rp
+                    ? new ContainerPluginRetryPolicy(rp.MaxAttempts, rp.BackoffSeconds, rp.RetryOn)
+                    : null,
+                Kubernetes = k8s,
+                Secrets = descriptor.SecretRefs.Count > 0
+                    ? new Dictionary<string, string>(descriptor.SecretRefs)
+                    : null,
+            }
+        };
+    }
+
+    private static ContainerPluginDescriptor ManifestToDescriptor(ContainerPluginManifest manifest)
+    {
+        var spec = manifest.Spec;
+        ContainerTopology topology;
+        KubernetesPluginConfig? k8sConfig = null;
+        string invokeBaseUrl;
+
+        if (spec.Kubernetes is { } k8s)
+        {
+            topology = ContainerTopology.Kubernetes;
+            k8sConfig = new KubernetesPluginConfig(k8s.ServiceUrl, k8s.DeploymentName, k8s.Namespace);
+            invokeBaseUrl = k8s.ServiceUrl;
+        }
+        else
+        {
+            topology = spec.Topology.Equals("sidecar", StringComparison.OrdinalIgnoreCase)
+                ? ContainerTopology.Sidecar : ContainerTopology.Standalone;
+            invokeBaseUrl = $"http://localhost:{spec.Port}";
+        }
+
+        ContainerRetryPolicy? retryPolicy = null;
+        if (spec.RetryPolicy is { } rp)
+            retryPolicy = new ContainerRetryPolicy(rp.MaxAttempts, rp.BackoffSeconds, rp.RetryOn);
+
+        return new ContainerPluginDescriptor
+        {
+            Name = manifest.Id,
+            Image = spec.Image,
+            Port = spec.Port,
+            Topology = topology,
+            StartupTimeoutSeconds = spec.StartupTimeoutSeconds,
+            InvokeTimeoutSeconds = spec.InvokeTimeoutSeconds,
+            RetryPolicy = retryPolicy,
+            SecretRefs = spec.Secrets is not null
+                ? new Dictionary<string, string>(spec.Secrets)
+                : new Dictionary<string, string>(),
+            InvokeBaseUrl = invokeBaseUrl,
+            KubernetesConfig = k8sConfig,
+        };
     }
 
     private async Task<List<ContainerPluginDescriptor>> ScanDescriptorsAsync(CancellationToken ct)

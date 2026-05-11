@@ -640,3 +640,64 @@ override Vais.Agents.Control.Http.AgentLogEntryDto.GetHashCode() -> int
 override Vais.Agents.Control.Http.AgentLogEntryDto.ToString() -> string!
 static Vais.Agents.Control.Http.AgentLogEntryDto.operator !=(Vais.Agents.Control.Http.AgentLogEntryDto? left, Vais.Agents.Control.Http.AgentLogEntryDto? right) -> bool
 static Vais.Agents.Control.Http.AgentLogEntryDto.operator ==(Vais.Agents.Control.Http.AgentLogEntryDto? left, Vais.Agents.Control.Http.AgentLogEntryDto? right) -> bool
+const Vais.Agents.Control.Http.ProblemDetailsMapping.ContainerPluginHandleNotFoundType = "urn:vais-agents:container-plugin-handle-not-found" -> string!
+const Vais.Agents.Control.Http.ProblemDetailsMapping.ContainerPluginConflictType = "urn:vais-agents:container-plugin-conflict" -> string!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapContainerPluginControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Control.Http.ContainerPluginApplyResponse
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.ContainerPluginApplyResponse!
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.ContainerPluginApplyResponse(Vais.Agents.ContainerPluginHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Deconstruct(out Vais.Agents.ContainerPluginHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Equals(Vais.Agents.Control.Http.ContainerPluginApplyResponse? other) -> bool
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Handle.get -> Vais.Agents.ContainerPluginHandle!
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.ContainerPluginApplyResponse.Warnings.init -> void
+override Vais.Agents.Control.Http.ContainerPluginApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ContainerPluginApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ContainerPluginApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ContainerPluginApplyResponse.operator !=(Vais.Agents.Control.Http.ContainerPluginApplyResponse? left, Vais.Agents.Control.Http.ContainerPluginApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.ContainerPluginApplyResponse.operator ==(Vais.Agents.Control.Http.ContainerPluginApplyResponse? left, Vais.Agents.Control.Http.ContainerPluginApplyResponse? right) -> bool
+Vais.Agents.Control.Http.ContainerPluginQueryResponse
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.ContainerPluginQueryResponse!
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.ContainerPluginQueryResponse(Vais.Agents.ContainerPluginManifest! Manifest, Vais.Agents.ContainerPluginHandle! Handle, Vais.Agents.ContainerPluginRuntimeStatus! Status) -> void
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Deconstruct(out Vais.Agents.ContainerPluginManifest! Manifest, out Vais.Agents.ContainerPluginHandle! Handle, out Vais.Agents.ContainerPluginRuntimeStatus! Status) -> void
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Equals(Vais.Agents.Control.Http.ContainerPluginQueryResponse? other) -> bool
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Handle.get -> Vais.Agents.ContainerPluginHandle!
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Manifest.get -> Vais.Agents.ContainerPluginManifest!
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Status.get -> Vais.Agents.ContainerPluginRuntimeStatus!
+Vais.Agents.Control.Http.ContainerPluginQueryResponse.Status.init -> void
+override Vais.Agents.Control.Http.ContainerPluginQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ContainerPluginQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ContainerPluginQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ContainerPluginQueryResponse.operator !=(Vais.Agents.Control.Http.ContainerPluginQueryResponse? left, Vais.Agents.Control.Http.ContainerPluginQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.ContainerPluginQueryResponse.operator ==(Vais.Agents.Control.Http.ContainerPluginQueryResponse? left, Vais.Agents.Control.Http.ContainerPluginQueryResponse? right) -> bool
+Vais.Agents.Control.Http.ContainerPluginListResponse
+Vais.Agents.Control.Http.ContainerPluginListResponse.<Clone>$() -> Vais.Agents.Control.Http.ContainerPluginListResponse!
+Vais.Agents.Control.Http.ContainerPluginListResponse.ContainerPluginListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.ContainerPluginManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.ContainerPluginListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.ContainerPluginManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.ContainerPluginListResponse.Equals(Vais.Agents.Control.Http.ContainerPluginListResponse? other) -> bool
+Vais.Agents.Control.Http.ContainerPluginListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ContainerPluginManifest!>!
+Vais.Agents.Control.Http.ContainerPluginListResponse.Items.init -> void
+Vais.Agents.Control.Http.ContainerPluginListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.ContainerPluginListResponse.NextCursor.init -> void
+override Vais.Agents.Control.Http.ContainerPluginListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ContainerPluginListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ContainerPluginListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ContainerPluginListResponse.operator !=(Vais.Agents.Control.Http.ContainerPluginListResponse? left, Vais.Agents.Control.Http.ContainerPluginListResponse? right) -> bool
+static Vais.Agents.Control.Http.ContainerPluginListResponse.operator ==(Vais.Agents.Control.Http.ContainerPluginListResponse? left, Vais.Agents.Control.Http.ContainerPluginListResponse? right) -> bool
+Vais.Agents.Control.Http.ContainerPluginValidationResult
+Vais.Agents.Control.Http.ContainerPluginValidationResult.<Clone>$() -> Vais.Agents.Control.Http.ContainerPluginValidationResult!
+Vais.Agents.Control.Http.ContainerPluginValidationResult.ContainerPluginValidationResult(bool Valid, System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Deconstruct(out bool Valid, out System.Collections.Generic.IReadOnlyList<string!>! Errors) -> void
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Equals(Vais.Agents.Control.Http.ContainerPluginValidationResult? other) -> bool
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Errors.init -> void
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Valid.get -> bool
+Vais.Agents.Control.Http.ContainerPluginValidationResult.Valid.init -> void
+override Vais.Agents.Control.Http.ContainerPluginValidationResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ContainerPluginValidationResult.GetHashCode() -> int
+override Vais.Agents.Control.Http.ContainerPluginValidationResult.ToString() -> string!
+static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator !=(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool
+static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator ==(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool

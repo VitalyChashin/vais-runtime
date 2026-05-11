@@ -96,4 +96,18 @@ public enum PolicyOperation
 
     /// <summary>Remove an MCP server manifest.</summary>
     McpServerEvict = 25,
+
+    // ── Container plugin operations (v0.24) ───────────────────────────────
+
+    /// <summary>Register a new container plugin manifest or version.</summary>
+    ContainerPluginCreate = 26,
+
+    /// <summary>Mutate an existing container plugin manifest.</summary>
+    ContainerPluginUpdate = 27,
+
+    /// <summary>Read-only query of container plugin status.</summary>
+    ContainerPluginQuery = 28,
+
+    /// <summary>Remove a container plugin manifest and stop the container.</summary>
+    ContainerPluginEvict = 29,
 }

@@ -15,6 +15,24 @@ public interface IContainerPluginHost
     /// together with its current lifecycle status.
     /// </summary>
     IReadOnlyList<LoadedContainerPlugin> LoadedPlugins { get; }
+
+    /// <summary>
+    /// Start a container plugin from a manifest, run the <c>/v1/metadata</c> ABI handshake,
+    /// and register the handler factory. Throws <see cref="InvalidOperationException"/> if
+    /// the container fails to start or the handshake fails.
+    /// Default: no-op (for test stubs that only expose <see cref="LoadedPlugins"/>).
+    /// </summary>
+    ValueTask RegisterAsync(ContainerPluginManifest manifest, CancellationToken ct = default)
+        => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Stop and deregister a running container plugin by id. No-op when not found.
+    /// Note: the handler-type-name entry in the plugin handler registry is not removed;
+    /// in-flight calls will fail once the container stops.
+    /// Default: no-op (for test stubs that only expose <see cref="LoadedPlugins"/>).
+    /// </summary>
+    ValueTask UnregisterAsync(string id, CancellationToken ct = default)
+        => ValueTask.CompletedTask;
 }
 
 /// <summary>

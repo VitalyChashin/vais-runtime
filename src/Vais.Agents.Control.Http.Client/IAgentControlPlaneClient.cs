@@ -343,4 +343,38 @@ public interface IAgentControlPlaneClient
     /// <summary>POST /v1/mcp-servers/validate — dry-run validation without registering. Default: always valid.</summary>
     Task<McpServerValidationResult> ValidateMcpServerAsync(McpServerManifest manifest, CancellationToken cancellationToken = default)
         => Task.FromResult(new McpServerValidationResult(Valid: true, Array.Empty<string>()));
+
+    // ── Container plugin verbs (v0.21) ──────────────────────────────────────
+
+    /// <summary>POST /v1/container-plugins — register a manifest and start the container. Default: throws NotSupportedException.</summary>
+    Task<ContainerPluginHandle> CreateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support container plugin management. Use AgentControlPlaneClient.");
+
+    /// <summary>POST /v1/container-plugins — register a manifest with an explicit idempotency key.</summary>
+    Task<ContainerPluginHandle> CreateContainerPluginAsync(ContainerPluginManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+        => CreateContainerPluginAsync(manifest, cancellationToken);
+
+    /// <summary>PATCH /v1/container-plugins/{id} — publish a new manifest version for an existing plugin. Default: throws NotSupportedException.</summary>
+    Task<ContainerPluginHandle> UpdateContainerPluginAsync(string id, ContainerPluginManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support container plugin management. Use AgentControlPlaneClient.");
+
+    /// <summary>PATCH /v1/container-plugins/{id} — publish a new manifest version with an explicit idempotency key.</summary>
+    Task<ContainerPluginHandle> UpdateContainerPluginAsync(string id, ContainerPluginManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+        => UpdateContainerPluginAsync(id, manifest, version, cancellationToken);
+
+    /// <summary>GET /v1/container-plugins — list registered manifests. Default: empty list.</summary>
+    Task<ContainerPluginListResponse> ListContainerPluginsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(new ContainerPluginListResponse(Array.Empty<ContainerPluginManifest>()));
+
+    /// <summary>GET /v1/container-plugins/{id} — fetch manifest + current runtime status. Default: null (not found).</summary>
+    Task<ContainerPluginQueryResponse?> QueryContainerPluginAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => Task.FromResult((ContainerPluginQueryResponse?)null);
+
+    /// <summary>DELETE /v1/container-plugins/{id} — stop and remove the plugin. Default: throws NotSupportedException.</summary>
+    Task EvictContainerPluginAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support container plugin management. Use AgentControlPlaneClient.");
+
+    /// <summary>POST /v1/container-plugins/validate — dry-run validation without registering. Default: always valid.</summary>
+    Task<ContainerPluginValidationResult> ValidateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
 }

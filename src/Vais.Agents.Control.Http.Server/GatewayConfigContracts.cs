@@ -59,3 +59,22 @@ public sealed record McpServerListResponse(
 
 /// <summary>Response body for <c>POST /v1/mcp-servers/validate</c>. Includes cross-ref checks against registered sources and gateway.</summary>
 public sealed record McpServerValidationResult(bool Valid, IReadOnlyList<string> Errors);
+
+/// <summary>Response body for <c>POST /v1/container-plugins</c> (create) and <c>PATCH /v1/container-plugins/{id}</c> (update).</summary>
+public sealed record ContainerPluginApplyResponse(
+    ContainerPluginHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
+
+/// <summary>Response body for <c>GET /v1/container-plugins/{id}</c>.</summary>
+public sealed record ContainerPluginQueryResponse(
+    ContainerPluginManifest Manifest,
+    ContainerPluginHandle Handle,
+    ContainerPluginRuntimeStatus Status);
+
+/// <summary>Response body for <c>GET /v1/container-plugins</c>.</summary>
+public sealed record ContainerPluginListResponse(
+    IReadOnlyList<ContainerPluginManifest> Items,
+    string? NextCursor = null);
+
+/// <summary>Response body for <c>POST /v1/container-plugins/validate</c>.</summary>
+public sealed record ContainerPluginValidationResult(bool Valid, IReadOnlyList<string> Errors);

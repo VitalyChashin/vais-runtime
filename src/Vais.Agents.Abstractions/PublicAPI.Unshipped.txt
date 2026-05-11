@@ -493,3 +493,135 @@ Vais.Agents.GraphInterrupted.CurrentState.init -> void
 Vais.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string? Result, string? Error = null) -> void
 Vais.Agents.ToolCallOutcome.Result.get -> string?
 Vais.Agents.ToolCallOutcome.Deconstruct(out string! CallId, out string? Result, out string? Error) -> void
+Vais.Agents.ContainerPluginManifest
+Vais.Agents.ContainerPluginManifest.<Clone>$() -> Vais.Agents.ContainerPluginManifest!
+Vais.Agents.ContainerPluginManifest.ContainerPluginManifest(string! Id, string! Version, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.ContainerPluginManifest.Deconstruct(out string! Id, out string! Version, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.ContainerPluginManifest.Description.get -> string?
+Vais.Agents.ContainerPluginManifest.Description.init -> void
+Vais.Agents.ContainerPluginManifest.Equals(Vais.Agents.ContainerPluginManifest? other) -> bool
+Vais.Agents.ContainerPluginManifest.Id.get -> string!
+Vais.Agents.ContainerPluginManifest.Id.init -> void
+Vais.Agents.ContainerPluginManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerPluginManifest.Labels.init -> void
+Vais.Agents.ContainerPluginManifest.Spec.get -> Vais.Agents.ContainerPluginSpec!
+Vais.Agents.ContainerPluginManifest.Spec.init -> void
+Vais.Agents.ContainerPluginManifest.Version.get -> string!
+Vais.Agents.ContainerPluginManifest.Version.init -> void
+override Vais.Agents.ContainerPluginManifest.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginManifest.GetHashCode() -> int
+override Vais.Agents.ContainerPluginManifest.ToString() -> string!
+static Vais.Agents.ContainerPluginManifest.operator !=(Vais.Agents.ContainerPluginManifest? left, Vais.Agents.ContainerPluginManifest? right) -> bool
+static Vais.Agents.ContainerPluginManifest.operator ==(Vais.Agents.ContainerPluginManifest? left, Vais.Agents.ContainerPluginManifest? right) -> bool
+Vais.Agents.ContainerPluginSpec
+Vais.Agents.ContainerPluginSpec.<Clone>$() -> Vais.Agents.ContainerPluginSpec!
+Vais.Agents.ContainerPluginSpec.ContainerPluginSpec() -> void
+Vais.Agents.ContainerPluginSpec.Build.get -> Vais.Agents.ContainerPluginBuildSpec?
+Vais.Agents.ContainerPluginSpec.Build.init -> void
+Vais.Agents.ContainerPluginSpec.Equals(Vais.Agents.ContainerPluginSpec? other) -> bool
+Vais.Agents.ContainerPluginSpec.Image.get -> string!
+Vais.Agents.ContainerPluginSpec.Image.init -> void
+Vais.Agents.ContainerPluginSpec.ImagePullPolicy.get -> string!
+Vais.Agents.ContainerPluginSpec.ImagePullPolicy.init -> void
+Vais.Agents.ContainerPluginSpec.InvokeTimeoutSeconds.get -> int
+Vais.Agents.ContainerPluginSpec.InvokeTimeoutSeconds.init -> void
+Vais.Agents.ContainerPluginSpec.Kubernetes.get -> Vais.Agents.ContainerPluginKubernetesConfig?
+Vais.Agents.ContainerPluginSpec.Kubernetes.init -> void
+Vais.Agents.ContainerPluginSpec.Port.get -> int
+Vais.Agents.ContainerPluginSpec.Port.init -> void
+Vais.Agents.ContainerPluginSpec.RetryPolicy.get -> Vais.Agents.ContainerPluginRetryPolicy?
+Vais.Agents.ContainerPluginSpec.RetryPolicy.init -> void
+Vais.Agents.ContainerPluginSpec.Secrets.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerPluginSpec.Secrets.init -> void
+Vais.Agents.ContainerPluginSpec.StartupTimeoutSeconds.get -> int
+Vais.Agents.ContainerPluginSpec.StartupTimeoutSeconds.init -> void
+Vais.Agents.ContainerPluginSpec.Topology.get -> string!
+Vais.Agents.ContainerPluginSpec.Topology.init -> void
+override Vais.Agents.ContainerPluginSpec.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginSpec.GetHashCode() -> int
+override Vais.Agents.ContainerPluginSpec.ToString() -> string!
+static Vais.Agents.ContainerPluginSpec.operator !=(Vais.Agents.ContainerPluginSpec? left, Vais.Agents.ContainerPluginSpec? right) -> bool
+static Vais.Agents.ContainerPluginSpec.operator ==(Vais.Agents.ContainerPluginSpec? left, Vais.Agents.ContainerPluginSpec? right) -> bool
+Vais.Agents.ContainerPluginBuildSpec
+Vais.Agents.ContainerPluginBuildSpec.<Clone>$() -> Vais.Agents.ContainerPluginBuildSpec!
+Vais.Agents.ContainerPluginBuildSpec.ContainerPluginBuildSpec() -> void
+Vais.Agents.ContainerPluginBuildSpec.Args.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerPluginBuildSpec.Args.init -> void
+Vais.Agents.ContainerPluginBuildSpec.Context.get -> string!
+Vais.Agents.ContainerPluginBuildSpec.Context.init -> void
+Vais.Agents.ContainerPluginBuildSpec.Dockerfile.get -> string!
+Vais.Agents.ContainerPluginBuildSpec.Dockerfile.init -> void
+Vais.Agents.ContainerPluginBuildSpec.Equals(Vais.Agents.ContainerPluginBuildSpec? other) -> bool
+Vais.Agents.ContainerPluginBuildSpec.Push.get -> bool
+Vais.Agents.ContainerPluginBuildSpec.Push.init -> void
+override Vais.Agents.ContainerPluginBuildSpec.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginBuildSpec.GetHashCode() -> int
+override Vais.Agents.ContainerPluginBuildSpec.ToString() -> string!
+static Vais.Agents.ContainerPluginBuildSpec.operator !=(Vais.Agents.ContainerPluginBuildSpec? left, Vais.Agents.ContainerPluginBuildSpec? right) -> bool
+static Vais.Agents.ContainerPluginBuildSpec.operator ==(Vais.Agents.ContainerPluginBuildSpec? left, Vais.Agents.ContainerPluginBuildSpec? right) -> bool
+Vais.Agents.ContainerPluginRetryPolicy
+Vais.Agents.ContainerPluginRetryPolicy.<Clone>$() -> Vais.Agents.ContainerPluginRetryPolicy!
+Vais.Agents.ContainerPluginRetryPolicy.BackoffSeconds.get -> int
+Vais.Agents.ContainerPluginRetryPolicy.BackoffSeconds.init -> void
+Vais.Agents.ContainerPluginRetryPolicy.ContainerPluginRetryPolicy(int MaxAttempts, int BackoffSeconds, System.Collections.Generic.IReadOnlyList<string!>! RetryOn) -> void
+Vais.Agents.ContainerPluginRetryPolicy.Deconstruct(out int MaxAttempts, out int BackoffSeconds, out System.Collections.Generic.IReadOnlyList<string!>! RetryOn) -> void
+Vais.Agents.ContainerPluginRetryPolicy.Equals(Vais.Agents.ContainerPluginRetryPolicy? other) -> bool
+Vais.Agents.ContainerPluginRetryPolicy.MaxAttempts.get -> int
+Vais.Agents.ContainerPluginRetryPolicy.MaxAttempts.init -> void
+Vais.Agents.ContainerPluginRetryPolicy.RetryOn.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.ContainerPluginRetryPolicy.RetryOn.init -> void
+override Vais.Agents.ContainerPluginRetryPolicy.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginRetryPolicy.GetHashCode() -> int
+override Vais.Agents.ContainerPluginRetryPolicy.ToString() -> string!
+static Vais.Agents.ContainerPluginRetryPolicy.operator !=(Vais.Agents.ContainerPluginRetryPolicy? left, Vais.Agents.ContainerPluginRetryPolicy? right) -> bool
+static Vais.Agents.ContainerPluginRetryPolicy.operator ==(Vais.Agents.ContainerPluginRetryPolicy? left, Vais.Agents.ContainerPluginRetryPolicy? right) -> bool
+Vais.Agents.ContainerPluginKubernetesConfig
+Vais.Agents.ContainerPluginKubernetesConfig.<Clone>$() -> Vais.Agents.ContainerPluginKubernetesConfig!
+Vais.Agents.ContainerPluginKubernetesConfig.ContainerPluginKubernetesConfig() -> void
+Vais.Agents.ContainerPluginKubernetesConfig.DeploymentName.get -> string!
+Vais.Agents.ContainerPluginKubernetesConfig.DeploymentName.init -> void
+Vais.Agents.ContainerPluginKubernetesConfig.Equals(Vais.Agents.ContainerPluginKubernetesConfig? other) -> bool
+Vais.Agents.ContainerPluginKubernetesConfig.Namespace.get -> string!
+Vais.Agents.ContainerPluginKubernetesConfig.Namespace.init -> void
+Vais.Agents.ContainerPluginKubernetesConfig.ServiceUrl.get -> string!
+Vais.Agents.ContainerPluginKubernetesConfig.ServiceUrl.init -> void
+override Vais.Agents.ContainerPluginKubernetesConfig.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginKubernetesConfig.GetHashCode() -> int
+override Vais.Agents.ContainerPluginKubernetesConfig.ToString() -> string!
+static Vais.Agents.ContainerPluginKubernetesConfig.operator !=(Vais.Agents.ContainerPluginKubernetesConfig? left, Vais.Agents.ContainerPluginKubernetesConfig? right) -> bool
+static Vais.Agents.ContainerPluginKubernetesConfig.operator ==(Vais.Agents.ContainerPluginKubernetesConfig? left, Vais.Agents.ContainerPluginKubernetesConfig? right) -> bool
+Vais.Agents.ContainerPluginHandle
+Vais.Agents.ContainerPluginHandle.<Clone>$() -> Vais.Agents.ContainerPluginHandle!
+Vais.Agents.ContainerPluginHandle.ContainerPluginHandle(string! Id, string! Version) -> void
+Vais.Agents.ContainerPluginHandle.Deconstruct(out string! Id, out string! Version) -> void
+Vais.Agents.ContainerPluginHandle.Equals(Vais.Agents.ContainerPluginHandle? other) -> bool
+Vais.Agents.ContainerPluginHandle.Id.get -> string!
+Vais.Agents.ContainerPluginHandle.Id.init -> void
+Vais.Agents.ContainerPluginHandle.Version.get -> string!
+Vais.Agents.ContainerPluginHandle.Version.init -> void
+override Vais.Agents.ContainerPluginHandle.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginHandle.GetHashCode() -> int
+override Vais.Agents.ContainerPluginHandle.ToString() -> string!
+static Vais.Agents.ContainerPluginHandle.operator !=(Vais.Agents.ContainerPluginHandle? left, Vais.Agents.ContainerPluginHandle? right) -> bool
+static Vais.Agents.ContainerPluginHandle.operator ==(Vais.Agents.ContainerPluginHandle? left, Vais.Agents.ContainerPluginHandle? right) -> bool
+Vais.Agents.ContainerPluginRuntimeStatus
+Vais.Agents.ContainerPluginRuntimeStatus.<Clone>$() -> Vais.Agents.ContainerPluginRuntimeStatus!
+Vais.Agents.ContainerPluginRuntimeStatus.ContainerPluginRuntimeStatus(Vais.Agents.ContainerPluginHandle! Handle, string! Topology, System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.ContainerPluginRuntimeStatus.Deconstruct(out Vais.Agents.ContainerPluginHandle! Handle, out string! Topology, out System.DateTimeOffset RegisteredAt) -> void
+Vais.Agents.ContainerPluginRuntimeStatus.Equals(Vais.Agents.ContainerPluginRuntimeStatus? other) -> bool
+Vais.Agents.ContainerPluginRuntimeStatus.Handle.get -> Vais.Agents.ContainerPluginHandle!
+Vais.Agents.ContainerPluginRuntimeStatus.Handle.init -> void
+Vais.Agents.ContainerPluginRuntimeStatus.RegisteredAt.get -> System.DateTimeOffset
+Vais.Agents.ContainerPluginRuntimeStatus.RegisteredAt.init -> void
+Vais.Agents.ContainerPluginRuntimeStatus.Topology.get -> string!
+Vais.Agents.ContainerPluginRuntimeStatus.Topology.init -> void
+override Vais.Agents.ContainerPluginRuntimeStatus.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginRuntimeStatus.GetHashCode() -> int
+override Vais.Agents.ContainerPluginRuntimeStatus.ToString() -> string!
+static Vais.Agents.ContainerPluginRuntimeStatus.operator !=(Vais.Agents.ContainerPluginRuntimeStatus? left, Vais.Agents.ContainerPluginRuntimeStatus? right) -> bool
+static Vais.Agents.ContainerPluginRuntimeStatus.operator ==(Vais.Agents.ContainerPluginRuntimeStatus? left, Vais.Agents.ContainerPluginRuntimeStatus? right) -> bool
+Vais.Agents.IContainerPluginRegistry
+Vais.Agents.IContainerPluginRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContainerPluginManifest?>
+Vais.Agents.IContainerPluginRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.ContainerPluginManifest!>!
+Vais.Agents.IContainerPluginRegistry.RegisterAsync(Vais.Agents.ContainerPluginManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IContainerPluginRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

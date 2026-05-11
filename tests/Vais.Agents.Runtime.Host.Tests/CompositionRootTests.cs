@@ -398,9 +398,9 @@ public class CompositionRootTests
         using var sp = services.BuildServiceProvider();
         var providers = sp.GetServices<INamedToolSourceProvider>().ToList();
 
-        providers.Should().ContainSingle(because: "AddPythonPlugins must register exactly one INamedToolSourceProvider.");
-        providers[0].Should().BeAssignableTo<IPythonPluginHost>(
-            because: "the PythonPluginHostService implements both IPythonPluginHost and INamedToolSourceProvider — the same singleton is forwarded.");
+        providers.Should().ContainSingle(
+            p => p is IPythonPluginHost,
+            because: "AddPythonPlugins must register one INamedToolSourceProvider backed by IPythonPluginHost — the same singleton is forwarded.");
     }
 
     [Fact]
@@ -481,7 +481,9 @@ public class CompositionRootTests
         var providers = sp.GetServices<INamedToolSourceProvider>().ToList();
 
         translator.Should().NotBeNull();
-        providers.Should().ContainSingle(because: "both translator and provider must resolve from the same root — confirms AddPythonPlugins preceded AddAgentManifestInstantiator.");
+        providers.Should().ContainSingle(
+            p => p is IPythonPluginHost,
+            because: "the Python provider must resolve from the same root as the translator — confirms AddPythonPlugins preceded AddAgentManifestInstantiator.");
     }
 
     [Fact]

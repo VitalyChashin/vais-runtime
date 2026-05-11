@@ -87,6 +87,14 @@ public static class ProblemDetailsMapping
     /// <summary>MCP server (id, version) already registered — use UpdateAsync to replace.</summary>
     public const string McpServerConflictType = TypePrefix + "mcp-server-conflict";
 
+    // ── Container plugin URNs (v0.21) ───────────────────────────────────────
+
+    /// <summary>Container plugin handle not found.</summary>
+    public const string ContainerPluginHandleNotFoundType = TypePrefix + "container-plugin-handle-not-found";
+
+    /// <summary>Container plugin (id, version) already registered — use UpdateAsync to replace.</summary>
+    public const string ContainerPluginConflictType = TypePrefix + "container-plugin-conflict";
+
     /// <summary>
     /// Translate a control-plane exception into an <see cref="IResult"/> carrying
     /// Problem Details with an appropriate status code + type URN.
@@ -220,6 +228,9 @@ public static class ProblemDetailsMapping
         McpGatewayConfigConflictException => (StatusCodes.Status409Conflict, McpGatewayConfigConflictType, "MCP gateway config already registered"),
         McpServerHandleNotFoundException => (StatusCodes.Status404NotFound, McpServerHandleNotFoundType, "MCP server not found"),
         McpServerConflictException => (StatusCodes.Status409Conflict, McpServerConflictType, "MCP server already registered"),
+        // ── Container plugin exceptions (v0.21) ──────────────────────────────
+        ContainerPluginHandleNotFoundException => (StatusCodes.Status404NotFound, ContainerPluginHandleNotFoundType, "Container plugin not found"),
+        ContainerPluginConflictException => (StatusCodes.Status409Conflict, ContainerPluginConflictType, "Container plugin already registered"),
         _ => (StatusCodes.Status503ServiceUnavailable, BackendUnavailableType, "Backend unavailable"),
     };
 }

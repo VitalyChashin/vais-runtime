@@ -59,3 +59,22 @@ public sealed record McpServerListResponse(
 
 /// <summary>Client-side wire type for <c>POST /v1/mcp-servers/validate</c>.</summary>
 public sealed record McpServerValidationResult(bool Valid, IReadOnlyList<string> Errors);
+
+/// <summary>Client-side wire type for <c>POST /v1/container-plugins</c> and <c>PATCH /v1/container-plugins/{id}</c>.</summary>
+public sealed record ContainerPluginApplyResponse(
+    ContainerPluginHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
+
+/// <summary>Client-side wire type for <c>GET /v1/container-plugins/{id}</c>.</summary>
+public sealed record ContainerPluginQueryResponse(
+    ContainerPluginManifest Manifest,
+    ContainerPluginHandle Handle,
+    ContainerPluginRuntimeStatus Status);
+
+/// <summary>Client-side wire type for <c>GET /v1/container-plugins</c>.</summary>
+public sealed record ContainerPluginListResponse(
+    IReadOnlyList<ContainerPluginManifest> Items,
+    string? NextCursor = null);
+
+/// <summary>Client-side wire type for <c>POST /v1/container-plugins/validate</c>.</summary>
+public sealed record ContainerPluginValidationResult(bool Valid, IReadOnlyList<string> Errors);

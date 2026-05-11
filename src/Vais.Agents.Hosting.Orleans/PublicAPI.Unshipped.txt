@@ -138,3 +138,43 @@ static Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.DeserializeMa
 static Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.SerializeManifest(Vais.Agents.McpGatewayConfigManifest! manifest) -> string!
 static Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.DeserializeManifest(string! json) -> Vais.Agents.McpServerManifest!
 static Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.SerializeManifest(Vais.Agents.McpServerManifest! manifest) -> string!
+const Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.DirectoryKey = "vais.agents.container-plugin-registry.directory" -> string!
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryGrain
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryDirectoryGrain.TrackAsync(string! pluginId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerPluginRegistryDirectoryGrain.UntrackAsync(string! pluginId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain.ContainerPluginRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain.RegisterAsync(string! manifestJson) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrain.ContainerPluginRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrain.TrackAsync(string! pluginId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrain.UntrackAsync(string! pluginId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState.ContainerPluginRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState.ManifestJsonByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryGrainState.ManifestJsonByVersion.set -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrainState.ContainerPluginRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrainState.PluginIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.ContainerPluginRegistryDirectoryGrainState.PluginIds.set -> void
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.OrleansContainerPluginRegistry(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.ContainerPluginManifest!>!
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContainerPluginManifest?>
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.RegisterAsync(Vais.Agents.ContainerPluginManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.DeserializeManifest(string! json) -> Vais.Agents.ContainerPluginManifest!
+static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.SerializeManifest(Vais.Agents.ContainerPluginManifest! manifest) -> string!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansContainerPluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

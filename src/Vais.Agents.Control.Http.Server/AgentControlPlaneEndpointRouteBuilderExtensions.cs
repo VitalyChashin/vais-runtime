@@ -196,6 +196,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapLlmGatewayControlPlane(builder, prefix);
         MapMcpGatewayControlPlane(builder, prefix);
         MapMcpServerControlPlane(builder, prefix);
+        MapContainerPluginControlPlane(builder, prefix);
 
         return builder;
     }
@@ -2658,5 +2659,225 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         }
 
         return errors;
+    }
+
+    // ── Container plugin handlers (v0.21) ─────────────────────────────────────
+
+    /// <summary>
+    /// Mount only the container plugin control-plane endpoints (v0.21).
+    /// </summary>
+    public static IEndpointRouteBuilder MapContainerPluginControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("ContainerPlugins");
+
+        group.MapPost("/container-plugins/validate", ContainerPluginValidateAsync)
+            .WithName("ContainerPlugins.Validate")
+            .WithSummary("Dry-run validation: structural checks only. Always 200; inspect Valid/Errors.")
+            .Accepts<ContainerPluginManifest>("application/json", "application/yaml")
+            .Produces<ContainerPluginValidationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/container-plugins", ContainerPluginCreateAsync)
+            .WithName("ContainerPlugins.Create")
+            .WithSummary("Register a container plugin manifest and start the container.")
+            .Accepts<ContainerPluginManifest>("application/json", "application/yaml")
+            .Produces<ContainerPluginApplyResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/container-plugins", ContainerPluginListAsync)
+            .WithName("ContainerPlugins.List")
+            .WithSummary("List registered container plugin manifests with optional label-prefix filter.")
+            .Produces<ContainerPluginListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/container-plugins/{id}", ContainerPluginQueryAsync)
+            .WithName("ContainerPlugins.Query")
+            .WithSummary("Fetch a container plugin manifest + current runtime status.")
+            .Produces<ContainerPluginQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPatch("/container-plugins/{id}", ContainerPluginUpdateAsync)
+            .WithName("ContainerPlugins.Update")
+            .WithSummary("Publish a new manifest version for an existing container plugin.")
+            .Accepts<ContainerPluginManifest>("application/json", "application/yaml")
+            .Produces<ContainerPluginApplyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapDelete("/container-plugins/{id}", ContainerPluginEvictAsync)
+            .WithName("ContainerPlugins.Evict")
+            .WithSummary("Stop and remove a container plugin.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> ContainerPluginValidateAsync(HttpContext http, CancellationToken ct)
+    {
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        IReadOnlyList<ManifestResource> resources;
+        try
+        {
+            resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+        }
+        catch (AgentManifestValidationException ex)
+        {
+            return Results.Ok(new ContainerPluginValidationResult(Valid: false, ex.Errors.ToArray()));
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.ContainerPluginCreate);
+        }
+
+        var plugins = resources.OfType<ManifestResource.ContainerPluginCase>().ToList();
+        if (plugins.Count != 1)
+            return Results.BadRequest(new { error = $"POST /container-plugins/validate accepts exactly one ContainerPlugin manifest; got {plugins.Count}." });
+
+        return Results.Ok(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
+    }
+
+    private static async Task<IResult> ContainerPluginCreateAsync(HttpContext http, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        ContainerPluginManifest manifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var plugins = resources.OfType<ManifestResource.ContainerPluginCase>().ToList();
+            if (plugins.Count != 1)
+                return Results.BadRequest(new { error = $"POST /container-plugins accepts exactly one ContainerPlugin manifest; got {plugins.Count}." });
+            manifest = plugins[0].Manifest;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.ContainerPluginCreate);
+        }
+
+        try
+        {
+            var handle = await manager.CreateAsync(manifest, ct).ConfigureAwait(false);
+            return Results.Created($"{http.Request.PathBase}{http.Request.Path}/{manifest.Id}",
+                new ContainerPluginApplyResponse(handle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.ContainerPluginCreate);
+        }
+    }
+
+    private static async Task<IResult> ContainerPluginListAsync(HttpContext http, string? labels, int? limit, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<ContainerPluginManifest>();
+            await foreach (var m in registry.ListAsync(labels, ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new ContainerPluginListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.ContainerPluginQuery);
+        }
+    }
+
+    private static async Task<IResult> ContainerPluginQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
+        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+                return Results.NotFound(new { error = $"container-plugin '{id}' not found" });
+            var handle = new ContainerPluginHandle(id, manifest.Version);
+            var status = await manager.QueryAsync(handle, ct).ConfigureAwait(false);
+            return Results.Ok(new ContainerPluginQueryResponse(manifest, handle, status));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.ContainerPluginQuery);
+        }
+    }
+
+    private static async Task<IResult> ContainerPluginUpdateAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        ContainerPluginManifest newManifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var plugins = resources.OfType<ManifestResource.ContainerPluginCase>().ToList();
+            if (plugins.Count != 1)
+                return Results.BadRequest(new { error = $"PATCH /container-plugins/{{id}} accepts exactly one ContainerPlugin manifest; got {plugins.Count}." });
+            newManifest = plugins[0].Manifest;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.ContainerPluginUpdate);
+        }
+
+        try
+        {
+            var existingVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (existingVersion is null)
+                return Results.NotFound(new { error = $"container-plugin '{id}' not found" });
+            var currentHandle = new ContainerPluginHandle(id, existingVersion);
+            var newHandle = await manager.UpdateAsync(currentHandle, newManifest, ct).ConfigureAwait(false);
+            return Results.Ok(new ContainerPluginApplyResponse(newHandle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.ContainerPluginUpdate);
+        }
+    }
+
+    private static async Task<IResult> ContainerPluginEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+                return Results.NotFound(new { error = $"container-plugin '{id}' not found" });
+            await manager.EvictAsync(new ContainerPluginHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
     }
 }

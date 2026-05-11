@@ -40,4 +40,7 @@ public abstract record ManifestResource
 
     /// <summary><c>kind: McpServer</c>.</summary>
     public sealed record McpServerCase(McpServerManifest Server) : ManifestResource;
+
+    /// <summary><c>kind: ContainerPlugin</c>.</summary>
+    public sealed record ContainerPluginCase(ContainerPluginManifest Manifest) : ManifestResource;
 }

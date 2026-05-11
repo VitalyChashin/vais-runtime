@@ -108,6 +108,37 @@ Vais.Agents.Control.PolicyOperation.McpServerCreate = 22 -> Vais.Agents.Control.
 Vais.Agents.Control.PolicyOperation.McpServerEvict = 25 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.McpServerQuery = 24 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.McpServerUpdate = 23 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ContainerPluginCreate = 26 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ContainerPluginUpdate = 27 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ContainerPluginQuery = 28 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ContainerPluginEvict = 29 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.IMcpServerConnectionChangedHook
 Vais.Agents.Control.IMcpServerConnectionChangedHook.OnConnectedAsync(string! serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 Vais.Agents.Control.IMcpServerConnectionChangedHook.OnDisconnectedAsync(string! serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.IContainerPluginLifecycleManager
+Vais.Agents.Control.IContainerPluginLifecycleManager.CreateAsync(Vais.Agents.ContainerPluginManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContainerPluginHandle!>
+Vais.Agents.Control.IContainerPluginLifecycleManager.EvictAsync(Vais.Agents.ContainerPluginHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IContainerPluginLifecycleManager.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.ContainerPluginManifest!>!
+Vais.Agents.Control.IContainerPluginLifecycleManager.QueryAsync(Vais.Agents.ContainerPluginHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContainerPluginRuntimeStatus!>
+Vais.Agents.Control.IContainerPluginLifecycleManager.UpdateAsync(Vais.Agents.ContainerPluginHandle! handle, Vais.Agents.ContainerPluginManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ContainerPluginHandle!>
+Vais.Agents.Control.ContainerPluginConflictException
+Vais.Agents.Control.ContainerPluginConflictException.ContainerPluginConflictException(string! pluginId, string! version) -> void
+Vais.Agents.Control.ContainerPluginConflictException.PluginId.get -> string!
+Vais.Agents.Control.ContainerPluginConflictException.Version.get -> string!
+Vais.Agents.Control.ContainerPluginHandleNotFoundException
+Vais.Agents.Control.ContainerPluginHandleNotFoundException.ContainerPluginHandleNotFoundException(string! pluginId, string! version) -> void
+Vais.Agents.Control.ContainerPluginHandleNotFoundException.PluginId.get -> string!
+Vais.Agents.Control.ContainerPluginHandleNotFoundException.Version.get -> string!
+Vais.Agents.Control.ManifestResource.ContainerPluginCase
+Vais.Agents.Control.ManifestResource.ContainerPluginCase.ContainerPluginCase(Vais.Agents.ContainerPluginManifest! Manifest) -> void
+Vais.Agents.Control.ManifestResource.ContainerPluginCase.Deconstruct(out Vais.Agents.ContainerPluginManifest! Manifest) -> void
+Vais.Agents.Control.ManifestResource.ContainerPluginCase.Equals(Vais.Agents.Control.ManifestResource.ContainerPluginCase? other) -> bool
+Vais.Agents.Control.ManifestResource.ContainerPluginCase.Manifest.get -> Vais.Agents.ContainerPluginManifest!
+Vais.Agents.Control.ManifestResource.ContainerPluginCase.Manifest.init -> void
+override Vais.Agents.Control.ManifestResource.ContainerPluginCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.ContainerPluginCase!
+override Vais.Agents.Control.ManifestResource.ContainerPluginCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.ContainerPluginCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.ContainerPluginCase.ToString() -> string!
+override sealed Vais.Agents.Control.ManifestResource.ContainerPluginCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+static Vais.Agents.Control.ManifestResource.ContainerPluginCase.operator !=(Vais.Agents.Control.ManifestResource.ContainerPluginCase? left, Vais.Agents.Control.ManifestResource.ContainerPluginCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.ContainerPluginCase.operator ==(Vais.Agents.Control.ManifestResource.ContainerPluginCase? left, Vais.Agents.Control.ManifestResource.ContainerPluginCase? right) -> bool

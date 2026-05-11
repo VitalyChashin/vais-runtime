@@ -872,6 +872,97 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new McpServerValidationResult(Valid: true, Array.Empty<string>());
     }
 
+    // ── Container plugin verbs (v0.21) ──────────────────────────────────────
+
+    /// <inheritdoc />
+    public Task<ContainerPluginHandle> CreateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
+        => CreateContainerPluginAsync(manifest, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<ContainerPluginHandle> CreateContainerPluginAsync(ContainerPluginManifest manifest, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/container-plugins")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<ContainerPluginApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateContainerPlugin.");
+    }
+
+    /// <inheritdoc />
+    public Task<ContainerPluginHandle> UpdateContainerPluginAsync(string id, ContainerPluginManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        => UpdateContainerPluginAsync(id, manifest, version, idempotencyKey: null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<ContainerPluginHandle> UpdateContainerPluginAsync(string id, ContainerPluginManifest manifest, string? version, string? idempotencyKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(manifest);
+        var path = version is null ? $"/v1/container-plugins/{Uri.EscapeDataString(id)}" : $"/v1/container-plugins/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Patch, path)
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        AttachIdempotencyKey(request, idempotencyKey);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var applyResponse = await response.Content.ReadFromJsonAsync<ContainerPluginApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateContainerPlugin.");
+    }
+
+    /// <inheritdoc />
+    public async Task<ContainerPluginListResponse> ListContainerPluginsAsync(string? labelPrefix = null, int? limit = null, string? cursor = null, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(labelPrefix)) qs.Add($"labels={Uri.EscapeDataString(labelPrefix)}");
+        if (limit is int l) qs.Add($"limit={l}");
+        if (!string.IsNullOrWhiteSpace(cursor)) qs.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        var path = qs.Count > 0 ? $"/v1/container-plugins?{string.Join('&', qs)}" : "/v1/container-plugins";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ContainerPluginListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new ContainerPluginListResponse(Array.Empty<ContainerPluginManifest>());
+    }
+
+    /// <inheritdoc />
+    public async Task<ContainerPluginQueryResponse?> QueryContainerPluginAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/container-plugins/{Uri.EscapeDataString(id)}" : $"/v1/container-plugins/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ContainerPluginQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task EvictContainerPluginAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/container-plugins/{Uri.EscapeDataString(id)}" : $"/v1/container-plugins/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ContainerPluginValidationResult> ValidateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/container-plugins/validate")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ContainerPluginValidationResult>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new ContainerPluginValidationResult(Valid: true, Array.Empty<string>());
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

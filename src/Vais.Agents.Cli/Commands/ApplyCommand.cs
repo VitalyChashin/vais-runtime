@@ -108,6 +108,9 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                     case ManifestResource.McpServerCase mcpServerCase:
                         await ApplyMcpServerAsync(client, mcpServerCase.Server, idempotencyKey, cancellationToken);
                         break;
+                    case ManifestResource.ContainerPluginCase containerPluginCase:
+                        await ApplyContainerPluginAsync(client, containerPluginCase.Manifest, idempotencyKey, cancellationToken);
+                        break;
                     default:
                         AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
                         break;
@@ -193,6 +196,20 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         {
             var updated = await client.UpdateMcpServerAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
             AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (mcp-server, version {updated.Version})");
+        }
+    }
+
+    private static async Task ApplyContainerPluginAsync(IAgentControlPlaneClient client, ContainerPluginManifest manifest, string idempotencyKey, CancellationToken ct)
+    {
+        try
+        {
+            var handle = await client.CreateContainerPluginAsync(manifest, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (container-plugin, version {handle.Version})");
+        }
+        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        {
+            var updated = await client.UpdateContainerPluginAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+            AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (container-plugin, version {updated.Version})");
         }
     }
 

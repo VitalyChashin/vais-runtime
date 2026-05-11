@@ -185,6 +185,24 @@ internal static class EnvelopeSerializer
         return WrapEnvelope("McpServer", metadata, spec).ToJsonString(JsonOptions);
     }
 
+    public static string Serialize(ContainerPluginManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
+        var s = manifest.Spec;
+        var spec = new JsonObject { ["image"] = s.Image };
+        if (s.Port != 8080) spec["port"] = s.Port;
+        if (!string.Equals(s.Topology, "standalone", StringComparison.Ordinal)) spec["topology"] = s.Topology;
+        if (s.StartupTimeoutSeconds != 30) spec["startupTimeoutSeconds"] = s.StartupTimeoutSeconds;
+        if (s.InvokeTimeoutSeconds != 60) spec["invokeTimeoutSeconds"] = s.InvokeTimeoutSeconds;
+        if (!string.Equals(s.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) spec["imagePullPolicy"] = s.ImagePullPolicy;
+        if (s.Build is { } build) spec["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
+        if (s.RetryPolicy is { } rp) spec["retryPolicy"] = JsonSerializer.SerializeToNode(rp, JsonOptions);
+        if (s.Kubernetes is { } k8s) spec["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
+        if (s.Secrets is { Count: > 0 }) spec["secrets"] = JsonSerializer.SerializeToNode(s.Secrets, JsonOptions);
+        return WrapEnvelope("ContainerPlugin", metadata, spec).ToJsonString(JsonOptions);
+    }
+
     private static JsonObject BuildGatewayMetadata(string id, string version, string? description,
         IReadOnlyDictionary<string, string>? labels, IReadOnlyDictionary<string, string>? annotations)
     {

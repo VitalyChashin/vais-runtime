@@ -2,8 +2,10 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Control;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Preprocessing;
 using Vais.Agents.Runtime.Plugins;
@@ -29,7 +31,11 @@ public static class ContainerPluginServiceCollectionExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
         services.AddSingleton<ICallTokenService, HmacCallTokenService>();
-        services.AddSingleton<ContainerPluginHostService>();
+        services.AddSingleton<ContainerPluginHostService>(sp => new ContainerPluginHostService(
+            sp.GetRequiredService<ContainerPluginLoaderOptions>(),
+            sp.GetRequiredService<IPluginHandlerRegistry>(),
+            sp.GetRequiredService<ILoggerFactory>(),
+            sp.GetService<IContainerPluginRegistry>()));
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ContainerPluginHostService>());
         services.AddSingleton<IContainerPluginHost>(sp => sp.GetRequiredService<ContainerPluginHostService>());
         services.AddSingleton<IContainerPluginReloader>(sp =>
@@ -40,6 +46,14 @@ public static class ContainerPluginServiceCollectionExtensions
         services.AddSingleton<IAgentPreprocessor>(sp => new SystemPromptInjector(
             sp.GetService<IPromptTemplateRegistry>(),
             sp.GetService<IPromptFileLoader>()));
+        services.TryAddSingleton<IContainerPluginLifecycleManager>(sp =>
+            new ContainerPluginLifecycleManager(
+                sp.GetRequiredService<IContainerPluginRegistry>(),
+                sp.GetRequiredService<IContainerPluginHost>(),
+                sp.GetService<IAgentPolicyEngine>(),
+                sp.GetService<IAuditLog>(),
+                sp.GetService<IAgentContextAccessor>(),
+                sp.GetService<ILogger<ContainerPluginLifecycleManager>>()));
         return services;
     }
 

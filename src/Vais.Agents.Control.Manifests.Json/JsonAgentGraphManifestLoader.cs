@@ -29,6 +29,7 @@ public sealed class JsonAgentGraphManifestLoader
     internal const string LlmGatewayConfigKind = "LlmGatewayConfig";
     internal const string McpGatewayConfigKind = "McpGatewayConfig";
     internal const string McpServerKind = "McpServer";
+    internal const string ContainerPluginKind = "ContainerPlugin";
 
     /// <summary>Parse graph manifests from an in-memory string. Agent-kind documents in the stream are silently skipped.</summary>
     public ValueTask<IReadOnlyList<AgentGraphManifest>> LoadFromStringAsync(string content, CancellationToken cancellationToken = default)
@@ -188,9 +189,14 @@ public sealed class JsonAgentGraphManifestLoader
             var srv = ParseMcpServer(root, errors, prefix);
             return srv is null ? null : new ManifestResource.McpServerCase(srv);
         }
+        if (string.Equals(kind, ContainerPluginKind, StringComparison.Ordinal))
+        {
+            var plugin = ParseContainerPlugin(root, errors, prefix);
+            return plugin is null ? null : new ManifestResource.ContainerPluginCase(plugin);
+        }
 
         errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' " +
-            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', or '{McpServerKind}')");
+            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', or '{ContainerPluginKind}')");
         return null;
     }
 
@@ -641,6 +647,7 @@ public sealed class JsonAgentGraphManifestLoader
                 ManifestResource.LlmGatewayConfigCase l => ("LlmGatewayConfig", l.Config.Id, l.Config.Version),
                 ManifestResource.McpGatewayConfigCase m => ("McpGatewayConfig", m.Config.Id, m.Config.Version),
                 ManifestResource.McpServerCase s => ("McpServer", s.Server.Id, s.Server.Version),
+                ManifestResource.ContainerPluginCase p => ("ContainerPlugin", p.Manifest.Id, p.Manifest.Version),
                 _ => throw new NotSupportedException($"Unknown ManifestResource type: {r.GetType().Name}"),
             };
             if (!seen.Add(key))
@@ -865,6 +872,111 @@ public sealed class JsonAgentGraphManifestLoader
             ToolProjection = toolProjection,
             McpGatewayRef = mcpGatewayRef,
             Annotations = annotations,
+        };
+    }
+
+    private static ContainerPluginManifest? ParseContainerPlugin(JsonElement root, List<string> errors, string prefix)
+    {
+        if (!root.TryGetProperty("metadata", out var metadata) || metadata.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid metadata block");
+            return null;
+        }
+
+        // Accept both metadata.id (standard) and metadata.name (legacy filesystem format).
+        var id = metadata.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        if (string.IsNullOrEmpty(id))
+            id = metadata.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+
+        var version = metadata.TryGetProperty("version", out var vEl) ? vEl.GetString() : null;
+        // Legacy plugin.yaml files omit version; default to "1.0" for backward compat.
+        if (string.IsNullOrEmpty(version)) version = "1.0";
+
+        var description = metadata.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+
+        if (string.IsNullOrEmpty(id))
+            errors.Add($"{prefix}metadata.id (or metadata.name) is required");
+        else if (!ManifestValidation.IsValidId(id))
+            errors.Add($"{prefix}metadata.id '{id}' does not match ^[a-z][a-z0-9-]{{0,62}}$");
+
+        var labels = ParseStringMap(metadata, "labels");
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(id)) return null;
+
+        var image = spec.TryGetProperty("image", out var imgEl) ? imgEl.GetString() : null;
+        if (string.IsNullOrEmpty(image))
+            errors.Add($"{prefix}spec.image is required");
+
+        var port = spec.TryGetProperty("port", out var portEl) && portEl.ValueKind == JsonValueKind.Number
+            ? portEl.GetInt32() : 8080;
+        var topology = spec.TryGetProperty("topology", out var topEl) ? topEl.GetString() ?? "standalone" : "standalone";
+        var startupTimeout = spec.TryGetProperty("startupTimeoutSeconds", out var stEl) && stEl.ValueKind == JsonValueKind.Number
+            ? stEl.GetInt32() : 30;
+        var invokeTimeout = spec.TryGetProperty("invokeTimeoutSeconds", out var itEl) && itEl.ValueKind == JsonValueKind.Number
+            ? itEl.GetInt32() : 60;
+        var imagePullPolicy = spec.TryGetProperty("imagePullPolicy", out var ippEl) ? ippEl.GetString() ?? "IfNotPresent" : "IfNotPresent";
+
+        var secrets = ParseStringMap(spec, "secrets");
+
+        ContainerPluginRetryPolicy? retryPolicy = null;
+        if (spec.TryGetProperty("retryPolicy", out var rpEl) && rpEl.ValueKind == JsonValueKind.Object)
+        {
+            var maxAttempts = rpEl.TryGetProperty("maxAttempts", out var maEl) && maEl.ValueKind == JsonValueKind.Number ? maEl.GetInt32() : 3;
+            var backoff = rpEl.TryGetProperty("backoffSeconds", out var bEl) && bEl.ValueKind == JsonValueKind.Number ? bEl.GetInt32() : 2;
+            var retryOn = ParseStringArray(rpEl, "retryOn") ?? Array.Empty<string>();
+            retryPolicy = new ContainerPluginRetryPolicy(maxAttempts, backoff, retryOn);
+        }
+
+        ContainerPluginKubernetesConfig? k8sConfig = null;
+        if (spec.TryGetProperty("kubernetes", out var k8sEl) && k8sEl.ValueKind == JsonValueKind.Object)
+        {
+            var serviceUrl = k8sEl.TryGetProperty("serviceUrl", out var suEl) ? suEl.GetString() : null;
+            if (string.IsNullOrEmpty(serviceUrl))
+                errors.Add($"{prefix}spec.kubernetes.serviceUrl is required when kubernetes block is present");
+            var deploymentName = k8sEl.TryGetProperty("deploymentName", out var dnEl) ? dnEl.GetString() ?? "" : "";
+            var ns = k8sEl.TryGetProperty("namespace", out var nsEl) ? nsEl.GetString() ?? "default" : "default";
+            if (!string.IsNullOrEmpty(serviceUrl))
+                k8sConfig = new ContainerPluginKubernetesConfig { ServiceUrl = serviceUrl!, DeploymentName = deploymentName, Namespace = ns };
+        }
+
+        ContainerPluginBuildSpec? buildSpec = null;
+        if (spec.TryGetProperty("build", out var buildEl) && buildEl.ValueKind == JsonValueKind.Object)
+        {
+            var context = buildEl.TryGetProperty("context", out var ctxEl) ? ctxEl.GetString() : null;
+            if (string.IsNullOrEmpty(context))
+                errors.Add($"{prefix}spec.build.context is required when build block is present");
+            else
+            {
+                var dockerfile = buildEl.TryGetProperty("dockerfile", out var dfEl) ? dfEl.GetString() ?? "Dockerfile" : "Dockerfile";
+                var buildArgs = ParseStringMap(buildEl, "args");
+                var push = buildEl.TryGetProperty("push", out var pushEl) && pushEl.ValueKind == JsonValueKind.True;
+                buildSpec = new ContainerPluginBuildSpec { Context = context!, Dockerfile = dockerfile, Args = buildArgs, Push = push };
+            }
+        }
+
+        if (string.IsNullOrEmpty(image)) return null;
+
+        return new ContainerPluginManifest(id!, version!, description, labels)
+        {
+            Spec = new ContainerPluginSpec
+            {
+                Image = image!,
+                Build = buildSpec,
+                Port = port,
+                Topology = topology,
+                StartupTimeoutSeconds = startupTimeout,
+                InvokeTimeoutSeconds = invokeTimeout,
+                ImagePullPolicy = imagePullPolicy,
+                RetryPolicy = retryPolicy,
+                Kubernetes = k8sConfig,
+                Secrets = secrets,
+            },
         };
     }
 }

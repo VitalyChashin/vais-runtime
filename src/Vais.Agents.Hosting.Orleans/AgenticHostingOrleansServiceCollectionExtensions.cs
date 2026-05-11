@@ -222,4 +222,18 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IMcpServerRegistry>(sp => sp.GetRequiredService<OrleansMcpServerRegistry>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansContainerPluginRegistry"/> as the durable
+    /// <see cref="IContainerPluginRegistry"/>. Plugin registrations survive silo restart
+    /// via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansContainerPluginRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansContainerPluginRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IContainerPluginRegistry>(sp => sp.GetRequiredService<OrleansContainerPluginRegistry>());
+        return services;
+    }
 }
