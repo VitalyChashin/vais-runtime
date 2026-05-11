@@ -29,7 +29,7 @@ public static class PhysicalMcpServiceCollectionExtensions
         services.AddSingleton<PhysicalMcpConnectionService>(sp =>
             new PhysicalMcpConnectionService(
                 sp.GetRequiredService<IMcpServerRegistry>(),
-                sp.GetServices<IMcpServerConnectionChangedHook>(),
+                sp,
                 sp.GetService<Microsoft.Extensions.Logging.ILogger<PhysicalMcpConnectionService>>()));
 
         services.AddSingleton<INamedToolSourceProvider>(sp =>

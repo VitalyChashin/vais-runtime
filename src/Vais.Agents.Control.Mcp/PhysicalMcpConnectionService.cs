@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -50,20 +51,35 @@ internal sealed class PhysicalMcpConnectionService : BackgroundService, INamedTo
     }
 
     private readonly IMcpServerRegistry _registry;
-    private readonly IReadOnlyList<IMcpServerConnectionChangedHook> _hooks;
+    private readonly Func<IEnumerable<IMcpServerConnectionChangedHook>> _hooksFactory;
     private readonly ILogger<PhysicalMcpConnectionService> _logger;
 
     // null value = server tracked but not yet connected / reconnecting
     private readonly ConcurrentDictionary<string, ConnectionEntry?> _connections =
         new(StringComparer.Ordinal);
 
+    // Used by tests — hooks resolved eagerly from a known-complete collection.
     internal PhysicalMcpConnectionService(
         IMcpServerRegistry registry,
         IEnumerable<IMcpServerConnectionChangedHook> hooks,
         ILogger<PhysicalMcpConnectionService>? logger = null)
     {
         _registry = registry;
-        _hooks = [.. hooks];
+        var captured = hooks.ToArray();
+        _hooksFactory = () => captured;
+        _logger = logger ?? NullLogger<PhysicalMcpConnectionService>.Instance;
+    }
+
+    // Used by DI — hooks resolved lazily via IServiceProvider to avoid a circular
+    // dependency: PhysicalMcpConnectionService → McpTranslatorInvalidationHook
+    // → AgentManifestTranslator → INamedToolSourceProvider (PhysicalMcpConnectionService).
+    internal PhysicalMcpConnectionService(
+        IMcpServerRegistry registry,
+        IServiceProvider serviceProvider,
+        ILogger<PhysicalMcpConnectionService>? logger = null)
+    {
+        _registry = registry;
+        _hooksFactory = () => serviceProvider.GetServices<IMcpServerConnectionChangedHook>();
         _logger = logger ?? NullLogger<PhysicalMcpConnectionService>.Instance;
     }
 
@@ -172,7 +188,7 @@ internal sealed class PhysicalMcpConnectionService : BackgroundService, INamedTo
     private async Task DispatchHooksAsync(
         Func<IMcpServerConnectionChangedHook, Task> action, string serverId)
     {
-        foreach (var hook in _hooks)
+        foreach (var hook in _hooksFactory())
         {
             try
             {
