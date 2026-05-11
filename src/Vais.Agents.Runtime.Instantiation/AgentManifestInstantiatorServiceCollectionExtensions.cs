@@ -76,6 +76,15 @@ public static class AgentManifestInstantiatorServiceCollectionExtensions
                 sp.GetRequiredService<IAgentManifestTranslator>(),
                 sp.GetService<Microsoft.Extensions.Logging.ILogger<TranslatorInvalidationHook>>()));
 
+        // When PhysicalMcpConnectionService (Vais.Agents.Control.Mcp) is registered,
+        // it invokes IMcpServerConnectionChangedHook impls on connect/disconnect.
+        // This hook drives translator-cache invalidation for agents that reference the server.
+        services.AddSingleton<Vais.Agents.Control.IMcpServerConnectionChangedHook>(sp =>
+            new McpTranslatorInvalidationHook(
+                sp.GetRequiredService<IAgentRegistry>(),
+                sp.GetRequiredService<IAgentManifestTranslator>(),
+                sp.GetService<Microsoft.Extensions.Logging.ILogger<McpTranslatorInvalidationHook>>()));
+
         return services;
     }
 

@@ -218,8 +218,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
 
         // GCF-24: Expand transport:registered McpServerRefs into IToolSources.
         // Virtual servers → VirtualMcpToolSource; physical servers → INamedToolSourceProvider bridge.
-        // TODO: A hosted service bridging IMcpServerRegistry → McpClient connections for physical
-        //       registered servers is out of scope here (TranslatorInvalidationHook v0.22 pattern).
+        // Physical registered servers are served by PhysicalMcpConnectionService (Vais.Agents.Control.Mcp)
+        // which registers as INamedToolSourceProvider and is resolved below in ResolveToolsAsync.
         var registeredSources = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
 
         var toolRegistry = await ResolveToolsAsync(manifest, registeredSources, cancellationToken).ConfigureAwait(false);
@@ -350,9 +350,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                 result[serverRef.Name] = BuildVirtualMcpToolSource(srv);
             }
             // Physical servers: delegated to INamedToolSourceProvider at tool-resolution time.
-            // A hosting service bridging IMcpServerRegistry → McpClient connections is needed
-            // to serve physical registered servers via INamedToolSourceProvider.
-            // TODO: TranslatorInvalidationHook for physical registered server reconnections (v0.22 pattern).
+            // PhysicalMcpConnectionService (Vais.Agents.Control.Mcp) serves them; if that service
+            // is not registered, GetByName returns null and tool resolution throws McpServerUnavailable.
         }
         return result;
     }

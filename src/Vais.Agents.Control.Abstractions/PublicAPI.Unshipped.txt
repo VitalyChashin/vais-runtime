@@ -108,3 +108,6 @@ Vais.Agents.Control.PolicyOperation.McpServerCreate = 22 -> Vais.Agents.Control.
 Vais.Agents.Control.PolicyOperation.McpServerEvict = 25 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.McpServerQuery = 24 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.McpServerUpdate = 23 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.IMcpServerConnectionChangedHook
+Vais.Agents.Control.IMcpServerConnectionChangedHook.OnConnectedAsync(string! serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.IMcpServerConnectionChangedHook.OnDisconnectedAsync(string! serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
