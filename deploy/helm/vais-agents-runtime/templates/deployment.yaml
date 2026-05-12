@@ -87,6 +87,10 @@ spec:
               value: "true"
             {{- end }}
             {{- end }}
+            {{- if .Values.plugins.pythonReloadPolicy }}
+            - name: VAIS_PYTHON_PLUGINS_RELOAD_POLICY
+              value: {{ .Values.plugins.pythonReloadPolicy | quote }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz

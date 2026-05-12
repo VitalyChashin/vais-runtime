@@ -86,6 +86,7 @@ Production installs push to a private registry and override `image.repository`.
 | `observability.langfuse.project` | `""` | Langfuse project label. |
 | `plugins.enabled` | `false` | Reserve `/var/lib/vais/plugins` mount (Pillar C uses this). |
 | `plugins.persistentVolumeClaimName` | `""` | PVC to mount; empty → emptyDir. |
+| `plugins.pythonReloadPolicy` | `""` | `""` disables hot-reload; `DrainAndSwap` enables the filesystem watcher and `POST /v1/plugins/{name}/source` endpoint. |
 | `service.type` | `ClusterIP` | |
 | `service.port` | `8080` | |
 | `readinessProbe.failureThreshold` | `12` | 12 × 5s = 60s tolerance — tune up for larger Orleans clusters. |
@@ -154,6 +155,30 @@ and the chart skips the sidecar + ConfigMap:
 ```bash
 --set opa.baseUrl=http://opa.opa-system.svc.cluster.local:8181
 ```
+
+## Python plugin hot-reload on Kubernetes
+
+Enable the reload policy so the runtime watches for source changes and exposes
+the `POST /v1/plugins/{name}/source` push endpoint:
+
+```bash
+helm upgrade vais-runtime . \
+  --namespace vais \
+  --set plugins.enabled=true \
+  --set plugins.pythonReloadPolicy=DrainAndSwap
+```
+
+The watcher is a no-op when nothing changes files — it is safe to enable in
+production. Three delivery patterns are supported:
+
+| Pattern | Description | Best for |
+|---|---|---|
+| `vais plugin push` | Pushes plugin source via the HTTP source endpoint; integrates cleanly with CI/CD pipelines | CI/CD-integrated workflows |
+| ConfigMap volume | Kubernetes-managed sync (~60 s delay); mount the ConfigMap at `/var/lib/vais/plugins/<name>/` | Small plugins, no extra tooling |
+| `git-sync` sidecar | Near-real-time sync from a git repository | Workflows with a git source-of-truth |
+
+`vais plugin push` is the recommended CI/CD integration point — it targets the
+runtime directly and does not require a pod restart or `kubectl exec`.
 
 ## Security posture
 

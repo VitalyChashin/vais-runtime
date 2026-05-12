@@ -121,6 +121,10 @@ plugins:
   #   - `persistentVolumeClaimName` empty → emptyDir (ephemeral; not a real
   #     plugin story, but keeps the mount shape stable for Pillar C).
   persistentVolumeClaimName: ""
+  # Python plugin hot-reload policy. Set to DrainAndSwap to enable the
+  # filesystem watcher and source-push endpoint. Safe to enable on
+  # Kubernetes: the watcher is a no-op if nothing changes files.
+  pythonReloadPolicy: ""   # "" | DrainAndSwap
 
 # v0.30 JWT bearer authentication. Off-by-default → existing localhost semantics
 # unchanged. When jwtAuthority is set the full bearer-token pipeline is wired on
