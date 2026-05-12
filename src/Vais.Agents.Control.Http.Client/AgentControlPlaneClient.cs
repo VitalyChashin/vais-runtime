@@ -963,6 +963,30 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new ContainerPluginValidationResult(Valid: true, Array.Empty<string>());
     }
 
+    /// <inheritdoc />
+    public async Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(source)) qs.Add($"source={Uri.EscapeDataString(source)}");
+        if (limit != 100) qs.Add($"limit={limit}");
+        var path = qs.Count > 0 ? $"/v1/diagnostics/spans?{string.Join('&', qs)}" : "/v1/diagnostics/spans";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+            return new DiagSpanListResponse(Array.Empty<Vais.Agents.Control.DiagSpanRecord>());
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<DiagSpanListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new DiagSpanListResponse(Array.Empty<Vais.Agents.Control.DiagSpanRecord>());
+    }
+
+    /// <inheritdoc />
+    public async Task<FilterStatusResponse> GetFilterStatusAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/v1/diagnostics/filter-status", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<FilterStatusResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new FilterStatusResponse(Array.Empty<Vais.Agents.Control.FilterCallEntry>(), 0);
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

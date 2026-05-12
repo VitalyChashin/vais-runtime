@@ -377,4 +377,12 @@ public interface IAgentControlPlaneClient
     /// <summary>POST /v1/container-plugins/validate — dry-run validation without registering. Default: always valid.</summary>
     Task<ContainerPluginValidationResult> ValidateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
         => Task.FromResult(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
+
+    /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
+    Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
+        => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));
+
+    /// <summary>GET /v1/diagnostics/filter-status — per-interface outgoing grain call counters. Default: empty.</summary>
+    Task<FilterStatusResponse> GetFilterStatusAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new FilterStatusResponse(Array.Empty<FilterCallEntry>(), 0));
 }

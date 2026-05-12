@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: callee-agent
+  version: "1.0"
+  description: |
+    Agent that lives on Runtime B (the callee runtime).
+    Authenticates inbound requests via VAIS_JWT_AUTHORITY;
+    uses ServiceAccountPrincipalMapper to split a K8s SA sub into Id + TenantId.
+spec:
+  model:
+    provider: openai
+    name: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a helpful assistant. Respond in one concise sentence.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  tools: []

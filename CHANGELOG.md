@@ -11,6 +11,21 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **CLI diagnostics command group `vais diagnose`** — live inspection of in-process OTel spans and Orleans grain call counters without container log archaeology.
+
+  - `DiagSpanBuffer : BaseExporter<Activity>, IDiagSpanBuffer` (`src/Vais.Agents.Runtime.Host/Diagnostics/`) — opt-in circular span buffer (default capacity 1000). Registered in the OTel tracing pipeline and as `IDiagSpanBuffer` in DI when `VAIS_DIAG_SPAN_BUFFER=true`. Uses `SimpleActivityExportProcessor` so export is synchronous per span.
+  - `FilterStatusTracker : IFilterStatusTracker` (`src/Vais.Agents.Runtime.Host/Diagnostics/`) — lock-free per-interface call counter incremented by `OrleansOutgoingActivityFilter`. Always registered (lightweight). Snapshot is ordered by total-calls descending.
+  - `IDiagSpanBuffer`, `DiagSpanRecord`, `IFilterStatusTracker`, `FilterCallEntry` — new public contracts in `Vais.Agents.Control.Abstractions`.
+  - `GET /v1/diagnostics/spans?source=&limit=` — returns recent spans from the buffer as `DiagSpanListResponse`. Returns 503 when buffer is not enabled (`VAIS_DIAG_SPAN_BUFFER` not set). Guarded by the standard JWT / OPA policy.
+  - `GET /v1/diagnostics/filter-status` — returns `FilterStatusResponse` with per-interface `(WithActivity, WithoutActivity)` counters.
+  - `vais diagnose spans [--tail N] [--source <ActivitySource>]` — fetches recent spans and emits NDJSON (one span per line), pipeable to `jq`.
+  - `vais diagnose trace <traceId>` — fetches all spans for a trace, reconstructs and pretty-prints the span tree via Spectre.Console.
+  - `vais diagnose filter-status [-o table|json]` — shows per-interface grain call counters in a Spectre table.
+  - `OrleansOutgoingActivityFilter` — now emits `vais.grain.outgoing.calls` OTel counter (tagged `grain.interface`, `has_activity`) and calls `IFilterStatusTracker.RecordCall` on every outgoing grain call.
+  - `IAgentControlPlaneClient` — new default methods `GetDiagSpansAsync` and `GetFilterStatusAsync`; concrete implementation in `AgentControlPlaneClient`.
+
+- **`samples/IdentityOidc/`** (v0.29 + v0.30) — YAML-only sample showing cross-runtime JWT authentication with `VAIS_JWT_AUTHORITY`, `VAIS_SA_PRINCIPAL_MAPPER`, and all three `IdentityMode` options (`Forward`, `ServiceAccount`, `TokenExchange`). Includes `callee-agent.yaml`, `caller-agent.yaml`, `caller-graph.yaml`, and a full quickstart README.
+
 - **Physical MCP server connections** (`src/Vais.Agents.Control.Mcp/`). New `Vais.Agents.Control.Mcp` package bridges `IMcpServerRegistry` physical entries to live `McpClient` connections, closing the gap where `transport:registered` servers were silently missing from agent tool registries.
 
   - `PhysicalMcpConnectionService : BackgroundService, INamedToolSourceProvider` — scans `IMcpServerRegistry` at startup and connects to every physical `streamableHttp` and `sse` server. Connections are fire-and-forget; the service re-enters a 30-second `PeriodicTimer` reconnect loop after the initial scan. On reconnect, registered `IMcpServerConnectionChangedHook` implementations are invoked so affected agent translator caches can be invalidated. Exposes connected servers to `AgentManifestTranslator` via `INamedToolSourceProvider.GetByName`. Scaling contract (P5): connections are per-silo; a server reachable from silo A but not silo B returns null on silo B, surfacing as `McpServerUnavailable` at agent activation.

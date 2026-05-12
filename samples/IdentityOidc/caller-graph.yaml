@@ -1,0 +1,29 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: caller-graph
+  version: "1.0"
+  description: |
+    Cross-runtime graph that invokes callee-agent on Runtime B.
+    Runtime A exchanges (or forwards) the bearer token via the configured
+    IdentityMode before sending the request to Runtime B.
+spec:
+  entry: ask-callee
+  nodes:
+    - id: ask-callee
+      kind: Agent
+      ref:
+        id: callee-agent
+        version: "1.0"
+        # runtimeUrl must match the key used in VAIS_REMOTE_RUNTIMES_<KEY>_URL
+        # (or the appsettings Vais:RemoteRuntimes key) on Runtime A.
+        # Change to the actual address of your Runtime B instance.
+        runtimeUrl: http://localhost:8081
+      stateBindings:
+        input: [input]
+        output: [output]
+    - id: end
+      kind: End
+  edges:
+    - from: ask-callee
+      to: end

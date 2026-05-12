@@ -234,6 +234,13 @@ internal sealed record RuntimeOptions
     /// </summary>
     public string? BootManifestsDirectory { get; init; }
 
+    /// <summary>
+    /// Opt-in in-process circular span buffer for <c>vais diagnose spans</c> / <c>vais diagnose trace</c>.
+    /// Off by default — lossy, dev-only, single-silo; not safe for production.
+    /// Set <c>VAIS_DIAG_SPAN_BUFFER=true</c> to enable.
+    /// </summary>
+    public bool DiagSpanBufferEnabled { get; init; }
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -272,6 +279,7 @@ internal sealed record RuntimeOptions
             BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
             LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
             LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),
+            DiagSpanBufferEnabled = string.Equals(Env("VAIS_DIAG_SPAN_BUFFER"), "true", StringComparison.OrdinalIgnoreCase),
         };
 
         static string? Env(string name)

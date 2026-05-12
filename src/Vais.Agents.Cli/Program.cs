@@ -4,6 +4,7 @@
 using Spectre.Console.Cli;
 using Vais.Agents.Cli.Commands;
 using Vais.Agents.Cli.Commands.Config;
+using Vais.Agents.Cli.Commands.Diagnose;
 
 var app = new CommandApp();
 app.Configure(config =>
@@ -94,6 +95,20 @@ app.Configure(config =>
 
     config.AddCommand<PluginWatchCommand>("plugin-watch")
         .WithDescription("Watch a Python plugin's source directory and hot-reload on every change.");
+
+    config.AddBranch("diagnose", branch =>
+    {
+        branch.SetDescription("Runtime diagnostics: spans, traces, filter counters.");
+
+        branch.AddCommand<DiagnoseSpansCommand>("spans")
+            .WithDescription("Fetch recent OTel spans from the in-process buffer as NDJSON. Requires VAIS_DIAG_SPAN_BUFFER=true.");
+
+        branch.AddCommand<DiagnoseTraceCommand>("trace")
+            .WithDescription("Pretty-print a span tree for a given trace ID.");
+
+        branch.AddCommand<DiagnoseFilterStatusCommand>("filter-status")
+            .WithDescription("Show per-interface outgoing Orleans grain call counters.");
+    });
 
     config.AddBranch("config", branch =>
     {

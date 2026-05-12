@@ -239,3 +239,9 @@ public sealed record NodeExecutionDto(
 /// <summary>Client-side wire type for <c>GET /v1/graphs/{id}/runs</c>.</summary>
 /// <param name="Items">Pipeline runs matching the filter criteria, ordered newest-first.</param>
 public sealed record RunListResponse(IReadOnlyList<PipelineRunDto> Items);
+
+/// <summary>Client-side wire type for <c>GET /v1/diagnostics/spans</c>. Mirrors server's <c>DiagSpanListResponse</c>.</summary>
+public sealed record DiagSpanListResponse(IReadOnlyList<Vais.Agents.Control.DiagSpanRecord> Items);
+
+/// <summary>Client-side wire type for <c>GET /v1/diagnostics/filter-status</c>. Mirrors server's <c>FilterStatusResponse</c>.</summary>
+public sealed record FilterStatusResponse(IReadOnlyList<Vais.Agents.Control.FilterCallEntry> Calls, long TotalCalls);

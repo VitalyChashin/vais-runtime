@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using Vais.Agents.Control;
 using Vais.Agents.Core;
 
 namespace Vais.Agents.Hosting.Orleans;
@@ -20,17 +22,28 @@ namespace Vais.Agents.Hosting.Orleans;
 /// </remarks>
 internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
 {
-    private readonly IAgentContextAccessor _contextAccessor;
+    private static readonly Meter _meter = new("Vais.Agents.Hosting.Orleans", "1.0");
+    private static readonly Counter<long> _callCounter =
+        _meter.CreateCounter<long>("vais.grain.outgoing.calls", description: "Outgoing Orleans grain calls.");
 
-    public OrleansOutgoingActivityFilter(IAgentContextAccessor contextAccessor)
+    private readonly IAgentContextAccessor _contextAccessor;
+    private readonly IFilterStatusTracker? _tracker;
+
+    public OrleansOutgoingActivityFilter(IAgentContextAccessor contextAccessor, IFilterStatusTracker? tracker = null)
     {
         _contextAccessor = contextAccessor;
+        _tracker = tracker;
     }
 
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
         // OTel trace propagation (existing behaviour).
         var current = Activity.Current;
+
+        var hasActivity = current is not null;
+        _callCounter.Add(1, new KeyValuePair<string, object?>("grain.interface", context.InterfaceName),
+            new KeyValuePair<string, object?>("has_activity", hasActivity));
+        _tracker?.RecordCall(context.InterfaceName, hasActivity);
         if (current?.Id is { } traceParent)
         {
             RequestContext.Set(ActivityPropagation.TraceParentKey, traceParent);

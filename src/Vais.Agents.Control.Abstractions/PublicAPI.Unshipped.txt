@@ -142,3 +142,53 @@ override Vais.Agents.Control.ManifestResource.ContainerPluginCase.ToString() -> 
 override sealed Vais.Agents.Control.ManifestResource.ContainerPluginCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
 static Vais.Agents.Control.ManifestResource.ContainerPluginCase.operator !=(Vais.Agents.Control.ManifestResource.ContainerPluginCase? left, Vais.Agents.Control.ManifestResource.ContainerPluginCase? right) -> bool
 static Vais.Agents.Control.ManifestResource.ContainerPluginCase.operator ==(Vais.Agents.Control.ManifestResource.ContainerPluginCase? left, Vais.Agents.Control.ManifestResource.ContainerPluginCase? right) -> bool
+Vais.Agents.Control.IDiagSpanBuffer
+Vais.Agents.Control.IDiagSpanBuffer.GetSpans(string? source, int limit) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.DiagSpanRecord!>!
+Vais.Agents.Control.IDiagSpanBuffer.IsEnabled.get -> bool
+Vais.Agents.Control.DiagSpanRecord
+Vais.Agents.Control.DiagSpanRecord.<Clone>$() -> Vais.Agents.Control.DiagSpanRecord!
+Vais.Agents.Control.DiagSpanRecord.Attributes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.Control.DiagSpanRecord.Attributes.init -> void
+Vais.Agents.Control.DiagSpanRecord.Deconstruct(out string! TraceId, out string! SpanId, out string? ParentSpanId, out string! Name, out string! Source, out System.DateTimeOffset StartTime, out long DurationMs, out string! Status, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Attributes) -> void
+Vais.Agents.Control.DiagSpanRecord.DiagSpanRecord(string! TraceId, string! SpanId, string? ParentSpanId, string! Name, string! Source, System.DateTimeOffset StartTime, long DurationMs, string! Status, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Attributes) -> void
+Vais.Agents.Control.DiagSpanRecord.DurationMs.get -> long
+Vais.Agents.Control.DiagSpanRecord.DurationMs.init -> void
+Vais.Agents.Control.DiagSpanRecord.Equals(Vais.Agents.Control.DiagSpanRecord? other) -> bool
+Vais.Agents.Control.DiagSpanRecord.Name.get -> string!
+Vais.Agents.Control.DiagSpanRecord.Name.init -> void
+Vais.Agents.Control.DiagSpanRecord.ParentSpanId.get -> string?
+Vais.Agents.Control.DiagSpanRecord.ParentSpanId.init -> void
+Vais.Agents.Control.DiagSpanRecord.Source.get -> string!
+Vais.Agents.Control.DiagSpanRecord.Source.init -> void
+Vais.Agents.Control.DiagSpanRecord.SpanId.get -> string!
+Vais.Agents.Control.DiagSpanRecord.SpanId.init -> void
+Vais.Agents.Control.DiagSpanRecord.StartTime.get -> System.DateTimeOffset
+Vais.Agents.Control.DiagSpanRecord.StartTime.init -> void
+Vais.Agents.Control.DiagSpanRecord.Status.get -> string!
+Vais.Agents.Control.DiagSpanRecord.Status.init -> void
+Vais.Agents.Control.DiagSpanRecord.TraceId.get -> string!
+Vais.Agents.Control.DiagSpanRecord.TraceId.init -> void
+override Vais.Agents.Control.DiagSpanRecord.Equals(object? obj) -> bool
+override Vais.Agents.Control.DiagSpanRecord.GetHashCode() -> int
+override Vais.Agents.Control.DiagSpanRecord.ToString() -> string!
+static Vais.Agents.Control.DiagSpanRecord.operator !=(Vais.Agents.Control.DiagSpanRecord? left, Vais.Agents.Control.DiagSpanRecord? right) -> bool
+static Vais.Agents.Control.DiagSpanRecord.operator ==(Vais.Agents.Control.DiagSpanRecord? left, Vais.Agents.Control.DiagSpanRecord? right) -> bool
+Vais.Agents.Control.IFilterStatusTracker
+Vais.Agents.Control.IFilterStatusTracker.GetSnapshot() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FilterCallEntry!>!
+Vais.Agents.Control.IFilterStatusTracker.RecordCall(string! grainInterface, bool hasActivity) -> void
+Vais.Agents.Control.FilterCallEntry
+Vais.Agents.Control.FilterCallEntry.<Clone>$() -> Vais.Agents.Control.FilterCallEntry!
+Vais.Agents.Control.FilterCallEntry.Deconstruct(out string! GrainInterface, out long WithActivity, out long WithoutActivity) -> void
+Vais.Agents.Control.FilterCallEntry.Equals(Vais.Agents.Control.FilterCallEntry? other) -> bool
+Vais.Agents.Control.FilterCallEntry.FilterCallEntry(string! GrainInterface, long WithActivity, long WithoutActivity) -> void
+Vais.Agents.Control.FilterCallEntry.GrainInterface.get -> string!
+Vais.Agents.Control.FilterCallEntry.GrainInterface.init -> void
+Vais.Agents.Control.FilterCallEntry.WithActivity.get -> long
+Vais.Agents.Control.FilterCallEntry.WithActivity.init -> void
+Vais.Agents.Control.FilterCallEntry.WithoutActivity.get -> long
+Vais.Agents.Control.FilterCallEntry.WithoutActivity.init -> void
+override Vais.Agents.Control.FilterCallEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.FilterCallEntry.GetHashCode() -> int
+override Vais.Agents.Control.FilterCallEntry.ToString() -> string!
+static Vais.Agents.Control.FilterCallEntry.operator !=(Vais.Agents.Control.FilterCallEntry? left, Vais.Agents.Control.FilterCallEntry? right) -> bool
+static Vais.Agents.Control.FilterCallEntry.operator ==(Vais.Agents.Control.FilterCallEntry? left, Vais.Agents.Control.FilterCallEntry? right) -> bool

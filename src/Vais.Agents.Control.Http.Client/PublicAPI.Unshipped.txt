@@ -644,3 +644,35 @@ override Vais.Agents.Control.Http.ContainerPluginValidationResult.GetHashCode() 
 override Vais.Agents.Control.Http.ContainerPluginValidationResult.ToString() -> string!
 static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator !=(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool
 static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator ==(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool
+
+Vais.Agents.Control.Http.DiagSpanListResponse
+Vais.Agents.Control.Http.DiagSpanListResponse.DiagSpanListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.DiagSpanRecord!>! Items) -> void
+Vais.Agents.Control.Http.DiagSpanListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.DiagSpanRecord!>!
+override Vais.Agents.Control.Http.DiagSpanListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.DiagSpanListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.DiagSpanListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.DiagSpanListResponse.operator !=(Vais.Agents.Control.Http.DiagSpanListResponse? left, Vais.Agents.Control.Http.DiagSpanListResponse? right) -> bool
+static Vais.Agents.Control.Http.DiagSpanListResponse.operator ==(Vais.Agents.Control.Http.DiagSpanListResponse? left, Vais.Agents.Control.Http.DiagSpanListResponse? right) -> bool
+Vais.Agents.Control.Http.FilterStatusResponse
+Vais.Agents.Control.Http.FilterStatusResponse.Calls.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FilterCallEntry!>!
+Vais.Agents.Control.Http.FilterStatusResponse.FilterStatusResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FilterCallEntry!>! Calls, long TotalCalls) -> void
+Vais.Agents.Control.Http.FilterStatusResponse.TotalCalls.get -> long
+override Vais.Agents.Control.Http.FilterStatusResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.FilterStatusResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.FilterStatusResponse.ToString() -> string!
+static Vais.Agents.Control.Http.FilterStatusResponse.operator !=(Vais.Agents.Control.Http.FilterStatusResponse? left, Vais.Agents.Control.Http.FilterStatusResponse? right) -> bool
+static Vais.Agents.Control.Http.FilterStatusResponse.operator ==(Vais.Agents.Control.Http.FilterStatusResponse? left, Vais.Agents.Control.Http.FilterStatusResponse? right) -> bool
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetDiagSpansAsync(string? source = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.DiagSpanListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetFilterStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.FilterStatusResponse!>!
+
+Vais.Agents.Control.Http.DiagSpanListResponse.Equals(Vais.Agents.Control.Http.DiagSpanListResponse? other) -> bool
+Vais.Agents.Control.Http.DiagSpanListResponse.Items.init -> void
+Vais.Agents.Control.Http.DiagSpanListResponse.<Clone>$() -> Vais.Agents.Control.Http.DiagSpanListResponse!
+Vais.Agents.Control.Http.DiagSpanListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.DiagSpanRecord!>! Items) -> void
+Vais.Agents.Control.Http.FilterStatusResponse.Equals(Vais.Agents.Control.Http.FilterStatusResponse? other) -> bool
+Vais.Agents.Control.Http.FilterStatusResponse.TotalCalls.init -> void
+Vais.Agents.Control.Http.FilterStatusResponse.Calls.init -> void
+Vais.Agents.Control.Http.FilterStatusResponse.<Clone>$() -> Vais.Agents.Control.Http.FilterStatusResponse!
+Vais.Agents.Control.Http.FilterStatusResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FilterCallEntry!>! Calls, out long TotalCalls) -> void
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetDiagSpansAsync(string? source = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.DiagSpanListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetFilterStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.FilterStatusResponse!>!

@@ -7,8 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Vais.Agents.Runtime.Host.Diagnostics;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Vais.Agents;
@@ -442,8 +444,11 @@ internal static class CompositionRoot
                 "SELECT COUNT(*) FROM vais_mcp_gateway_events LIMIT 1"));
         }
 
-        // 6. Optional observability. Off unless either the OTel endpoint env var or the
-        //    console-exporter toggle is set; off-by-default keeps hello-world overhead zero.
+        // 6. Diagnostics filter-status tracker (always; lightweight singleton).
+        services.AddSingleton<IFilterStatusTracker, FilterStatusTracker>();
+
+        // 7. Optional observability. Off unless the OTel endpoint, console-exporter toggle,
+        //    or the diagnostic span buffer is enabled; off-by-default keeps hello-world overhead zero.
         ConfigureObservability(services, options);
 
         // Self-check: infrastructure service probes registered after stores so all
@@ -540,12 +545,25 @@ internal static class CompositionRoot
     private static void ConfigureObservability(IServiceCollection services, RuntimeOptions options)
     {
         var otelEnabled = !string.IsNullOrWhiteSpace(options.OtelEndpoint) || options.OtelConsole;
-        if (otelEnabled)
+
+        // Register the diagnostic span buffer early so the endpoint can resolve it even when
+        // full OTel exporters are not configured.
+        DiagSpanBuffer? diagBuffer = null;
+        if (options.DiagSpanBufferEnabled)
+        {
+            diagBuffer = new DiagSpanBuffer();
+            services.AddSingleton(diagBuffer);
+            services.AddSingleton<IDiagSpanBuffer>(diagBuffer);
+        }
+
+        if (otelEnabled || options.DiagSpanBufferEnabled)
         {
             services.AddOpenTelemetry()
                 .WithTracing(t =>
                 {
                     t.AddAgenticInstrumentation();
+                    if (diagBuffer is not null)
+                        t.AddProcessor(new SimpleActivityExportProcessor(diagBuffer));
                     if (!string.IsNullOrWhiteSpace(options.OtelEndpoint))
                     {
                         // Do NOT set o.Endpoint in code — the SDK will NOT append /v1/traces

@@ -197,6 +197,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapMcpGatewayControlPlane(builder, prefix);
         MapMcpServerControlPlane(builder, prefix);
         MapContainerPluginControlPlane(builder, prefix);
+        MapDiagnosticsControlPlane(builder, prefix);
 
         return builder;
     }
@@ -2879,5 +2880,57 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
         }
+    }
+
+    // ── Diagnostics endpoints (v0.36) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Mount the diagnostics control-plane endpoints (v0.36).
+    /// </summary>
+    public static IEndpointRouteBuilder MapDiagnosticsControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("Diagnostics");
+
+        group.MapGet("/diagnostics/spans", DiagnosticsSpansAsync)
+            .WithName("Diagnostics.Spans")
+            .WithSummary("Returns recent OTel spans from the in-process circular buffer. Requires VAIS_DIAG_SPAN_BUFFER=true.")
+            .Produces<DiagSpanListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/diagnostics/filter-status", DiagnosticsFilterStatusAsync)
+            .WithName("Diagnostics.FilterStatus")
+            .WithSummary("Returns per-interface call counters recorded by OrleansOutgoingActivityFilter.")
+            .Produces<FilterStatusResponse>(StatusCodes.Status200OK);
+
+        return builder;
+    }
+
+    private static IResult DiagnosticsSpansAsync(
+        HttpContext http,
+        string? source = null,
+        int limit = 100)
+    {
+        var buffer = http.RequestServices.GetService<IDiagSpanBuffer>();
+        if (buffer is null || !buffer.IsEnabled)
+            return Results.Problem(
+                title: "Span buffer not configured",
+                detail: "Set VAIS_DIAG_SPAN_BUFFER=true to enable the in-process span buffer.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:diag-span-buffer-not-configured");
+
+        var limitClamped = Math.Clamp(limit, 1, 1000);
+        var spans = buffer.GetSpans(source, limitClamped);
+        return Results.Ok(new DiagSpanListResponse(spans));
+    }
+
+    private static IResult DiagnosticsFilterStatusAsync(HttpContext http)
+    {
+        var tracker = http.RequestServices.GetRequiredService<IFilterStatusTracker>();
+        var snapshot = tracker.GetSnapshot();
+        var total = snapshot.Sum(static e => e.WithActivity + e.WithoutActivity);
+        return Results.Ok(new FilterStatusResponse(snapshot, total));
     }
 }
