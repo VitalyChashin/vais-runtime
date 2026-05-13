@@ -125,16 +125,29 @@ if ($UseInternalNetwork) {
     # Docker socket path: /var/run/docker.sock works on Linux and Docker Desktop
     # (macOS/Windows) for Linux-container workloads. Docker Desktop translates
     # this transparently via its VM socket proxy.
+    # Docker does not publish ports for containers that are only on an --internal
+    # network (the internal flag blocks host-level port forwarding). Fix: start
+    # the runtime on the default bridge for port publishing, then connect it to
+    # the internal network so it can reach plugin containers via container-DNS.
+    #
+    # The image has ASPNETCORE_HTTP_PORTS=8080 baked in via Kestrel UseKestrel()
+    # config, which takes precedence over ASPNETCORE_URLS. Map host:$RuntimePort
+    # to container:8080.
+    # --user root: /var/run/docker.sock is root:root 0660; the runtime image
+    # runs as uid=65532 by default. The e2e suite is a dev tool — root is fine here.
     docker run -d `
         --name vais-e2e-runtime `
-        --network $pluginNet `
+        --user root `
         -v /var/run/docker.sock:/var/run/docker.sock `
         -e VAIS_HOSTING_MODE=localhost `
-        -e "ASPNETCORE_URLS=http://0.0.0.0:$RuntimePort" `
         -e VAIS_CONTAINER_PLUGINS_DIRECTORY=/tmp/vais-e2e-plugins `
         -e VAIS_DOCKER_PLUGIN_NETWORK=$pluginNet `
-        -p "127.0.0.1:${RuntimePort}:${RuntimePort}" `
+        -p "127.0.0.1:${RuntimePort}:8080" `
         vais-research-pipeline:local | Out-Null
+
+    # Connect runtime to the internal network after start so it can reach plugins
+    # via container-DNS while still having the published host port above.
+    docker network connect $pluginNet vais-e2e-runtime | Out-Null
 
     Write-Host "       runtime container starting, waiting for /healthz..."
     $ok = Wait-ForRuntime 120
@@ -191,7 +204,7 @@ if ($UseInternalNetwork) {
         --format '{{json .HostConfig.PortBindings}}' 2>$null
     $portBindings = $portBindingsRaw | ConvertFrom-Json
     $hasNoPorts = ($null -eq $portBindings) -or
-                  (($portBindings | Get-Member -MemberType NoteProperty -ErrorAction SilentlyContinue).Count -eq 0)
+                  (@($portBindings | Get-Member -MemberType NoteProperty -ErrorAction SilentlyContinue).Count -eq 0)
     Assert "plugin has no published host ports (internal-network mode)" $hasNoPorts
 
     # Verify the plugin is on the internal network.
