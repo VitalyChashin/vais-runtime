@@ -11,6 +11,8 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiV
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiVersionMax.set -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBounds.get -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds!
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBounds.set -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork.get -> string?
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork.set -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.ContainerPluginResourceBounds() -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxMemoryBytes.get -> long

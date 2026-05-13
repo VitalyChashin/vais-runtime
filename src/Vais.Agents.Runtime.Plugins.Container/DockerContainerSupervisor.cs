@@ -64,7 +64,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             { $"{_descriptor.Port}/tcp", new EmptyStruct() }
         };
 
-        var containerName = $"vais-plugin-{_descriptor.Name}";
+        var containerName = DockerNaming.ContainerName(_descriptor.Name);
         await RemoveExistingContainerAsync(containerName, ct).ConfigureAwait(false);
 
         var createResp = await _docker.Containers.CreateContainerAsync(
@@ -239,14 +239,10 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         _docker.Dispose();
     }
 
-    internal static HostConfig BuildHostConfig(ContainerPluginDescriptor descriptor) =>
-        new HostConfig
+    internal static HostConfig BuildHostConfig(ContainerPluginDescriptor descriptor)
+    {
+        var hostConfig = new HostConfig
         {
-            PortBindings = new Dictionary<string, IList<PortBinding>>
-            {
-                { $"{descriptor.Port}/tcp",
-                  new List<PortBinding> { new() { HostIP = "127.0.0.1", HostPort = descriptor.Port.ToString() } } }
-            },
             ReadonlyRootfs = true,
             Tmpfs          = new Dictionary<string, string> { { "/tmp", "rw,size=64m,mode=1777" } },
             CapDrop        = new List<string> { "ALL" },
@@ -256,6 +252,25 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             NanoCPUs       = descriptor.NanoCpus    ?? DefaultNanoCpus,
             PidsLimit      = descriptor.PidsLimit   ?? DefaultPidsLimit,
         };
+
+        if (descriptor.DockerPluginNetwork is { Length: > 0 } networkName)
+        {
+            // Internal-network mode: plugin is on a shared Docker network with the runtime.
+            // No host port published; the runtime reaches the plugin via container-DNS.
+            hostConfig.NetworkMode = networkName;
+        }
+        else
+        {
+            // Legacy host-runtime mode: publish the plugin port to 127.0.0.1 only.
+            hostConfig.PortBindings = new Dictionary<string, IList<PortBinding>>
+            {
+                { $"{descriptor.Port}/tcp",
+                  new List<PortBinding> { new() { HostIP = "127.0.0.1", HostPort = descriptor.Port.ToString() } } }
+            };
+        }
+
+        return hostConfig;
+    }
 
     private async Task RemoveExistingContainerAsync(string name, CancellationToken ct)
     {

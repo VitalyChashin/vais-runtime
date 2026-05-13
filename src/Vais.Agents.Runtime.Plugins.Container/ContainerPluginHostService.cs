@@ -105,7 +105,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
     public async ValueTask RegisterAsync(ContainerPluginManifest manifest, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var descriptor = ManifestToDescriptor(manifest);
+        var descriptor = ManifestToDescriptor(manifest, _options.PluginNetwork);
         await StartCoreAsync(descriptor, ct).ConfigureAwait(false);
     }
 
@@ -287,12 +287,13 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         };
     }
 
-    private static ContainerPluginDescriptor ManifestToDescriptor(ContainerPluginManifest manifest)
+    private static ContainerPluginDescriptor ManifestToDescriptor(ContainerPluginManifest manifest, string? pluginNetwork = null)
     {
         var spec = manifest.Spec;
         ContainerTopology topology;
         KubernetesPluginConfig? k8sConfig = null;
         string invokeBaseUrl;
+        string? dockerNetwork = null;
 
         if (spec.Kubernetes is { } k8s)
         {
@@ -304,7 +305,8 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         {
             topology = spec.Topology.Equals("sidecar", StringComparison.OrdinalIgnoreCase)
                 ? ContainerTopology.Sidecar : ContainerTopology.Standalone;
-            invokeBaseUrl = $"http://localhost:{spec.Port}";
+            dockerNetwork = pluginNetwork;
+            invokeBaseUrl = DockerNaming.InvokeUrl(manifest.Id, spec.Port, pluginNetwork);
         }
 
         ContainerRetryPolicy? retryPolicy = null;
@@ -325,6 +327,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 : new Dictionary<string, string>(),
             InvokeBaseUrl = invokeBaseUrl,
             KubernetesConfig = k8sConfig,
+            DockerPluginNetwork = dockerNetwork,
         };
     }
 
@@ -371,9 +374,12 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 continue;
             }
 
+            var pluginName = doc.Metadata?.Name is { Length: > 0 } n ? n : Path.GetFileName(pluginDir);
+
             ContainerTopology topology;
             KubernetesPluginConfig? k8sConfig = null;
             string invokeBaseUrl;
+            string? dockerNetwork = null;
 
             if (spec.Kubernetes is { } k8sSpec)
             {
@@ -392,7 +398,8 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             {
                 topology = spec.Topology.Equals("sidecar", StringComparison.OrdinalIgnoreCase)
                     ? ContainerTopology.Sidecar : ContainerTopology.Standalone;
-                invokeBaseUrl = $"http://localhost:{spec.Port}";
+                dockerNetwork = _options.PluginNetwork;
+                invokeBaseUrl = DockerNaming.InvokeUrl(pluginName, spec.Port, _options.PluginNetwork);
 
                 if (topology == ContainerTopology.Standalone && string.IsNullOrEmpty(spec.Durability))
                     _logger.LogWarning(
@@ -408,7 +415,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             var bounds = _options.ResourceBounds;
             var descriptor = new ContainerPluginDescriptor
             {
-                Name = doc.Metadata?.Name is { Length: > 0 } n ? n : Path.GetFileName(pluginDir),
+                Name = pluginName,
                 Image = spec.Image,
                 Port = spec.Port,
                 Topology = topology,
@@ -418,6 +425,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 SecretRefs = new Dictionary<string, string>(spec.Secrets),
                 InvokeBaseUrl = invokeBaseUrl,
                 KubernetesConfig = k8sConfig,
+                DockerPluginNetwork = dockerNetwork,
                 MemoryBytes = ContainerPluginResourceParser.Clamp(
                     ContainerPluginResourceParser.ParseMemoryBytes(spec.Resources?.Memory), bounds.MaxMemoryBytes),
                 NanoCpus = ContainerPluginResourceParser.Clamp(

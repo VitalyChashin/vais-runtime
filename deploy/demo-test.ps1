@@ -17,12 +17,19 @@
 .PARAMETER Topic
     The research topic to send as graph input. Defaults to a short test topic.
 
+.PARAMETER UseInternalNetwork
+    Enable Phase 2 egress isolation: plugin containers join the 'vais-internal'
+    Docker network (--internal, no NAT gateway) and are addressed via container-DNS.
+    The 'vais-internal' network is created idempotently before compose starts.
+
 .EXAMPLE
     pwsh deploy/demo-test.ps1
     pwsh deploy/demo-test.ps1 -Topic "LLM routing strategies"
+    pwsh deploy/demo-test.ps1 -UseInternalNetwork
 #>
 param(
-    [string] $Topic = "AI agent observability tools in 2025"
+    [string] $Topic = "AI agent observability tools in 2025",
+    [switch] $UseInternalNetwork
 )
 
 Set-StrictMode -Version Latest
@@ -72,7 +79,9 @@ TAVILY_API_KEY=$(Get-Secret 'TAVILY_API_KEY')
 
 function Invoke-Compose([string[]] $ComposeArgs) {
     Push-Location $LocalDevDir
-    try { docker compose -f docker-compose.dev.yml @ComposeArgs }
+    $files = @("-f", "docker-compose.dev.yml")
+    if ($UseInternalNetwork) { $files += @("-f", "docker-compose.internal.yml") }
+    try { docker compose @files @ComposeArgs }
     finally { Pop-Location }
 }
 
@@ -116,6 +125,12 @@ function Ensure-OrleansSchema {
 function Invoke-Apply([string] $file) {
     $out = dotnet run --project $CliProject -- apply -f $file --endpoint $Endpoint 2>&1
     if ($LASTEXITCODE -ne 0) { throw "apply failed for $(Split-Path $file -Leaf)`n$out" }
+}
+
+# ── Bootstrap internal network (idempotent) ───────────────────────────────────
+if ($UseInternalNetwork) {
+    Write-Host "Bootstrapping internal network 'vais-internal' ..." -ForegroundColor Cyan
+    docker network create --internal vais-internal 2>$null; $true
 }
 
 # ── [1/5] Stop ────────────────────────────────────────────────────────────────

@@ -9,7 +9,8 @@ namespace Vais.Agents.Runtime.Plugins.Container.Tests;
 public sealed class DockerContainerSupervisorHostConfigTests
 {
     private static ContainerPluginDescriptor MakeDescriptor(
-        long? memoryBytes = null, long? nanoCpus = null, long? pidsLimit = null) =>
+        long? memoryBytes = null, long? nanoCpus = null, long? pidsLimit = null,
+        string? dockerPluginNetwork = null) =>
         new()
         {
             Name = "test-plugin",
@@ -19,6 +20,7 @@ public sealed class DockerContainerSupervisorHostConfigTests
             MemoryBytes = memoryBytes,
             NanoCpus = nanoCpus,
             PidsLimit = pidsLimit,
+            DockerPluginNetwork = dockerPluginNetwork,
         };
 
     [Fact]
@@ -85,5 +87,45 @@ public sealed class DockerContainerSupervisorHostConfigTests
     {
         var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(memoryBytes: 384L * 1024 * 1024));
         cfg.MemorySwap.Should().Be(cfg.Memory);
+    }
+
+    // ── Internal-network mode ─────────────────────────────────────────────
+
+    [Fact]
+    public void BuildHostConfig_InternalNetwork_SetsNetworkMode()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(dockerPluginNetwork: "vais-internal"));
+        cfg.NetworkMode.Should().Be("vais-internal");
+    }
+
+    [Fact]
+    public void BuildHostConfig_InternalNetwork_NoPortBindings()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(dockerPluginNetwork: "vais-internal"));
+        cfg.PortBindings.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public void BuildHostConfig_LegacyMode_NoNetworkMode()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor());
+        cfg.NetworkMode.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public void BuildHostConfig_LegacyMode_HasLoopbackPortBinding()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor());
+        cfg.PortBindings.Should().ContainKey("8080/tcp");
+        cfg.PortBindings["8080/tcp"].Single().HostIP.Should().Be("127.0.0.1");
+    }
+
+    [Fact]
+    public void BuildHostConfig_InternalNetwork_HardnessSettingsUnchanged()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(dockerPluginNetwork: "vais-internal"));
+        cfg.ReadonlyRootfs.Should().BeTrue();
+        cfg.CapDrop.Should().Contain("ALL");
+        cfg.SecurityOpt.Should().Contain("no-new-privileges:true");
     }
 }

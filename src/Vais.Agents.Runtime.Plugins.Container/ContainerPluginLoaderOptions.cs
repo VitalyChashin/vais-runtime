@@ -20,6 +20,14 @@ public sealed class ContainerPluginLoaderOptions
 
     /// <summary>Operator-configured upper bounds for per-plugin resource requests.</summary>
     public ContainerPluginResourceBounds ResourceBounds { get; set; } = new();
+
+    /// <summary>
+    /// Docker network name for internal-network mode (Phase 2 egress isolation).
+    /// When set, plugin containers are attached to this network and addressed via container-DNS;
+    /// no host port is published. Null or empty = legacy host-runtime mode.
+    /// Set via <c>VAIS_DOCKER_PLUGIN_NETWORK</c> (e.g. <c>vais-internal</c>).
+    /// </summary>
+    public string? PluginNetwork { get; set; }
 }
 
 /// <summary>

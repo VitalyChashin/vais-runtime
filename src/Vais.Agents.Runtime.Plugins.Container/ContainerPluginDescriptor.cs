@@ -27,6 +27,11 @@ internal sealed class ContainerPluginDescriptor
     public long? MemoryBytes { get; init; }
     public long? NanoCpus    { get; init; }
     public long? PidsLimit   { get; init; }
+    /// <summary>
+    /// Docker network name for internal-network mode (Phase 2 isolation).
+    /// Null = legacy host-runtime mode (plugin port published to 127.0.0.1).
+    /// </summary>
+    public string? DockerPluginNetwork { get; init; }
 }
 
 internal enum ContainerTopology { Sidecar, Standalone, Kubernetes }

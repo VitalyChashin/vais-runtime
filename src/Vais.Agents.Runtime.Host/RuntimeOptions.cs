@@ -95,6 +95,14 @@ internal sealed record RuntimeOptions
     public string? ContainerPluginsDirectory { get; init; }
 
     /// <summary>
+    /// Docker network name for internal-network isolation (Phase 2 egress isolation).
+    /// When set, plugin containers join this network and are addressed via container-DNS;
+    /// no host port is published. Null = legacy host-runtime mode.
+    /// Set via <c>VAIS_DOCKER_PLUGIN_NETWORK</c> (e.g. <c>vais-internal</c>).
+    /// </summary>
+    public string? DockerPluginNetwork { get; init; }
+
+    /// <summary>
     /// v0.30 OIDC authority URL (e.g. <c>https://keycloak.example.com/realms/my-realm</c>).
     /// When set, the full JWT bearer-token authentication pipeline is wired on the runtime host.
     /// Null ⇒ auth pipeline disabled — existing localhost semantics unchanged.
@@ -263,6 +271,7 @@ internal sealed record RuntimeOptions
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
+            DockerPluginNetwork = Env("VAIS_DOCKER_PLUGIN_NETWORK"),
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),

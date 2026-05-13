@@ -224,7 +224,11 @@ internal static class CompositionRoot
         // Container-plugins pillar — opt-in via VAIS_CONTAINER_PLUGINS_DIRECTORY.
         if (!string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
         {
-            services.AddContainerPlugins(o => o.PluginsDirectory = options.ContainerPluginsDirectory);
+            services.AddContainerPlugins(o =>
+            {
+                o.PluginsDirectory = options.ContainerPluginsDirectory;
+                o.PluginNetwork    = options.DockerPluginNetwork;
+            });
         }
 
         // GCF-20/21 — named middleware registrations + composite factories.
