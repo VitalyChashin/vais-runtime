@@ -50,7 +50,7 @@
   -->
   <PropertyGroup>
     <IsPackable Condition="'$(IsPackable)' == ''">true</IsPackable>
-    <GenerateDocumentationFile Condition="'$(IsPackable)' == 'true'">true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
