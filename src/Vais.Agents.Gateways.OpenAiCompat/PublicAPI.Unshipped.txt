@@ -2,4 +2,11 @@
 Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatEndpoints
 static Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatEndpoints.MapOpenAiCompat(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! app) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatServiceCollectionExtensions
-static Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatServiceCollectionExtensions.AddOpenAiCompatGateway(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatServiceCollectionExtensions.AddOpenAiCompatGateway(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.OpenAiCompatOptions() -> void
+const Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.SectionName = "Vais:OpenAiCompat" -> string!
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.AgentRoutingEnabled.get -> bool
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.AgentRoutingEnabled.set -> void
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.GraphRoutingEnabled.get -> bool
+Vais.Agents.Gateways.OpenAiCompat.OpenAiCompatOptions.GraphRoutingEnabled.set -> void

@@ -31,7 +31,12 @@ public static class OpenAiCompatServiceCollectionExtensions
     /// endpoint can push the resolved context and downstream middleware can read it.
     /// </para>
     /// </remarks>
-    public static IServiceCollection AddOpenAiCompatGateway(this IServiceCollection services)
+    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+    /// <param name="configure">Optional inline override for <see cref="OpenAiCompatOptions"/>.
+    /// Applied after config-file binding, so code values win over appsettings.</param>
+    public static IServiceCollection AddOpenAiCompatGateway(
+        this IServiceCollection services,
+        Action<OpenAiCompatOptions>? configure = null)
     {
         // Register the shared context accessor under both read and write interfaces.
         services.TryAddSingleton<AsyncLocalAgentContextAccessor>();
@@ -39,6 +44,12 @@ public static class OpenAiCompatServiceCollectionExtensions
             sp.GetRequiredService<AsyncLocalAgentContextAccessor>());
         services.TryAddSingleton<IAgentContextSetter>(sp =>
             sp.GetRequiredService<AsyncLocalAgentContextAccessor>());
+
+        var opts = services.AddOptions<OpenAiCompatOptions>()
+            .BindConfiguration(OpenAiCompatOptions.SectionName);
+
+        if (configure is not null)
+            opts.Configure(configure);
 
         return services;
     }

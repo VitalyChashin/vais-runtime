@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Vais.Agents.Control;
 using Vais.Agents.Core;
 using Vais.Agents.Gateways.OpenAiCompat.Models;
@@ -56,6 +57,7 @@ public static class OpenAiCompatEndpoints
         IModelRouter modelRouter,
         IAgentContextSetter contextSetter,
         IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
+        IOptions<OpenAiCompatOptions> options,
         CancellationToken ct)
     {
         // 1. Deserialize request body
@@ -97,6 +99,11 @@ public static class OpenAiCompatEndpoints
         // 3. Routing fork — agent: and graph: bypass the LLM model router
         if (oaiRequest.Model.StartsWith("agent:", StringComparison.Ordinal))
         {
+            if (!options.Value.AgentRoutingEnabled)
+            {
+                await WriteRoutingDisabledAsync(ctx, "agent", ct).ConfigureAwait(false);
+                return;
+            }
             var agentId = oaiRequest.Model["agent:".Length..];
             if (oaiRequest.Stream == true)
                 await HandleAgentStreamAsync(ctx, agentId, oaiRequest, agentCtx, ct).ConfigureAwait(false);
@@ -107,6 +114,11 @@ public static class OpenAiCompatEndpoints
 
         if (oaiRequest.Model.StartsWith("graph:", StringComparison.Ordinal))
         {
+            if (!options.Value.GraphRoutingEnabled)
+            {
+                await WriteRoutingDisabledAsync(ctx, "graph", ct).ConfigureAwait(false);
+                return;
+            }
             var graphId = oaiRequest.Model["graph:".Length..];
             if (oaiRequest.Stream == true)
                 await HandleGraphStreamAsync(ctx, graphId, oaiRequest, agentCtx, ct).ConfigureAwait(false);
@@ -183,6 +195,7 @@ public static class OpenAiCompatEndpoints
     private static async Task HandleModelsAsync(
         HttpContext ctx,
         IModelRouter modelRouter,
+        IOptions<OpenAiCompatOptions> options,
         CancellationToken ct)
     {
         var aliases = await modelRouter.ListAliasesAsync(ct).ConfigureAwait(false);
@@ -195,35 +208,41 @@ public static class OpenAiCompatEndpoints
             OwnedBy = "vais"
         }));
 
-        // Append agent models
-        var agentRegistry = ctx.RequestServices.GetService<IAgentRegistry>();
-        if (agentRegistry is not null)
+        // Append agent models (skipped when AgentRoutingEnabled = false)
+        if (options.Value.AgentRoutingEnabled)
         {
-            await foreach (var manifest in agentRegistry.ListAsync(null, ct).ConfigureAwait(false))
+            var agentRegistry = ctx.RequestServices.GetService<IAgentRegistry>();
+            if (agentRegistry is not null)
             {
-                models.Add(new ModelObject
-                {
-                    Id = $"agent:{manifest.Id}",
-                    Created = now,
-                    OwnedBy = "vais-agent"
-                });
-            }
-        }
-
-        // Append graph models — only those with the OpenAI-compat input annotation
-        var graphRegistry = ctx.RequestServices.GetService<IAgentGraphRegistry>();
-        if (graphRegistry is not null)
-        {
-            await foreach (var manifest in graphRegistry.ListAsync(null, ct).ConfigureAwait(false))
-            {
-                if (manifest.Annotations?.ContainsKey("vais.io/openai-compat-input-key") == true)
+                await foreach (var manifest in agentRegistry.ListAsync(null, ct).ConfigureAwait(false))
                 {
                     models.Add(new ModelObject
                     {
-                        Id = $"graph:{manifest.Id}",
+                        Id = $"agent:{manifest.Id}",
                         Created = now,
-                        OwnedBy = "vais-graph"
+                        OwnedBy = "vais-agent"
                     });
+                }
+            }
+        }
+
+        // Append graph models — only those with the OpenAI-compat input annotation (skipped when GraphRoutingEnabled = false)
+        if (options.Value.GraphRoutingEnabled)
+        {
+            var graphRegistry = ctx.RequestServices.GetService<IAgentGraphRegistry>();
+            if (graphRegistry is not null)
+            {
+                await foreach (var manifest in graphRegistry.ListAsync(null, ct).ConfigureAwait(false))
+                {
+                    if (manifest.Annotations?.ContainsKey("vais.io/openai-compat-input-key") == true)
+                    {
+                        models.Add(new ModelObject
+                        {
+                            Id = $"graph:{manifest.Id}",
+                            Created = now,
+                            OwnedBy = "vais-graph"
+                        });
+                    }
                 }
             }
         }
@@ -761,6 +780,14 @@ public static class OpenAiCompatEndpoints
         }
 
         return "";
+    }
+
+    private static Task WriteRoutingDisabledAsync(HttpContext ctx, string routingType, CancellationToken ct)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+        return ctx.Response.WriteAsJsonAsync(
+            new { error = new { message = $"{routingType} routing is disabled by configuration." } },
+            ct);
     }
 
     private static Task WriteErrorAsync(

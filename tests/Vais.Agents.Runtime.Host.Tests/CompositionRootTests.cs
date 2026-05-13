@@ -637,4 +637,127 @@ public class CompositionRootTests
             Environment.SetEnvironmentVariable("VAIS_BOOT_MANIFESTS_DIRECTORY", null);
         }
     }
+
+    // ── RC-8: A2A / PowerFx / Idempotency gating ─────────────────────────────
+
+    [Fact]
+    public void ConfigureServices_A2aDisabled_DoesNotRegisterIA2AGraphNodeInvoker()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { A2aEnabled = false });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IA2AGraphNodeInvoker>().Should().BeNull(
+            because: "VAIS_A2A_ENABLED=false must skip AddA2AGraphNodeInvoker so graph nodes cannot delegate to remote A2A runtimes.");
+    }
+
+    [Fact]
+    public void ConfigureServices_A2aEnabled_RegistersIA2AGraphNodeInvoker()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { A2aEnabled = true });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IA2AGraphNodeInvoker>().Should().NotBeNull(
+            because: "A2aEnabled=true (default) must register IA2AGraphNodeInvoker.");
+    }
+
+    [Fact]
+    public void ConfigureServices_PowerFxDisabled_DoesNotRegisterIGraphExpressionEvaluator()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PowerFxEnabled = false });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IGraphExpressionEvaluator>().Should().BeNull(
+            because: "VAIS_POWERFX_ENABLED=false must skip AddPowerFxExpressionEvaluator so graph edge PowerFx predicates are not evaluated.");
+    }
+
+    [Fact]
+    public void ConfigureServices_PowerFxEnabled_RegistersIGraphExpressionEvaluator()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PowerFxEnabled = true });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IGraphExpressionEvaluator>().Should().NotBeNull(
+            because: "PowerFxEnabled=true (default) must register IGraphExpressionEvaluator.");
+    }
+
+    [Fact]
+    public void ConfigureServices_IdempotencyDisabled_DoesNotRegisterIIdempotencyStore()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { IdempotencyEnabled = false });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IIdempotencyStore>().Should().BeNull(
+            because: "VAIS_IDEMPOTENCY_ENABLED=false must skip AddAgentControlPlaneIdempotency so duplicate control-plane requests are not detected.");
+    }
+
+    // ── RC-7: RuntimeOptions.FromEnvironment env-var parsing ─────────────────
+
+    [Fact]
+    public void RuntimeOptions_FromEnvironment_A2aDefaultTrue()
+    {
+        Environment.SetEnvironmentVariable("VAIS_A2A_ENABLED", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.A2aEnabled.Should().BeTrue(
+                because: "unset VAIS_A2A_ENABLED must default to true — existing deployments are unaffected.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_A2A_ENABLED", null);
+        }
+    }
+
+    [Fact]
+    public void RuntimeOptions_FromEnvironment_A2aFalseWhenEnvVarSetToFalse()
+    {
+        Environment.SetEnvironmentVariable("VAIS_A2A_ENABLED", "false");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.A2aEnabled.Should().BeFalse(
+                because: "VAIS_A2A_ENABLED=false must disable A2A graph-node invocation.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_A2A_ENABLED", null);
+        }
+    }
+
+    [Fact]
+    public void RuntimeOptions_FromEnvironment_PowerFxDefaultTrue()
+    {
+        Environment.SetEnvironmentVariable("VAIS_POWERFX_ENABLED", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.PowerFxEnabled.Should().BeTrue(
+                because: "unset VAIS_POWERFX_ENABLED must default to true.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_POWERFX_ENABLED", null);
+        }
+    }
+
+    [Fact]
+    public void RuntimeOptions_FromEnvironment_IdempotencyDefaultTrue()
+    {
+        Environment.SetEnvironmentVariable("VAIS_IDEMPOTENCY_ENABLED", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.IdempotencyEnabled.Should().BeTrue(
+                because: "unset VAIS_IDEMPOTENCY_ENABLED must default to true.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_IDEMPOTENCY_ENABLED", null);
+        }
+    }
 }

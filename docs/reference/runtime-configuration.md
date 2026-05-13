@@ -178,13 +178,37 @@ The baked `appsettings.json` sets these log-levels:
 
 Override via `Logging__LogLevel__{Category}=Level` env vars or a mounted `appsettings.Production.json` ConfigMap.
 
+## Optional integrations
+
+All three default to `true` — existing deployments that do not set these vars see identical behaviour.
+
+| Env var | Default | What it controls |
+|---|---|---|
+| `VAIS_A2A_ENABLED` | `true` | A2A cross-runtime graph-node invocation. When `false`, `IA2AGraphNodeInvoker` is not registered; graph nodes that reference remote A2A runtimes degrade gracefully (the invoker field arrives as `null`). |
+| `VAIS_POWERFX_ENABLED` | `true` | PowerFx expression evaluator for graph edge conditions. When `false`, `IGraphExpressionEvaluator` is not registered; graph edges that reference PowerFx predicates are not evaluated. |
+| `VAIS_IDEMPOTENCY_ENABLED` | `true` | HTTP control-plane idempotency middleware. When `false`, `IIdempotencyStore` is not registered and the middleware no-ops (duplicate control-plane requests are not detected). |
+
+## OpenAI-compatible gateway routing flags
+
+Applies when `AddOpenAiCompatGateway()` is used (library mode or the sample host). Bound from the `Vais:OpenAiCompat` configuration section — supports both `appsettings.json` and `Vais__OpenAiCompat__*` env vars.
+
+| Config key / Env var | Default | What it controls |
+|---|---|---|
+| `Vais:OpenAiCompat:AgentRoutingEnabled` / `Vais__OpenAiCompat__AgentRoutingEnabled` | `true` | When `false`, `agent:*` models are excluded from `GET /v1/models` and `POST /v1/chat/completions` returns 404 for `agent:`-prefixed model IDs. |
+| `Vais:OpenAiCompat:GraphRoutingEnabled` / `Vais__OpenAiCompat__GraphRoutingEnabled` | `true` | When `false`, `graph:*` models are excluded from `GET /v1/models` and `POST /v1/chat/completions` returns 404 for `graph:`-prefixed model IDs. |
+
+Code override (applies after config-file binding, so code wins):
+
+```csharp
+builder.Services.AddOpenAiCompatGateway(o => o.AgentRoutingEnabled = false);
+```
+
 ## Composition-root decisions that can't change via config
 
 These are baked in by the runtime host's composition root (see [`CompositionRoot.cs`](../../src/Vais.Agents.Runtime.Host/CompositionRoot.cs)) and would require a code change to alter:
 
 - **Durability sidecars are always on.** `OrleansTaskStore` / `OrleansCheckpointer` / `OrleansIdempotencyStore` all register unconditionally, and they register *before* the generic HTTP control-plane wiring so the `TryAddSingleton` discipline picks the Orleans impls over the in-memory defaults. Unit tests guard the order.
 - **`AddAgentControlPlaneOpenApi()` is always wired.** The v0.11 OpenAPI document is served at `/openapi/v1.json`.
-- **`AddAgentControlPlaneIdempotency()` is always wired.** The idempotency middleware runs before the routes map; Orleans-backed store survives silo restart.
 - **`AgentLifecycleManager` uses `OrleansAgentRegistry`** since v0.17 — manifests survive pod roll via per-id grain persistence.
 - **Plugin loader registered before the manifest translator** since v0.18 — the translator's ctor queries `IPluginHandlerRegistry` lazily at build time. The composition root enforces this ordering; `Composition_Plugin_Registry_Registered_Before_Translator` locks it.
 

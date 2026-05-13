@@ -37,6 +37,9 @@ builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 
+// Both routing paths enabled by default.
+// Override via config: Vais__OpenAiCompat__AgentRoutingEnabled=false
+// or in code: AddOpenAiCompatGateway(o => o.GraphRoutingEnabled = false)
 builder.Services.AddOpenAiCompatGateway();
 builder.Services.AddPassThroughIdentityResolver();  // dev-only: accepts any bearer token
 builder.Services.AddInMemoryModelRouter(routes =>

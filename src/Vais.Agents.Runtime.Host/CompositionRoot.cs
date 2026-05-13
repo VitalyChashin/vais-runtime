@@ -302,8 +302,10 @@ internal static class CompositionRoot
         {
             services.AddAgentRemoteInvoker();
         }
-        services.AddA2AGraphNodeInvoker();
-        services.AddPowerFxExpressionEvaluator();
+        if (options.A2aEnabled)
+            services.AddA2AGraphNodeInvoker();
+        if (options.PowerFxEnabled)
+            services.AddPowerFxExpressionEvaluator();
         services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
         {
             var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
@@ -363,7 +365,8 @@ internal static class CompositionRoot
 
         // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
         services.AddAgentControlPlane();
-        services.AddAgentControlPlaneIdempotency();
+        if (options.IdempotencyEnabled)
+            services.AddAgentControlPlaneIdempotency();
         services.AddAgentControlPlaneOpenApi();
 
         // 4b. v0.30 JWT authentication + principal mapping. Off-by-default — existing localhost

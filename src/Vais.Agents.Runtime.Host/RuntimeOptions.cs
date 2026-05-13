@@ -258,6 +258,28 @@ internal sealed record RuntimeOptions
     /// </summary>
     public bool DiagSpanBufferEnabled { get; init; }
 
+    /// <summary>
+    /// A2A cross-runtime graph-node invocation. Registers <c>IA2AGraphNodeInvoker</c>
+    /// so graph nodes can delegate turns to agents on remote runtimes via the A2A protocol.
+    /// Defaults to <see langword="true"/>. Set <c>VAIS_A2A_ENABLED=false</c> to disable.
+    /// </summary>
+    public bool A2aEnabled { get; init; } = true;
+
+    /// <summary>
+    /// PowerFx expression evaluator for graph edge conditions. When false,
+    /// <c>IGraphExpressionEvaluator</c> is not registered and graph edges
+    /// that reference PowerFx predicates will not be evaluated.
+    /// Defaults to <see langword="true"/>. Set <c>VAIS_POWERFX_ENABLED=false</c> to disable.
+    /// </summary>
+    public bool PowerFxEnabled { get; init; } = true;
+
+    /// <summary>
+    /// HTTP control-plane idempotency middleware. When false, the idempotency store is not
+    /// registered; the middleware no-ops gracefully (duplicate requests are not detected).
+    /// Defaults to <see langword="true"/>. Set <c>VAIS_IDEMPOTENCY_ENABLED=false</c> to disable.
+    /// </summary>
+    public bool IdempotencyEnabled { get; init; } = true;
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -299,6 +321,9 @@ internal sealed record RuntimeOptions
             LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
             LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),
             DiagSpanBufferEnabled = string.Equals(Env("VAIS_DIAG_SPAN_BUFFER"), "true", StringComparison.OrdinalIgnoreCase),
+            A2aEnabled         = !string.Equals(Env("VAIS_A2A_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
+            PowerFxEnabled     = !string.Equals(Env("VAIS_POWERFX_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
+            IdempotencyEnabled = !string.Equals(Env("VAIS_IDEMPOTENCY_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
         };
 
         static string? Env(string name)
