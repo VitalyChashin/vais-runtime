@@ -4,7 +4,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using Vais.Agents.Control;
 using Vais.Agents.Core;
 using Xunit;
 

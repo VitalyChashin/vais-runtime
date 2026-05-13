@@ -9,7 +9,7 @@ namespace Vais.Agents.Core.Tests;
 
 /// <summary>
 /// Coverage for tool-using streaming — the v0.4.1 follow-up that gave
-/// <see cref="StatefulAiAgent.StreamAsync"/> an outer tool-call loop parallel
+/// <see cref="StatefulAiAgent.StreamAsync(string, CancellationToken)"/> an outer tool-call loop parallel
 /// to <see cref="StatefulAiAgent.AskAsync"/>.
 /// </summary>
 /// <remarks>

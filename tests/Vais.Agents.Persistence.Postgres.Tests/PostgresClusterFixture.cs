@@ -4,7 +4,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Orleans.Hosting;
 using Orleans.TestingHost;
 using Testcontainers.PostgreSql;
 using Vais.Agents.Hosting.Orleans;

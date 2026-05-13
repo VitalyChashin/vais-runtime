@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
-using Vais.Agents;
 using Vais.Agents.Core;
 using Vais.Agents.Gateways.Testing;
 using Xunit;

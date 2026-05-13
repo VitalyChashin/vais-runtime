@@ -2,8 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using Vais.Agents;
-using Vais.Agents.Hosting.Orleans;
 using Xunit;
 
 namespace Vais.Agents.Hosting.Orleans.Tests;

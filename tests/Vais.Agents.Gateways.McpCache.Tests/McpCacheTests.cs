@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Vais.Agents.Gateways.McpCache;
 using Xunit;
 
 namespace Vais.Agents.Gateways.McpCache.Tests;

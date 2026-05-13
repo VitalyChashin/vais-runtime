@@ -2,15 +2,15 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
-using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
-using MeaiFunctionCallContent = Microsoft.Extensions.AI.FunctionCallContent;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
 using Vais.Agents.Ai.MicrosoftAgentFramework;
 using Vais.Agents.Ai.SemanticKernel;
 using Vais.Agents.Core;
 using Xunit;
+using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
+using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
+using MeaiFunctionCallContent = Microsoft.Extensions.AI.FunctionCallContent;
 
 namespace Vais.Agents.ParityTests;
 

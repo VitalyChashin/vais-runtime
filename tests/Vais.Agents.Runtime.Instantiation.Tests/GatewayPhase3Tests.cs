@@ -4,7 +4,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Vais.Agents.Core;
 using Vais.Agents.Gateways.McpGovernance;

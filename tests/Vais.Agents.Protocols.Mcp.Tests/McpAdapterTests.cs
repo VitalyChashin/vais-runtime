@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using ModelContextProtocol.Client;
 using Xunit;
 
 namespace Vais.Agents.Protocols.Mcp.Tests;
@@ -13,7 +12,7 @@ namespace Vais.Agents.Protocols.Mcp.Tests;
 /// <remarks>
 /// <para>
 /// <b>Integration scope.</b> <see cref="McpToolSource"/> + <see cref="McpBackedTool"/>
-/// exercise <see cref="IMcpClient"/> extension methods (<c>EnumerateToolsAsync</c>,
+/// exercise <c>McpClient</c> extension methods (<c>EnumerateToolsAsync</c>,
 /// <c>CallToolAsync</c>) which dispatch JSON-RPC requests through the client's
 /// transport layer. Unit-testing them would require a real MCP server (stdio /
 /// streamable-HTTP) or a full JSON-RPC-transport fake — both disproportionate

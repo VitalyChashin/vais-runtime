@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Spectre.Console.Testing;
-using Vais.Agents.Cli;
 using Vais.Agents.Control.Http;
 using Xunit;
 

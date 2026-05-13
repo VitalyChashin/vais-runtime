@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Polly;
-using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;
 using Xunit;
 

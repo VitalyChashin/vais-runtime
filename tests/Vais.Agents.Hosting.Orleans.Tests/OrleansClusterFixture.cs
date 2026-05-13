@@ -2,9 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Hosting;
 using Orleans.TestingHost;
-using Vais.Agents.Core;
 using Xunit;
 
 namespace Vais.Agents.Hosting.Orleans.Tests;

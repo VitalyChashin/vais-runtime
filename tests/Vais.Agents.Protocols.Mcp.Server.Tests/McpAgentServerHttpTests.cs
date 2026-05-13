@@ -16,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;

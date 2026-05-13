@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Hosting.InMemory;
 using Xunit;

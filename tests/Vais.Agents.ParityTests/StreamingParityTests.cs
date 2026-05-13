@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Vais.Agents.Ai.MicrosoftAgentFramework;
@@ -14,7 +13,7 @@ namespace Vais.Agents.ParityTests;
 
 /// <summary>
 /// Parity between the SK and MAF streaming adapters: given the same pre-scripted
-/// text chunks from the underlying stack, <see cref="StatefulAiAgent.StreamAsync"/>
+/// text chunks from the underlying stack, <see cref="StatefulAiAgent.StreamAsync(string, CancellationToken)"/>
 /// must emit the same deltas in order and settle with the same assistant-turn text
 /// in <see cref="IAiAgent.History"/>.
 /// </summary>

@@ -2,8 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using Vais.Agents.Control;
-using Vais.Agents.Control.Policy.Opa;
 using Xunit;
 
 namespace Vais.Agents.Control.Policy.Opa.Tests;

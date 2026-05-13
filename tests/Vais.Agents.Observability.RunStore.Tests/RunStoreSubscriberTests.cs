@@ -5,9 +5,7 @@ using System.Collections.Concurrent;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Vais.Agents;
 using Vais.Agents.Hosting.InMemory;
-using Vais.Agents.Observability.RunStore;
 using Xunit;
 
 namespace Vais.Agents.Observability.RunStore.Tests;

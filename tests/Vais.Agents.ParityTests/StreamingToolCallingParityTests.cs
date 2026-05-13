@@ -1,11 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Text.Json;
 using FluentAssertions;
-using MeaiChatMessage = Microsoft.Extensions.AI.ChatMessage;
-using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
-using MeaiFunctionCallContent = Microsoft.Extensions.AI.FunctionCallContent;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -14,18 +10,20 @@ using Vais.Agents.Ai.MicrosoftAgentFramework;
 using Vais.Agents.Ai.SemanticKernel;
 using Vais.Agents.Core;
 using Xunit;
+using MeaiChatRole = Microsoft.Extensions.AI.ChatRole;
+using MeaiFunctionCallContent = Microsoft.Extensions.AI.FunctionCallContent;
 
 namespace Vais.Agents.ParityTests;
 
 /// <summary>
 /// Parity coverage for the v0.4.1 tool-using streaming path: both adapters must
 /// accumulate model-requested tool calls across streamed updates and surface
-/// them to <see cref="StatefulAiAgent.StreamAsync"/>'s outer loop for dispatch.
+/// them to <see cref="StatefulAiAgent.StreamAsync(string, CancellationToken)"/>'s outer loop for dispatch.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The MAF scenario runs end-to-end through
-/// <see cref="StatefulAiAgent.StreamAsync"/> — MAF's streaming pipeline handles
+/// <see cref="StatefulAiAgent.StreamAsync(string, CancellationToken)"/> — MAF's streaming pipeline handles
 /// scripted <c>FunctionCallContent</c> cleanly even without the built-in
 /// <c>FunctionInvokingChatClient</c> wrapping (we disabled it via
 /// <c>UseProvidedChatClientAsIs</c>). The SK scenario is narrower: it asserts

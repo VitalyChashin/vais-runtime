@@ -1,8 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using Vais.Agents.Runtime.Plugins.Python;
-
 namespace Vais.Agents.Runtime.Plugins.Python.Tests;
 
 /// <summary>

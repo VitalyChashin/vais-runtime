@@ -3,8 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Vais.Agents;
-using Vais.Agents.Control.Kubernetes;
 using Xunit;
 
 namespace Vais.Agents.Control.Kubernetes.Tests;

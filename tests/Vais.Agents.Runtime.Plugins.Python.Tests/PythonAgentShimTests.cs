@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
 using Xunit;
 using IOpaqueStateCarrier = Vais.Agents.Core.IOpaqueStateCarrier;

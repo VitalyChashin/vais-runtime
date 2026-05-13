@@ -5,7 +5,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
-using Orleans.Hosting;
 using Orleans.TestingHost;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;

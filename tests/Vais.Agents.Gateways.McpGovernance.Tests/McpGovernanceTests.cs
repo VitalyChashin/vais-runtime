@@ -4,7 +4,6 @@
 using System.Text.Json;
 using FluentAssertions;
 using Vais.Agents.Gateways.Governance;
-using Vais.Agents.Gateways.McpGovernance;
 using Xunit;
 
 namespace Vais.Agents.Gateways.McpGovernance.Tests;

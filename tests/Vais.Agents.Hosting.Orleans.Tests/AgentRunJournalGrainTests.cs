@@ -3,8 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Orleans.Runtime;
-using Orleans.TestingHost;
 using Xunit;
 
 namespace Vais.Agents.Hosting.Orleans.Tests;

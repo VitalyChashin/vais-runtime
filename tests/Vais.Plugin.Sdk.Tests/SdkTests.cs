@@ -7,7 +7,6 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents;
-using Vais.Plugin.Sdk;
 using Xunit;
 
 namespace Vais.Plugin.Sdk.Tests;

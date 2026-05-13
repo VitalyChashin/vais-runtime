@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Vais.Plugin.Sdk;
 
 namespace Vais.Plugin.Sdk.Tests;
 

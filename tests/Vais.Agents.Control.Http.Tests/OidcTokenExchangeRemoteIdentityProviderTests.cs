@@ -5,8 +5,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using Vais.Agents.Control;
-using Vais.Agents.Control.Http;
 using Xunit;
 
 namespace Vais.Agents.Control.Http.Tests;

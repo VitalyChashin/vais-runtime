@@ -3,9 +3,7 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.Logging;
-using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;

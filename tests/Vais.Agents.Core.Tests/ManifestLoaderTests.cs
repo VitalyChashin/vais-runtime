@@ -1,7 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Text.Json;
 using FluentAssertions;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Manifests;

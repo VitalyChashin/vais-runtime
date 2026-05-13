@@ -5,9 +5,7 @@ using FluentAssertions;
 using k8s.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Vais.Agents;
 using Vais.Agents.Control.Http;
-using Vais.Agents.Control.Kubernetes;
 using Xunit;
 
 namespace Vais.Agents.Control.Kubernetes.Tests;

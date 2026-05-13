@@ -4,9 +4,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
-using Vais.Agents;
-using Vais.Agents.Control;
-using Vais.Agents.Control.Policy.Opa;
 using Xunit;
 
 namespace Vais.Agents.Control.Policy.Opa.Tests;

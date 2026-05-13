@@ -7,7 +7,7 @@ using Xunit;
 namespace Vais.Agents.Core.Tests;
 
 /// <summary>
-/// Focused coverage for <see cref="StatefulAiAgent.StreamAsync"/>. Uses a
+/// Focused coverage for <see cref="StatefulAiAgent.StreamAsync(string, CancellationToken)"/>. Uses a
 /// <see cref="FakeStreamingCompletionProvider"/> so tests stay deterministic and
 /// don't depend on SK or MAF plumbing.
 /// </summary>

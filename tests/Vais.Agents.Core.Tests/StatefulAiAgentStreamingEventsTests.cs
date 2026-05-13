@@ -4,7 +4,6 @@
 using System.Text.Json;
 using FluentAssertions;
 using Polly;
-using Polly.Retry;
 using Xunit;
 
 namespace Vais.Agents.Core.Tests;

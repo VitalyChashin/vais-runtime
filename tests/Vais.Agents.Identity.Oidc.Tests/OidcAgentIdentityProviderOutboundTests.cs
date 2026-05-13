@@ -9,7 +9,6 @@ using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Vais.Agents.Control;
-using Vais.Agents.Identity.Oidc;
 using Xunit;
 
 namespace Vais.Agents.Identity.Oidc.Tests;

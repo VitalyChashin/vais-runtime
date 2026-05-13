@@ -3,7 +3,6 @@
 
 using A2A;
 using FluentAssertions;
-using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;

@@ -56,10 +56,10 @@ public sealed class McpAgentServerBuilderTests
     {
         var manifest = ManifestFor("support", "1.2", "Helpful support")
             with
-            {
-                Budget = new RunBudget(MaxTurns: 5, MaxDuration: TimeSpan.FromSeconds(30)),
-                Handoffs = new[] { new HandoffRef("billing", When: "refunds"), new HandoffRef("sales") },
-            };
+        {
+            Budget = new RunBudget(MaxTurns: 5, MaxDuration: TimeSpan.FromSeconds(30)),
+            Handoffs = new[] { new HandoffRef("billing", When: "refunds"), new HandoffRef("sales") },
+        };
 
         var desc = McpAgentServerBuilder.BuildToolDescription(manifest);
 

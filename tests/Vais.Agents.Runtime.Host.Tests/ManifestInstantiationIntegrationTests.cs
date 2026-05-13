@@ -5,7 +5,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
-using Orleans;
 using Vais.Agents.Control;
 using Vais.Agents.Core;
 using Vais.Agents.Runtime.Instantiation;

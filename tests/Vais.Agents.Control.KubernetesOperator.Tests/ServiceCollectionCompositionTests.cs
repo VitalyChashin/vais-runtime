@@ -4,7 +4,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Vais.Agents.Control.Kubernetes;
 using Xunit;
 
 namespace Vais.Agents.Control.Kubernetes.Tests;

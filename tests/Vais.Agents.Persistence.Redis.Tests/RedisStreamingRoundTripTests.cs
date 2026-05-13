@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using Orleans.Hosting;
 using Orleans.TestingHost;
 using Testcontainers.Redis;
 using Vais.Agents.Hosting.Orleans;

@@ -76,12 +76,12 @@ public sealed class ContainerPluginYamlResourcesTests
     // ── Resource parser — memory ──────────────────────────────────────────
 
     [Theory]
-    [InlineData("256Mi",  256L * 1024 * 1024)]
-    [InlineData("1Gi",    1L * 1024 * 1024 * 1024)]
-    [InlineData("512Ki",  512L * 1024)]
-    [InlineData("1024",   1024L)]
-    [InlineData("500M",   500L * 1_000_000)]
-    [InlineData("2G",     2L * 1_000_000_000)]
+    [InlineData("256Mi", 256L * 1024 * 1024)]
+    [InlineData("1Gi", 1L * 1024 * 1024 * 1024)]
+    [InlineData("512Ki", 512L * 1024)]
+    [InlineData("1024", 1024L)]
+    [InlineData("500M", 500L * 1_000_000)]
+    [InlineData("2G", 2L * 1_000_000_000)]
     public void ParseMemoryBytes_RecognisesAllUnits(string raw, long expectedBytes)
     {
         ContainerPluginResourceParser.ParseMemoryBytes(raw).Should().Be(expectedBytes);
@@ -96,10 +96,10 @@ public sealed class ContainerPluginYamlResourcesTests
     // ── Resource parser — CPU ─────────────────────────────────────────────
 
     [Theory]
-    [InlineData("0.5",   500_000_000L)]
-    [InlineData("1.0",   1_000_000_000L)]
-    [InlineData("500m",  500_000_000L)]
-    [InlineData("250m",  250_000_000L)]
+    [InlineData("0.5", 500_000_000L)]
+    [InlineData("1.0", 1_000_000_000L)]
+    [InlineData("500m", 500_000_000L)]
+    [InlineData("250m", 250_000_000L)]
     public void ParseNanoCpus_RecognisesUnits(string raw, long expectedNano)
     {
         ContainerPluginResourceParser.ParseNanoCpus(raw).Should().Be(expectedNano);

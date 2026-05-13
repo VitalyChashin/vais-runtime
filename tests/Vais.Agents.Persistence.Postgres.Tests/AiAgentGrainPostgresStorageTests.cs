@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Npgsql;
-using Orleans.Runtime;
 using Vais.Agents.Hosting.Orleans;
 using Xunit;
 
@@ -12,7 +11,7 @@ namespace Vais.Agents.Persistence.Postgres.Tests;
 /// <summary>
 /// End-to-end tests that prove <see cref="AiAgentGrain"/> stores and restores state
 /// through the Postgres ADO.NET grain-storage provider wired by
-/// <see cref="AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage"/>.
+/// <see cref="AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage(ISiloBuilder, string)"/>.
 /// </summary>
 [Collection(PostgresClusterCollection.CollectionName)]
 public sealed class AiAgentGrainPostgresStorageTests

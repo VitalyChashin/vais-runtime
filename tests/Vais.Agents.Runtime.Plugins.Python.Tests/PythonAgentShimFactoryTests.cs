@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Vais.Agents.Core;
 using Xunit;
 
 namespace Vais.Agents.Runtime.Plugins.Python.Tests;

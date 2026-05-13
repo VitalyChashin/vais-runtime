@@ -5,7 +5,6 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Vais.Agents.Control;
 using Vais.Agents.Core.Guardrails;
 using Vais.Agents.Runtime.Instantiation.Guardrails;
 using Vais.Agents.Runtime.Instantiation.ModelProviders;

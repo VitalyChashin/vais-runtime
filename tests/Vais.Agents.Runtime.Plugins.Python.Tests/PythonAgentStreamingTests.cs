@@ -4,7 +4,6 @@
 using System.IO.Pipelines;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Vais.Agents;
 using Vais.Agents.Core;
 using Xunit;
 

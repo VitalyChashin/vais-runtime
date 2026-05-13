@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using FluentAssertions;
-using Vais.Agents;
 using Vais.Agents.Core;
 using Xunit;
 

@@ -12,8 +12,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Vais.Agents.Control;
-using Vais.Agents.Control.Http;
 using Vais.Agents.Core;
 using Xunit;
 

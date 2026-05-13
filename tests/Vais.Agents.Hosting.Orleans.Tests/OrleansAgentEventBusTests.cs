@@ -2,8 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Orleans.Hosting;
 using Orleans.TestingHost;
 using Xunit;
 
@@ -14,7 +12,7 @@ namespace Vais.Agents.Hosting.Orleans.Tests;
 /// provider-neutral; here we exercise it against Orleans' in-process
 /// <c>AddMemoryStreams</c>, which is enough to verify the wiring end-to-end:
 /// surrogate serialisation for all three <see cref="AgentEvent"/> subclasses
-/// plus the <see cref="Subscribe"/> observer adapter.
+/// plus the <see cref="OrleansAgentEventBus.Subscribe"/> observer adapter.
 /// </summary>
 /// <remarks>
 /// Durable cross-silo providers (<c>Microsoft.Orleans.Streaming.AzureEventHubs</c>

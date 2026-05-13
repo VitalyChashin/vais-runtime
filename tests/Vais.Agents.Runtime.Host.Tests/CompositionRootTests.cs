@@ -6,21 +6,17 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Orleans;
-using Vais.Agents;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
-using Xunit;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
-using Vais.Agents.Runtime.Host;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
+using Xunit;
 
 namespace Vais.Agents.Runtime.Host.Tests;
 

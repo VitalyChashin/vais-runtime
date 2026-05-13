@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using Vais.Agents;
 using Xunit;
 
 namespace Vais.Agents.Control.Http.Tests;
