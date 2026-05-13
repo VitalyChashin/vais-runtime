@@ -6,9 +6,9 @@ Audience: you're embedding `Vais.Agents` primitives in your own .NET host instea
 
 ## Path
 
-1. **[Install + package picks](../getting-started/installation.md)** — which `Vais.Agents.*` NuGet packages to install for which scenario.
-2. **[30-second library hello](../getting-started/hello-agent.md)** — `new StatefulAiAgent(...)` against Semantic Kernel, then against Microsoft Agent Framework. Same agent class; swap the adapter via DI.
-3. **[Choose your stack — MAF or SK](../getting-started/choosing-a-stack.md)** — decision framework. Relevant only in library mode; the runtime hides this choice from manifest authors.
+1. **[Install + package picks](installation.md)** — which `Vais.Agents.*` NuGet packages to install for which scenario.
+2. **[30-second library hello](hello-agent.md)** — `new StatefulAiAgent(...)` against Semantic Kernel, then against Microsoft Agent Framework. Same agent class; swap the adapter via DI.
+3. **[Choose your stack — MAF or SK](choose-your-stack.md)** — decision framework. Relevant only in library mode; the runtime hides this choice from manifest authors.
 
 ## What you give up
 
