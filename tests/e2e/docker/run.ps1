@@ -62,6 +62,9 @@ function Wait-ForPlugin([string]$name, [string]$state = "Ready", [int]$timeoutSe
 # ── Setup ─────────────────────────────────────────────────────────────────────
 Write-Host "`n=== E2E Docker Suite ===" -ForegroundColor Cyan
 
+# Pre-run cleanup: remove stale plugin container from prior aborted runs (ignore errors).
+try { docker rm -f vais-plugin-echo-plugin 2>$null | Out-Null } catch {}
+
 # Write a temporary vais config pointing at the local runtime
 $tmpConfig = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.yaml'
 @"
@@ -91,7 +94,8 @@ dotnet publish "$repoRoot\src\Vais.Agents.Runtime.Host\Vais.Agents.Runtime.Host.
 
 $env:VAIS_HOSTING_MODE               = "localhost"
 $env:VAIS_PLUGINS_DIRECTORY          = ""
-$env:VAIS_CONTAINER_PLUGINS_DIRECTORY = ""
+# Non-empty so AddContainerPlugins registers IContainerPluginLifecycleManager; path need not exist.
+$env:VAIS_CONTAINER_PLUGINS_DIRECTORY = "$env:TEMP\vais-e2e-plugins"
 $env:ASPNETCORE_URLS                 = "http://+:$RuntimePort"
 
 $runtimeProc = Start-Process dotnet `

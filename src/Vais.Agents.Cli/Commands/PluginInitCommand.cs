@@ -108,6 +108,7 @@ RUN dotnet publish -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app .
+USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT [""dotnet"", ""{name}.dll""]
 ");

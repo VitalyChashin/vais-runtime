@@ -17,4 +17,23 @@ public sealed class ContainerPluginLoaderOptions
 
     /// <summary>Maximum supported container API version (inclusive).</summary>
     public string SupportedApiVersionMax { get; set; } = "0.24";
+
+    /// <summary>Operator-configured upper bounds for per-plugin resource requests.</summary>
+    public ContainerPluginResourceBounds ResourceBounds { get; set; } = new();
+}
+
+/// <summary>
+/// Upper bounds applied to resource requests in <c>spec.resources</c> of a plugin manifest.
+/// Operators can raise or lower these to match cluster capacity.
+/// </summary>
+public sealed class ContainerPluginResourceBounds
+{
+    /// <summary>Maximum memory a plugin may request. Default 2 GiB.</summary>
+    public long MaxMemoryBytes { get; init; } = 2L * 1024 * 1024 * 1024;
+
+    /// <summary>Maximum CPU a plugin may request, in nanoCPUs (1 CPU = 1_000_000_000). Default 4 vCPU.</summary>
+    public long MaxNanoCpus    { get; init; } = 4_000_000_000L;
+
+    /// <summary>Maximum PID limit a plugin may request. Default 1024.</summary>
+    public long MaxPidsLimit   { get; init; } = 1024;
 }

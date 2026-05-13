@@ -24,6 +24,9 @@ internal sealed class ContainerPluginDescriptor
         new Dictionary<string, string>();
     public string InvokeBaseUrl { get; init; } = "";
     public KubernetesPluginConfig? KubernetesConfig { get; init; }
+    public long? MemoryBytes { get; init; }
+    public long? NanoCpus    { get; init; }
+    public long? PidsLimit   { get; init; }
 }
 
 internal enum ContainerTopology { Sidecar, Standalone, Kubernetes }

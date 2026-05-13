@@ -9,6 +9,20 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Security
+
+- **Container plugin host hardening (Phase 1 of plugin isolation contract / P12).** `DockerContainerSupervisor` now applies non-negotiable `HostConfig` defaults to every container plugin: read-only root filesystem, `/tmp` tmpfs (64 MiB), all Linux capabilities dropped, `no-new-privileges`, 256 MiB / 0.5 vCPU / 128 PIDs resource limits (overridable via `spec.resources` in the plugin manifest), and host port bind narrowed from `0.0.0.0` to `127.0.0.1`. The Kubernetes plugin Helm chart (`Charts/vais-plugin/`) gains a matching `securityContext` block — pod-level (`runAsNonRoot`, `runAsUser: 65532`, `seccompProfile: RuntimeDefault`) and container-level (`readOnlyRootFilesystem`, `allowPrivilegeEscalation: false`, `capabilities.drop: ALL`) — plus a Memory-backed `emptyDir` volume for `/tmp` (64 MiB).
+
+  - **`spec.resources` in `plugin.yaml`.** Container plugins may now request up to operator-configured maxima (default: 2 GiB memory, 4 vCPU, 1024 PIDs) via the new optional `spec.resources` block. Absent fields fall back to the supervisor defaults. K8s-style quantity strings (`256Mi`, `0.5`, `500m`) are accepted.
+  - **`vais plugin-init` Dockerfile template.** The generated `Dockerfile` for `--runtime dotnet` now includes `USER 65532:65532` before `EXPOSE`. New plugin authors get a non-root image by default.
+  - **Migration note for existing plugins.** Any container plugin image that runs as root will still start under `DockerContainerSupervisor` (Docker only enforces `runAsNonRoot` at the K8s admission level). Add `USER <non-root>` to the plugin's `Dockerfile` to be K8s-compatible. Plugins that write outside `/tmp` will fail to start under the new read-only rootfs default — move writes to `/tmp` or pre-stage writable paths in the image.
+  - Reference: `research/plugin-isolation-contract-2026-05-13.md`, `research/plugin-docker-isolation-2026-05-13.md`.
+
+### Fixed
+
+- **`IContainerPluginRegistry` missing from composition root.** `CompositionRoot` now calls `AddOrleansContainerPluginRegistry()` alongside the other pillar registries. Previously, `POST /v1/container-plugins` returned 500 because the Orleans-backed registry grain was never wired into DI.
+- **E2E Docker suite (`tests/e2e/docker/run.ps1`).** Two fixes: `VAIS_CONTAINER_PLUGINS_DIRECTORY` is now set to a non-empty temp path (so `AddContainerPlugins` registers `IContainerPluginLifecycleManager`), and a pre-run `docker rm -f` removes stale plugin containers from aborted prior runs.
+
 ### Added
 
 - **CLI diagnostics command group `vais diagnose`** — live inspection of in-process OTel spans and Orleans grain call counters without container log archaeology.

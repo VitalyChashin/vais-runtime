@@ -405,6 +405,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             if (spec.RetryPolicy is { } rp)
                 retryPolicy = new ContainerRetryPolicy(rp.MaxAttempts, rp.BackoffSeconds, rp.RetryOn);
 
+            var bounds = _options.ResourceBounds;
             var descriptor = new ContainerPluginDescriptor
             {
                 Name = doc.Metadata?.Name is { Length: > 0 } n ? n : Path.GetFileName(pluginDir),
@@ -417,6 +418,12 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 SecretRefs = new Dictionary<string, string>(spec.Secrets),
                 InvokeBaseUrl = invokeBaseUrl,
                 KubernetesConfig = k8sConfig,
+                MemoryBytes = ContainerPluginResourceParser.Clamp(
+                    ContainerPluginResourceParser.ParseMemoryBytes(spec.Resources?.Memory), bounds.MaxMemoryBytes),
+                NanoCpus = ContainerPluginResourceParser.Clamp(
+                    ContainerPluginResourceParser.ParseNanoCpus(spec.Resources?.Cpu), bounds.MaxNanoCpus),
+                PidsLimit = ContainerPluginResourceParser.Clamp(
+                    spec.Resources?.PidsLimit, bounds.MaxPidsLimit),
             };
             result.Add(descriptor);
         }

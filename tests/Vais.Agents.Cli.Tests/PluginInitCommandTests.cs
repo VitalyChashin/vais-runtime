@@ -41,6 +41,7 @@ public sealed class PluginInitCommandTests
         dockerfile.Should().Contain("dotnet/sdk:9.0");
         dockerfile.Should().Contain("dotnet/aspnet:9.0");
         dockerfile.Should().Contain("my-plugin.dll");
+        dockerfile.Should().Contain("USER 65532:65532");
         dockerfile.Should().Contain("EXPOSE 8080");
     }
 }

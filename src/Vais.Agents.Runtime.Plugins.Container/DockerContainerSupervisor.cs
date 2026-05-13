@@ -28,6 +28,10 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
     private readonly object _stateLock = new();
     private readonly SemaphoreSlim _replaceLock = new(1, 1);
 
+    private const long DefaultMemoryBytes = 256L * 1024 * 1024;
+    private const long DefaultNanoCpus    = 500_000_000L;
+    private const long DefaultPidsLimit   = 128;
+
     public ContainerPluginDescriptor Descriptor => _descriptor;
     public ContainerPluginStatus Status => _status;
 
@@ -70,16 +74,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
                 Image = _descriptor.Image,
                 Env = envVars,
                 ExposedPorts = exposedPorts,
-                HostConfig = new HostConfig
-                {
-                    PortBindings = new Dictionary<string, IList<PortBinding>>
-                    {
-                        {
-                            $"{_descriptor.Port}/tcp",
-                            new List<PortBinding> { new() { HostPort = _descriptor.Port.ToString() } }
-                        }
-                    }
-                }
+                HostConfig = BuildHostConfig(_descriptor),
             }, ct).ConfigureAwait(false);
 
         _containerId = createResp.ID;
@@ -243,6 +238,24 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             await StopAsync().ConfigureAwait(false);
         _docker.Dispose();
     }
+
+    internal static HostConfig BuildHostConfig(ContainerPluginDescriptor descriptor) =>
+        new HostConfig
+        {
+            PortBindings = new Dictionary<string, IList<PortBinding>>
+            {
+                { $"{descriptor.Port}/tcp",
+                  new List<PortBinding> { new() { HostIP = "127.0.0.1", HostPort = descriptor.Port.ToString() } } }
+            },
+            ReadonlyRootfs = true,
+            Tmpfs          = new Dictionary<string, string> { { "/tmp", "rw,size=64m,mode=1777" } },
+            CapDrop        = new List<string> { "ALL" },
+            SecurityOpt    = new List<string> { "no-new-privileges:true" },
+            Memory         = descriptor.MemoryBytes ?? DefaultMemoryBytes,
+            MemorySwap     = descriptor.MemoryBytes ?? DefaultMemoryBytes,
+            NanoCPUs       = descriptor.NanoCpus    ?? DefaultNanoCpus,
+            PidsLimit      = descriptor.PidsLimit   ?? DefaultPidsLimit,
+        };
 
     private async Task RemoveExistingContainerAsync(string name, CancellationToken ct)
     {

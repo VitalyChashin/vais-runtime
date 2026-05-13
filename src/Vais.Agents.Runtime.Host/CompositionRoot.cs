@@ -189,6 +189,7 @@ internal static class CompositionRoot
         services.AddOrleansLlmGatewayConfigRegistry();
         services.AddOrleansMcpGatewayConfigRegistry();
         services.AddOrleansMcpServerRegistry();
+        services.AddOrleansContainerPluginRegistry();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator

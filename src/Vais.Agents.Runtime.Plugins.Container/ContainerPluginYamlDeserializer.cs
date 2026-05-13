@@ -42,6 +42,14 @@ internal sealed class ContainerPluginYamlSpec
     public ContainerPluginYamlRetryPolicy? RetryPolicy { get; set; }
     public ContainerPluginYamlKubernetesSpec? Kubernetes { get; set; }
     public Dictionary<string, string> Secrets { get; set; } = new();
+    public ContainerPluginYamlResources? Resources { get; set; }
+}
+
+internal sealed class ContainerPluginYamlResources
+{
+    public string? Memory    { get; set; }
+    public string? Cpu       { get; set; }
+    public long?   PidsLimit { get; set; }
 }
 
 internal sealed class ContainerPluginYamlKubernetesSpec

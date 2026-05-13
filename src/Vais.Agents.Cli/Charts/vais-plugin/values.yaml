@@ -25,6 +25,22 @@ resources:
     cpu: 500m
     memory: 512Mi
 
+## Pod-level security context (P12 isolation defaults — override to relax for specific plugins).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+## Container-level security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
 ## Extra environment variables passed to the container.
 env: []
 # - name: MY_SECRET

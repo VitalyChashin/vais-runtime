@@ -9,6 +9,16 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiV
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiVersionMin.set -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiVersionMax.get -> string!
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.SupportedApiVersionMax.set -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBounds.get -> Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds!
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBounds.set -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.ContainerPluginResourceBounds() -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxMemoryBytes.get -> long
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxMemoryBytes.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.get -> long
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.get -> long
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.init -> void
 Vais.Agents.Runtime.Plugins.Container.ICallTokenService
 Vais.Agents.Runtime.Plugins.Container.ICallTokenService.Generate(string! runId, string! agentId, int timeoutSeconds) -> string!
 Vais.Agents.Runtime.Plugins.Container.ICallTokenService.Validate(string! token, string! runId, string! agentId) -> bool
