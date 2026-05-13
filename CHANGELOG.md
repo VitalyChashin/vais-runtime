@@ -18,10 +18,23 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   - **Migration note for existing plugins.** Any container plugin image that runs as root will still start under `DockerContainerSupervisor` (Docker only enforces `runAsNonRoot` at the K8s admission level). Add `USER <non-root>` to the plugin's `Dockerfile` to be K8s-compatible. Plugins that write outside `/tmp` will fail to start under the new read-only rootfs default — move writes to `/tmp` or pre-stage writable paths in the image.
   - Reference: `research/plugin-isolation-contract-2026-05-13.md`, `research/plugin-docker-isolation-2026-05-13.md`.
 
+- **Container plugin egress isolation — internal-network mode (Phase 2 of P12).** Opt-in `--internal` Docker network topology that gives container plugins no NAT path to the internet. Enable by setting `VAIS_DOCKER_PLUGIN_NETWORK=<network-name>` on the runtime; the runtime and plugin containers share the named network and communicate via Docker embedded DNS instead of host-published ports.
+
+  - **`DockerContainerSupervisor`** switches between two `HostConfig` branches: when `DockerPluginNetwork` is set, `NetworkMode` is set to the network name and `PortBindings` are omitted (plugin has no host port); otherwise the existing Phase 1 loopback port binding is used unchanged.
+  - **`DockerNaming`** (internal helper) — single source of truth for the container name (`vais-plugin-{name}`) and invoke URL: `http://localhost:{port}` in legacy mode, `http://vais-plugin-{name}:{port}` in internal-network mode. Eliminates the previous dual URL-construction paths.
+  - **`ContainerPluginLoaderOptions.PluginNetwork`** — new public property bound from `VAIS_DOCKER_PLUGIN_NETWORK`. Null/empty = legacy mode (default); any non-empty value activates internal-network mode.
+  - **`local-dev/docker-compose.internal.yml`** — Compose overlay for `dev.ps1 -UseInternalNetwork`. Adds the `vais-internal` external network to the runtime service, mounts `/var/run/docker.sock`, and sets `VAIS_DOCKER_PLUGIN_NETWORK=vais-internal`.
+  - **`local-dev/dev.ps1 -UseInternalNetwork`** — new switch. Creates `vais-internal` idempotently (`docker network create --internal`) before compose starts and applies the overlay.
+  - **`deploy/demo-test.ps1 -UseInternalNetwork`** — same switch on the demo/integration test script.
+  - **`tests/e2e/docker/run.ps1 -UseInternalNetwork`** — new mode in the E2E Docker suite. Creates a per-run `vais-e2e-plugin-net` internal network, starts the runtime as a container (on the default bridge for port publishing, then `docker network connect` to the internal net), and asserts that the plugin container has no published host ports and is attached to the internal network. All 13 assertions pass.
+  - **`docs/guides/harden-docker-container-plugins.md`** — new production playbook covering both phases, daemon-wide hardening (`userns-remap`, rootless Docker, docker-socket-proxy roadmap), and a platform compatibility table (Linux / Docker Desktop).
+  - Reference: `research/completed/plugin-docker-isolation-2026-05-13.md`.
+
 ### Fixed
 
 - **`IContainerPluginRegistry` missing from composition root.** `CompositionRoot` now calls `AddOrleansContainerPluginRegistry()` alongside the other pillar registries. Previously, `POST /v1/container-plugins` returned 500 because the Orleans-backed registry grain was never wired into DI.
 - **E2E Docker suite (`tests/e2e/docker/run.ps1`).** Two fixes: `VAIS_CONTAINER_PLUGINS_DIRECTORY` is now set to a non-empty temp path (so `AddContainerPlugins` registers `IContainerPluginLifecycleManager`), and a pre-run `docker rm -f` removes stale plugin containers from aborted prior runs.
+- **E2E Docker suite `-UseInternalNetwork` mode.** Three bugs fixed after first-run validation: (1) `--user root` added to the runtime `docker run` — the image's default user (`uid=65532`) cannot access `/var/run/docker.sock` (`root:root 0660`); (2) container port corrected from `$RuntimePort` to `8080` — the image has `ASPNETCORE_HTTP_PORTS=8080` baked via Kestrel, which takes precedence over `ASPNETCORE_URLS`; (3) `Get-Member` result wrapped in `@(...)` so `.Count` works when `PortBindings` deserializes to an empty `PSCustomObject`. All 13 assertions now pass (11 shared with legacy mode + 2 internal-network-specific).
 
 ### Added
 
