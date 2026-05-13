@@ -62,7 +62,7 @@
   </ItemGroup>
   <ItemGroup Label="Kubernetes operator (v0.13 K8s CRD + operator pillar). KubeOps 10.x pulls the official kubernetes-client transitively.">
     <PackageVersion Include="KubeOps.Operator" Version="10.3.4" />
-    <PackageVersion Include="KubeOps.Abstractions" Version="10.3.4" />
+    <PackageVersion Include="KubeOps.Abstractions" Version="10.5.0" />
     <PackageVersion Include="KubernetesClient" Version="19.0.2" />
   </ItemGroup>
   <ItemGroup Label="CLI (v0.15 vais dotnet-tool pillar). Spectre pulls its console renderer family transitively.">
