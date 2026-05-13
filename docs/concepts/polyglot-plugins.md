@@ -1,6 +1,6 @@
 # Polyglot plugins
 
-**v0.23.** The runtime can load tool-contributing plugins authored in languages other than C#. For v0.23 the supported runtime is Python. A Python plugin is an MCP server spawned as a subprocess; the Vais runtime manages its lifecycle, negotiates the handshake, and exposes its tools to the agent's tool registry exactly as if they were .NET-native tools.
+The runtime can load tool-contributing plugins authored in languages other than C#. The supported runtime today is Python. A Python plugin is an MCP server spawned as a subprocess; the runtime manages its lifecycle, negotiates the handshake, and exposes its tools to the agent's tool registry exactly as if they were .NET-native tools.
 
 ## Concept
 

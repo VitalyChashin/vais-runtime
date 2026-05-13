@@ -1,8 +1,6 @@
 # Graph as a first-class deployable
 
-Shipped in v0.19. An `AgentGraph` can be registered with, and managed by, the vais-agents runtime in exactly the same way as a single `Agent` — via the HTTP control plane, `vais apply`, or the Kubernetes operator.
-
-Before v0.19, graphs existed only as in-process constructs: you compiled the graph definition into the host process and wired it up manually. v0.19 adds a *declarative graph manifest* and an end-to-end management path for it.
+An `AgentGraph` can be registered with, and managed by, the runtime in exactly the same way as a single `Agent` — via the HTTP control plane, `vais apply`, or the Kubernetes operator. Graphs are first-class deployables: durable in the registry, invocable through the standard verbs, streamable over SSE. A *declarative graph manifest* drives the end-to-end management path; in-process construction (compile the graph in the host and wire it manually) remains supported for embedded scenarios.
 
 ## The `AgentGraph` manifest format
 

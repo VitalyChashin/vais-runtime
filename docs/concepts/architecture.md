@@ -208,7 +208,7 @@ See [control plane concept](control-plane.md) + [Kubernetes operator concept](ku
 
 Later pillars added their own activity sources + tag families — `Vais.Agents.Policy.OPA` per-evaluation spans with `vais.policy.*` tags (v0.14), `vais.control.idempotency.*` tags on HTTP idempotency-middleware spans (v0.11), `vais.stream.*` tags on SSE streaming spans (v0.12). See [telemetry keys reference](../reference/telemetry-keys.md) for the full catalogue.
 
-## Runtime tier (v0.16 Pillar A)
+## Runtime tier (v0.16)
 
 The 31 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
 
@@ -238,15 +238,15 @@ The 31 packages above are a **library**. They also ship as a **deployable runtim
 
 Two audiences, two answers. The runtime container is the partner-facing shape (docker-compose for evaluation, Helm for Kubernetes); the library is the consumer-facing shape (custom hosts, embedded agent-in-app, unusual runtime combinations).
 
-The host's `CompositionRoot` is the single source of truth for "how to wire the full stack" — the install guides build on it, the composition-root unit tests lock its invariants, and any future Pillar B / C / D / E feature layers on top of the same shape. See:
+The host's `CompositionRoot` is the single source of truth for "how to wire the full stack" — the install guides build on it, the composition-root unit tests lock its invariants, and the v0.17–v0.20 feature tiers layer on top of the same shape. See:
 
 - [runtime-configuration reference](../reference/runtime-configuration.md) — every knob on the container.
 - [install-the-runtime-locally guide](../guides/install-the-runtime-locally.md) — docker-compose recipes.
 - [deploy-the-runtime-to-kubernetes guide](../guides/deploy-the-runtime-to-kubernetes.md) — Helm chart walkthrough.
 
-v0.16 (Pillar A) ships the container + compose + Helm. v0.17 (Pillar B, below) resolves the 501-on-invoke story.
+v0.16 ships the container + compose + Helm. v0.17 (below) shipped declarative agent instantiation.
 
-## Manifest instantiation tier (v0.17 Pillar B)
+## Manifest instantiation tier (v0.17)
 
 Sits between `Runtime.Host` and the library stack — turns a stored `AgentManifest` into a running `StatefulAiAgent` without consumer-written C#. Partners write YAML; `vais apply` persists it; `vais invoke` produces a real model response.
 
@@ -287,14 +287,14 @@ Sits between `Runtime.Host` and the library stack — turns a stored `AgentManif
 
 Key invariants:
 
-- **`Model != null` is the declarative-path switch.** Manifests with `Model` set take the translator path; those without trigger `501 urn:vais-agents:handler-not-loaded` until Pillar C (plugin loader) ships.
+- **`Model != null` is the declarative-path switch.** Manifests with `Model` set take the translator path; those without route to the plugin loader (v0.18+). If no loaded plugin claims the handler `typeName`, the response is `501 urn:vais-agents:handler-not-loaded`.
 - **Per-agent model providers** — the grain's completion provider comes from the translated options' `CompletionProvider` slot, not a silo-wide DI singleton. Different agents on the same silo can use different providers.
 - **Update eviction** — `AgentLifecycleManager.UpdateAsync` calls `IAgentManifestInvalidator.InvalidateAsync` (the translator) so next invoke re-activates with the new manifest. In-flight runs keep their original options.
 - **OrleansAgentRegistry** replaces `InMemoryAgentRegistry` in the runtime host so `vais apply` persists across pod roll.
 
 See [declarative-agents concept](declarative-agents.md) for the full pipeline; [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) for the end-to-end walkthrough.
 
-## Plugin tier (v0.18 Pillar C)
+## Plugin tier (v0.18)
 
 Parallel to the manifest instantiation tier — adds a plugin-loader branch that runs **before** the declarative `Model` check. Partners ship DLLs whose exported `IAiAgent` types route to manifests by `AgentHandlerRef.TypeName`. Authoring details live in [runtime-plugins concept](runtime-plugins.md) + [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md).
 
@@ -350,7 +350,7 @@ Key invariants:
 
 See [runtime-plugins concept](runtime-plugins.md) for the plugin-authoring contract, ABI-matching rules, and security posture.
 
-## Graph control-plane tier (v0.19 Pillar D)
+## Graph control-plane tier (v0.19)
 
 Parallel to the agent control-plane — adds `AgentGraph` as a first-class managed object: stored in `OrleansAgentGraphRegistry`, exposed through the HTTP control plane, invocable via `POST /v1/graphs/{id}/invoke`, streamable via SSE `POST /v1/graphs/{id}/invoke/stream`, and manageable with `vais apply` / `vais get-graphs` / `vais delete-graph`.
 

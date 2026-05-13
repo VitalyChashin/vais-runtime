@@ -1,8 +1,8 @@
 # Runtime plugins
 
-**v0.18 Pillar C.** The runtime loads code-authored `IAiAgent` implementations from DLLs dropped under `/var/lib/vais/plugins` and routes manifests to them when `AgentHandlerRef.TypeName` matches. Partners ship agents whose behaviour doesn't fit the "model + prompt + tools" declarative shape — custom loops, proprietary providers, deterministic fallbacks — without rebuilding the runtime container.
+The runtime loads code-authored `IAiAgent` implementations from DLLs dropped under `/var/lib/vais/plugins` and routes manifests to them when `AgentHandlerRef.TypeName` matches. Ship agents whose behaviour doesn't fit the "model + prompt + tools" declarative shape — custom loops, proprietary providers, deterministic fallbacks — without rebuilding the runtime container.
 
-> **v0.23:** Python tool-contributing plugins are now supported via a separate loader path (`IPythonPluginHost`, `INamedToolSourceProvider`). Python plugins contribute **tools** rather than a full agent loop, using the MCP stdio protocol. See [polyglot-plugins.md](polyglot-plugins.md).
+> Python tool-contributing plugins are supported via a separate loader path (`IPythonPluginHost`, `INamedToolSourceProvider`). Python plugins contribute **tools** rather than a full agent loop, using the MCP stdio protocol. See [polyglot-plugins.md](polyglot-plugins.md).
 
 ## What ships
 
@@ -46,7 +46,7 @@ The translator's decision is:
       │         • skip declarative translation entirely
       │
       └─ NO ──→ declarative path:
-                • Model set? → v0.17 Pillar B path
+                • Model set? → declarative path (translator builds options)
                 • Model null? → 501 handler-not-loaded
 ```
 
@@ -150,7 +150,7 @@ See [runtime-configuration reference §Plugin loader](../reference/runtime-confi
 
 ## URN catalogue
 
-Six new URNs ship with v0.18 Pillar C.
+Six new URNs ship with the plugin loader (v0.18).
 
 ### Loader-side (`Runtime.Plugins`)
 
@@ -203,7 +203,7 @@ See the [PluginAgentWeather sample](../../samples/PluginAgentWeather/README.md#h
 ## Related
 
 - [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) — step-by-step walkthrough from `dotnet new classlib` to `vais invoke`.
-- [declarative-agents concept](declarative-agents.md) — the v0.17 path plugins complement; see §"`handler.typeName` coexistence with Pillar C" for the wins-wins-wins decision table.
-- [architecture concept §Plugin tier (v0.18 Pillar C)](architecture.md#plugin-tier-v018-pillar-c) — where the loader sits relative to the library stack.
+- [declarative-agents concept](declarative-agents.md) — the declarative path plugins complement; see §"`handler.typeName` coexistence with the plugin loader" for the precedence decision table.
+- [architecture concept §Plugin tier (v0.18)](architecture.md#plugin-tier-v018) — where the loader sits relative to the library stack.
 - [runtime-configuration reference §Plugin loader](../reference/runtime-configuration.md#plugin-loader) — env var + appsettings key.
 - [problem-details-urns reference](../reference/problem-details-urns.md) — full URN catalogue.

@@ -19,7 +19,7 @@ Generated OpenAPI clients branch on URN via the `x-vais-type-urns` extension —
 | `urn:vais-agents:streaming-not-supported` | `501` | Resolved agent does not implement `IStreamingAiAgent`. | v0.12 | Use `POST /v1/agents/{id}/invoke` (unary); or swap in a streaming-capable agent. |
 | `urn:vais-agents:backend-unavailable` | `503` | Upstream dependency (Orleans silo, DB, vector store) unreachable. | v0.6 | Retry with exponential backoff; escalate on persistent failure. |
 
-### Manifest instantiation (v0.17 Pillar B)
+### Manifest instantiation (v0.17)
 
 Emitted by `AgentManifestTranslator` during grain activation — surfacing as HTTP responses on the first invoke that follows `vais apply`.
 
@@ -39,7 +39,7 @@ Emitted by `AgentManifestTranslator` during grain activation — surfacing as HT
 | `urn:vais-agents:guardrail-not-registered` | `400` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. | v0.17 | Register a factory or pick a built-in (`LengthCap` / `RegexAllowlist` / `RegexDenylist` / `LlmAsJudge`). |
 | `urn:vais-agents:guardrail-params-invalid` | `400` | Factory rejected the supplied `params` (missing key, wrong type, bad value). | v0.17 | Fix the params per the factory's documented schema. |
 
-### Plugin model (v0.18 Pillar C)
+### Plugin model (v0.18)
 
 Two runtime URNs reach the HTTP wire; four loader URNs are startup-log-only (WARN level, loader continues). See [runtime-plugins concept](../concepts/runtime-plugins.md#urn-catalogue) for the full loader catalogue.
 
@@ -52,7 +52,7 @@ Two runtime URNs reach the HTTP wire; four loader URNs are startup-log-only (WAR
 | `urn:vais-agents:plugin-handler-collision` | — | **Startup log or throw.** Two plugins declared the same `HandlerTypeName`. Throws on `PluginLoaderOptions.FailOnHandlerCollision=true` (default); otherwise first-registered wins. | v0.18 | Rename one plugin's handler or dedicate a namespace. |
 | `urn:vais-agents:plugin-handler-not-found` | — | **Startup log only.** A `[VaisPlugin(..., "Foo")]` declared `"Foo"` but the loaded assembly has no matching type. Handler skipped. | v0.18 | Fix the attribute or type name mismatch. |
 
-### Python plugin (v0.23 Pillar E)
+### Python plugin (v0.23)
 
 Emitted by `IPythonPluginHost` at silo startup — startup-log-only unless `transport: plugin` surfaces an unavailable server through the translator (which produces an HTTP error).
 
@@ -67,7 +67,7 @@ Emitted by `IPythonPluginHost` at silo startup — startup-log-only unless `tran
 
 URN structure: `urn:vais-agents:<slug>` where `<slug>` is lowercase kebab-case. No version suffix — the URN is the contract; renaming an existing URN is a **breaking change** and requires a major-version bump.
 
-### Python agent (v0.24 Pillar F)
+### Python agent (v0.24)
 
 Emitted by `PythonSubprocessSupervisor` and `PythonAgentShim` during agent invocation. Unlike v0.23 plugin URNs (startup-log-only), these surface as exceptions to the grain caller and may propagate to HTTP clients as `500` errors.
 

@@ -1,6 +1,6 @@
 # Reference: runtime configuration
 
-Every knob on the `vais-agents-runtime` container (v0.16 Pillar A). Env vars are the authoritative surface; the Helm chart sets them via values; `appsettings.json` is the baked default for logging + Kestrel.
+Every knob on the `vais-agents-runtime` container. Env vars are the authoritative surface; the Helm chart sets them via values; `appsettings.json` is the baked default for logging + Kestrel.
 
 ## Precedence
 
@@ -66,7 +66,7 @@ Off-by-default. Zero overhead when nothing below is set.
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | `grpc` \| `http/protobuf` | Standard OTel SDK env var. |
 | `OTEL_SERVICE_NAME` | (unset) | string | Overrides the OTel resource `service.name`. When unset, the runtime advertises the assembly name. |
 | `VAIS_OTEL_CONSOLE` | `false` | `true` \| `false` | Additionally emit traces + metrics to the console. Noisy — debug only. |
-| `VAIS_LANGFUSE_PROJECT` | (unset) | string | When set, registers `LangfuseEnrichmentFilter` with a static `project` metadata tag. v0.16 writes the project label only; Pillar B expands to full Langfuse ingestion. |
+| `VAIS_LANGFUSE_PROJECT` | (unset) | string | When set, registers `LangfuseEnrichmentFilter` with a static `project` metadata tag. Writes the project label; deeper Langfuse ingestion is on the roadmap. |
 
 Deeper dive: [deploy-otel-and-langfuse.md](../guides/deploy-otel-and-langfuse.md) + [telemetry-keys.md](./telemetry-keys.md).
 
@@ -92,7 +92,7 @@ Helm's default `readinessProbe.failureThreshold: 12 × periodSeconds: 5 = 60 s` 
 
 ## Plugin loader
 
-v0.18 Pillar C. Loader scans the configured directory at first `IPluginHandlerRegistry` resolve; each subfolder is a plugin. See [runtime-plugins concept](../concepts/runtime-plugins.md) for the authoring contract + [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) for the end-to-end walkthrough.
+Loader scans the configured directory at first `IPluginHandlerRegistry` resolve; each subfolder is a plugin. See [runtime-plugins concept](../concepts/runtime-plugins.md) for the authoring contract + [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) for the end-to-end walkthrough.
 
 | Env var | Default | Values | Notes |
 |---|---|---|---|
@@ -111,7 +111,7 @@ v0.18 Pillar C. Loader scans the configured directory at first `IPluginHandlerRe
 
 ## Python plugin loader
 
-v0.23 Pillar E. Opt-in — disabled by default because Python is an optional runtime dependency. See [polyglot-plugins concept](../concepts/polyglot-plugins.md) + [package-a-python-plugin guide](../guides/package-a-python-plugin.md).
+Opt-in — disabled by default because Python is an optional runtime dependency. See [polyglot-plugins concept](../concepts/polyglot-plugins.md) + [package-a-python-plugin guide](../guides/package-a-python-plugin.md).
 
 | Env var | Default | Values | Notes |
 |---|---|---|---|
@@ -185,8 +185,8 @@ These are baked in by the runtime host's composition root (see [`CompositionRoot
 - **Durability sidecars are always on.** `OrleansTaskStore` / `OrleansCheckpointer` / `OrleansIdempotencyStore` all register unconditionally, and they register *before* the generic HTTP control-plane wiring so the `TryAddSingleton` discipline picks the Orleans impls over the in-memory defaults. Unit tests guard the order.
 - **`AddAgentControlPlaneOpenApi()` is always wired.** The v0.11 OpenAPI document is served at `/openapi/v1.json`.
 - **`AddAgentControlPlaneIdempotency()` is always wired.** The idempotency middleware runs before the routes map; Orleans-backed store survives silo restart.
-- **`AgentLifecycleManager` uses `OrleansAgentRegistry`** since v0.17 Pillar B — manifests survive pod roll via per-id grain persistence. (v0.16 shipped `InMemoryAgentRegistry` because the 501-on-invoke limitation made durable registry outlive the feature.)
-- **Plugin loader registered before the manifest translator** since v0.18 Pillar C — the translator's ctor queries `IPluginHandlerRegistry` lazily at build time. The composition root enforces this ordering; `Composition_Plugin_Registry_Registered_Before_Translator` locks it.
+- **`AgentLifecycleManager` uses `OrleansAgentRegistry`** since v0.17 — manifests survive pod roll via per-id grain persistence.
+- **Plugin loader registered before the manifest translator** since v0.18 — the translator's ctor queries `IPluginHandlerRegistry` lazily at build time. The composition root enforces this ordering; `Composition_Plugin_Registry_Registered_Before_Translator` locks it.
 
 ## Related
 

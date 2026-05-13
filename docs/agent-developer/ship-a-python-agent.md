@@ -188,7 +188,7 @@ The turn counter persists across invocations — state is round-tripping correct
 
 The example above is intentionally minimal. The plugin contract supports:
 
-- **LangGraph state graphs** as the agent loop — see the [LangGraph plugin tutorial](../deep-development/index.md) in deep development (coming in Phase 3 of the docs reorg).
+- **LangGraph state graphs** as the agent loop — see the [LangGraph plugin tutorial](../deep-development/build-a-langgraph-plugin.md) in deep development.
 - **Real LLM calls** via any Python client (`langchain-openai`, `anthropic`, `google-genai`, …). The runtime's LLM gateway can still be in front of them by routing calls through the runtime's LLM endpoint — see the [P12 plugin sandbox contract](../concepts/control-plane.md).
 - **Streaming responses** — the SDK supports `vais/agent.stream`; yield text chunks from your invoke function with `stream=True`.
 

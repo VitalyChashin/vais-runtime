@@ -1,6 +1,6 @@
 # Declarative agents
 
-**v0.17 Pillar B.** The runtime turns a stored `AgentManifest` into a running `StatefulAiAgent` without the consumer writing C# for the "pure-LLM-plus-tools-plus-guardrails" shape. Apply a YAML manifest with `vais apply -f`, and `vais invoke` returns a real response — the 501-on-invoke story from v0.16 goes away for declarative agents.
+The runtime turns a stored `AgentManifest` into a running `StatefulAiAgent` without the consumer writing C# for the "pure-LLM-plus-tools-plus-guardrails" shape. Apply a YAML manifest with `vais apply -f`, and `vais invoke` returns a real response.
 
 ## The pipeline
 
@@ -109,7 +109,7 @@ Unknown guardrail name ⇒ `urn:vais-agents:guardrail-not-registered`. Malformed
 
 **In-flight runs are not touched** — the `StatefulAiAgent` started before the update keeps running with its original options. Partners who need immediate-drop-in semantics should `vais cancel` the run first.
 
-## `handler.typeName` coexistence with Pillar C
+## `handler.typeName` coexistence with the plugin loader
 
 `AgentHandlerRef.TypeName` is required in the record. The translator consults the v0.18 plugin registry **before** it checks `Model` presence:
 
@@ -117,7 +117,7 @@ Unknown guardrail name ⇒ `urn:vais-agents:guardrail-not-registered`. Malformed
 |---|---|---|
 | yes | no | **Plugin path.** Factory-produced `IAiAgent` lands on `StatefulAgentOptions.Agent`; grain uses it verbatim. |
 | yes | yes | **Plugin wins + WARN.** Same as above, but the apply response carries `urn:vais-agents:handler-and-declarative-fields-both-set`. Declarative `Model` / `SystemPromptSpec` / `Tools` / `GuardrailsSpec` are silently ignored. |
-| no | yes | **Declarative path.** Translator builds options from manifest fields (v0.17 Pillar B behaviour). |
+| no | yes | **Declarative path.** Translator builds options from manifest fields. |
 | no | no | `501 urn:vais-agents:handler-not-loaded` at invoke. Either publish a plugin that exports this handler, or switch the manifest to the declarative path with a `Model`. |
 
 Convention: set `handler.typeName: declarative` for pure-YAML agents — no plugin ever registers that sentinel. Plugin authors pick namespaced values like `MyApp.WeatherAgent` to avoid collision. See [runtime-plugins concept](runtime-plugins.md) for plugin authoring + loader semantics.
@@ -160,7 +160,7 @@ All surface as HTTP Problem Details when `vais apply` / `vais invoke` hits them.
 ## Related
 
 - [author-an-agent-in-yaml guide](../guides/author-an-agent-in-yaml.md) — end-to-end walkthrough.
-- [runtime-plugins concept](runtime-plugins.md) — the v0.18 Pillar C escape hatch for manifests that need C# behaviour.
+- [runtime-plugins concept](runtime-plugins.md) — the C# plugin escape hatch for manifests that need behaviour beyond the declarative shape.
 - [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) — end-to-end walkthrough for the plugin path.
 - [ship-a-guardrail guide](../guides/ship-a-guardrail.md) — custom `IGuardrailFactory`.
 - [ship-a-custom-model-provider guide](../guides/ship-a-custom-model-provider.md) — custom `IModelProviderFactory`.

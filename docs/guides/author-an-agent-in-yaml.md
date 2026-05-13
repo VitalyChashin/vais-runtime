@@ -1,6 +1,6 @@
 # Guide: author an agent in YAML
 
-End-to-end walkthrough from a blank YAML file to a running agent that answers a prompt. No C# code required. v0.17 Pillar B.
+End-to-end walkthrough from a blank YAML file to a running agent that answers a prompt. No C# code required.
 
 Prereqs: a running `vais-agents-runtime` container ([install-the-runtime-locally](install-the-runtime-locally.md)), the `vais` CLI ([install-the-cli](../getting-started/install-the-cli.md)), and an OpenAI / Anthropic / Azure-OpenAI API key.
 
@@ -55,7 +55,7 @@ spec:
 ```
 
 Key fields:
-- **`handler.typeName: declarative`** — placeholder string for v0.17; Pillar C will repurpose specific names for code plugins.
+- **`handler.typeName: declarative`** — sentinel for the declarative path. The plugin loader (v0.18+) repurposes specific names for code-authored plugins.
 - **`model.provider: openai`** — matches `OpenAIModelProviderFactory.ProviderName`.
 - **`model.apiKeyRef`** — `secret://env/OPENAI_API_KEY` tells the resolver to read the `OPENAI_API_KEY` env var.
 - **`systemPrompt.inline`** — literal prompt. See [declarative-agents concept](../concepts/declarative-agents.md#systempromptspec) for templateRef / fileRef alternatives.
@@ -178,7 +178,7 @@ Registry row gone + grain evicted + translator cache cleared. Re-applying brings
 
 - **`400 urn:vais-agents:model-provider-unsupported`** — `ModelSpec.Provider` doesn't match a registered factory. Check `vais version` to confirm the runtime registered `openai / anthropic / azure-openai` at startup.
 - **`400 urn:vais-agents:manifest-invalid`** — syntactic issue. Check the JSON Schema the runtime emits at `GET /openapi/v1.json` — the `AgentManifest` component is authoritative.
-- **`501 urn:vais-agents:handler-not-loaded`** — manifest has no `Model`. Either add a `Model` block (declarative path) or wait for Pillar C (plugin loader).
+- **`501 urn:vais-agents:handler-not-loaded`** — manifest has no `Model` and no loaded plugin claims its `handler.typeName`. Either add a `Model` block (declarative path) or load a plugin that exports the handler.
 - **Secret resolution fails** — `secret://env/OPENAI_API_KEY` requires the env var be set *inside* the runtime container. If you're running via docker-compose, export it on the host before `docker compose up`; the compose files forward the env.
 
 ## Related

@@ -1,6 +1,6 @@
 # Control plane
 
-Managed cloud runtimes (Bedrock AgentCore, Temporal, Restate, Dapr, OpenAI Assistants) converge on a universal verb set for agent lifecycles: **Create / Invoke / Signal / Query / Cancel / Update / Evict**. Vais.Agents ships those verbs as `IAgentLifecycleManager` + a value-typed `AgentManifest` that describes an agent deployment. v0.4 ships the **contract surface only** — no HTTP API, no CRDs, no YAML loader, no policy engine, no identity provider impl. Those land in Phase 3 (the cloud runtime).
+Managed cloud runtimes (Bedrock AgentCore, Temporal, Restate, Dapr, OpenAI Assistants) converge on a universal verb set for agent lifecycles: **Create / Invoke / Signal / Query / Cancel / Update / Evict**. Vais.Agents ships those verbs as `IAgentLifecycleManager` + a value-typed `AgentManifest` that describes an agent deployment. The library tier ships the contracts + an in-memory reference implementation; the runtime tier implements the verbs with an Orleans-backed lifecycle manager, HTTP control plane, Kubernetes operator, OPA policy engine, and Keycloak-backed identity provider.
 
 ## Why contract-first
 
@@ -69,7 +69,7 @@ public interface IAgentIdentityProvider
 
 Just `InMemoryAgentRegistry` in Core — a concurrent-dictionary-backed `IAgentRegistry` impl with `Register` / `Remove` helpers, label-prefix filter on `ListAsync`, and "null version → latest lexicographically" semantics on `GetAsync`. Useful for dev, tests, and as a reference implementation for the cloud runtime.
 
-No `IAgentLifecycleManager` impl. No `IAgentIdentityProvider` impl. Those are cloud-runtime (Phase 3) deliverables.
+No `IAgentLifecycleManager` impl. No `IAgentIdentityProvider` impl. Those are runtime-tier deliverables — see [`runtime-configuration`](../reference/runtime-configuration.md).
 
 ## Using the registry
 
@@ -106,13 +106,13 @@ var staging = await registry.ListAsync(labelPrefix: "env:staging");
 
 - **`AgentManifest` is a pure data record** — no behaviour, no validation callbacks, no DI fixtures. Consumers validate via their own layer; the registry stores whatever you give it.
 - **`Name` + `Version` together uniquely identify** a manifest. Registry supports multiple versions side-by-side; `GetAsync(name, null)` returns the lexicographic-latest version.
-- **`Tools` reference tools by `Source` string** — `"static"` for in-process, `"mcp:<server-name>"` for MCP discovery, `"a2a:<agent-name>"` for A2A delegation. The cloud runtime (Phase 3) resolves these at instantiation; consumers defining their own runtime also resolve via the `Source` string convention.
+- **`Tools` reference tools by `Source` string** — `"static"` for in-process, `"mcp:<server-name>"` for MCP discovery, `"a2a:<agent-name>"` for A2A delegation. The runtime resolves these at instantiation; consumers defining their own host also resolve via the `Source` string convention.
 - **`Bindings` list protocols** — `"http"`, `"a2a"`, `"mcp"` — with per-binding config blobs. The cloud runtime reads these to wire ingress.
 - **`Labels`** are free-form; used for filtering + routing.
 
-## Verb semantics (forward-looking)
+## Verb semantics
 
-The Phase 3 cloud runtime implements `IAgentLifecycleManager` with these semantics:
+The runtime implements `IAgentLifecycleManager` with these semantics:
 
 | Verb | Semantics |
 |---|---|
@@ -130,7 +130,7 @@ These are surveyed universals; every target runtime (Bedrock AgentCore / Tempora
 
 - **`IAgentRegistry`** — file-backed, HTTP-backed, Kubernetes-CRD-backed implementations all fit the contract. Consumers who want Git-ops-style declarative registries build on top.
 - **`IAgentLifecycleManager`** — the cloud runtime is one implementation; an Aspire-hosted local runtime is another valid one.
-- **`IAgentIdentityProvider`** — per-tenant identity resolution + outbound credential acquisition. Phase 3 ships a Keycloak-backed impl; others (Azure AD, Okta) follow.
+- **`IAgentIdentityProvider`** — per-tenant identity resolution + outbound credential acquisition. The runtime ships a Keycloak-backed impl; others (Azure AD, Okta) on the roadmap.
 
 ## Idempotency (v0.11)
 
@@ -209,7 +209,7 @@ CLI surface: `vais get-remote-runtimes`. See [CLI subcommands reference](../refe
 
 ## Limitations / known gaps
 
-- **No multi-region** — manifest carries no region field. Phase 3 adds regionalisation.
+- **No multi-region** — manifest carries no region field. Multi-region support is on the roadmap.
 
 ## See also
 

@@ -1,10 +1,10 @@
 # Polyglot agents
 
-**v0.24.** Python agents — authored and executed entirely in Python — are first-class citizens of the VAIS runtime: Orleans-backed durability, CLI-deployable, registry-activated, policy/audit/journal wired. This extends v0.23's Python tool plugin model from the tool level to the agent level.
+Python agents — authored and executed entirely in Python — are first-class citizens of the runtime: Orleans-backed durability, CLI-deployable, registry-activated, policy/audit/journal wired. This extends the [Python tool plugin model](polyglot-plugins.md) from the tool level to the agent level.
 
 ## Three-way comparison
 
-| | External A2A agent | Python tool plugin (v0.23) | Python agent plugin (v0.24) |
+| | External A2A agent | Python tool plugin | Python agent plugin |
 |---|---|---|---|
 | **Where the agent runs** | External process or service | .NET runtime (Python provides tools) | Python subprocess |
 | **Where the LLM loop runs** | External | .NET (`StatefulAiAgent`) | Python (LangGraph, LangChain, custom) |
@@ -12,7 +12,7 @@
 | **`vais agent apply`** | Yes, via A2A manifest | Yes, declarative | Yes, declarative |
 | **Policy / audit / journal** | Partial (invocation boundary only) | Full | Full |
 | **Graph nodes** | Yes, via A2A node type | Yes, as tool-calling agent | Yes, as agent node |
-| **Streaming** | If the external agent supports it | Yes | Yes (v0.26 — `vais/agent.stream` bundled deltas) |
+| **Streaming** | If the external agent supports it | Yes | Yes (`vais/agent.stream` bundled deltas) |
 | **Best for** | Federating with third-party or team-owned agents that live outside the runtime | Python domain logic / numeric code called as tools from .NET agents | LangGraph, LangChain, or custom Python agent loops that must be managed identically to .NET agents |
 
 ## Why A2A is not enough for managed Python agents

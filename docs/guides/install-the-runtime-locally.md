@@ -33,7 +33,7 @@ docker build \
   .
 ```
 
-The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` for runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume (Pillar C ships the loader; the convention is baked now), and exposes `/healthz` + `/readyz` + `/openapi/v1.json` on port 8080. Expect ~150 MB.
+The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` for runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume (the plugin loader scans this path on startup), and exposes `/healthz` + `/readyz` + `/openapi/v1.json` on port 8080. Expect ~150 MB.
 
 ```bash
 docker images | grep vais-agents-runtime
@@ -165,7 +165,7 @@ docker compose \
   up --build -d
 ```
 
-Langfuse UI at `http://localhost:3001`. First run, sign up, create a project, copy the public + secret keys into a local `override.yml` — **never commit those keys**. v0.16 wires the project label only; Pillar B expands the enrichment pipeline for full trace ingestion.
+Langfuse UI at `http://localhost:3001`. First run, sign up, create a project, copy the public + secret keys into a local `override.yml` — **never commit those keys**. The project-label enrichment is wired; deeper trace ingestion is on the roadmap.
 
 ### 4.3 OTel → Jaeger
 
@@ -205,23 +205,8 @@ vais apply -f weather.yaml
 vais get agents
 ```
 
-### The 501 you'll see on invoke
+## Known limitations
 
-```bash
-vais invoke weather --text "hi"
-# exit 1
-# Problem Details:
-#   type:   urn:vais-agents:agent-not-instantiable
-#   title:  Agent handler not instantiable
-#   status: 501
-#   detail: Manifest-driven agent instantiation ships with Pillar B (v0.17).
-```
-
-This is **documented behaviour**, not a bug. The v0.16 runtime boots Orleans + the durability sidecars + the full HTTP control plane; it does not yet materialize an `IAiAgent` from `AgentManifest.Model + SystemPrompt`. Create / Get / Delete verbs + OpenAPI + idempotency all work today.
-
-## Known limitations (v0.16-preview)
-
-- **Invoke returns 501** on every agent until Pillar B ships.
 - **Postgres clustering degrades to in-silo memory streams.** The Orleans 10.x ecosystem lacks a production Postgres stream provider; Redis is the default for a reason. Logged as WARN on startup.
 - **Scale>1 needs an override.** Single-replica base publishes 8080; drop the host port as shown above when scaling past one.
 - **The default policy engine is allow-all.** `opa=disabled (AllowAll)` is logged at startup so the behaviour is never silent, but a dev compose without the OPA overlay applies no gating at all.

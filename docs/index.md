@@ -17,9 +17,9 @@ Runtime for AI agents on .NET. Declarative manifests, Orleans-backed durability,
 One page per concept. Each explains what it is, the core types, how to wire it, extension points, and known limitations.
 
 - [Architecture](concepts/architecture.md) — the 32 packages, layered diagram, dependency rules.
-- [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation (v0.17 Pillar B); Model / SystemPromptSpec / Tools / Guardrails translation.
-- [Runtime plugins](concepts/runtime-plugins.md) — code-authored `IAiAgent` DLLs loaded at silo startup; plugin-branch in the translator (v0.18 Pillar C).
-- [Polyglot plugins](concepts/polyglot-plugins.md) — Python MCP plugins spawned as subprocesses; tools contributed to the agent registry via `INamedToolSourceProvider` (v0.23).
+- [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation; Model / SystemPromptSpec / Tools / Guardrails translation.
+- [Runtime plugins](concepts/runtime-plugins.md) — code-authored `IAiAgent` DLLs loaded at silo startup; plugin-branch in the translator.
+- [Polyglot plugins](concepts/polyglot-plugins.md) — Python MCP plugins spawned as subprocesses; tools contributed to the agent registry via `INamedToolSourceProvider`.
 - [Session + memory](concepts/session.md) — `IAgentSession`, working vs session history, `IMemoryStore` scopes.
 - [Context](concepts/context.md) — `IContextProvider` chain, `IContextWindowPacker`, merge rules.
 - [Prompt](concepts/prompt.md) — `ISystemPromptComposer`, contributors, `IPromptTemplate`.

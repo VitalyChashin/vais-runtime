@@ -183,7 +183,7 @@ helm upgrade vais-runtime ./deploy/helm/vais-agents-runtime \
   --set observability.langfuse.project=prod-agents
 ```
 
-v0.16 wires the project label through the Langfuse enrichment filter. Pillar B expands the enrichment pipeline for full trace ingestion with auth.
+The chart wires the project label through the Langfuse enrichment filter. Deeper enrichment (full trace ingestion with auth) is on the roadmap.
 
 ## 6. Exercise the runtime from the CLI
 
@@ -198,7 +198,7 @@ vais apply -f agent.yaml
 vais get agents
 ```
 
-`vais invoke` returns `501 urn:vais-agents:agent-not-instantiable` until Pillar B lands — see the [Pillar A local install guide](./install-the-runtime-locally.md#the-501-youll-see-on-invoke) for the full rationale.
+`vais invoke` against a manifest with `handler.typeName: declarative` returns the model response once a `Model` block is set; manifests without one and without a matching plugin return `501 urn:vais-agents:handler-not-loaded` — see [author-an-agent-in-yaml](./author-an-agent-in-yaml.md) for the declarative-path walkthrough.
 
 ## 7. Teardown
 
@@ -208,13 +208,12 @@ kubectl delete ns vais
 # Platform-team Redis stays put.
 ```
 
-## Known limitations (v0.16-preview)
+## Known limitations
 
-- **Invoke returns 501** until Pillar B (v0.17).
 - **Postgres clustering** uses in-silo memory streams (no production Postgres stream provider in Orleans 10.x). Redis is the default for this reason.
 - **No horizontal-pod-autoscaler template.** Add your own HPA targeting `app.kubernetes.io/name: vais-agents-runtime`; the `/readyz` gate makes scaling safe.
-- **No NetworkPolicy / image signing / SBOM** — deferred to Pillar F polish.
-- **Kind integration isn't CI-gated** — Pillar A relies on the composition-root unit tests + `helm lint` + template renders to prove structural invariants. A kind harness may arrive in Pillar F if partners hit regressions.
+- **No NetworkPolicy / image signing / SBOM** — on the roadmap.
+- **Kind integration isn't CI-gated** — the runtime tier relies on the composition-root unit tests + `helm lint` + template renders to prove structural invariants. A kind harness may arrive later if partners hit regressions.
 
 ## Next
 
