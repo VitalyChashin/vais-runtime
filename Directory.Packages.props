@@ -136,7 +136,7 @@
   <ItemGroup Label="ASP.NET Core TestHost — integration tests for the HTTP control plane.">
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.16" />
   </ItemGroup>
   <ItemGroup Label="Microsoft.IdentityModel — OIDC identity provider (Vais.Agents.Identity.Oidc). Version pinned to match the 8.0.1 floor set transitively by Microsoft.AspNetCore.Authentication.JwtBearer 9.0.0.">
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.0.1" />
