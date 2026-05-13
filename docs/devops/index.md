@@ -6,12 +6,12 @@ You'll stand up the `vais-agents-runtime` container locally with Docker Compose,
 
 ## Path
 
-1. **[Deploy runtime on Docker](../guides/install-the-runtime-locally.md)** — docker-compose recipes: localhost, clustered, with OPA / Langfuse / OTel overlays.
-2. **[Deploy runtime on Kubernetes](../guides/deploy-the-runtime-to-kubernetes.md)** — Helm chart walkthrough: kind quickstart → production with external Redis.
-3. **[Add Redis persistence](../guides/add-redis-persistence.md)** — Orleans grain state on Redis.
-4. **[Add Postgres persistence](../guides/add-postgres-persistence.md)** — durable backing for grain storage, agent registry, run history.
-5. **[Wire Langfuse](../guides/deploy-otel-and-langfuse.md)** — OTel collector + Langfuse enrichment for agent traces.
-6. **Wire Prometheus + Grafana** — *coming in Phase 3 of the docs reorganization.* Scrape config, starter dashboard JSON, and the `vais.*` metrics that matter.
+1. **[Deploy the runtime on Docker](deploy-runtime-on-docker.md)** — docker-compose recipes: localhost, clustered, with OPA / Langfuse / OTel overlays.
+2. **[Deploy the runtime on Kubernetes](deploy-runtime-on-kubernetes.md)** — Helm chart walkthrough: kind quickstart → production with external Redis.
+3. **[Add Redis persistence](add-redis-persistence.md)** — Orleans clustering, grain storage, and event-bus streams on Redis.
+4. **[Add Postgres persistence](add-postgres-persistence.md)** — durable backing for grain storage with optional hybrid (Postgres + Redis streams).
+5. **[Wire Langfuse](wire-langfuse.md)** — point the runtime's OTel pipeline at Langfuse for LLM-specific UI views.
+6. **[Wire Prometheus + Grafana](wire-prometheus-and-grafana.md)** — scrape config, starter dashboard JSON, and the `vais.*` metrics that matter.
 
 ## After this section
 
