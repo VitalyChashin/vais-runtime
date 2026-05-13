@@ -80,7 +80,7 @@ internal sealed record RuntimeOptions
 
     /// <summary>
     /// v0.xx Python plugin hot-reload policy. <see cref="ReloadPolicy.DrainAndSwap"/> registers
-    /// <see cref="IPythonPluginReloader"/> and starts the filesystem watcher that restarts the
+    /// <c>IPythonPluginReloader</c> and starts the filesystem watcher that restarts the
     /// Python subprocess on source changes without touching the .NET silo.
     /// Set <c>VAIS_PYTHON_PLUGINS_RELOAD_POLICY=DrainAndSwap</c> to enable.
     /// </summary>
@@ -222,7 +222,7 @@ internal sealed record RuntimeOptions
     public int AgentLogBufferLines { get; init; } = 500;
 
     /// <summary>
-    /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <see cref="AiAgentGrain.StorageName"/>
+    /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <c>AiAgentGrain.StorageName</c>
     /// (the store used by every agent, registry, checkpoint, idempotency, and session grain).
     /// <see cref="LocalhostPersistenceMode.Postgres"/> makes API-deployed agents and graphs survive
     /// runtime restarts without requiring a manifest directory. Ignored in <c>clustered</c> mode.

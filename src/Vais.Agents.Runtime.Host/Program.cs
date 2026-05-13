@@ -116,6 +116,6 @@ if (!string.IsNullOrWhiteSpace(options.OtelEndpoint) || options.OtelConsole)
 app.Run();
 
 /// <summary>
-/// Marker for <see cref="Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory{TEntryPoint}"/>.
+/// Marker for <c>WebApplicationFactory&lt;TEntryPoint&gt;</c>.
 /// </summary>
 public partial class Program;

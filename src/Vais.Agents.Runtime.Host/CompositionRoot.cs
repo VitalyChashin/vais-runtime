@@ -1,19 +1,13 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Vais.Agents.Runtime.Host.Diagnostics;
 using Orleans.Configuration;
-using Orleans.Hosting;
-using Vais.Agents;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
@@ -61,9 +55,9 @@ namespace Vais.Agents.Runtime.Host;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The public shape is two methods: <see cref="ConfigureSilo(ISiloBuilder, RuntimeOptions)"/>
+/// The public shape is two methods: <c>ConfigureSilo(ISiloBuilder, RuntimeOptions)</c>
 /// runs inside the <c>UseOrleans</c> callback and wires clustering + grain storage + streams;
-/// <see cref="ConfigureServices(IServiceCollection, RuntimeOptions)"/> runs against the
+/// <c>ConfigureServices(IServiceCollection, RuntimeOptions)</c> runs against the
 /// top-level <c>IServiceCollection</c> and wires durability sidecars, the HTTP control plane,
 /// optional observability, and optional OPA.
 /// </para>
