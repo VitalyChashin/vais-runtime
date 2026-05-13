@@ -50,7 +50,7 @@ $env:OPENAI_API_KEY = "sk-..."
 Clone and enter the repo.
 
 ```bash
-git clone https://github.com/<org>/<repo>.git
+git clone https://github.com/VitalyChashin/vais-runtime.git
 cd <repo>/agentic
 ```
 

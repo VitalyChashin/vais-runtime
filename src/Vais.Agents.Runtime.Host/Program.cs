@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Runtime.Host;
+using Vais.Agents.Runtime.Plugins.Container;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +71,10 @@ if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
 
 app.MapAgentControlPlane();
 app.MapAgentControlPlaneOpenApi();
+
+if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory) ||
+    !string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
+    app.MapContainerGatewayEndpoints();
 
 app.MapHealthChecks("/healthz");
 app.MapHealthChecks("/readyz", new HealthCheckOptions

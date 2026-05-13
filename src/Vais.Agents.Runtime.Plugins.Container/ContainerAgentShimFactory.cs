@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 

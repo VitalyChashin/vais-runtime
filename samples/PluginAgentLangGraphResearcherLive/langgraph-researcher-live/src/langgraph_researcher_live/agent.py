@@ -6,6 +6,15 @@ from langgraph_researcher_live.graph import _MODEL, run_graph
 from langgraph_researcher_live.state import ResearchState
 
 
+def _apply_gateway_context(state: ResearchState, request: AgentRequest) -> ResearchState:
+    return state.model_copy(update={
+        "llm_gateway_url": request.llm_gateway_url,
+        "call_token": request.call_token,
+        "run_id": request.run_id,
+        "agent_id": request.agent_id,
+    })
+
+
 async def invoke(request: AgentRequest) -> AgentResponse:
     """Handle one vais/agent.invoke call."""
     if request.state:
@@ -13,6 +22,7 @@ async def invoke(request: AgentRequest) -> AgentResponse:
     else:
         state = ResearchState.initial(request.user_message)
 
+    state = _apply_gateway_context(state, request)
     state, tracker = await run_graph(state, request.user_message)
 
     usage = None

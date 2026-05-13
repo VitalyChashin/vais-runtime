@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
@@ -103,4 +104,56 @@ internal sealed class GatewayToolInvokeResponse
     public string ToolCallId { get; init; } = "";
     public string Content { get; init; } = "";
     public bool IsError { get; init; }
+}
+
+internal sealed class GatewayToolInfo
+{
+    public string Name { get; init; } = "";
+    public string Description { get; init; } = "";
+    public System.Text.Json.JsonElement ParametersSchema { get; init; }
+}
+
+internal sealed class GatewayToolListResponse
+{
+    public IReadOnlyList<GatewayToolInfo> Tools { get; init; } = [];
+}
+
+// OpenAI-compat chat completions types for POST /v1/container-gateway/chat/completions
+internal sealed class OpenAiChatMessage
+{
+    [JsonPropertyName("role")]   public string Role    { get; init; } = "";
+    [JsonPropertyName("content")] public string? Content { get; init; }
+}
+
+internal sealed class OpenAiChatRequest
+{
+    [JsonPropertyName("model")]      public string Model       { get; init; } = "";
+    [JsonPropertyName("messages")]   public IReadOnlyList<OpenAiChatMessage> Messages { get; init; } = [];
+    [JsonPropertyName("temperature")] public float? Temperature { get; init; }
+    [JsonPropertyName("max_tokens")] public int?   MaxTokens   { get; init; }
+    [JsonPropertyName("stream")]     public bool?  Stream      { get; init; }
+}
+
+internal sealed class OpenAiUsage
+{
+    [JsonPropertyName("prompt_tokens")]     public int PromptTokens     { get; init; }
+    [JsonPropertyName("completion_tokens")] public int CompletionTokens { get; init; }
+    [JsonPropertyName("total_tokens")]      public int TotalTokens      { get; init; }
+}
+
+internal sealed class OpenAiChatChoice
+{
+    [JsonPropertyName("index")]         public int             Index       { get; init; }
+    [JsonPropertyName("message")]       public OpenAiChatMessage Message   { get; init; } = new();
+    [JsonPropertyName("finish_reason")] public string          FinishReason { get; init; } = "stop";
+}
+
+internal sealed class OpenAiChatResponse
+{
+    [JsonPropertyName("id")]      public string Id      { get; init; } = "";
+    [JsonPropertyName("object")]  public string Object  { get; init; } = "chat.completion";
+    [JsonPropertyName("created")] public long   Created { get; init; }
+    [JsonPropertyName("model")]   public string Model   { get; init; } = "";
+    [JsonPropertyName("choices")] public IReadOnlyList<OpenAiChatChoice> Choices { get; init; } = [];
+    [JsonPropertyName("usage")]   public OpenAiUsage? Usage { get; init; }
 }

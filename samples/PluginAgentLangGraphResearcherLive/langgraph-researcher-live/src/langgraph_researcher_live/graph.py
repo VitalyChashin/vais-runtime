@@ -4,28 +4,25 @@ Graph shape:
   START --_router--> [plan] --> [search] --> [summarize] --> END
                  \-> [summarize] --> END  (plan already exists)
 
-Prerequisites:
-  Declare the secret in plugin.yaml:
-    spec:
-      secrets:
-        OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"
-  The VAIS runtime resolves this at startup (v0.31) and injects
-  VAIS_SECRET_OPENAI_API_KEY into the subprocess environment.
+LLM calls go through the VAIS LLM gateway (P12). Tool calls go through
+the VAIS container gateway tools/invoke endpoint (P12). Gateway URL and
+call token are threaded through ResearchState per invocation.
 """
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
 from langgraph_researcher_live.state import ResearchState
+
+_MODEL = "gpt-4o-mini"
+_MAX_PLAN_TOKENS = 256
+_MAX_SUMMARY_TOKENS = 768
 
 
 class _TokenUsageCallback(BaseCallbackHandler):
@@ -42,16 +39,6 @@ class _TokenUsageCallback(BaseCallbackHandler):
                 self.input_tokens += um.get("input_tokens", 0)
                 self.output_tokens += um.get("output_tokens", 0)
 
-_MODEL = "gpt-4o-mini"
-_MAX_PLAN_TOKENS = 256
-_MAX_SUMMARY_TOKENS = 768
-_OPENAI_API_KEY = os.environ["VAIS_SECRET_OPENAI_API_KEY"]
-_TAVILY_MCP_URL = (
-    os.environ.get("VAIS_SECRET_TAVILY_MCP_URL")
-    or os.environ.get("TAVILY_MCP_URL")
-    or "http://tavily-mcp:8000/mcp"
-)
-
 
 def _parse_json_array(text: str) -> list[str]:
     """Extract a JSON string array from LLM output, tolerating markdown fences."""
@@ -62,14 +49,21 @@ def _parse_json_array(text: str) -> list[str]:
             return [str(item) for item in parsed if item]
     except (json.JSONDecodeError, ValueError):
         pass
-    # Fallback: split on newlines and strip common bullet prefixes.
     lines = [re.sub(r"^[\-\*\d+\.\s]+", "", ln).strip() for ln in cleaned.splitlines()]
     return [ln for ln in lines if ln] or [text.strip()]
 
 
 def _node_plan(state: ResearchState) -> dict[str, Any]:
-    """Ask Claude to decompose the topic into 3 research questions."""
-    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_PLAN_TOKENS, api_key=_OPENAI_API_KEY)
+    """Ask the model to decompose the topic into 3 research questions."""
+    from vais_agent_sdk import ChatOpenAI
+    llm = ChatOpenAI(
+        model=_MODEL,
+        max_tokens=_MAX_PLAN_TOKENS,
+        llm_gateway_url=state.llm_gateway_url,
+        call_token=state.call_token,
+        run_id=state.run_id,
+        agent_id=state.agent_id,
+    )
     response = llm.invoke(
         f"You are a research planner. Break down this topic into exactly 3 specific "
         f"research questions that would help a researcher understand it thoroughly:\n\n"
@@ -82,15 +76,18 @@ def _node_plan(state: ResearchState) -> dict[str, Any]:
 
 
 async def _node_search(state: ResearchState) -> dict[str, Any]:
-    """Call the Tavily MCP server for each plan question and collect search results."""
+    """Invoke the Tavily search tool via the VAIS gateway for each plan question."""
     questions = state.plan or []
     if not questions:
         return {"search_results": []}
 
-    client = MultiServerMCPClient(
-        {"tavily": {"url": _TAVILY_MCP_URL, "transport": "streamable_http"}}
+    from vais_agent_sdk import gateway_get_tools
+    tools = await gateway_get_tools(
+        tool_gateway_base_url=state.llm_gateway_url,
+        call_token=state.call_token,
+        run_id=state.run_id,
+        agent_id=state.agent_id,
     )
-    tools = await client.get_tools()
     search_tool = next((t for t in tools if "search" in t.name), None)
     if search_tool is None:
         return {"search_results": []}
@@ -112,7 +109,15 @@ async def _node_search(state: ResearchState) -> dict[str, Any]:
 
 def _node_summarize(state: ResearchState) -> dict[str, Any]:
     """Write a summary grounded in web search results when available."""
-    llm = ChatOpenAI(model=_MODEL, max_tokens=_MAX_SUMMARY_TOKENS, api_key=_OPENAI_API_KEY)
+    from vais_agent_sdk import ChatOpenAI
+    llm = ChatOpenAI(
+        model=_MODEL,
+        max_tokens=_MAX_SUMMARY_TOKENS,
+        llm_gateway_url=state.llm_gateway_url,
+        call_token=state.call_token,
+        run_id=state.run_id,
+        agent_id=state.agent_id,
+    )
     plan_text = "\n".join(f"- {q}" for q in (state.plan or []))
 
     if state.search_results:

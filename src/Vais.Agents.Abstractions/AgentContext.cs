@@ -93,7 +93,7 @@ public sealed record AgentContext(
 
     /// <summary>
     /// Autonomy level for this session. <see langword="null"/> = no autonomy constraint.
-    /// The Cognitive Scheduler routes based on this value; tool gateways may block
+    /// Schedulers and middleware may route based on this value; tool gateways may block
     /// actions that require approval when the level is <see cref="Agents.AutonomyLevel.FullyAutonomous"/>.
     /// </summary>
     public AutonomyLevel? AutonomyLevel { get; init; }

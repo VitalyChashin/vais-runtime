@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Vais.Agents.Control;
+using Vais.Agents.Core;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Preprocessing;
 using Vais.Agents.Runtime.Plugins;
@@ -15,6 +16,20 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 /// <summary>Extension methods for registering container plugin services.</summary>
 public static class ContainerPluginServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers <see cref="ICallTokenService"/> for HMAC call-token generation and validation.
+    /// Called automatically by <see cref="AddContainerPlugins"/>; call this explicitly when only
+    /// Python plugins are enabled so that
+    /// <see cref="ContainerGatewayEndpointRouteBuilderExtensions.MapContainerGatewayEndpoints"/>
+    /// can validate incoming plugin callbacks.
+    /// Requires <c>Vais:ContainerPlugin:CallTokenSecret</c> (min 32 chars) in configuration.
+    /// </summary>
+    public static IServiceCollection AddContainerGatewayCallToken(this IServiceCollection services)
+    {
+        services.TryAddSingleton<ICallTokenService, HmacCallTokenService>();
+        return services;
+    }
+
     /// <summary>
     /// Registers <see cref="ICallTokenService"/>, <see cref="ContainerPluginHostService"/>,
     /// and the built-in preprocessing pipeline (<see cref="IAgentPreprocessor"/> chain).
@@ -30,7 +45,7 @@ public static class ContainerPluginServiceCollectionExtensions
         var options = new ContainerPluginLoaderOptions();
         configure?.Invoke(options);
         services.AddSingleton(options);
-        services.AddSingleton<ICallTokenService, HmacCallTokenService>();
+        services.AddContainerGatewayCallToken();
         services.AddSingleton<ContainerPluginHostService>(sp => new ContainerPluginHostService(
             sp.GetRequiredService<ContainerPluginLoaderOptions>(),
             sp.GetRequiredService<IPluginHandlerRegistry>(),

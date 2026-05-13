@@ -1,6 +1,6 @@
 # Vais.Agents — documentation
 
-Stack-neutral agent library for .NET. This tree is the full walkthrough — concepts, guides, and reference. Start with **[Getting started](#getting-started)** if you're new; jump to **[Concepts](#concepts)** for the design story; open **[Reference](#reference)** for lookup tables.
+Runtime for AI agents on .NET. Declarative manifests, Orleans-backed durability, multi-language plugins, swappable MAF/SK underneath. This tree is the full walkthrough — concepts, guides, and reference. Start with **[Getting started](#getting-started)** if you're new; jump to **[Concepts](#concepts)** for the design story; open **[Reference](#reference)** for lookup tables.
 
 > **Status.** Phase 1 — pre-alpha, pre-release. API unstable. NuGet not yet published.
 

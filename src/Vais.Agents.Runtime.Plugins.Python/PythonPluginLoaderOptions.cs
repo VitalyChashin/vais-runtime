@@ -71,4 +71,12 @@ public sealed class PythonPluginLoaderOptions
     /// invocations will receive an error on their next I/O attempt. Defaults to 30 seconds.
     /// </summary>
     public int ReloadDrainTimeoutSeconds { get; init; } = 30;
+
+    /// <summary>
+    /// Base URL of the internal runtime gateway (e.g. <c>http://localhost:5001</c>).
+    /// Injected into each subprocess invoke context so Python plugins can route
+    /// LLM and tool calls through the gateway rather than calling providers directly
+    /// (P12 mandatory-outbound contract).
+    /// </summary>
+    public string InternalGatewayBaseUrl { get; init; } = "http://localhost:5001";
 }

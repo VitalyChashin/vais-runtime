@@ -21,11 +21,9 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.init -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.get -> long
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.init -> void
-Vais.Agents.Runtime.Plugins.Container.ICallTokenService
-Vais.Agents.Runtime.Plugins.Container.ICallTokenService.Generate(string! runId, string! agentId, int timeoutSeconds) -> string!
-Vais.Agents.Runtime.Plugins.Container.ICallTokenService.Validate(string! token, string! runId, string! agentId) -> bool
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions
 Vais.Agents.Runtime.Plugins.Container.ContainerGatewayEndpointRouteBuilderExtensions
+static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddContainerGatewayCallToken(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddContainerPlugins(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Runtime.Plugins.Container.ContainerGatewayEndpointRouteBuilderExtensions.MapContainerGatewayEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddAgentPreprocessor<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -209,6 +209,7 @@ internal static class CompositionRoot
         // before AddAgentManifestInstantiator so INamedToolSourceProvider reaches the translator.
         if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory))
         {
+            services.AddContainerGatewayCallToken();
             services.AddPythonPlugins(new PythonPluginLoaderOptions
             {
                 PluginsDirectory = options.PythonPluginsDirectory,
@@ -216,6 +217,7 @@ internal static class CompositionRoot
                 // so contributors don't need a manual setup step after cloning.
                 FallbackUvSync = options.Mode == "localhost",
                 ReloadPolicy = options.PythonPluginsReloadPolicy,
+                InternalGatewayBaseUrl = options.InternalGatewayBaseUrl,
             });
             services.AddHealthChecks()
                 .AddCheck<PythonPluginsReadyCheck>("python-plugins", tags: ["ready"]);

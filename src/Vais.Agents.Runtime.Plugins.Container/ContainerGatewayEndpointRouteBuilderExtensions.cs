@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Vais.Agents;
+using Vais.Agents.Core;
+using Vais.Agents.Runtime.Instantiation;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
@@ -43,7 +46,9 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         });
 
         group.MapPost("llm/complete", HandleLlmCompleteAsync);
+        group.MapPost("chat/completions", HandleChatCompletionsAsync);
         group.MapPost("tools/invoke", HandleToolInvokeAsync);
+        group.MapGet("tools/list", HandleToolsListAsync);
 
         return builder;
     }
@@ -51,12 +56,17 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
     private static async Task<IResult> HandleLlmCompleteAsync(
         HttpContext ctx,
         GatewayLlmCompleteRequest body,
-        ICompletionProvider provider,
+        ICompletionProviderPool pool,
         CancellationToken ct)
     {
         if (ctx.Request.Headers.Accept.Any(
                 h => h?.Contains("text/event-stream", StringComparison.OrdinalIgnoreCase) == true))
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+
+        var modelId = string.IsNullOrEmpty(body.ModelId) ? "gpt-4o-mini" : body.ModelId;
+        var provider = await pool.GetAsync(
+            new ModelSpec("openai", modelId, ApiKeyRef: "secret://env/OPENAI_API_KEY"), ct)
+            .ConfigureAwait(false);
 
         var history = body.Messages
             .Select(PluginMessageToChatTurn)
@@ -82,28 +92,151 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         });
     }
 
-    private static async Task<IResult> HandleToolInvokeAsync(
+    private static async Task<IResult> HandleChatCompletionsAsync(
         HttpContext ctx,
-        GatewayToolInvokeRequest body,
-        IToolCallDispatcher dispatcher,
+        OpenAiChatRequest body,
+        ICompletionProviderPool pool,
         CancellationToken ct)
     {
-        var agentCtx = new AgentContext(
-            AgentName: ctx.Request.Headers["X-Agent-Id"].FirstOrDefault(),
-            CorrelationId: ctx.Request.Headers["X-Correlation-Id"].FirstOrDefault())
-        {
-            RunId = ctx.Request.Headers["X-Run-Id"].FirstOrDefault(),
-        };
+        if (body.Stream == true)
+            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
 
-        var toolRequest = new ToolCallRequest(body.ToolName, body.Arguments, body.ToolCallId);
-        var outcome = await dispatcher.DispatchAsync(toolRequest, agentCtx, ct).ConfigureAwait(false);
+        var provider = await pool.GetAsync(
+            new ModelSpec("openai", body.Model, ApiKeyRef: "secret://env/OPENAI_API_KEY"), ct)
+            .ConfigureAwait(false);
 
-        return Results.Ok(new GatewayToolInvokeResponse
+        var history = body.Messages
+            .Select(m => new ChatTurn(
+                m.Role switch
+                {
+                    "system"    => AgentChatRole.System,
+                    "assistant" => AgentChatRole.Assistant,
+                    "tool"      => AgentChatRole.Tool,
+                    _           => AgentChatRole.User,
+                },
+                m.Content ?? ""))
+            .ToArray();
+
+        var request = new CompletionRequest(history, Temperature: body.Temperature, MaxTokens: body.MaxTokens);
+        var response = await provider.CompleteAsync(request, ct).ConfigureAwait(false);
+
+        return Results.Ok(new OpenAiChatResponse
         {
-            ToolCallId = body.ToolCallId,
-            Content = outcome.Result ?? outcome.Error ?? "",
-            IsError = outcome.Error is not null,
+            Id      = $"chatcmpl-{Guid.NewGuid():N}",
+            Object  = "chat.completion",
+            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Model   = body.Model,
+            Choices = [new OpenAiChatChoice
+            {
+                Index        = 0,
+                Message      = new OpenAiChatMessage { Role = "assistant", Content = response.Text },
+                FinishReason = "stop",
+            }],
+            Usage = new OpenAiUsage
+            {
+                PromptTokens     = response.PromptTokens     ?? 0,
+                CompletionTokens = response.CompletionTokens ?? 0,
+                TotalTokens      = (response.PromptTokens ?? 0) + (response.CompletionTokens ?? 0),
+            },
         });
+    }
+
+    private static async Task<IResult> HandleToolInvokeAsync(
+        GatewayToolInvokeRequest body,
+        IMcpServerRegistry? registry,
+        IEnumerable<INamedToolSourceProvider> providers,
+        CancellationToken ct)
+    {
+        if (registry is null)
+            return Results.Ok(new GatewayToolInvokeResponse
+            {
+                ToolCallId = body.ToolCallId,
+                Content = $"Tool '{body.ToolName}' not found: no tool registry.",
+                IsError = true,
+            });
+
+        ITool? tool = null;
+        await foreach (var server in registry.ListAsync(ct: ct).ConfigureAwait(false))
+        {
+            IToolSource? source = null;
+            foreach (var provider in providers)
+            {
+                source = provider.GetByName(server.Id);
+                if (source is not null) break;
+            }
+            if (source is null) continue;
+
+            await foreach (var t in source.DiscoverAsync(ct).ConfigureAwait(false))
+            {
+                if (string.Equals(t.Name, body.ToolName, StringComparison.OrdinalIgnoreCase))
+                {
+                    tool = t;
+                    break;
+                }
+            }
+            if (tool is not null) break;
+        }
+
+        if (tool is null)
+            return Results.Ok(new GatewayToolInvokeResponse
+            {
+                ToolCallId = body.ToolCallId,
+                Content = $"Tool '{body.ToolName}' not found.",
+                IsError = true,
+            });
+
+        try
+        {
+            var result = await tool.InvokeAsync(body.Arguments, ct).ConfigureAwait(false);
+            return Results.Ok(new GatewayToolInvokeResponse
+            {
+                ToolCallId = body.ToolCallId,
+                Content = result,
+                IsError = false,
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.Ok(new GatewayToolInvokeResponse
+            {
+                ToolCallId = body.ToolCallId,
+                Content = $"Tool '{body.ToolName}' failed: {ex.Message}",
+                IsError = true,
+            });
+        }
+    }
+
+    private static async Task<IResult> HandleToolsListAsync(
+        IMcpServerRegistry? registry,
+        IEnumerable<INamedToolSourceProvider> providers,
+        CancellationToken ct)
+    {
+        if (registry is null)
+            return Results.Ok(new GatewayToolListResponse());
+
+        var tools = new List<GatewayToolInfo>();
+        await foreach (var server in registry.ListAsync(ct: ct).ConfigureAwait(false))
+        {
+            IToolSource? source = null;
+            foreach (var provider in providers)
+            {
+                source = provider.GetByName(server.Id);
+                if (source is not null) break;
+            }
+            if (source is null) continue;
+
+            await foreach (var tool in source.DiscoverAsync(ct).ConfigureAwait(false))
+            {
+                tools.Add(new GatewayToolInfo
+                {
+                    Name = tool.Name,
+                    Description = tool.Description,
+                    ParametersSchema = tool.ParametersSchema,
+                });
+            }
+        }
+
+        return Results.Ok(new GatewayToolListResponse { Tools = tools });
     }
 
     private static ChatTurn PluginMessageToChatTurn(PluginMessage msg)

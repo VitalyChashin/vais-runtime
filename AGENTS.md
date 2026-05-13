@@ -72,7 +72,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## Project
 
-`Vais.Agents` is a stack-neutral agent library for .NET plus a deployable runtime container. The library ships as 27 NuGet packages (see [`docs/reference/packages.md`](docs/reference/packages.md)); the runtime (`src/Vais.Agents.Runtime.Host/`) is packaged as a Docker image + Helm chart + docker-compose recipes.
+`Vais.Agents` is a runtime for AI agents on .NET plus a stack-neutral agent library underneath. The library ships as 27 NuGet packages (see [`docs/reference/packages.md`](docs/reference/packages.md)); the runtime (`src/Vais.Agents.Runtime.Host/`) is packaged as a Docker image + Helm chart + docker-compose recipes.
 
 Two AI stacks are first-class and swappable via DI: **Microsoft Semantic Kernel** (`Vais.Agents.Ai.SemanticKernel`) and **Microsoft Agent Framework** (`Vais.Agents.Ai.MicrosoftAgentFramework`). The same `StatefulAiAgent` class works against either — each adapter exercises its stack's native machinery rather than reducing both to a shared `IChatClient` pass-through.
 

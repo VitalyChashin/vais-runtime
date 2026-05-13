@@ -103,6 +103,15 @@ internal sealed record RuntimeOptions
     public string? DockerPluginNetwork { get; init; }
 
     /// <summary>
+    /// Base URL of this runtime host as seen by Python plugin subprocesses.
+    /// Python plugins call back to <c>{InternalGatewayBaseUrl}/v1/container-gateway/...</c>
+    /// for LLM completions and tool invocations (P12 gateway contract).
+    /// Must match the port in <c>ASPNETCORE_URLS</c>.
+    /// Set via <c>VAIS_INTERNAL_GATEWAY_URL</c>; defaults to <c>http://localhost:8080</c>.
+    /// </summary>
+    public string InternalGatewayBaseUrl { get; init; } = "http://localhost:8080";
+
+    /// <summary>
     /// v0.30 OIDC authority URL (e.g. <c>https://keycloak.example.com/realms/my-realm</c>).
     /// When set, the full JWT bearer-token authentication pipeline is wired on the runtime host.
     /// Null ⇒ auth pipeline disabled — existing localhost semantics unchanged.
@@ -272,6 +281,7 @@ internal sealed record RuntimeOptions
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
             DockerPluginNetwork = Env("VAIS_DOCKER_PLUGIN_NETWORK"),
+            InternalGatewayBaseUrl = Env("VAIS_INTERNAL_GATEWAY_URL") ?? "http://localhost:8080",
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),

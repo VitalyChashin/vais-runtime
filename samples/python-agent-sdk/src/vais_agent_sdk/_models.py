@@ -14,6 +14,18 @@ class AgentRequest(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    @property
+    def llm_gateway_url(self) -> str:
+        return (self.context or {}).get("llmGatewayUrl", "")
+
+    @property
+    def call_token(self) -> str:
+        return (self.context or {}).get("callToken", "")
+
+    @property
+    def run_id(self) -> str:
+        return (self.context or {}).get("runId", "")
+
 
 class AgentUsage(BaseModel):
     model: str

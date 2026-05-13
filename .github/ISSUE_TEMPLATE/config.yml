@@ -1,6 +1,5 @@
 blank_issues_enabled: false
-# Once the GitHub org / repo name is finalised, uncomment and edit the security-advisories link:
-# contact_links:
-#   - name: Report a security vulnerability
-#     url: https://github.com/<org>/<repo>/security/advisories/new
-#     about: Use GitHub Security Advisories for private vulnerability reports. Do NOT open a public issue for vulnerabilities.
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/VitalyChashin/vais-runtime/security/advisories/new
+    about: Use GitHub Security Advisories for private vulnerability reports. Do NOT open a public issue for vulnerabilities.

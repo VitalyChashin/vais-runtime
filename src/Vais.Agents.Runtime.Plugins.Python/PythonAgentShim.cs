@@ -38,13 +38,17 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
     private readonly IPythonAgentChannel _supervisor;
     private readonly int _maxStateSizeBytes;
     private readonly ILogger _logger;
+    private readonly ICallTokenService? _callTokenService;
+    private readonly string? _internalBaseUrl;
     private string? _opaqueState;
 
     internal PythonAgentShim(
         IPythonAgentChannel supervisor,
         InMemoryAgentSession session,
         int maxStateSizeBytes,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        ICallTokenService? callTokenService = null,
+        string? internalBaseUrl = null)
     {
         ArgumentNullException.ThrowIfNull(supervisor);
         ArgumentNullException.ThrowIfNull(session);
@@ -52,6 +56,8 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         Session = session;
         _maxStateSizeBytes = maxStateSizeBytes;
         _logger = logger ?? NullLogger.Instance;
+        _callTokenService = callTokenService;
+        _internalBaseUrl = internalBaseUrl;
     }
 
     /// <inheritdoc />
@@ -86,9 +92,7 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         activity?.SetTag("gen_ai.prompt",   userMessage);
         if (graphRunId != null) activity?.SetTag("graph.run_id", graphRunId);
 
-        var context = activity?.Id is { } traceparent
-            ? new Dictionary<string, string> { ["traceparent"] = traceparent }
-            : null;
+        var context = BuildInvokeContext(graphRunId, activity?.Id);
         var request = new AgentInvokeRequest(
             AgentId: Session.AgentId,
             SessionId: Session.SessionId,
@@ -158,10 +162,8 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         var start = DateTimeOffset.UtcNow;
         yield return new TurnStarted(start, context, userMessage);
 
-        var streamTraceparent = Activity.Current?.Id;
-        var requestContext = streamTraceparent is not null
-            ? new Dictionary<string, string> { ["traceparent"] = streamTraceparent }
-            : null;
+        var streamGraphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
+        var requestContext = BuildInvokeContext(streamGraphRunId, Activity.Current?.Id);
         var request = new AgentInvokeRequest(
             AgentId: Session.AgentId,
             SessionId: Session.SessionId,
@@ -261,6 +263,33 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             PromptTokens: finalResponse.Usage?.Sum(u => u.InputTokens),
             CompletionTokens: finalResponse.Usage?.Sum(u => u.OutputTokens),
             Duration: DateTimeOffset.UtcNow - start);
+    }
+
+    private Dictionary<string, string>? BuildInvokeContext(string? runId, string? traceparent)
+    {
+        Dictionary<string, string>? ctx = null;
+
+        if (_callTokenService is not null && _internalBaseUrl is not null)
+        {
+            var effectiveRunId = runId ?? "";
+            var callToken = _callTokenService.Generate(
+                effectiveRunId, Session.AgentId, _supervisor.Descriptor.InvokeTimeoutSeconds);
+            ctx = new Dictionary<string, string>
+            {
+                ["llmGatewayUrl"] = _internalBaseUrl,
+                ["callToken"]     = callToken,
+                ["runId"]         = effectiveRunId,
+                ["agentId"]       = Session.AgentId,
+            };
+        }
+
+        if (traceparent is not null)
+        {
+            ctx ??= new Dictionary<string, string>();
+            ctx["traceparent"] = traceparent;
+        }
+
+        return ctx;
     }
 
     /// <inheritdoc />

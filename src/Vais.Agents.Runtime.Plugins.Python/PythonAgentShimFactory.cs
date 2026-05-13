@@ -16,16 +16,22 @@ internal sealed class PythonAgentShimFactory : IAgentHandlerFactory
     private readonly PythonSubprocessSupervisor _supervisor;
     private readonly int _maxStateSizeBytes;
     private readonly ILoggerFactory? _loggerFactory;
+    private readonly ICallTokenService? _callTokenService;
+    private readonly string? _internalBaseUrl;
 
     internal PythonAgentShimFactory(
         PythonSubprocessSupervisor supervisor,
         int maxStateSizeBytes,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        ICallTokenService? callTokenService = null,
+        string? internalBaseUrl = null)
     {
         ArgumentNullException.ThrowIfNull(supervisor);
         _supervisor = supervisor;
         _maxStateSizeBytes = maxStateSizeBytes;
         _loggerFactory = loggerFactory;
+        _callTokenService = callTokenService;
+        _internalBaseUrl = internalBaseUrl;
     }
 
     /// <inheritdoc />
@@ -41,7 +47,8 @@ internal sealed class PythonAgentShimFactory : IAgentHandlerFactory
 
         var session = new InMemoryAgentSession(manifest.Id);
         var logger = _loggerFactory?.CreateLogger<PythonAgentShim>();
-        var shim = new PythonAgentShim(_supervisor, session, _maxStateSizeBytes, logger);
+        var shim = new PythonAgentShim(
+            _supervisor, session, _maxStateSizeBytes, logger, _callTokenService, _internalBaseUrl);
 
         if (manifest.SystemPrompt?.Inline is { Length: > 0 } sysPrompt)
             shim.SystemPrompt = sysPrompt;

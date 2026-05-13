@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Control;
+using Vais.Agents.Core;
 using Vais.Agents.Protocols.Mcp;
 
 namespace Vais.Agents.Runtime.Plugins.Python;
@@ -29,6 +30,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     private readonly IPluginHandlerRegistry? _handlerRegistry;
     private readonly ISecretResolver? _secretResolver;
     private readonly IAgentLogSink? _logSink;
+    private readonly ICallTokenService? _callTokenService;
 
     // Keyed by plugin name for O(1) lookup during hot-reload.
     private readonly Dictionary<string, PythonSubprocessSupervisor> _supervisors =
@@ -39,8 +41,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         ILoggerFactory? loggerFactory = null,
         IPluginHandlerRegistry? handlerRegistry = null,
         ISecretResolver? secretResolver = null,
-        IAgentLogSink? logSink = null)
-        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry, secretResolver, logSink) { }
+        IAgentLogSink? logSink = null,
+        ICallTokenService? callTokenService = null)
+        : this(options, loggerFactory, supervisorFactory: null, handlerRegistry, secretResolver, logSink, callTokenService) { }
 
     // Test constructor — inject a custom supervisor factory (handlerRegistry optional).
     internal PythonPluginHostService(
@@ -49,7 +52,8 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         Func<PythonPluginDescriptor, PythonSubprocessSupervisor>? supervisorFactory,
         IPluginHandlerRegistry? handlerRegistry = null,
         ISecretResolver? secretResolver = null,
-        IAgentLogSink? logSink = null)
+        IAgentLogSink? logSink = null,
+        ICallTokenService? callTokenService = null)
     {
         _options = options ?? new PythonPluginLoaderOptions();
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
@@ -57,6 +61,7 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
         _handlerRegistry = handlerRegistry;
         _secretResolver = secretResolver;
         _logSink = logSink;
+        _callTokenService = callTokenService;
         _supervisorFactory = supervisorFactory
             ?? (d => new PythonSubprocessSupervisor(d, _loggerFactory, _logSink));
     }
@@ -156,7 +161,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
                         var factory = new PythonAgentShimFactory(
                             supervisor,
                             _options.MaxAgentStateSizeBytes,
-                            _loggerFactory);
+                            _loggerFactory,
+                            _callTokenService,
+                            _options.InternalGatewayBaseUrl);
                         registry.Register(factory, resolved.Name);
                         _logger.LogInformation(
                             "Registered Python agent handler '{TypeName}' for plugin '{Name}'.",

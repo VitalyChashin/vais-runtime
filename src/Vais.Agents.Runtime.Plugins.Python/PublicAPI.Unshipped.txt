@@ -8,6 +8,8 @@ Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.get ->
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadPolicy.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadDrainTimeoutSeconds.get -> int
 Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.ReloadDrainTimeoutSeconds.init -> void
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.InternalGatewayBaseUrl.get -> string!
+Vais.Agents.Runtime.Plugins.Python.PythonPluginLoaderOptions.InternalGatewayBaseUrl.init -> void
 Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult
 Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult!
 Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadResult.Deconstruct(out string! PluginName, out Vais.Agents.Runtime.Plugins.Python.PythonPluginReloadStatus Status, out string? FailureUrn, out System.Exception? FailureException) -> void

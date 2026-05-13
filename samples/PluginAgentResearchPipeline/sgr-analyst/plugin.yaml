@@ -15,6 +15,3 @@ spec:
     handshakeTimeoutSeconds: 15
     restartPolicy: exponentialBackoff
     invokeTimeoutSeconds: 120
-  secrets:
-    OPENAI_API_KEY: "secret://env/OPENAI_API_KEY"
-    TAVILY_API_KEY: "secret://env/TAVILY_API_KEY"

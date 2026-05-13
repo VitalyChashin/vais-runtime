@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Vais.Agents.Control;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Runtime.Plugins.Python;
 
@@ -49,8 +50,9 @@ public static class PythonPluginServiceCollectionExtensions
             var handlerRegistry = sp.GetService<IPluginHandlerRegistry>();
             var secretResolver = sp.GetService<ISecretResolver>();
             var logSink = sp.GetService<IAgentLogSink>();
+            var callTokenService = sp.GetService<ICallTokenService>();
             return new PythonPluginHostService(opts, loggerFactory, handlerRegistry: handlerRegistry,
-                secretResolver: secretResolver, logSink: logSink);
+                secretResolver: secretResolver, logSink: logSink, callTokenService: callTokenService);
         });
 
         if (!alreadyRegistered)

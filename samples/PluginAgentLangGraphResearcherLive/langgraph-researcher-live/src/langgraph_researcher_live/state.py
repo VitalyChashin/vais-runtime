@@ -11,6 +11,10 @@ class ResearchState(BaseModel):
     summary: Optional[str] = None
     turn_count: int = 0
     tool_journal: list[dict] = []
+    llm_gateway_url: str = ""
+    call_token: str = ""
+    run_id: str = ""
+    agent_id: str = ""
 
     def is_planned(self) -> bool:
         return self.plan is not None
