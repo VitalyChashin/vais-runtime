@@ -89,7 +89,7 @@ Licence: **Apache-2.0**. Copyright is held by *VAIS contributors*. Every `.cs` f
 | `src/` | 29 C# projects: 27 library packages + `Vais.Agents.Runtime.Host` (container entrypoint) + `Vais.Agents.Control.KubernetesOperator.Host` (operator entrypoint). |
 | `tests/` | xUnit test projects. Naming convention: `<ProjectUnderTest>.Tests`. |
 | `samples/` | Standalone .NET 9 console apps + YAML-only directories (27 samples). Each is a runnable demonstration of one feature; see [`samples/README.md`](samples/README.md). |
-| `docs/` | All docs. Subfolders: `getting-started/`, `concepts/`, `guides/`, `tutorials/`, `reference/`, `adr/`, `roadmap/`, `contributing/`. |
+| `docs/` | All docs. Top-level audience sections: `agent-developer/`, `devops/`, `deep-development/`, `extensions/`, `library-mode/`. Plus `concepts/` (explanations), `guides/` (deep-dive how-tos), `reference/` (lookup tables), `roadmap/`, `contributing/`. |
 | `deploy/` | `compose/` (docker-compose recipes, bases + overlays), `helm/` (runtime + operator charts), `crds/` (standalone CRDs for non-Helm installs). |
 | `contracts/` | Versioned contract artefacts (JSON schemas, OPA input schema, OpenAPI) consumed by downstream repos. |
 | `artifacts/` | Build outputs, including `artifacts/packages/` — the local NuGet feed samples consume from. Gitignored. |
@@ -158,9 +158,9 @@ Overlays (`opa`, `langfuse`, `otel`, `clustered`) compose orthogonally via layer
 For Kubernetes, see [`deploy/helm/vais-agents-runtime/README.md`](deploy/helm/vais-agents-runtime/README.md) and [`docs/guides/deploy-the-runtime-to-kubernetes.md`](docs/guides/deploy-the-runtime-to-kubernetes.md).
 
 End-to-end walkthroughs:
-- [`docs/getting-started/install-the-runtime.md`](docs/getting-started/install-the-runtime.md)
-- [`docs/getting-started/deploy-your-first-agent.md`](docs/getting-started/deploy-your-first-agent.md)
-- [`docs/tutorials/from-zero-to-graph-in-20-minutes.md`](docs/tutorials/from-zero-to-graph-in-20-minutes.md)
+- [`docs/devops/deploy-runtime-on-docker.md`](docs/devops/deploy-runtime-on-docker.md)
+- [`docs/agent-developer/your-first-declarative-agent.md`](docs/agent-developer/your-first-declarative-agent.md)
+- [`docs/agent-developer/compose-a-multi-agent-graph.md`](docs/agent-developer/compose-a-multi-agent-graph.md)
 
 ---
 
@@ -270,10 +270,9 @@ A "pillar" is a coherent feature set scoped to one preview version. A phase is a
 
 [`docs/index.md`](docs/index.md) is the canonical entry point. Hierarchy:
 
-- `getting-started/` — the first-hour path. One page per onboarding task. Plain-English, recipe-shaped.
-- `concepts/` — one page per pillar. Explains *what* and *why*, lists core types, extension points, known limitations.
-- `guides/` — task-focused recipes. "How do I X?" Each guide is backed by a sample.
-- `tutorials/` — longer multi-step walkthroughs that cross pillars (e.g. zero-to-graph).
+- Audience sections — `agent-developer/`, `devops/`, `deep-development/`, `extensions/`, `library-mode/`. Each leads with task-shaped tutorials and links into the deep references below.
+- `concepts/` — one page per concept. Explains *what* and *why*, lists core types, extension points, known limitations.
+- `guides/` — task-focused recipes referenced as depth links from the audience sections.
 - `reference/` — lookup tables. Package list, event closed-hierarchies, URN taxonomy, CRD schema, CLI subcommands, runtime config knobs, telemetry keys.
 - `adr/` — architecture decision records. One ADR per non-obvious design call. Numbered + dated + status-tagged.
 - `roadmap/` — forward-looking: deferred backlog, phase proposals.

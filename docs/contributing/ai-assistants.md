@@ -187,9 +187,8 @@ If you have any of these wired in globally, disable or ignore them while working
 - Email, calendar, cloud drive (Gmail / Google Calendar / Google Drive / Outlook /
   Dropbox). This repo's work product is code and docs, not correspondence or meeting
   scheduling.
-- Diagram / whiteboard tools (Miro, draw.io) — unless you are specifically authoring a
-  diagram for an ADR, and even then the output goes into `docs/adr/` as an ASCII / Mermaid
-  block, not a live embed.
+- Diagram / whiteboard tools (Miro, draw.io) — diagrams go into the relevant concept
+  page as ASCII or Mermaid blocks, not live embeds.
 - Chat platforms (Slack, Discord). Any collaboration happens through the forge (§1).
 
 These tools are valuable in other contexts; they are noise here and using them costs
@@ -320,38 +319,6 @@ green.
 
 **Report:** the new row, a verification of `/pack-local` + `dotnet run --project
 samples/<Name>` succeeding.
-
----
-
-### `/adr-new` — start a new architecture decision record
-
-**When:** a non-obvious design choice has alternatives worth capturing.
-
-**Recipe.** Create `docs/adr/<NNNN>-<kebab-case-title>.md`, numbered to the next
-available ADR id (currently `0004` is the last; the next is `0005`). Use the standard
-template:
-
-```markdown
-# <NNNN>. <Title>
-
-Status: **Proposed** | **Accepted** | **Superseded by ADR-XXXX** | **Deprecated**
-Date: YYYY-MM-DD
-
-## Context
-<the forces that led to this decision>
-
-## Decision
-<what we chose>
-
-## Alternatives considered
-<what we rejected and why>
-
-## Consequences
-<what this forces downstream; what it forecloses>
-```
-
-**Report:** new ADR file path + a note on whether the concept page it relates to needs
-an update to link out to this ADR.
 
 ---
 

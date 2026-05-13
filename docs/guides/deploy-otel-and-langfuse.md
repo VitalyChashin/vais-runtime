@@ -149,5 +149,4 @@ For Langfuse, route traces to Langfuse's OTLP endpoint instead (or alongside).
 - [Observability concept](../concepts/observability.md)
 - [Telemetry keys reference](../reference/telemetry-keys.md)
 - [Events reference](../reference/events.md)
-- [ADR 0002 — OTel GenAI conventions](../adr/0002-otel-genai-conventions.md)
 - Sample: `samples/ObservabilityOtelConsole/` (per samples plan)

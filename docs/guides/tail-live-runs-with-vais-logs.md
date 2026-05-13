@@ -168,7 +168,7 @@ echo "smoke test passed"
 
 ## See also
 
-- [Install the CLI](../getting-started/install-the-cli.md) — bootstrap + first-run walkthrough.
+- [Install the CLI](../devops/install-the-cli.md) — bootstrap + first-run walkthrough.
 - [CLI concept](../concepts/cli.md) — full subcommand map.
 - [CLI subcommands reference](../reference/cli-subcommands.md) — per-command flag table for `logs`.
 - [Stream invocations over HTTP](stream-invocations-over-http.md) — the underlying v0.12 SSE route.

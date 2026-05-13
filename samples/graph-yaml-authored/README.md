@@ -197,5 +197,5 @@ spec:
 - [docs/concepts/graph-orchestration.md](../../docs/concepts/graph-orchestration.md) — node kinds, edge predicates, effects
 - [docs/concepts/graph-as-deployable.md](../../docs/concepts/graph-as-deployable.md) — management surface
 - [docs/guides/compose-an-agent-graph-yaml.md](../../docs/guides/compose-an-agent-graph-yaml.md) — full YAML field reference
-- [docs/tutorials/from-zero-to-graph-in-20-minutes.md](../../docs/tutorials/from-zero-to-graph-in-20-minutes.md) — end-to-end tutorial
+- [docs/agent-developer/compose-a-multi-agent-graph.md](../../docs/agent-developer/compose-a-multi-agent-graph.md) — end-to-end tutorial
 - [samples/graph-cross-runtime](../graph-cross-runtime) — same pattern with a remote node ref

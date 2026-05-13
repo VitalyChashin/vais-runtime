@@ -32,7 +32,7 @@ activation — no redeployment needed.
 ## Prerequisites
 
 - Docker + Docker Compose
-- `vais` CLI on PATH (see [install](../../docs/getting-started/install-the-cli.md))
+- `vais` CLI on PATH (see [install](../../docs/devops/install-the-cli.md))
 - `OPENAI_API_KEY` environment variable set
 
 ---

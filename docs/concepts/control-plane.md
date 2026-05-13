@@ -167,7 +167,7 @@ Unary `POST /v1/agents/{id}/invoke` returns a single `AgentInvocationResult`. St
 
 The route probes the resolved agent for `IStreamingAiAgent`; missing capability returns `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements it out of the box. `OrleansAiAgentProxy` also implements `IStreamingAiAgent` as of v0.35 — Orleans-hosted agents stream natively without falling back to 501.
 
-Clients call either `InvokeStreamAsync` (text-only projection) or `InvokeStreamEventsAsync` (full events). See [stream invocations over HTTP](../guides/stream-invocations-over-http.md) + [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md).
+Clients call either `InvokeStreamAsync` (text-only projection) or `InvokeStreamEventsAsync` (full events). See [stream invocations over HTTP](../guides/stream-invocations-over-http.md).
 
 ## Policy engines
 

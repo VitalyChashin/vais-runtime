@@ -2,7 +2,7 @@
 
 `Vais.Agents.Cli` — a `dotnet tool` that wraps the v0.6 HTTP control plane in a kubectl-shape command-line surface. Nine top-level verbs + a `config` branch with four sub-verbs. Thirteen total commands. POSIX exit codes. Kubeconfig-style `~/.vais/config.yaml` for context switching. Shipped in v0.15 as a preview.
 
-Install: `dotnet tool install -g Vais.Agents.Cli` → `vais` on PATH. See [install the CLI](../getting-started/install-the-cli.md) for the bootstrap walkthrough.
+Install: `dotnet tool install -g Vais.Agents.Cli` → `vais` on PATH. See [install the CLI](../devops/install-the-cli.md) for the bootstrap walkthrough.
 
 ## Subcommand map
 
@@ -178,7 +178,7 @@ The CLI is a thin shell over the library; anything the CLI does, `AgentControlPl
 
 ## See also
 
-- [Install the CLI](../getting-started/install-the-cli.md) — bootstrap walkthrough.
+- [Install the CLI](../devops/install-the-cli.md) — bootstrap walkthrough.
 - [CLI subcommands reference](../reference/cli-subcommands.md) — per-command flag + argument + exit-code table.
 - [CLI config file reference](../reference/cli-config-file.md) — YAML schema, env-var overrides, token precedence.
 - [Apply manifests from CI](../guides/apply-manifests-from-ci.md) — `vais apply -f` in shell scripts.

@@ -197,7 +197,7 @@ See [control plane concept](control-plane.md) + [Kubernetes operator concept](ku
 
 ## Observability
 
-`AgenticDiagnostics.ActivitySource` is the single source name (`"Vais.Agents"`). `StatefulAiAgent` starts a `chat` activity per run, populates `gen_ai.*` semantic-convention tags (per [ADR 0002](../adr/0002-otel-genai-conventions.md)), plus `vais.*` extensions for agent-specific fields.
+`AgenticDiagnostics.ActivitySource` is the single source name (`"Vais.Agents"`). `StatefulAiAgent` starts a `chat` activity per run, populates `gen_ai.*` semantic-convention tags per the OpenTelemetry GenAI spec, plus `vais.*` extensions for agent-specific fields.
 
 `Vais.Agents.Observability.OpenTelemetry` provides:
 - `OpenTelemetryUsageSink` — emits `gen_ai.client.token.usage` + `gen_ai.client.operation.duration` histograms.
@@ -397,4 +397,3 @@ See the [packages reference](../reference/packages.md) for the per-package descr
 - [Session + memory](session.md)
 - [Execution loop](execution-loop.md) — where the outer tool-call loop lives.
 - [Control plane](control-plane.md) — `IAgentLifecycleManager`, HTTP surface, policy engines.
-- [ADR index](../adr/index.md)

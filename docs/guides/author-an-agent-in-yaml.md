@@ -2,7 +2,7 @@
 
 End-to-end walkthrough from a blank YAML file to a running agent that answers a prompt. No C# code required.
 
-Prereqs: a running `vais-agents-runtime` container ([install-the-runtime-locally](install-the-runtime-locally.md)), the `vais` CLI ([install-the-cli](../getting-started/install-the-cli.md)), and an OpenAI / Anthropic / Azure-OpenAI API key.
+Prereqs: a running `vais-agents-runtime` container ([install-the-runtime-locally](install-the-runtime-locally.md)), the `vais` CLI ([install-the-cli](../devops/install-the-cli.md)), and an OpenAI / Anthropic / Azure-OpenAI API key.
 
 ## 1. Export your API key
 

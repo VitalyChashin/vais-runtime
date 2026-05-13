@@ -282,6 +282,6 @@ Unrecognised values fall back to the command's default rather than erroring.
 
 - [CLI concept](../concepts/cli.md) — the big-picture subcommand map + design choices.
 - [CLI config file reference](cli-config-file.md) — YAML schema, env-var overrides, token precedence.
-- [Install the CLI](../getting-started/install-the-cli.md) — bootstrap walkthrough.
+- [Install the CLI](../devops/install-the-cli.md) — bootstrap walkthrough.
 - [Apply manifests from CI](../guides/apply-manifests-from-ci.md) — `vais apply` + exit-code handling in scripts.
 - [Tail live runs with `vais logs`](../guides/tail-live-runs-with-vais-logs.md) — `vais logs` + filters.

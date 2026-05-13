@@ -2,7 +2,7 @@
 
 Start the `vais-agents-runtime` using docker-compose. Two base configurations + three orthogonal overlays.
 
-**Concepts:** [install the runtime](../../docs/getting-started/install-the-runtime.md), [install guide (full)](../../docs/guides/install-the-runtime-locally.md), [runtime configuration](../../docs/reference/runtime-configuration.md).
+**Concepts:** [install the runtime](../../docs/devops/deploy-runtime-on-docker.md), [install guide (full)](../../docs/guides/install-the-runtime-locally.md), [runtime configuration](../../docs/reference/runtime-configuration.md).
 **Needs API key:** no (runtime starts without one; agents that call LLMs need `OPENAI_API_KEY` etc.).
 **Code:** 0 lines — configuration only.
 

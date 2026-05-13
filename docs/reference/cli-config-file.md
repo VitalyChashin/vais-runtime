@@ -182,5 +182,5 @@ Secrets belong in `tokenFile` (out-of-band) or `$VAIS_TOKEN` (session-scoped), n
 
 - [CLI concept](../concepts/cli.md) — subcommand map + auth precedence in context.
 - [CLI subcommands reference](cli-subcommands.md) — full per-command flag table.
-- [Install the CLI](../getting-started/install-the-cli.md) — first-run bootstrap walkthrough.
+- [Install the CLI](../devops/install-the-cli.md) — first-run bootstrap walkthrough.
 - Kubernetes `kubeconfig` docs — the shape this file mirrors. Most kubeconfig patterns (context switching, env-var overrides) translate directly.

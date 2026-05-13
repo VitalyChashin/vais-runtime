@@ -210,4 +210,3 @@ On failure: `Activity.SetStatus(ActivityStatusCode.Error)`, `error.type` tag, `T
 - [Events reference](../reference/events.md)
 - [Telemetry keys reference](../reference/telemetry-keys.md)
 - [Deploy OTel and Langfuse guide](../guides/deploy-otel-and-langfuse.md)
-- [ADR 0002 — OTel GenAI conventions](../adr/0002-otel-genai-conventions.md)

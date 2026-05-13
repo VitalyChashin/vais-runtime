@@ -193,7 +193,7 @@ Five services, three integration points, fully wired. Use this shape to demo the
 
 ## 5. Talk to the runtime with the `vais` CLI
 
-The [CLI](../getting-started/install-the-cli.md) is the idiomatic way to exercise the control-plane verbs against any deployment — docker-compose, Kubernetes, or co-hosted dev.
+The [CLI](../devops/install-the-cli.md) is the idiomatic way to exercise the control-plane verbs against any deployment — docker-compose, Kubernetes, or co-hosted dev.
 
 ```bash
 dotnet tool install -g Vais.Agents.Cli

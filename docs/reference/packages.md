@@ -180,10 +180,10 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 
 ## Version pins (in `Directory.Packages.props`)
 
-See [installation](../getting-started/installation.md) for the full pin list — SK 1.74, MAF 1.1.0, MEAI 10.5.0, OpenAI 2.10.0, Orleans 10.1.0, MCP 1.2.0, A2A 1.0.0-preview2, OTel 1.15.2, AspNetCore.OpenApi 9.0.11, ServerSentEvents 10.0.2, KubeOps 10.3.4, Spectre.Console.Cli 0.55.0, prometheus-net 8.2.1.
+See [installation](../library-mode/installation.md) for the full pin list — SK 1.74, MAF 1.1.0, MEAI 10.5.0, OpenAI 2.10.0, Orleans 10.1.0, MCP 1.2.0, A2A 1.0.0-preview2, OTel 1.15.2, AspNetCore.OpenApi 9.0.11, ServerSentEvents 10.0.2, KubeOps 10.3.4, Spectre.Console.Cli 0.55.0, prometheus-net 8.2.1.
 
 ## See also
 
 - [Architecture concept](../concepts/architecture.md) — dependency layering diagram.
-- [Installation](../getting-started/installation.md)
-- [Install the CLI](../getting-started/install-the-cli.md)
+- [Installation](../library-mode/installation.md)
+- [Install the CLI](../devops/install-the-cli.md)

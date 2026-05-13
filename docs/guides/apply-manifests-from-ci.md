@@ -215,7 +215,7 @@ To inspect the raw JSON response with full `diagnostics` detail, use `--output j
 
 ## See also
 
-- [Install the CLI](../getting-started/install-the-cli.md) — bootstrap + config-file first-run.
+- [Install the CLI](../devops/install-the-cli.md) — bootstrap + config-file first-run.
 - [CLI concept](../concepts/cli.md) — full subcommand map, auth precedence, exit codes.
 - [CLI subcommands reference](../reference/cli-subcommands.md) — per-command flag tables.
 - [Enable HTTP idempotency](enable-http-idempotency.md) — the v0.11 middleware `apply` depends on.

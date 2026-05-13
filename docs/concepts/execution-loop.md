@@ -208,8 +208,6 @@ var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
 });
 ```
 
-See [ADR 0003 — streaming filter contract](../adr/0003-streaming-filter-contract.md) for the decision rationale.
-
 ## Streaming Invoke over HTTP (v0.12)
 
 The HTTP control plane publishes `POST /v1/agents/{id}/invoke/stream` — a Server-Sent Events endpoint that carries the **full `AgentEvent` hierarchy** on the wire, not just text. Ten wire-event names, one per `AgentEvent` subtype. Clients get two shapes:
@@ -219,7 +217,7 @@ The HTTP control plane publishes `POST /v1/agents/{id}/invoke/stream` — a Serv
 
 `CompletionDelta : AgentEvent` in `Vais.Agents.Abstractions` is the text-carrying event. `IStreamingAiAgent` in the same assembly is the capability interface the route probes for — agents that don't implement it return `501 urn:vais-agents:streaming-not-supported`. `StatefulAiAgent` implements both `IAiAgent` and `IStreamingAiAgent` out of the box.
 
-See [ADR 0004 — SSE event taxonomy on the wire](../adr/0004-sse-event-taxonomy-on-wire.md) and the [stream-invocations-over-http guide](../guides/stream-invocations-over-http.md).
+See the [stream-invocations-over-http guide](../guides/stream-invocations-over-http.md).
 
 ## Events
 
@@ -228,7 +226,7 @@ One `TurnStarted` at run entry + one `TurnCompleted` or `TurnFailed` at run exit
 ## Extension points
 
 - **`IToolCallDispatcher`** — inject a custom dispatcher for bespoke invocation semantics. Default `DefaultToolCallDispatcher` runs tool guardrails, invokes via `ITool.InvokeAsync`, catches exceptions into `ToolCallOutcome.Error`, emits events. Any replacement should preserve that envelope.
-- **`IStreamingAgentFilter`** (v0.10) — around-provider DIM + per-delta transform + post-drain hook for `StreamAsync`. Three override points on one interface. See [ADR 0003](../adr/0003-streaming-filter-contract.md).
+- **`IStreamingAgentFilter`** (v0.10) — around-provider DIM + per-delta transform + post-drain hook for `StreamAsync`. Three override points on one interface.
 - **`IAgentFilter`** — the ordered `CompletionRequest → CompletionResponse` chain for `AskAsync`. Streaming has its own filter interface (v0.10) — the two don't share the chain.
 - **`IStreamingAiAgent`** (v0.12) — capability interface for agents that expose `StreamAsync(string, AgentContext, CancellationToken) : IAsyncEnumerable<AgentEvent>`. Probed by the HTTP streaming route.
 
@@ -246,6 +244,4 @@ One `TurnStarted` at run entry + one `TurnCompleted` or `TurnFailed` at run exit
 - [Guardrails](guardrails.md) — the three layers the dispatcher + agent invoke.
 - [Events reference](../reference/events.md) — `AgentEvent` closed hierarchy + v0.9 `AgentGraphEvent`.
 - [Budget reference](../reference/budget.md) — `RunBudget` fields.
-- [ADR 0003](../adr/0003-streaming-filter-contract.md) — streaming filter contract.
-- [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md) — SSE event taxonomy on the wire.
 - [Stream invocations over HTTP](../guides/stream-invocations-over-http.md) — v0.12 HTTP streaming walkthrough.

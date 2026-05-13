@@ -2,7 +2,7 @@
 
 Deploy a declarative agent to the runtime using a YAML manifest and the `vais` CLI. Zero C# required.
 
-**Concepts:** [declarative agents](../../docs/concepts/declarative-agents.md), [deploy your first agent](../../docs/getting-started/deploy-your-first-agent.md), [author an agent in YAML](../../docs/guides/author-an-agent-in-yaml.md).
+**Concepts:** [declarative agents](../../docs/concepts/declarative-agents.md), [deploy your first agent](../../docs/agent-developer/your-first-declarative-agent.md), [author an agent in YAML](../../docs/guides/author-an-agent-in-yaml.md).
 **Needs API key:** yes — `OPENAI_API_KEY` for live LLM calls (the agent won't invoke without it).
 **Code:** 0 lines — YAML manifests only.
 
@@ -145,7 +145,7 @@ spec:
 
 ## See also
 
-- [docs/getting-started/deploy-your-first-agent.md](../../docs/getting-started/deploy-your-first-agent.md)
+- [docs/agent-developer/your-first-declarative-agent.md](../../docs/agent-developer/your-first-declarative-agent.md)
 - [docs/guides/author-an-agent-in-yaml.md](../../docs/guides/author-an-agent-in-yaml.md)
 - [docs/concepts/declarative-agents.md](../../docs/concepts/declarative-agents.md)
 - [docs/reference/agent-manifest.md](../../docs/reference/agent-manifest.md)

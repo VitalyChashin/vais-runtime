@@ -202,5 +202,4 @@ On the server, `HttpContext.RequestAborted` fires when the client goes away. The
 - [Events reference](../reference/events.md) — `AgentEvent` hierarchy + wire-event-name table.
 - [Execution loop concept](../concepts/execution-loop.md) — where each event fires during the run.
 - [Control plane concept](../concepts/control-plane.md) — where the streaming route sits in the verb set.
-- [ADR 0004: SSE event taxonomy on the wire](../adr/0004-sse-event-taxonomy-on-wire.md) — why the full AgentEvent hierarchy rides the wire instead of just text deltas.
 - [`samples/HttpStreamingInvoke`](../../samples/HttpStreamingInvoke) — runnable walkthrough.

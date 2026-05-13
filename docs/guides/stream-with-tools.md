@@ -164,7 +164,7 @@ var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
 
 **Phase 1 retry / Phase 2 drain** — retries apply only **before** the first `CompletionUpdate` is yielded. Once the consumer has seen a delta, mid-stream failures rethrow without retry (replaying would double-emit content + inflate token counts). The window Polly watches covers enumerator-open + first `MoveNextAsync`; everything after is fire-and-forget from Polly's perspective.
 
-Filter-domain exceptions (subtypes of `FilterAbortedException`) bypass retry entirely — the filter is doing deliberate policy work. See [ADR 0003](../adr/0003-streaming-filter-contract.md) for the decision rationale.
+Filter-domain exceptions (subtypes of `FilterAbortedException`) bypass retry entirely — the filter is doing deliberate policy work.
 
 ## Adapter specifics
 

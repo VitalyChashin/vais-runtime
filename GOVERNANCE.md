@@ -1,6 +1,6 @@
 # Governance
 
-Vais.Agents is in Phase 1 (pre-alpha). During Phase 1, governance is a **benevolent-dictator** model: maintainers drive the roadmap, accept or reject PRs on scope, and tag releases. Decisions are made in the open via issues, PRs, and ADRs under [`docs/adr/`](docs/adr/) — contributors are free to disagree and propose alternatives, but the final call rests with the maintainers.
+Vais.Agents is in Phase 1 (pre-alpha). During Phase 1, governance is a **benevolent-dictator** model: maintainers drive the roadmap, accept or reject PRs on scope, and tag releases. Decisions are made in the open via issues, PRs, and inline commit/PR descriptions — contributors are free to disagree and propose alternatives, but the final call rests with the maintainers.
 
 ## Roles
 
@@ -14,7 +14,7 @@ Vais.Agents is in Phase 1 (pre-alpha). During Phase 1, governance is a **benevol
 | Bug fixes; small docs / sample improvements | One maintainer approval, then merge. |
 | New features; behavioural changes; API additions | Open an issue first. A maintainer signs off on the design before significant implementation work begins. |
 | Breaking changes | Migration guidance required in the PR and `CHANGELOG.md` under `Changed`. Maintainer sign-off required. |
-| Architecture decisions | Captured as ADRs under [`docs/adr/`](docs/adr/). New ADRs go through the same PR review as code changes. |
+| Architecture decisions | Captured inline in the PR description and the commit body; substantive rationale also lands in `CHANGELOG.md` and the relevant concept page. |
 
 Out-of-scope work is enumerated in [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md). PRs that contradict an entry there are likely to be rejected unless the contributor first argues for re-prioritising the item.
 

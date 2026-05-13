@@ -162,7 +162,6 @@ activity.SetTag(AgenticTags.Policy.Decision, "deny");
 ## See also
 
 - [Observability concept](../concepts/observability.md)
-- [ADR 0002 — OTel GenAI conventions](../adr/0002-otel-genai-conventions.md)
 - [Deploy OTel and Langfuse guide](../guides/deploy-otel-and-langfuse.md)
 - [OPA policy engine concept](../concepts/opa-policy-engine.md) — per-evaluation span shape.
 - [Kubernetes operator concept](../concepts/kubernetes-operator.md) — reconcile span shape.

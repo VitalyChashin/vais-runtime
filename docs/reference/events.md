@@ -112,7 +112,7 @@ new CompletionDelta(DateTimeOffset.UtcNow, context, textDelta, modelId, promptTo
 | `HandoffRequested` | `handoff.requested` |
 | `CompletionDelta` | `delta` |
 
-Ten event names — one per closed-hierarchy subtype. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface. See [ADR 0004](../adr/0004-sse-event-taxonomy-on-wire.md).
+Ten event names — one per closed-hierarchy subtype. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface.
 
 Heartbeat comments (`: heartbeat <utc>`) fire between events at `StreamingInvokeOptions.HeartbeatInterval` cadence (15s default). SSE parsers ignore comment lines — they keep proxies and load balancers from idling the connection.
 

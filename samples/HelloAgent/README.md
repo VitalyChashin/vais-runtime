@@ -2,7 +2,7 @@
 
 Runs the same `StatefulAiAgent` through Semantic Kernel, then Microsoft Agent Framework, then a third tool-calling scenario. The point: one stack-neutral agent class drives both stacks without change.
 
-**Concepts:** [hello-agent walkthrough](../../docs/getting-started/hello-agent.md), [choosing a stack](../../docs/getting-started/choosing-a-stack.md).
+**Concepts:** [hello-agent walkthrough](../../docs/library-mode/hello-agent.md), [choosing a stack](../../docs/library-mode/choose-your-stack.md).
 **Packages:** `Vais.Agents.Abstractions`, `Vais.Agents.Core`, `Vais.Agents.Ai.SemanticKernel`, `Vais.Agents.Ai.MicrosoftAgentFramework`.
 **Needs API key:** `OPENAI_API_KEY` (live-LLM sample).
 
