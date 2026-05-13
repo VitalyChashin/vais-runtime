@@ -5,7 +5,6 @@
     <AssemblyName>Vais.Agents.Runtime.Host</AssemblyName>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!--
       Runtime product entry point (v0.16 Pillar A). Ships as the container image
       `vais-agents-runtime`, not a published NuGet. Dockerfile lives next to this

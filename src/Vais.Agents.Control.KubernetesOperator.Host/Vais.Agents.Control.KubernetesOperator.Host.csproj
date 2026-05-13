@@ -5,7 +5,6 @@
     <AssemblyName>Vais.Agents.Control.KubernetesOperator.Host</AssemblyName>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!--
       Host exe — not a published NuGet. Container image source is the
       Dockerfile next to this csproj. Consumers build + push to their own
