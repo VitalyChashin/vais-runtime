@@ -66,6 +66,13 @@ flowchart TB
 | Observability — OTel GenAI semantic conventions + Langfuse enrichment | `Vais.Agents.Observability.OpenTelemetry`, `Vais.Agents.Observability.Langfuse` |
 | Interop — MCP tool-source adapter, A2A remote-agent-as-tool adapter | `Vais.Agents.Protocols.Mcp`, `Vais.Agents.Protocols.A2A` |
 
+## Why Vais.Agents?
+
+- **Durable agents, not durable workflows.** Other runtimes give you durable workflow primitives and ask you to build the agent loop on top. Vais.Agents ships the agent as the unit — one Orleans grain per `(agent, session)`, with state, history, and opaque-blob round-tripping handled by the host.
+- **Declarative-first, code-aware.** YAML for the 80%: model, prompt, tools, guardrails, gateway middleware. Drop into C#, Python, or any container speaking the plugin HTTP protocol when YAML isn't enough — same `vais apply` operator surface either way.
+- **Gateway is the only LLM and tool path.** Logging, OTel, rate limit, fallback, policy, cost gating — all middleware, all declared in a manifest, all applied uniformly. Adding observability is a YAML edit, not a search-and-replace across agent code.
+- **Native .NET, not bolted on.** Orleans for durability, MEAI for the AI contract, ASP.NET Core for HTTP, KubeOps for the operator. No node-style sidecar proxies, no foreign concurrency model.
+
 ## First run — declarative
 
 Start the runtime, declare an agent, invoke it. No C# required. Make sure `OPENAI_API_KEY` is set in your shell environment first.
@@ -175,9 +182,78 @@ flowchart LR
 
 Plugin code is the only thing you author. Everything else — input shaping, history persistence, LLM and tool call governance, observability, durability across silo restart — is the runtime. Custom middleware plugs in at the marked seams.
 
-## Embed in a .NET app
+## Examples
 
-If you'd rather embed agents in an existing .NET app instead of running the standalone runtime, every primitive is also a NuGet package. Drop `StatefulAiAgent` into an existing .NET app — same agent class works against either AI stack.
+Three shapes of what you can build, each self-contained.
+
+<details><summary><b>1. Single declarative agent with an MCP tool</b></summary>
+
+```yaml
+# researcher.yaml — agent registered to use an MCP fetch server
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: researcher
+  version: "1.0"
+spec:
+  model: { provider: openai, name: gpt-4o-mini }
+  systemPrompt:
+    inline: |
+      For each user question, fetch a relevant URL and summarise
+      what you found in 2-3 sentences. Cite the URL.
+  handler: { typeName: declarative }
+  protocols:
+    - kind: Http
+  mcpServers:
+    - name: mcp-fetch
+      transport: registered
+  tools:
+    - name: fetch
+      source: mcp:mcp-fetch
+```
+
+```bash
+vais apply -f researcher.yaml
+vais invoke researcher --text "What's on example.com?"
+```
+
+The model decides to call `fetch`, the runtime routes it through the MCP gateway middleware chain (logging, OTel, rate limit, response truncation), the agent summarises what it found. ~20 lines of YAML, zero C# code.
+
+</details>
+
+<details><summary><b>2. Multi-agent pipeline (graph)</b></summary>
+
+```yaml
+# research-pipeline.yaml — plan → research → report
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: research-pipeline
+  version: "1.0"
+spec:
+  entry: plan
+  nodes:
+    - { id: plan,     kind: Agent, ref: { id: planner,    version: "1.0" } }
+    - { id: research, kind: Agent, ref: { id: researcher, version: "1.0" } }
+    - { id: report,   kind: Agent, ref: { id: reporter,   version: "1.0" } }
+    - { id: end,      kind: End }
+  edges:
+    - { from: plan,     to: research }
+    - { from: research, to: report }
+    - { from: report,   to: end }
+```
+
+```bash
+vais invoke-graph research-pipeline \
+  --initial-state '{"query": "Why is the sky blue?"}' \
+  --stream
+```
+
+Event stream: `graph.started → node.started plan → node.completed plan → … → graph.completed`. Each node's output flows into the next via state bindings. Graph runs persist in Orleans grains — pod rolls and silo restarts resume where they left off.
+
+</details>
+
+<details><summary><b>3. Embed in an existing .NET app (library mode)</b></summary>
 
 ```csharp
 using Microsoft.SemanticKernel;
@@ -197,15 +273,9 @@ Console.WriteLine(await agent.AskAsync("What is the capital of France?"));
 Console.WriteLine(await agent.AskAsync("And its population?"));  // History carries.
 ```
 
-Swap the adapter to MAF — one `using` change, same agent class:
+Swap `SkCompletionProvider` for `MafCompletionProvider` to run the same agent against Microsoft Agent Framework — one `using` change, same agent class.
 
-```csharp
-using Microsoft.Extensions.AI;
-using Vais.Agents.Ai.MicrosoftAgentFramework;
-
-IChatClient client = /* your MEAI chat client */;
-var agent = new StatefulAiAgent(new MafCompletionProvider(client), options);
-```
+</details>
 
 ## Documentation
 
@@ -226,6 +296,12 @@ Plus [Concepts](docs/index.md#concepts) for the design model and [Reference](doc
 3. **Stack-neutral contracts, native code paths.** `Vais.Agents.Abstractions` references no SK, no MAF, no Orleans, no ASP.NET. Adapters exercise their stack's native machinery (SK's `IChatCompletionService`, MAF's `ChatClientAgent`) — never reduced to a shared `IChatClient` pass-through.
 4. **Gateway is the only LLM/tool path.** Observability, rate limiting, policy, fallback, and provider routing live in middleware — not scattered across agent code. Adding a new cross-cutting concern is a gateway middleware, not a search-and-replace.
 5. **Apache 2.0 across the stack** — library, runtime, operator, CLI.
+
+## Built on / interoperates with
+
+| Built on | Interoperates with |
+|---|---|
+| .NET 9 · Orleans · Microsoft.Extensions.AI · ASP.NET Core · KubeOps · Spectre.Console | Microsoft Agent Framework · Semantic Kernel · OpenAI · Anthropic · Azure OpenAI · Model Context Protocol (MCP) · Agent-to-Agent (A2A) · OpenTelemetry · Langfuse · Prometheus · OPA · Redis · Postgres |
 
 ## Building
 
