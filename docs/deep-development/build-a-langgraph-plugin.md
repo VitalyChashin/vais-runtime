@@ -18,8 +18,7 @@ A larger working example is in [`samples/PluginAgentLangGraphResearcherLive/`](.
 
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) installed locally.
 - Docker.
-- A running runtime ([DevOps section](../devops/index.md)).
-- An `OPENAI_API_KEY` available to the plugin container.
+- A running runtime ([DevOps section](../devops/index.md)) with `OPENAI_API_KEY` set in its environment — the plugin manifest below references it via `secret://env/OPENAI_API_KEY`, which tells the runtime to read its own env and inject the value into the plugin container.
 
 ## 1. Scaffold
 
@@ -167,20 +166,20 @@ spec:
   build:
     context: .
     dockerfile: Dockerfile
-  env:
-    - name: OPENAI_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: openai-key
+  secrets:
+    OPENAI_API_KEY: secret://env/OPENAI_API_KEY
 ```
+
+`spec.secrets` is a map of env-var name (inside the plugin container) → `secret://` URI. The `secret://env/OPENAI_API_KEY` URI tells the runtime to read `OPENAI_API_KEY` from its own environment and inject it as `OPENAI_API_KEY` in the plugin container at startup. The runtime never persists the value.
 
 `vais apply` reads `spec.build`, builds the image locally (only if the tag doesn't exist), and registers the plugin in one shot.
 
 ## 8. Apply and invoke
 
 ```bash
-# Stash the OpenAI key as a runtime-managed secret
-vais secret create openai-key --from-literal=value=$OPENAI_API_KEY
+# Confirm OPENAI_API_KEY is set in the runtime container's environment.
+# (Set at runtime startup — see the DevOps section. The secret reference
+# in plugin.yaml resolves against this.)
 
 # Build + register the plugin
 vais apply -f plugin.yaml
