@@ -1,0 +1,26 @@
+<Project>
+
+  <!--
+    Loaded AFTER each project file (.csproj), so settings here override per-project
+    properties. Use this for cross-cutting fixes that must beat explicit csproj values.
+  -->
+
+  <!--
+    Override per-project GenerateDocumentationFile=false on non-packable projects
+    (test projects, host applications). Required because the IDE0005 analyzer
+    ("Remove unnecessary usings/imports") can only run at build time when
+    GenerateDocumentationFile is true. Recent Roslyn versions (some .NET SDK 9.0.x
+    patches) emit the EnableGenerateDocumentationFile diagnostic when this isn't set,
+    and TreatWarningsAsErrors converts it into a build failure.
+
+    Pair with NoWarn=CS1591 so missing-XML-doc warnings on non-API surfaces
+    (xUnit [Fact] methods, Program entry points) don't break the build.
+
+    Background: https://github.com/dotnet/roslyn/issues/41640
+  -->
+  <PropertyGroup Condition="'$(IsPackable)' != 'true'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
