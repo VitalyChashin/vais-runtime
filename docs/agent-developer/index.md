@@ -6,13 +6,11 @@ You'll deploy a declarative agent against the runtime, route every model call an
 
 ## Path
 
-1. **[Your first declarative agent](../getting-started/deploy-your-first-agent.md)** — write an `Agent` manifest, `vais apply`, `vais invoke`. No C# required.
-2. **[LLM gateway](../guides/plug-in-gateway-middleware.md)** — every model call passes through middleware: logging, OTel, rate limit, fallback. Wire your first middleware.
-3. **[MCP gateway](../guides/gate-tool-calls-with-the-tool-gateway.md)** — every tool call passes through middleware: logging, OTel, rate limit, truncation. Wire MCP tools to an agent and observe them.
-4. **[Simple Python agent](../guides/package-a-python-agent.md)** — drop into Python when YAML isn't enough. Same declarative shape; supervisor handles durability.
-5. **[Multi-agent graph](../tutorials/from-zero-to-graph-in-20-minutes.md)** — compose multiple agents into a graph: sequential nodes, conditional edges, shared state.
-
-> The five pages above are the existing material these tutorials are based on. Phase 3 of the docs reorganization reframes them as section-1 tutorials with consistent "you'll build X" leads; the underlying content is mostly the same.
+1. **[Your first declarative agent](your-first-declarative-agent.md)** — write an `Agent` manifest, `vais apply`, `vais invoke`. No C# required.
+2. **[Wire the LLM gateway](wire-the-llm-gateway.md)** — route every model call through observable middleware via an `LlmGatewayConfig` manifest.
+3. **[Wire the MCP gateway](wire-the-mcp-gateway.md)** — give the agent tools through an `McpGatewayConfig` middleware chain — logging, OTel, rate limit, truncation.
+4. **[Ship a simple Python agent](ship-a-python-agent.md)** — drop into Python when YAML isn't enough. Same operator surface; supervisor handles durability.
+5. **[Compose a multi-agent graph](compose-a-multi-agent-graph.md)** — sequential nodes, edges, shared state. `vais invoke-graph --stream` emits a structured event log.
 
 ## After this section
 
