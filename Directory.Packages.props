@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Label="Microsoft.Extensions.AI (MEAI) - unifying IChatClient abstraction. Aligned 10.x family.">
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.1" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
     <!--
@@ -19,7 +19,7 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
   </ItemGroup>
   <ItemGroup Label="Microsoft Agent Framework (MAF) adapter">
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.5.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.1.0" />
   </ItemGroup>
   <ItemGroup Label="PowerFx expression evaluator (Vais.Agents.Core.PowerFx only — optional)">
