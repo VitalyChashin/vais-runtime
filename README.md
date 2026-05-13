@@ -27,7 +27,7 @@ flowchart TB
     subgraph silo["Runtime container — Orleans silo<br/><i>(scale-out via multi-silo cluster)</i>"]
         reg["Registries<br/>Agent · Graph · Plugin · Gateway · MCP server"]
         agent["AiAgentGrain"]
-        graph["GraphRunGrain<br/>plan → research → report"]
+        graphrun["GraphRunGrain<br/>plan → research → report"]
         plugin["Plugin host<br/>C# DLL · Python subprocess · Container image"]
         llmgw["LLM Gateway"]
         mcpgw["MCP Gateway"]
@@ -43,8 +43,8 @@ flowchart TB
     cli -- HTTP --> reg
     op -- HTTP --> reg
     reg --> agent
-    reg --> graph
-    graph --> agent
+    reg --> graphrun
+    graphrun --> agent
     agent <--> plugin
     agent --> llmgw
     agent --> mcpgw
