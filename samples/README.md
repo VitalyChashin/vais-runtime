@@ -69,7 +69,22 @@ Most samples are deterministic (scripted fake completion provider) and need no A
 | [AgentGraphMaf](AgentGraphMaf) | v0.9 — `MafGraphOrchestrator` (MAF Workflows backend); proves cross-stack parity with `AgentGraphInProcess`; same manifest, same output, fan-out/fan-in unlocked | Abstractions, Core, Hosting.InMemory, Control.InProcess, Orchestration.Graph.MicrosoftAgentFramework | ~95 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
 | [AgentGraphResumeOnOrleans](AgentGraphResumeOnOrleans) | v0.9 — `Interrupt`-kind node + `OrleansCheckpointer`; interrupt → `GraphInterrupted` → `LoadAsync` → `ResumeStreamAsync`; in-process Orleans silo, no Docker | Abstractions, Core, Hosting.InMemory, Control.InProcess, Hosting.Orleans + Orleans | ~145 | — | [graph-orchestration](../docs/concepts/graph-orchestration.md) |
 
-## Suggested learning path
+## Runtime-first learning path
+
+The runtime + declarative + plugins path. Start here if you're aligned with the project's positioning — most users.
+
+1. **runtime-docker-compose** — start the runtime with docker-compose.
+2. **declarative-agent-yaml** — deploy your first declarative agent via YAML; `vais apply` and `vais invoke`.
+3. **declarative-agent-mcp-gateways** — wire LLM + MCP gateway middleware chains via YAML. Logging, OTel, rate limit, response truncation, all declarative — zero C#.
+4. **PluginAgentLangGraphResearcher** — drop into Python when YAML isn't enough. LangGraph plan→summarize topology.
+5. **graph-yaml-authored** — compose multiple agents into a multi-agent graph; `vais invoke-graph --stream`.
+6. **KubernetesOperatorQuickstart** — production deploy via Helm + `vais.io/v1alpha1` CRD.
+
+For library mode (embed primitives in a .NET app instead of running the runtime), see the path below.
+
+## Library-mode learning path
+
+Walks the library primitives one at a time. Useful if you're embedding `Vais.Agents` in your own .NET host, or if you want a deeper understanding of the building blocks the runtime composes.
 
 1. **HelloAgent** — the stack-neutral agent shape.
 2. **ToolFromFunc** → **PromptComposer** → **InputOutputGuardrails** → **ToolGuardrailsAndInterrupt** — core pillars.

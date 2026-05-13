@@ -209,7 +209,15 @@ var agent = new StatefulAiAgent(new MafCompletionProvider(client), options);
 
 ## Documentation
 
-Full docs live under **[`docs/`](docs/index.md)** — getting-started walkthrough, per-pillar concepts, how-to guides, API reference, ADR index. Start at [`docs/index.md`](docs/index.md).
+Full docs live under **[`docs/`](docs/index.md)**. Sections by audience:
+
+- **[Agent developer](docs/agent-developer/index.md)** — build agents.
+- **[DevOps / admin](docs/devops/index.md)** — run the runtime.
+- **[Deep agent development](docs/deep-development/index.md)** — author plugins.
+- **[Extensions](docs/extensions/index.md)** — customize the runtime's seams.
+- **[Library mode](docs/library-mode/index.md)** — embed primitives in a .NET app.
+
+Plus [Concepts](docs/index.md#concepts) for the design model and [Reference](docs/index.md#reference) for lookup tables.
 
 ## Design principles
 
