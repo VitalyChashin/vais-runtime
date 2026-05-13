@@ -4,6 +4,7 @@
 using A2A;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
@@ -36,6 +37,15 @@ public class CompositionRootTests
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IClusterClient>());
         services.AddLogging();
+
+        // IConfiguration is always present in ASP.NET Core; required by HmacCallTokenService
+        // (registered when PythonPluginsDirectory is set) to read the call-token secret.
+        services.AddSingleton<IConfiguration>(
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> {
+                    ["Vais:ContainerPlugin:CallTokenSecret"] = "test-secret-at-least-32-chars-long-xxxx"
+                })
+                .Build());
 
         return services;
     }

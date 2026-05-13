@@ -113,6 +113,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Runtime.Plugins
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Runtime.Host.PluginFixture", "tests\Vais.Agents.Runtime.Host.PluginFixture\Vais.Agents.Runtime.Host.PluginFixture.csproj", "{90931024-EE36-4242-B7A6-425C2D6CA705}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Runtime.Host.PluginFixtureHotReloadV1", "tests\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV1\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV1.csproj", "{01180CEA-A6E8-47FD-9A48-23BB1E36A10C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Runtime.Host.PluginFixtureHotReloadV2", "tests\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV2\Vais.Agents.Runtime.Host.PluginFixtureHotReloadV2.csproj", "{652F9D15-43C7-45DD-B32F-7E5CA1E9B6B4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Identity.Oidc", "src\Vais.Agents.Identity.Oidc\Vais.Agents.Identity.Oidc.csproj", "{6A9CBBD5-7117-4FBA-A60C-CA5C37750847}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vais.Agents.Identity.Oidc.Tests", "tests\Vais.Agents.Identity.Oidc.Tests\Vais.Agents.Identity.Oidc.Tests.csproj", "{C2C0036D-7674-4309-A2A2-373688C71939}"

@@ -150,7 +150,8 @@ internal static class CompositionRoot
         //    default, it is too late. See v0.11 findings for the ordering footgun.
         services.AddOrleansA2ATaskStore();
         services.AddOrleansGraphCheckpointer();
-        services.AddOrleansIdempotencyStore();
+        if (options.IdempotencyEnabled)
+            services.AddOrleansIdempotencyStore();
 
         // IHttpClientFactory — required by plugin handlers that take IHttpClientFactory in
         // their constructor. AddHttpClient is idempotent; calling it here makes it available
