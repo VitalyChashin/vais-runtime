@@ -487,6 +487,12 @@ static Vais.Agents.AgentPreprocessorContext.operator !=(Vais.Agents.AgentPreproc
 static Vais.Agents.AgentPreprocessorContext.operator ==(Vais.Agents.AgentPreprocessorContext? left, Vais.Agents.AgentPreprocessorContext? right) -> bool
 Vais.Agents.GraphInterrupted.CurrentState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
 Vais.Agents.GraphInterrupted.CurrentState.init -> void
+*REMOVED*Vais.Agents.AgentInvocationRequest.AgentInvocationRequest(string! Text, string? SessionId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null) -> void
+*REMOVED*Vais.Agents.AgentInvocationRequest.Deconstruct(out string! Text, out string? SessionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata) -> void
+Vais.Agents.AgentInvocationRequest.AgentInvocationRequest(string! Text, string? SessionId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata = null, System.Collections.Generic.IReadOnlyList<(string! Role, string! Content)>? InitialHistory = null) -> void
+Vais.Agents.AgentInvocationRequest.Deconstruct(out string! Text, out string? SessionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Metadata, out System.Collections.Generic.IReadOnlyList<(string! Role, string! Content)>? InitialHistory) -> void
+Vais.Agents.AgentInvocationRequest.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<(string! Role, string! Content)>?
+Vais.Agents.AgentInvocationRequest.InitialHistory.init -> void
 *REMOVED*Vais.Agents.ToolCallOutcome.ToolCallOutcome(string! CallId, string! Result, string? Error = null) -> void
 *REMOVED*Vais.Agents.ToolCallOutcome.Result.get -> string!
 *REMOVED*Vais.Agents.ToolCallOutcome.Deconstruct(out string! CallId, out string! Result, out string? Error) -> void

@@ -5,11 +5,11 @@
     <AssemblyName>Vais.Agents.Gateways.OpenAiCompat.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Gateways.OpenAiCompat\Vais.Agents.Gateways.OpenAiCompat.csproj" />
   </ItemGroup>

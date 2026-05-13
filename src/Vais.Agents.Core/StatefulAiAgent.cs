@@ -140,8 +140,39 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     /// Alias for <see cref="AskAsync"/>. Matches the <c>InvokeAsync</c> naming convention
     /// used by <see cref="IAgentGraph{TState}"/> and the A2A/MCP server invoke paths.
     /// </summary>
+#pragma warning disable RS0026 // Two overloads with optional CT — first params are distinct types (string vs AgentInvocationRequest), not a real ambiguity
     public Task<string> InvokeAsync(string userMessage, CancellationToken cancellationToken = default)
         => AskAsyncCore(userMessage, runIdOverride: null, cancellationToken);
+#pragma warning restore RS0026
+
+    /// <summary>
+    /// Invokes the agent from an <see cref="AgentInvocationRequest"/>. When
+    /// <see cref="AgentInvocationRequest.InitialHistory"/> is non-empty the session is
+    /// reset and seeded with those turns before processing <see cref="AgentInvocationRequest.Text"/>;
+    /// this enables stateless multi-turn usage (OpenAI-compat path, edit/regenerate).
+    /// When <see cref="AgentInvocationRequest.InitialHistory"/> is null the current
+    /// session history is preserved unchanged.
+    /// </summary>
+#pragma warning disable RS0026
+    public async Task<string> InvokeAsync(AgentInvocationRequest request, CancellationToken cancellationToken = default)
+#pragma warning restore RS0026
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.InitialHistory is { Count: > 0 })
+        {
+            await _session.ResetAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var (role, content) in request.InitialHistory)
+            {
+                var chatRole = string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase)
+                    ? AgentChatRole.Assistant
+                    : AgentChatRole.User;
+                await _session.AppendAsync(new ChatTurn(chatRole, content), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return await AskAsyncCore(request.Text, runIdOverride: null, cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task<string> AskAsyncCore(string userMessage, string? runIdOverride, CancellationToken cancellationToken)
     {

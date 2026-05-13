@@ -546,6 +546,122 @@ For Kubernetes deployments, `vais plugin-deploy` uses the embedded Helm chart.
 
 ---
 
+## OpenAI-compatible gateway
+
+The `Vais.Agents.Gateways.OpenAiCompat` package exposes a standard
+`POST /v1/chat/completions` + `GET /v1/models` surface, so any tool that speaks
+the OpenAI Chat Completions API (OpenWebUI, LiteLLM, Continue.dev, …) can talk to
+your agents and graphs without modification.
+
+### Register in Program.cs
+
+```csharp
+// Register the runtime and any agents/graphs as usual, then:
+builder.Services.AddOpenAiCompatGateway(options =>
+{
+    // (optional) add a static model alias that routes to a real LLM provider
+    options.AddAlias("gpt-4o-mini", new CompletionRequest { Model = "gpt-4o-mini" });
+});
+
+var app = builder.Build();
+app.MapOpenAiCompatEndpoints();   // mounts /v1/chat/completions and /v1/models
+app.Run();
+```
+
+`GET /v1/models` automatically discovers:
+- Every registered agent (`agent:<id>` model IDs via `IAgentRegistry`).
+- Every graph that opts in via the `vais.io/openai-compat-input-key` annotation
+  (`graph:<id>` model IDs via `IAgentGraphRegistry`).
+
+If `IAgentRegistry` or `IAgentGraphRegistry` are not registered, the endpoint
+simply omits those entries — no error.
+
+### Call an agent
+
+```bash
+curl http://localhost:5000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "agent:planner",
+    "messages": [
+      {"role": "user", "content": "What are the main themes of MCP?"}
+    ]
+  }'
+```
+
+Every call is stateless: the full message history is reinjected from the
+`messages` array, so edit / regenerate works correctly in any chat UI.
+
+**Multi-turn streaming session** — add the `X-Session-Id` header to pin turns to
+a single in-process session (useful when the UI sends only the latest message):
+
+```bash
+curl http://localhost:5000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: my-session-42" \
+  -d '{"model": "agent:planner", "stream": true,
+       "messages": [{"role": "user", "content": "Follow up question…"}]}'
+```
+
+When `X-Session-Id` is absent, a new GUID is used and history is seeded from
+`messages` (stateless mode).
+
+### Call a graph
+
+Graphs must opt in with two annotations in their manifest:
+
+```yaml
+kind: AgentGraph
+metadata:
+  name: research-pipeline
+spec:
+  annotations:
+    vais.io/openai-compat-input-key: query      # state field to write the user message into
+    vais.io/openai-compat-output-key: report    # state field to read the assistant reply from
+  # ... nodes, edges, etc.
+```
+
+Then:
+
+```bash
+curl http://localhost:5000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "graph:research-pipeline",
+    "messages": [
+      {"role": "user", "content": "Summarise the Model Context Protocol spec"}
+    ]
+  }'
+```
+
+The gateway writes the last user message into the `query` field of the initial
+state and reads the final `report` field as the assistant reply.  If the output
+key points to a list of messages (e.g. a conversation array), the last assistant
+message in that list is returned.
+
+A graph that lacks either annotation returns `422 Unprocessable Entity`.
+
+### Caller parameters
+
+`temperature`, `max_tokens`, `tools`, and `tool_choice` from the request body are
+forwarded to the agent as metadata keys (`oai.temperature`, `oai.max_tokens`, …).
+They are available to agent code via `AgentInvocationRequest.Metadata` but are not
+enforced by the gateway itself — it is up to each agent implementation to honour them.
+
+### Connect OpenWebUI
+
+1. In OpenWebUI → Settings → Connections → Add OpenAI connection.
+2. Set **Base URL** to `http://<runtime-host>:5000/v1`.
+3. Set **API Key** to any non-empty string (the gateway accepts any value; auth is
+   handled by upstream middleware if you configure it).
+4. Your agents and graphs now appear in the model selector.
+
+For multi-turn conversations from OpenWebUI, the gateway uses the full `messages`
+history sent on each request (OpenWebUI always sends the full history), so
+stateless mode works out of the box.
+
+---
+
 ## Observability quick look
 
 Tail the runtime logs to see gateway middleware in action.
@@ -590,4 +706,5 @@ docker rm -f vais-plugin-quickstart-python-planner 2>/dev/null || true
 | Add conditional routing (`if/else`) to the graph | [`docs/concepts/graph-orchestration.md`](docs/concepts/graph-orchestration.md) |
 | Run a Python agent in production (Kubernetes, secrets) | [`docs/guides/package-a-python-agent.md`](docs/guides/package-a-python-agent.md) |
 | Make graphs resumable across silo restarts | [`docs/guides/run-resumable-graphs-on-orleans.md`](docs/guides/run-resumable-graphs-on-orleans.md) |
+| Expose agents to OpenWebUI / LiteLLM via the OpenAI-compatible gateway | [OpenAI-compatible gateway](#openai-compatible-gateway) (this file) |
 | Browse every package, sample, and reference | [`docs/index.md`](docs/index.md) |

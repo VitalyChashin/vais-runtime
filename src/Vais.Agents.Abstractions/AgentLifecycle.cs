@@ -22,10 +22,12 @@ public sealed record AgentHandle(string AgentId, string Version, string? Instanc
 /// <param name="Text">User-visible message for the agent to process.</param>
 /// <param name="SessionId">Optional session identifier. When null, the runtime chooses.</param>
 /// <param name="Metadata">Arbitrary flat metadata — correlation ids, tenant, tracing tags.</param>
+/// <param name="InitialHistory">Optional prior conversation turns to seed into the agent's history before processing <paramref name="Text"/>. When non-null, the agent resets its session and replays these turns first, enabling stateless multi-turn usage.</param>
 public sealed record AgentInvocationRequest(
     string Text,
     string? SessionId = null,
-    IReadOnlyDictionary<string, string>? Metadata = null);
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    IReadOnlyList<(string Role, string Content)>? InitialHistory = null);
 
 /// <summary>Result of an <see cref="IAgentLifecycleManager.InvokeAsync"/> call. Mirror shape of request.</summary>
 /// <param name="Text">Assistant-produced text.</param>

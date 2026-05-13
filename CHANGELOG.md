@@ -9,6 +9,21 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Added
+
+- **OpenAI-compatible agent and graph gateway (OC-1–OC-12).** `Vais.Agents.Gateways.OpenAiCompat` now exposes registered agents and graphs through a standard `POST /v1/chat/completions` + `GET /v1/models` surface, enabling tools such as OpenWebUI, LiteLLM, and Continue.dev to talk to the Vais.Agents runtime without modification.
+  - **OC-1** — `AgentInvocationRequest` gains an `InitialHistory` parameter (`IReadOnlyList<(string Role, string Content)>?`), enabling stateless multi-turn usage: each OpenAI call reseeds the agent session from the full message history, so edit and regenerate work correctly in any chat UI.
+  - **OC-2** — `StatefulAiAgent.InvokeAsync(AgentInvocationRequest)` overload: when `InitialHistory` is non-empty the session is reset and the history turns are replayed before processing the new user message.
+  - **OC-4** — `GET /v1/models` discovers `agent:<id>` entries from `IAgentRegistry` (optional) and `graph:<id>` entries from `IAgentGraphRegistry` (optional, opt-in only via the `vais.io/openai-compat-input-key` annotation).
+  - **OC-5** — `POST /v1/chat/completions` routing fork: `agent:` prefix → agent path; `graph:` prefix → graph path; all other model IDs → existing `IModelRouter` path.
+  - **OC-6** — Non-streaming agent dispatch: resolves `IAgentLifecycleManager`, seeds `InitialHistory` from all messages before the last user message, forwards `temperature`/`max_tokens`/`tools`/`tool_choice` as `oai.*` metadata keys.
+  - **OC-7** — Streaming agent dispatch: resolves `IAgentRuntime`, uses session keyed by `X-Session-Id` header (or new GUID), emits SSE via `IStreamingAiAgent` event stream (`CompletionDelta`, `TurnCompleted`, `TurnFailed`, `GuardrailTriggered`); falls back to single-chunk SSE for non-streaming agents.
+  - **OC-8** — Non-streaming graph dispatch: requires `vais.io/openai-compat-input-key` + `vais.io/openai-compat-output-key` annotations (returns `422` if absent); serializes messages as JSON input; extracts string or last-assistant-message output from `FinalState`.
+  - **OC-9** — Streaming graph dispatch: same annotation requirement; emits SSE from `IAgentGraphLifecycleManager.InvokeStreamAsync` (`NodeAgentInvoked` → content chunks, `GraphCompleted` → stop, `GraphFailed` → error content).
+  - **OC-10/OC-11** — `Vais.Agents.Control.Abstractions` added as project reference to both the gateway and its test project.
+  - **OC-12** — QUICKSTART.md gains a new **"OpenAI-compatible gateway"** section covering `Program.cs` registration, agent and graph invocation examples, the opt-in annotation YAML, `X-Session-Id` multi-turn streaming, caller-param forwarding, and OpenWebUI connection instructions.
+  - All new `IAgentRegistry`, `IAgentLifecycleManager`, `IAgentRuntime`, `IAgentGraphRegistry`, `IAgentGraphLifecycleManager` dependencies are optional (`GetService<T>()`), so existing deployments without these services registered continue to work.
+
 ### Changed
 
 - **README positioning enhancements.** Three new sections added to `agentic/README.md`: a **"Why Vais.Agents?"** block (4 bold-lead bullets that implicitly position against durable-workflow runtimes, JS/Python agent frameworks, bare SK/MAF library use, and sidecar-style runtimes — without naming alternatives); an **"Examples"** gallery (3 collapsible `<details>` blocks showing a declarative agent with MCP tool, a multi-agent graph, and library-mode embed — the third absorbs the former standalone "Embed in a .NET app" section to avoid duplication); a **"Built on / interoperates with"** two-column table (.NET 9 · Orleans · MEAI · ASP.NET Core · KubeOps · Spectre.Console / MAF · SK · OpenAI · Anthropic · Azure OpenAI · MCP · A2A · OpenTelemetry · Langfuse · Prometheus · OPA · Redis · Postgres). README grew from 261 to 336 lines (+75 net); the existing "Embed in a .NET app" standalone section was removed in favour of the gallery's item 3.
