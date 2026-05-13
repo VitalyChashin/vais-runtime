@@ -8,7 +8,5 @@ spec:
   image: vais-quickstart-planner:1.0
   port: 8080
   build:
-    context: ./
-    dockerfile: Dockerfile
-  secrets:
-    OPENAI_API_KEY: secret://env/OPENAI_API_KEY
+    context: ../../
+    dockerfile: samples/quickstart-python-planner/Dockerfile

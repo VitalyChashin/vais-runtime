@@ -1,16 +1,14 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Vais.Agents;
+using Vais.Agents.Core;
 
 namespace MyApp.TranslateAgent;
 
 /// <summary>
-/// Code-authored plugin agent that translates text to a target language using the
-/// OpenAI chat completions API. Demonstrates injecting IHttpClientFactory from the
+/// Code-authored plugin agent that translates text to a target language via the
+/// Vais.Agents LLM gateway. Demonstrates injecting ICompletionProvider from the
 /// runtime host DI container and reading agent-level config from the manifest's
 /// spec.properties bag.
 /// </summary>
@@ -26,11 +24,11 @@ namespace MyApp.TranslateAgent;
 public sealed class TranslateAgent : IAiAgent
 {
     private readonly InMemoryAgentSession _session = new(agentId: "translate", sessionId: "default");
-    private readonly IHttpClientFactory _httpFactory;
+    private readonly ICompletionProvider _provider;
 
-    public TranslateAgent(IHttpClientFactory httpFactory)
+    public TranslateAgent(ICompletionProvider provider)
     {
-        _httpFactory = httpFactory;
+        _provider = provider;
     }
 
     public string? SystemPrompt { get; set; }
@@ -44,36 +42,15 @@ public sealed class TranslateAgent : IAiAgent
         ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
 
         var targetLanguage = ExtractTargetLanguage(SystemPrompt) ?? "Spanish";
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-
-        if (string.IsNullOrWhiteSpace(apiKey))
+        var history = new[]
         {
-            var fallback = $"[TranslateAgent] No OPENAI_API_KEY set — would translate to {targetLanguage}: \"{userMessage}\"";
-            await RecordAsync(userMessage, fallback, cancellationToken);
-            return fallback;
-        }
-
-        var client = _httpFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", apiKey);
-
-        var body = new
-        {
-            model = "gpt-4o-mini",
-            messages = new[]
-            {
-                new { role = "system", content = $"Translate the user's message to {targetLanguage}. Return only the translated text, nothing else." },
-                new { role = "user",   content = userMessage }
-            }
+            new ChatTurn(AgentChatRole.System,
+                $"Translate the user's message to {targetLanguage}. Return only the translated text, nothing else."),
+            new ChatTurn(AgentChatRole.User, userMessage),
         };
-
-        var response = await client.PostAsJsonAsync(
-            "https://api.openai.com/v1/chat/completions", body, cancellationToken);
-
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadFromJsonAsync<CompletionResponse>(
-            JsonSerializerOptions.Default, cancellationToken) ?? throw new InvalidOperationException("Null response");
-
-        var reply = json.Choices[0].Message.Content;
+        var request = new CompletionRequest(history);
+        var response = await LlmGatewayPipeline.InvokeAsync(request, _provider, [], cancellationToken);
+        var reply = response.Text;
         await RecordAsync(userMessage, reply, cancellationToken);
         return reply;
     }
@@ -93,13 +70,4 @@ public sealed class TranslateAgent : IAiAgent
         var idx = systemPrompt.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         return idx < 0 ? null : systemPrompt[(idx + marker.Length)..].Trim();
     }
-
-    private sealed record CompletionResponse(
-        [property: JsonPropertyName("choices")] List<Choice> Choices);
-
-    private sealed record Choice(
-        [property: JsonPropertyName("message")] MessageContent Message);
-
-    private sealed record MessageContent(
-        [property: JsonPropertyName("content")] string Content);
 }

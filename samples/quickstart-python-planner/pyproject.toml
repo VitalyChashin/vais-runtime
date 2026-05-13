@@ -3,5 +3,5 @@ name = "quickstart-python-planner"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "openai >=1.40",
+  "vais-plugin>=0.1.0",
 ]

@@ -1,31 +1,19 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Vais.Agents;
 using Vais.Agents.Core;
-#pragma warning disable CA2000 // HttpClient intentionally not disposed per-agent (long-lived)
 
 namespace MyApp.ResearchPlannerAgent;
 
 /// <summary>
 /// Plugin agent that decomposes a user research query into 3–5 focused
-/// sub-questions via OpenAI. Output is plain text, one question per line —
-/// suitable as input to the LangGraph researcher node in the research pipeline.
+/// sub-questions via the Vais.Agents LLM gateway. Output is plain text, one
+/// question per line — suitable as input to the LangGraph researcher node in
+/// the research pipeline.
 /// </summary>
-/// <remarks>
-/// Reads <c>OPENAI_API_KEY</c> from the environment (set via the runtime compose
-/// env or a <c>secret://env/OPENAI_API_KEY</c> secret ref in the agent manifest).
-/// Falls back to a stub response if the key is absent so the plugin can be
-/// exercised without a live OpenAI account.
-/// </remarks>
 public sealed class ResearchPlannerAgent : IAiAgent
 {
-    private const string Model = "gpt-4o-mini";
-    private const string OpenAiEndpoint = "https://api.openai.com/v1/chat/completions";
-
     private static readonly string DefaultSystemPrompt = """
         You are a research planning expert. Break the user's topic into 3 to 5
         specific, focused sub-questions that together fully cover the subject.
@@ -35,18 +23,16 @@ public sealed class ResearchPlannerAgent : IAiAgent
         """;
 
     private readonly InMemoryAgentSession _session;
-    private readonly ICompletionProvider? _provider;
+    private readonly ICompletionProvider _provider;
     private readonly LlmGatewayMiddleware[] _middleware;
-    private readonly HttpClient? _http;
 
     public ResearchPlannerAgent(
-        ICompletionProvider? provider = null,
+        ICompletionProvider provider,
         IEnumerable<LlmGatewayMiddleware>? middleware = null)
     {
         _session = new InMemoryAgentSession(agentId: "research-planner", sessionId: Guid.NewGuid().ToString("N"));
         _provider = provider;
         _middleware = middleware?.ToArray() ?? [];
-        _http = _provider is null ? new HttpClient() : null;
     }
 
     /// <inheritdoc />
@@ -62,11 +48,7 @@ public sealed class ResearchPlannerAgent : IAiAgent
     public async Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
-
-        if (_provider is not null)
-            return await AskViaGatewayAsync(userMessage, cancellationToken);
-
-        return await AskViaHttpAsync(userMessage, cancellationToken);
+        return await AskViaGatewayAsync(userMessage, cancellationToken);
     }
 
     private async Task<string> AskViaGatewayAsync(string userMessage, CancellationToken cancellationToken)
@@ -79,45 +61,8 @@ public sealed class ResearchPlannerAgent : IAiAgent
             History: history,
             SystemPrompt: SystemPrompt ?? DefaultSystemPrompt);
 
-        var response = await LlmGatewayPipeline.InvokeAsync(request, _provider!, _middleware, cancellationToken);
+        var response = await LlmGatewayPipeline.InvokeAsync(request, _provider, _middleware, cancellationToken);
         var reply = response.Text;
-        await RecordAsync(userMessage, reply, cancellationToken);
-        return reply;
-    }
-
-    private async Task<string> AskViaHttpAsync(string userMessage, CancellationToken cancellationToken)
-    {
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            var stub = $"What are the key concepts in: {userMessage}?\n" +
-                       $"What are the main challenges related to: {userMessage}?\n" +
-                       $"What are recent developments regarding: {userMessage}?";
-            await RecordAsync(userMessage, stub, cancellationToken);
-            return stub;
-        }
-
-        var client = _http!;
-        client.DefaultRequestHeaders.Authorization = new("Bearer", apiKey);
-
-        var body = new
-        {
-            model = Model,
-            messages = new[]
-            {
-                new { role = "system", content = SystemPrompt ?? DefaultSystemPrompt },
-                new { role = "user",   content = userMessage }
-            }
-        };
-
-        var response = await client.PostAsJsonAsync(OpenAiEndpoint, body, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadFromJsonAsync<OpenAiCompletionResponse>(
-            JsonSerializerOptions.Default, cancellationToken)
-            ?? throw new InvalidOperationException("Null response from OpenAI");
-
-        var reply = json.Choices[0].Message.Content;
         await RecordAsync(userMessage, reply, cancellationToken);
         return reply;
     }
@@ -130,13 +75,4 @@ public sealed class ResearchPlannerAgent : IAiAgent
         await _session.AppendAsync(new ChatTurn(AgentChatRole.User, user), ct);
         await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, assistant), ct);
     }
-
-    private sealed record OpenAiCompletionResponse(
-        [property: JsonPropertyName("choices")] List<OpenAiChoice> Choices);
-
-    private sealed record OpenAiChoice(
-        [property: JsonPropertyName("message")] OpenAiMessage Message);
-
-    private sealed record OpenAiMessage(
-        [property: JsonPropertyName("content")] string Content);
 }
