@@ -14,7 +14,6 @@
     <OutputType>Library</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
