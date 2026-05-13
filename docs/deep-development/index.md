@@ -6,9 +6,9 @@ You'll author a C# plugin (in-process DLL), then a from-scratch LangGraph plugin
 
 ## Path
 
-1. **[C# plugin](../guides/package-an-agent-as-a-plugin.md)** — code-authored `IAiAgent` DLL, loaded at silo startup, supervised by the agent grain.
-2. **LangGraph plugin (from-scratch)** — *coming in Phase 3 of the docs reorganization.* Minimal LangGraph state graph (one node, one tool call) → IP-1 conformance → `vais apply`. A larger reference exists in [`samples/PluginAgentLangGraphResearcherLive/`](../../samples/PluginAgentLangGraphResearcherLive/) — useful as a worked example while the tutorial is being written.
-3. **Container plugin (Go worked example)** — *coming in Phase 3 of the docs reorganization.* The container plugin protocol (IP-1 HTTP) is language-neutral; this tutorial documents it generically and uses Go (`net/http`) as the worked example. No SDK required — any language that can serve HTTP can author a plugin.
+1. **[Author a C# plugin](author-a-csharp-plugin.md)** — code-authored `IAiAgent` DLL, loaded at silo startup, supervised by the agent grain.
+2. **[Build a LangGraph plugin](build-a-langgraph-plugin.md)** — minimal Python plugin with a real LangGraph state graph (`classify → respond`), packaged as a container, deployed via `vais apply`. A larger reference example: [`samples/PluginAgentLangGraphResearcherLive/`](../../samples/PluginAgentLangGraphResearcherLive/).
+3. **[Author a container plugin in Go](author-a-container-plugin-in-go.md)** — IP-1 HTTP protocol documented generically with Go (`net/http`) as the worked example. No SDK required — any language that can serve HTTP can author a plugin. Paired sample: [`samples/quickstart-go-plugin/`](../../samples/quickstart-go-plugin/).
 
 ## What you're really learning
 

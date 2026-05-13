@@ -1,0 +1,12 @@
+apiVersion: vais.agents/v1
+kind: ContainerPlugin
+metadata:
+  id: quickstart-go-plugin
+  version: "1.0"
+  description: Trivial Go container plugin demonstrating the IP-1 HTTP protocol.
+spec:
+  image: vais-quickstart-go-plugin:1.0
+  port: 8080
+  build:
+    context: .
+    dockerfile: Dockerfile
