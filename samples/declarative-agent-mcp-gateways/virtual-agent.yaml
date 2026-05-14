@@ -1,0 +1,27 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: virtual-agent
+  version: "1.0"
+  description: |
+    Binds a virtual MCP server with a single mcpServers[] entry — no tools[] required.
+    The runtime imports the virtual server's projected toolset automatically.
+spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a research assistant. Use the web_fetch tool to retrieve web content
+      and summarize findings concisely. Always cite the URL you fetched.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  llmGatewayRef: demo-llm-gateway
+  mcpServers:
+    - name: virtual-fetch
+      transport: registered   # binding the virtual server imports its projected toolset
+  # No tools[] needed — the virtual server's toolProjection is the curation boundary.
+  budget:
+    maxTurns: 5

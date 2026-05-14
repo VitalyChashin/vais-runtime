@@ -3,6 +3,16 @@
 Deploy a research agent that uses declarative LLM and MCP gateway pipelines. Zero C# — every
 governance, observability, and reliability behaviour is configured in YAML manifests.
 
+Two variants are included:
+
+| Variant | Agent manifest | How tools arrive |
+|---|---|---|
+| **Explicit** (original) | `research-agent.yaml` | Each tool listed in `tools[]` |
+| **Virtual server** | `virtual-agent.yaml` | One `mcpServers[]` line; `tools[]` not needed |
+
+The virtual-server variant demonstrates the IBM Context Forge-compatible consumption model: curate
+the toolset once in `virtual-fetch.yaml`, then bind it with a single line in every agent that needs it.
+
 **Concepts:** [gateway config control plane](../../docs/concepts/gateway-config-control-plane.md),
 [declarative agents](../../docs/concepts/declarative-agents.md).
 **Needs API key:** yes — `OPENAI_API_KEY` (agent uses `gpt-4o-mini`).
@@ -71,6 +81,8 @@ vais config use-context local
 Gateway configs and the registered MCP server must be applied **before** the agent, because
 `POST /v1/agents` eagerly validates `llmGatewayRef` and `mcpGatewayRef` against the registries.
 
+**Explicit-tools variant (original):**
+
 ```bash
 vais apply -f llm-gateway.yaml
 # applied LlmGatewayConfig demo-llm-gateway@1.0
@@ -85,10 +97,29 @@ vais apply -f research-agent.yaml
 # applied Agent research-agent@1.0
 ```
 
+**Virtual-server variant** — adds a virtual server that curates the backend, and an agent that
+consumes it with a single `mcpServers[]` line and no `tools[]`:
+
+```bash
+vais apply -f llm-gateway.yaml
+vais apply -f mcp-gateway.yaml
+vais apply -f fetch-server.yaml       # physical upstream
+
+vais apply -f virtual-fetch.yaml      # virtual server curates fetch → web_fetch
+# applied McpServer virtual-fetch@1.0
+
+vais apply -f virtual-agent.yaml      # binds the virtual server; no tools[] needed
+# applied Agent virtual-agent@1.0
+```
+
 ### 3. Invoke
 
 ```bash
+# Explicit variant
 vais invoke research-agent --text "What is Model Context Protocol?"
+
+# Virtual-server variant
+vais invoke virtual-agent --text "What is Model Context Protocol?"
 ```
 
 Stream token-by-token:
@@ -109,12 +140,14 @@ vais get mcp-gateways
 # demo-mcp-governance   1.0
 
 vais get mcp-servers
-# NAME        VERSION  VIRTUAL
-# mcp-fetch   1.0      false
+# NAME             VERSION  VIRTUAL
+# mcp-fetch        1.0      false
+# virtual-fetch    1.0      true    ← only when virtual-fetch.yaml was applied
 
 vais get agents
 # NAME              VERSION  STATUS
 # research-agent    1.0      Active
+# virtual-agent     1.0      Active  ← only when virtual-agent.yaml was applied
 ```
 
 ---
@@ -153,9 +186,9 @@ Registers the `mcp-fetch` container as a known MCP server. Setting `mcpGatewayRe
 `mcpGatewayRef`. Because `research-agent` sets its own `mcpGatewayRef`, the agent-level gateway
 wins (one active tool pipeline per agent at any time).
 
-### `research-agent.yaml` — Agent
+### `research-agent.yaml` — Agent (explicit-tools variant)
 
-Binds to both gateway configs:
+Binds to both gateway configs. Lists each tool explicitly in `tools[]` — the pre-existing pattern:
 
 ```yaml
 llmGatewayRef: demo-llm-gateway     # per-agent LLM pipeline
@@ -165,11 +198,43 @@ mcpServers:
     transport: registered            # look up server in IMcpServerRegistry
 tools:
   - name: fetch
-    source: mcp:mcp-fetch
+    source: mcp:mcp-fetch            # explicit: only this tool imported from mcp-fetch
 ```
 
 `transport: registered` tells the translator to expand the server ref from `IMcpServerRegistry`
 at grain activation time rather than connecting directly from the manifest URL.
+
+### `virtual-fetch.yaml` — McpServer (virtual)
+
+A virtual `McpServer` that aggregates `mcp-fetch` and curates its toolset via `toolProjection`:
+
+```yaml
+spec:
+  virtual: true
+  sources:
+    - ref: mcp-fetch             # upstream physical server
+  toolProjection:
+    - name: web_fetch            # published name the model sees
+      from: mcp-fetch
+      sourceToolName: fetch      # source name on mcp-fetch
+```
+
+The projection renames `fetch` → `web_fetch`. Consumers of this virtual server see `web_fetch` only,
+regardless of how many tools `mcp-fetch` exposes. This is the curation boundary.
+
+### `virtual-agent.yaml` — Agent (virtual-server variant)
+
+Binds only the virtual server. No `tools[]` entry needed — the runtime imports the projected toolset:
+
+```yaml
+mcpServers:
+  - name: virtual-fetch
+    transport: registered        # binding imports the virtual server's projected toolset
+# No tools[] — web_fetch arrives automatically from virtual-fetch's toolProjection
+```
+
+This is the IBM Context Forge-compatible consumption model: curate once in the virtual server,
+consume everywhere with a single line.
 
 ---
 

@@ -111,10 +111,7 @@ spec:
   mcpGatewayRef: observable-mcp-gateway      # ← agent's tool calls flow through this
   mcpServers:
     - name: mcp-fetch
-      transport: registered                  # ← reference the registered server above
-  tools:
-    - name: fetch
-      source: mcp:mcp-fetch                  # ← from the mcp-fetch server
+      transport: registered                  # ← binding the server imports its full toolset
   budget:
     maxTurns: 5
 ```
@@ -122,6 +119,33 @@ spec:
 ```bash
 vais apply -f researcher.yaml
 ```
+
+**Binding a server imports its toolset.** When a `transport: registered` entry has no matching `tools[]` entry, the runtime is in **import-all mode**: every tool the server exposes is imported automatically. For `mcp-fetch` that means the `fetch` tool, without any per-tool declaration in the agent manifest.
+
+### Mode selection (D1)
+
+How the runtime decides which mode a server is in, per server:
+
+| Condition | Mode | What resolves |
+|---|---|---|
+| No `tools[]` entry with `source: mcp:<serverName>` | **Import-all** | Every tool the server exposes |
+| At least one `tools[]` entry with `source: mcp:<serverName>` | **Explicit** | Only the tools listed in `tools[]` |
+
+Explicit mode is the pre-existing behavior and is unchanged — every existing manifest keeps working exactly as before.
+
+### Narrowing the import
+
+If you want only a subset of the server's tools, add a `tools` allowlist directly on the `mcpServers` entry (not in `tools[]`):
+
+```yaml
+mcpServers:
+  - name: mcp-fetch
+    transport: registered
+    tools:
+      - fetch         # import only this tool; the server may expose others
+```
+
+Any name in the allowlist that the server does not expose fails at apply time with `urn:vais-agents:mcp-tool-not-found`.
 
 ## Step 4 — Invoke and observe
 
@@ -164,7 +188,7 @@ Around the 30th call you'll see `ToolRateLimitExceeded` outcomes flowing back to
 
 - A reusable `McpGatewayConfig` covering logging, tracing, rate limiting, and result truncation.
 - An `McpServer` registration that any agent can reference by `name`.
-- A `researcher` agent that calls `fetch` through the gateway — every call observable, rate-limited, and capped, with zero per-tool code.
+- A `researcher` agent that binds `mcp-fetch` in one line and automatically gets its full toolset — every call observable, rate-limited, and capped, with zero per-tool enumeration.
 
 ## Next
 

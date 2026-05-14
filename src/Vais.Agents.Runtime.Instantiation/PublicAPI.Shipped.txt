@@ -106,3 +106,4 @@ static Vais.Agents.Runtime.Instantiation.Guardrails.BuiltinGuardrailsServiceColl
 static Vais.Agents.Runtime.Instantiation.ModelProviders.BuiltinModelProvidersServiceCollectionExtensions.AddBuiltinModelProviders(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpServerUnavailable = "urn:vais-agents:mcp-server-unavailable" -> string!
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpToolNotFound = "urn:vais-agents:mcp-tool-not-found" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpToolNameCollision = "urn:vais-agents:mcp-tool-name-collision" -> string!

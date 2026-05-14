@@ -11,6 +11,13 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **MCP virtual-server binding parity (VSB-1–VSB-5, VSB-6).** Binding a `transport: registered` MCP server in `mcpServers[]` now imports that server's full toolset without requiring any `tools[]` entries. This closes the consumption-model gap with IBM Context Forge's virtual-server model.
+  - **VSB-1** — `AgentManifestTranslator.ResolveToolsAsync` gains an import-all path. When a `transport: registered` server has no `tools[]` entry referencing it (D1 presence-gated rule), every tool the server exposes is imported automatically. Physical servers are resolved via `INamedToolSourceProvider`; virtual servers use the pre-built `VirtualMcpToolSource`.
+  - **VSB-2** — `McpServerRef.Tools` allowlist on the `mcpServers[]` entry narrows the import in import-all mode. Every allowlisted name must exist; absent names throw `urn:vais-agents:mcp-tool-not-found` at apply time.
+  - **VSB-3** — Two import-all servers exposing the same tool name throw `urn:vais-agents:mcp-tool-name-collision` at apply time naming both servers. Explicit-vs-explicit collisions retain the existing first-wins behavior. Adding any explicit `tools[]` entry for one of the colliding servers switches it to explicit mode (D1), resolving the collision.
+  - **Backward compatible** — every existing manifest that lists `tools[]` entries with `source: mcp:<name>` continues to work identically (explicit mode). The shipped `declarative-agent-mcp-gateways` sample is unchanged.
+  - **Docs** — `wire-the-mcp-gateway.md` rewritten to lead with the one-line bind model; `gateway-config-control-plane.md` gains a two-axis explainer (`McpServer` = what tools, `McpGatewayConfig` = what policy).
+
 - **OpenAI-compatible agent and graph gateway (OC-1–OC-12).** `Vais.Agents.Gateways.OpenAiCompat` now exposes registered agents and graphs through a standard `POST /v1/chat/completions` + `GET /v1/models` surface, enabling tools such as OpenWebUI, LiteLLM, and Continue.dev to talk to the Vais.Agents runtime without modification.
   - **OC-1** — `AgentInvocationRequest` gains an `InitialHistory` parameter (`IReadOnlyList<(string Role, string Content)>?`), enabling stateless multi-turn usage: each OpenAI call reseeds the agent session from the full message history, so edit and regenerate work correctly in any chat UI.
   - **OC-2** — `StatefulAiAgent.InvokeAsync(AgentInvocationRequest)` overload: when `InitialHistory` is non-empty the session is reset and the history turns are replayed before processing the new user message.

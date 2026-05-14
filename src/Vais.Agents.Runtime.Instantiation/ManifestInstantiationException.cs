@@ -93,4 +93,11 @@ public static class ManifestInstantiationUrns
 
     /// <summary>Apply-time WARN — manifest has both a loaded-plugin <c>handler.TypeName</c> AND declarative <c>Model</c> fields. Plugin wins; declarative fields ignored. v0.18 Pillar C.</summary>
     public const string HandlerAndDeclarativeFieldsBothSet = UrnPrefix + "handler-and-declarative-fields-both-set";
+
+    /// <summary>
+    /// Two import-all registered servers expose the same tool name. At least one server must use
+    /// <c>McpServerRef.Tools</c> to narrow its import, or an explicit <c>tools[]</c> entry must
+    /// put one server into explicit mode (D1).
+    /// </summary>
+    public const string McpToolNameCollision = UrnPrefix + "mcp-tool-name-collision";
 }

@@ -1,0 +1,17 @@
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: virtual-fetch
+  version: "1.0"
+  description: |
+    Virtual MCP server that curates the mcp-fetch backend.
+    Consumers bind this server and receive the projected toolset — no per-tool enumeration required.
+spec:
+  virtual: true
+  sources:
+    - ref: mcp-fetch          # upstream physical server registered in this sample
+  toolProjection:
+    - name: web_fetch         # published name the agent's model sees
+      from: mcp-fetch
+      sourceToolName: fetch   # source tool name on mcp-fetch
+  mcpGatewayRef: demo-mcp-governance

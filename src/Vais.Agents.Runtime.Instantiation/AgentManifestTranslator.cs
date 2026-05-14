@@ -384,19 +384,32 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IReadOnlyDictionary<string, IToolSource> registeredSources,
         CancellationToken cancellationToken)
     {
-        if (manifest.Tools is null || manifest.Tools.Count == 0)
+        // D1: a registered server is in explicit mode if any tools[] entry has source == "mcp:<serverName>".
+        // All other transport:registered servers are in import-all mode.
+        var explicitServers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var toolRef in manifest.Tools ?? [])
         {
-            return null;
+            if (toolRef.Source?.StartsWith("mcp:", StringComparison.Ordinal) == true)
+                explicitServers.Add(toolRef.Source["mcp:".Length..]);
         }
 
-        var resolved = new List<ITool>();
+        var importAllRefs = manifest.McpServers?
+            .Where(s => s.Transport == McpServerRef.RegisteredTransport && !explicitServers.Contains(s.Name))
+            .ToList() ?? [];
+
+        if ((manifest.Tools is null || manifest.Tools.Count == 0) && importAllRefs.Count == 0)
+            return null;
+
         // Per-call caches so each server's IToolSource and discovered tool list is fetched once.
-        // Pre-populate with registered sources (transport:registered expansions take priority).
+        // Pre-populate with registered sources (transport:registered virtual → VirtualMcpToolSource).
         var mcpSourceCache = new Dictionary<string, IToolSource?>(StringComparer.Ordinal);
         foreach (var kv in registeredSources) mcpSourceCache[kv.Key] = kv.Value;
         var mcpToolsCache = new Dictionary<string, List<ITool>>(StringComparer.Ordinal);
 
-        foreach (var toolRef in manifest.Tools)
+        // --- Phase 1: explicit tools[] entries ---
+        var resolved = new List<ITool>();
+
+        foreach (var toolRef in manifest.Tools ?? [])
         {
             var source = toolRef.Source ?? string.Empty;
 
@@ -516,14 +529,104 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             }
         }
 
-        if (resolved.Count == 0)
+        // --- Phase 2: import-all mode (D1) — registered servers with no explicit tools[] entry ---
+        var importAllResolved = await ResolveImportAllToolsAsync(
+            importAllRefs, mcpSourceCache, mcpToolsCache, cancellationToken).ConfigureAwait(false);
+
+        // D3: fail-fast when two import-all servers expose the same tool name.
+        // Explicit-vs-explicit and explicit-vs-import-all collisions use first-wins (AggregatingToolRegistry).
+        var importAllNames = new Dictionary<string, string>(StringComparer.Ordinal); // toolName → serverName
+        foreach (var (tool, serverName) in importAllResolved)
         {
-            return null;
+            if (!importAllNames.TryAdd(tool.Name, serverName))
+            {
+                var existingServer = importAllNames[tool.Name];
+                throw new ManifestInstantiationException(
+                    ManifestInstantiationUrns.McpToolNameCollision,
+                    $"Tool name '{tool.Name}' is exposed by multiple import-all servers: " +
+                    $"'{existingServer}' and '{serverName}'. " +
+                    "Narrow one server using McpServerRef.Tools, or add an explicit tools[] entry to put it in explicit mode.");
+            }
         }
 
+        // Explicit tools first — they win over import-all tools on name collision (first-wins).
+        var allTools = new List<ITool>(resolved.Count + importAllResolved.Count);
+        allTools.AddRange(resolved);
+        allTools.AddRange(importAllResolved.Select(x => x.Tool));
+
+        if (allTools.Count == 0)
+            return null;
+
         return await AggregatingToolRegistry
-            .BuildAsync(resolved, sources: null, cancellationToken)
+            .BuildAsync(allTools, sources: null, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    // D1 import-all phase: for each registered server not in explicit mode, discover and import
+    // its full toolset (narrowed by McpServerRef.Tools allowlist when specified — D2).
+    private async ValueTask<List<(ITool Tool, string ServerName)>> ResolveImportAllToolsAsync(
+        List<McpServerRef> importAllRefs,
+        Dictionary<string, IToolSource?> mcpSourceCache,
+        Dictionary<string, List<ITool>> mcpToolsCache,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<(ITool Tool, string ServerName)>();
+
+        foreach (var serverRef in importAllRefs)
+        {
+            var serverName = serverRef.Name;
+
+            // Resolve IToolSource: virtual servers are pre-populated in mcpSourceCache from
+            // registeredSources; physical servers are resolved lazily via INamedToolSourceProvider.
+            if (!mcpSourceCache.TryGetValue(serverName, out var toolSource))
+            {
+                foreach (var provider in _toolSourceProviders)
+                {
+                    toolSource = provider.GetByName(serverName);
+                    if (toolSource is not null) break;
+                }
+                mcpSourceCache[serverName] = toolSource;
+            }
+
+            if (toolSource is null)
+            {
+                throw new ManifestInstantiationException(
+                    ManifestInstantiationUrns.McpServerUnavailable,
+                    $"MCP server '{serverName}' is declared but unavailable. " +
+                    $"No INamedToolSourceProvider has a ready source for '{serverName}'.");
+            }
+
+            if (!mcpToolsCache.TryGetValue(serverName, out var discoveredTools))
+            {
+                discoveredTools = [];
+                await foreach (var t in toolSource.DiscoverAsync(cancellationToken).ConfigureAwait(false))
+                    discoveredTools.Add(t);
+                mcpToolsCache[serverName] = discoveredTools;
+            }
+
+            // D2: McpServerRef.Tools allowlist narrows the import. Every allowlisted name must exist.
+            if (serverRef.Tools is { Count: > 0 })
+            {
+                var allowSet = new HashSet<string>(serverRef.Tools, StringComparer.Ordinal);
+                foreach (var allowedName in serverRef.Tools)
+                {
+                    if (!discoveredTools.Any(t => string.Equals(t.Name, allowedName, StringComparison.Ordinal)))
+                        throw new ManifestInstantiationException(
+                            ManifestInstantiationUrns.McpToolNotFound,
+                            $"Tool '{allowedName}' in McpServerRef.Tools allowlist for server '{serverName}' " +
+                            $"was not found. Available: [{string.Join(", ", discoveredTools.Select(t => t.Name))}].");
+                }
+                foreach (var tool in discoveredTools.Where(t => allowSet.Contains(t.Name)))
+                    result.Add((tool, serverName));
+            }
+            else
+            {
+                foreach (var tool in discoveredTools)
+                    result.Add((tool, serverName));
+            }
+        }
+
+        return result;
     }
 
     // Wraps the host IServiceProvider to surface a pre-built ICompletionProvider so that

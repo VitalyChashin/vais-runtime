@@ -72,6 +72,17 @@ spec:
   mcpGatewayRef: prod-mcp-governance   # fallback gateway when agent has none
 ```
 
+## Two orthogonal axes
+
+The MCP surface is two independent resources with distinct responsibilities:
+
+| Resource | Controls | Does NOT own |
+|---|---|---|
+| `McpServer` (incl. `virtual: true`) | **What tools** the agent receives | Policy, middleware, rate limits |
+| `McpGatewayConfig` | **What policy/middleware** governs tool calls | Server catalog, connection details |
+
+These are intentionally separate. One governance pipeline can span many server sets; one server set can be reused across pipelines. Do **not** confuse `McpGatewayConfig` with an IBM Context Forge-style federation gateway — it is a middleware chain only, not a server catalog.
+
 ## Binding an agent
 
 An agent manifest references a gateway config by `id`:
@@ -82,10 +93,12 @@ spec:
   mcpGatewayRef: prod-mcp-governance
   mcpServers:
     - name: my-fetch-server
-      transport: registered             # resolved from IMcpServerRegistry
+      transport: registered             # binding this server imports its full toolset
 ```
 
 `POST /v1/agents` eagerly validates both refs against the live registries. Unknown ref → `422 urn:vais-agents:llm-gateway-ref-not-found` / `mcp-gateway-ref-not-found`.
+
+**Binding a `transport: registered` server is sufficient to import its toolset.** No `tools[]` entry is required. If you want only a subset, add `tools: [name1, name2]` on the `mcpServers` entry (the allowlist), or add explicit `tools[]` entries (explicit mode).
 
 ## Apply order
 
@@ -125,8 +138,17 @@ The `ToolWorkspacePolicy` entry is a sentinel: the translator intercepts it, con
 
 Server entries with `transport: registered` are resolved from `IMcpServerRegistry` at translation time rather than connected directly from the manifest URL. Two resolution paths:
 
-- **Physical server** — delegates to `INamedToolSourceProvider` (e.g. a running Python plugin supervisor).
+- **Physical server** — delegates to `INamedToolSourceProvider` (e.g. a running Python plugin supervisor or `PhysicalMcpConnectionService`).
 - **Virtual server** — `VirtualMcpToolSource` aggregates N upstream `IToolSource` instances with optional tool projection (`McpServerToolProjection`) and rename support.
+
+**Import-all vs. explicit mode (D1).** For each `transport: registered` entry the translator applies a presence-gated rule:
+
+- **Import-all** (default) — if no `tools[]` entry has `source: mcp:<serverName>`, the server's full discovered toolset is imported. This is the recommended path when binding a virtual server.
+- **Explicit** — if at least one `tools[]` entry references the server via `source: mcp:<serverName>`, only those named tools are resolved (existing behavior, unchanged).
+
+The `McpServerRef.Tools` allowlist (on the `mcpServers` entry) narrows the import in either mode. Allowlisted names that the server does not expose throw `urn:vais-agents:mcp-tool-not-found` at apply time.
+
+Collision between two import-all servers on the same tool name throws `urn:vais-agents:mcp-tool-name-collision`; an explicit `tools[]` entry on one of them resolves the collision by switching that server to explicit mode.
 
 ## HTTP API
 

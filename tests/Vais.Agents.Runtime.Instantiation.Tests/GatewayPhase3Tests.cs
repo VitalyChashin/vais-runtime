@@ -328,6 +328,267 @@ public class GatewayPhase3Tests
             .WithMessage("*missing-mcp-gw*");
     }
 
+    // ── Tests 13–20: Option B import-all mode (VSB-1 / VSB-2 / VSB-3) ──────────
+
+    [Fact]
+    public async Task ImportAll_Virtual_Server_No_Tools_Entry_Imports_All_Tools()
+    {
+        var upstreamSource = new FakeToolSource(new FakeTool("tool-a"), new FakeTool("tool-b"));
+        var provider = new FakeNamedToolSourceProvider(("upstream", upstreamSource));
+
+        var virtualManifest = new McpServerManifest("virtual-srv", "1")
+        {
+            Virtual = true,
+            Sources = new[] { new McpServerSourceRef("upstream") },
+        };
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("virtual-srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(virtualManifest));
+
+        // No tools[] → import-all mode
+        var manifest = BuildManifest(
+            mcpServers: new[] { new McpServerRef("virtual-srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Select(t => t.Name)
+            .Should().BeEquivalentTo(new[] { "tool-a", "tool-b" });
+    }
+
+    [Fact]
+    public async Task ImportAll_Physical_Server_No_Tools_Entry_Imports_All_Tools()
+    {
+        var source = new FakeToolSource(new FakeTool("search"), new FakeTool("fetch"));
+        var provider = new FakeNamedToolSourceProvider(("physical-srv", source));
+
+        var serverManifest = new McpServerManifest("physical-srv", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("physical-srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        // No tools[] → import-all mode
+        var manifest = BuildManifest(
+            mcpServers: new[] { new McpServerRef("physical-srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Select(t => t.Name)
+            .Should().BeEquivalentTo(new[] { "search", "fetch" });
+    }
+
+    [Fact]
+    public async Task ImportAll_Explicit_Tools_Entry_Keeps_Explicit_Mode_Backward_Compat()
+    {
+        // D1: any tools[] entry referencing the server puts it in explicit mode → only listed tools.
+        var source = new FakeToolSource(new FakeTool("search"), new FakeTool("fetch"), new FakeTool("analyze"));
+        var provider = new FakeNamedToolSourceProvider(("srv", source));
+
+        var serverManifest = new McpServerManifest("srv", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var manifest = BuildManifest(
+            tools: new[] { new ToolRef("search", "mcp:srv") },
+            mcpServers: new[] { new McpServerRef("srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Should().ContainSingle(t => t.Name == "search");
+    }
+
+    [Fact]
+    public async Task ImportAll_McpServerRef_Tools_Allowlist_Narrows_Import()
+    {
+        // D2: McpServerRef.Tools allowlist restricts the import to only those tool names.
+        var source = new FakeToolSource(
+            new FakeTool("tool-1"), new FakeTool("tool-2"), new FakeTool("tool-3"),
+            new FakeTool("tool-4"), new FakeTool("tool-5"));
+        var provider = new FakeNamedToolSourceProvider(("srv", source));
+
+        var serverManifest = new McpServerManifest("srv", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var manifest = BuildManifest(
+            mcpServers: new[]
+            {
+                new McpServerRef("srv", McpServerRef.RegisteredTransport,
+                    Tools: new[] { "tool-1", "tool-3" }),
+            });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Select(t => t.Name)
+            .Should().BeEquivalentTo(new[] { "tool-1", "tool-3" });
+    }
+
+    [Fact]
+    public async Task ImportAll_McpServerRef_Tools_Allowlist_Missing_Tool_Throws_McpToolNotFound()
+    {
+        // D2: an allowlisted name not exposed by the server → McpToolNotFound.
+        var source = new FakeToolSource(new FakeTool("a"), new FakeTool("b"), new FakeTool("c"));
+        var provider = new FakeNamedToolSourceProvider(("srv", source));
+
+        var serverManifest = new McpServerManifest("srv", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var manifest = BuildManifest(
+            mcpServers: new[]
+            {
+                new McpServerRef("srv", McpServerRef.RegisteredTransport,
+                    Tools: new[] { "a", "ghost-tool" }),
+            });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var act = async () => await fixture.Translator.TranslateAsync(AgentId);
+
+        await act.Should().ThrowAsync<ManifestInstantiationException>()
+            .Where(e => e.Urn == ManifestInstantiationUrns.McpToolNotFound)
+            .WithMessage("*ghost-tool*");
+    }
+
+    [Fact]
+    public async Task ImportAll_Two_Servers_Shared_Tool_Name_Throws_McpToolNameCollision()
+    {
+        // D3: two import-all servers sharing a tool name → McpToolNameCollision naming both.
+        var sourceA = new FakeToolSource(new FakeTool("foo"), new FakeTool("bar"));
+        var sourceB = new FakeToolSource(new FakeTool("foo"), new FakeTool("baz"));
+        var provider = new FakeNamedToolSourceProvider(
+            ("server-a", sourceA),
+            ("server-b", sourceB));
+
+        var manifestA = new McpServerManifest("server-a", "1");
+        var manifestB = new McpServerManifest("server-b", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("server-a", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(manifestA));
+        serverRegistry.GetAsync("server-b", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(manifestB));
+
+        var manifest = BuildManifest(mcpServers: new[]
+        {
+            new McpServerRef("server-a", McpServerRef.RegisteredTransport),
+            new McpServerRef("server-b", McpServerRef.RegisteredTransport),
+        });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var act = async () => await fixture.Translator.TranslateAsync(AgentId);
+
+        await act.Should().ThrowAsync<ManifestInstantiationException>()
+            .Where(e => e.Urn == ManifestInstantiationUrns.McpToolNameCollision)
+            .WithMessage("*foo*")
+            .WithMessage("*server-a*")
+            .WithMessage("*server-b*");
+    }
+
+    [Fact]
+    public async Task ImportAll_Explicit_Entry_Puts_Server_In_Explicit_Mode_No_Collision()
+    {
+        // D1 + D3: explicit tools[] entry on server-a puts it in explicit mode.
+        // server-a: explicit → only "bar" imported; server-b: import-all → "foo" + "baz".
+        // No collision because server-a no longer contributes "foo" via import-all.
+        var sourceA = new FakeToolSource(new FakeTool("foo"), new FakeTool("bar"));
+        var sourceB = new FakeToolSource(new FakeTool("foo"), new FakeTool("baz"));
+        var provider = new FakeNamedToolSourceProvider(
+            ("server-a", sourceA),
+            ("server-b", sourceB));
+
+        var manifestA = new McpServerManifest("server-a", "1");
+        var manifestB = new McpServerManifest("server-b", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("server-a", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(manifestA));
+        serverRegistry.GetAsync("server-b", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(manifestB));
+
+        var manifest = BuildManifest(
+            tools: new[] { new ToolRef("bar", "mcp:server-a") },
+            mcpServers: new[]
+            {
+                new McpServerRef("server-a", McpServerRef.RegisteredTransport),
+                new McpServerRef("server-b", McpServerRef.RegisteredTransport),
+            });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Select(t => t.Name)
+            .Should().BeEquivalentTo(new[] { "bar", "foo", "baz" });
+    }
+
+    [Fact]
+    public async Task ImportAll_Mixed_With_Static_Tool_All_Resolve()
+    {
+        // import-all registered server + explicit static: tool → both resolve together.
+        var source = new FakeToolSource(new FakeTool("search"));
+        var provider = new FakeNamedToolSourceProvider(("srv", source));
+        var staticTool = new FakeTool("calculate");
+
+        var serverManifest = new McpServerManifest("srv", "1");
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        // tools[] has only the static tool — "srv" has no mcp: entry → import-all mode for srv.
+        var manifest = BuildManifest(
+            tools: new[] { new ToolRef("calculate", "static:calculate") },
+            mcpServers: new[] { new McpServerRef("srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithToolSourceProvider(provider)
+            .WithStaticTool("calculate", staticTool);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolRegistry.Should().NotBeNull();
+        options.ToolRegistry!.Tools.Select(t => t.Name)
+            .Should().BeEquivalentTo(new[] { "calculate", "search" });
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static async Task<List<ITool>> CollectToolsAsync(IToolSource source)

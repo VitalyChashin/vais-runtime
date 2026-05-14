@@ -176,6 +176,18 @@ public sealed class GatewayConfigEndpointTests : IAsyncLifetime
         resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
+    // VSB-4: registered-server-only agent (no tools[]) accepted when server exists
+    [Fact]
+    public async Task CreateAgent_RegisteredServerOnly_NoToolsEntry_Returns201()
+    {
+        await _serverRegistry.RegisterAsync(new McpServerManifest("srv-exists", "1.0"));
+
+        var content = new StringContent(AgentEnvelope("agent-d", mcpServerName: "srv-exists"), Encoding.UTF8, "application/json");
+        using var resp = await _http.PostAsync("/v1/agents", content);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
     // ── Fake infrastructure ───────────────────────────────────────────────────
 
     private sealed class FakeAgentLifecycleManager : IAgentLifecycleManager
