@@ -2,7 +2,6 @@
 name = "vais-plugin"
 version = "0.1.0"
 description = "Python SDK for building Vais.Agents container plugins. Implements the IP-1 container plugin protocol."
-readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi >=0.115,<1",

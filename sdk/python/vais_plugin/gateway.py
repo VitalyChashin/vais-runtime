@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator
 
 import httpx
 
-from .models import Message, RequestContext, ToolCall, ToolResult, UsageCounts
+from .models import Message, RequestContext, ToolCall, UsageCounts
 
 
 @dataclass
