@@ -44,7 +44,7 @@ metadata:
   id: weather
 spec:
   handler:
-    typeName: MyApp.WeatherAgent
+    typeName: MyApp.WeatherAgent.WeatherAgent
   protocols:
     - kind: Http
   tools: []
@@ -52,7 +52,7 @@ spec:
 
 ```bash
 vais apply -f weather.yaml
-vais invoke weather -m "hello"
+vais invoke weather --text "hello"
 # → "Sunny!"
 ```
 
