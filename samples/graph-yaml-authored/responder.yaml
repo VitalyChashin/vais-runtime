@@ -8,6 +8,7 @@ spec:
   model:
     provider: openai
     id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You are a helpful assistant. Answer the user's question in 2-3 sentences.

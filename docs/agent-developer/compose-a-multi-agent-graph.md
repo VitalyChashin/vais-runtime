@@ -29,6 +29,7 @@ spec:
   model:
     provider: openai
     id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You are an intent classifier. Given a user message, respond with exactly one word:
@@ -61,6 +62,7 @@ spec:
   model:
     provider: openai
     id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You are a helpful assistant. Answer the user's question in 2-3 sentences.
@@ -81,9 +83,9 @@ Verify both are registered:
 
 ```bash
 vais get
-# NAME          VERSION   STATUS   AGE
-# classifier    1.0       Active   …
-# responder     1.0       Active   …
+# ID            VERSION   DESCRIPTION                           LABELS
+# classifier    1.0       Classifies user intent...             -
+# responder     1.0       Generates the final answer...         -
 ```
 
 ## Part 2 — Compose the graph
@@ -122,8 +124,8 @@ spec:
 ```bash
 vais apply -f qa-pipeline.yaml
 vais get-graphs
-# NAME          VERSION   STATUS   AGE
-# qa-pipeline   1.0       Active   …
+# ID            VERSION   ENTRY      NODES   DESCRIPTION                         LABELS
+# qa-pipeline   1.0       classify   3       Classify intent, then generate...   -
 ```
 
 ## Part 3 — Invoke and observe
@@ -153,17 +155,21 @@ vais invoke-graph qa-pipeline \
 You'll see the structured event sequence:
 
 ```
-graph.started   qa-pipeline
-node.started    classify
-node.completed  classify
-edge.traversed  classify → respond
-node.started    respond
-node.completed  respond
-edge.traversed  respond → end
-graph.completed qa-pipeline
+▶ graph.started  HH:MM:SS.mmm  qa-pipeline v1.0  run=<runId>
+▷ node.started   HH:MM:SS.mmm  step=0  classify (classify)
+~ state.updated  HH:MM:SS.mmm  step=0  [lastAssistantText, messages]
+→ edge.traversed HH:MM:SS.mmm  step=0  classify → respond
+◁ node.completed HH:MM:SS.mmm  step=0  classify (Nms)
+▷ node.started   HH:MM:SS.mmm  step=1  respond (respond)
+~ state.updated  HH:MM:SS.mmm  step=1  [lastAssistantText, messages]
+→ edge.traversed HH:MM:SS.mmm  step=1  respond → end
+◁ node.completed HH:MM:SS.mmm  step=1  respond (Nms)
+▷ node.started   HH:MM:SS.mmm  step=2  end (end)
+◁ node.completed HH:MM:SS.mmm  step=2  end (Nms)
+■ graph.completed HH:MM:SS.mmm step=3  final=end (Nms)
 ```
 
-Each `node.completed` event carries the agent's response text in `payload.lastAssistantText`.
+Each step emits `state.updated` (containing `lastAssistantText` and any bound output keys) before the outbound `edge.traversed` and final `node.completed`. The `end` node also emits `node.started`/`node.completed`.
 
 ### Tail graph events without invoking
 

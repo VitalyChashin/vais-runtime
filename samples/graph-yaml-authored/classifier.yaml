@@ -8,6 +8,7 @@ spec:
   model:
     provider: openai
     id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You are an intent classifier. Given a user message, respond with exactly one word:

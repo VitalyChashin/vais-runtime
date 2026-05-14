@@ -52,7 +52,7 @@ internal sealed class InvokeGraphCommand : AsyncCommand<InvokeGraphCommand.Setti
         [CommandOption("--idempotency-key")]
         public string? IdempotencyKey { get; init; }
 
-        [Description("Output format: text | json | state. 'state' serialises the final state bag as indented JSON. Default: text.")]
+        [Description("Output format: json | state. 'state' serialises the final state bag as indented JSON. Default: last assistant text (plain).")]
         [CommandOption("-o|--output")]
         public string? Output { get; init; }
 
@@ -182,15 +182,22 @@ internal sealed class InvokeGraphCommand : AsyncCommand<InvokeGraphCommand.Setti
             return ProblemDetailsParser.ExitSuccess;
         }
 
-        var format = OutputFormatter.Parse(output, OutputFormat.Json);
+        var format = OutputFormatter.Parse(output, OutputFormat.Table);
         if (format == OutputFormat.Json)
         {
             OutputFormatter.WriteJson(result, AnsiConsole.Console);
         }
         else
         {
-            AnsiConsole.MarkupLine($"run={result.RunId} complete={result.IsComplete}");
-            if (!result.IsComplete && result.PendingInterruptId is not null)
+            if (result.IsComplete)
+            {
+                if (result.FinalState.TryGetValue("lastAssistantText", out var lat) &&
+                    lat.ValueKind == JsonValueKind.String)
+                {
+                    AnsiConsole.Console.WriteLine(lat.GetString()!);
+                }
+            }
+            else if (result.PendingInterruptId is not null)
             {
                 AnsiConsole.MarkupLine($"[yellow]interrupted[/] interruptId={result.PendingInterruptId} node={result.PendingInterruptNodeId} reason={result.PendingInterruptReason ?? "(none)"}");
                 AnsiConsole.MarkupLine($"[dim]Resume with: vais invoke-graph <id> --run-id {result.RunId} --resume-from {result.PendingInterruptId}[/]");
