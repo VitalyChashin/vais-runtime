@@ -1,6 +1,6 @@
 # Author a C# plugin
 
-You'll author a C# `IAiAgent` implementation, publish it as a class-library DLL, and load it into the runtime as an in-process plugin. End state: `vais apply` against an agent manifest with `handler.typeName: MyApp.WeatherAgent` routes invocations into your C# code; `vais invoke` returns whatever your agent returns.
+You'll author a C# `IAiAgent` implementation, publish it as a class-library DLL, and load it into the runtime as an in-process plugin. End state: `vais apply` against an agent manifest with `handler.typeName: MyApp.WeatherAgent.WeatherAgent` routes invocations into your C# code; `vais invoke` returns whatever your agent returns.
 
 ## When this path?
 
@@ -17,6 +17,26 @@ For polyglot (Python, Go, anything else) or stricter isolation (container, netwo
 - A running `vais-agents-runtime` ([DevOps section](../devops/index.md)).
 - The `vais` CLI installed and pointed at the runtime.
 - .NET 9 SDK.
+- Access to the `Vais.Agents.*` NuGet packages. These are not on nuget.org. Add a `NuGet.config` next to your csproj that points at the private feed (or the local `agentic/artifacts/packages` folder from your checkout):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="vais-local" value="path/to/agentic/artifacts/packages" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="vais-local">
+      <package pattern="Vais.Agents.*" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+```
 
 ## 1. Scaffold a class library
 
@@ -33,14 +53,16 @@ Edit the csproj to reference Vais.Agents packages and publish transitive deps:
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
     <AssemblyName>MyApp.WeatherAgent</AssemblyName>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <SelfContained>false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Vais.Agents.Abstractions" />
-    <PackageReference Include="Vais.Agents.Core" />
+    <PackageReference Include="Vais.Agents.Abstractions" Version="0.18.0-preview" />
+    <PackageReference Include="Vais.Agents.Core" Version="0.18.0-preview" />
   </ItemGroup>
 </Project>
 ```
@@ -87,11 +109,11 @@ Add `AssemblyInfo.cs`:
 ```csharp
 using Vais.Agents;
 
-[assembly: VaisPlugin(targetApiVersion: "0.24", "MyApp.WeatherAgent")]
+[assembly: VaisPlugin(targetApiVersion: "0.18", "MyApp.WeatherAgent.WeatherAgent")]
 ```
 
-- `targetApiVersion` — must major.minor-match the runtime's `VaisRuntimeAbi.CurrentVersion`. Mismatches log `urn:vais-agents:plugin-abi-mismatch` and skip the plugin.
-- Second argument lists every `AgentManifest.Handler.TypeName` this plugin exports. Case-sensitive.
+- `targetApiVersion` — must major.minor-match the runtime's `VaisRuntimeAbi.CurrentVersion` (currently `"0.18"`). Mismatches log `urn:vais-agents:plugin-abi-mismatch` and skip the plugin.
+- Second argument lists every `AgentManifest.Handler.TypeName` this plugin exports. Must be the **full CLR type name** (namespace + class, e.g. `"MyApp.WeatherAgent.WeatherAgent"`). Case-sensitive.
 
 Build to verify:
 
@@ -107,10 +129,10 @@ dotnet publish -c Release -o ./publish
 ls publish/
 # MyApp.WeatherAgent.dll
 # MyApp.WeatherAgent.deps.json
-# (+ any transitive deps not already in the runtime's shared-types carve-out)
+# Vais.Agents.Abstractions.dll, Vais.Agents.Core.dll, Polly.Core.dll, …
 ```
 
-The shared carve-out already covers `Vais.Agents.Abstractions`, `Vais.Agents.Core`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions`, MEAI, Polly — those won't land in `publish/` because the build skips them at the publish step (the runtime's versions win).
+The publish output will include `Vais.Agents.Abstractions.dll`, `Vais.Agents.Core.dll`, Polly, and other shared assemblies — `dotnet publish` copies everything the project depends on. This is expected. At runtime the loader's `PluginAssemblyLoadContext` redirects resolution of shared types back to the host's copies, so your copies are ignored in favour of the runtime's versions. You do not need to strip them manually.
 
 ## 5. Layer onto the runtime image
 
@@ -121,7 +143,7 @@ Two shapes — pick one.
 ```dockerfile
 # Dockerfile.overlay
 FROM vais-agents-runtime:local
-COPY ./publish /var/lib/vais/plugins/weather-agent
+COPY ./publish /var/lib/vais/plugins/MyApp.WeatherAgent
 ```
 
 ```bash
@@ -135,7 +157,7 @@ Ship `my-runtime:1.0` through your regular CI + registry + rollout. Plugin updat
 
 ```bash
 docker run --rm -p 8080:8080 \
-  -v "$(pwd)/publish:/var/lib/vais/plugins/weather-agent:ro" \
+  -v "$(pwd)/publish:/var/lib/vais/plugins/MyApp.WeatherAgent:ro" \
   vais-agents-runtime:local
 ```
 
@@ -143,11 +165,11 @@ Faster iteration — rebuild, restart. Don't use bind mounts in production.
 
 ## 6. Verify the plugin loaded
 
-Look for the startup log line:
+Look for the startup log lines:
 
 ```
+Loaded plugin 'MyApp.WeatherAgent' (targetApiVersion=0.18, handlers=[MyApp.WeatherAgent.WeatherAgent])
 Plugin loading complete — 1 plugin(s) loaded, 1 handler(s) registered.
-Loaded plugin 'weather-agent' (targetApiVersion=0.24, handlers=[MyApp.WeatherAgent])
 ```
 
 Missing log = missing plugin. Common causes:
@@ -168,7 +190,7 @@ metadata:
   version: "1.0"
 spec:
   handler:
-    typeName: MyApp.WeatherAgent
+    typeName: MyApp.WeatherAgent.WeatherAgent
   protocols:
     - kind: Http
   tools: []
@@ -179,8 +201,10 @@ No `model:` block — the plugin owns execution.
 ```bash
 vais apply -f weather.yaml
 vais invoke weather --text "hello"
-# Sunny!
+# → Sunny!
 ```
+
+The `handler.typeName` value must be the **full CLR type name** and must match exactly what you declared in `[VaisPlugin]`. If they differ, `vais invoke` returns `503 urn:vais-agents:backend-unavailable` — check the startup log for the registered handler list.
 
 If you accidentally include a `model:` block alongside the plugin handler, the apply response carries a `handler-and-declarative-fields-both-set` warning URN. The plugin still wins; the declarative fields are silently ignored. Remove them to clean the warning.
 
@@ -194,7 +218,7 @@ If you accidentally include a `model:` block alongside the plugin handler, the a
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `501 urn:vais-agents:handler-not-loaded` | Plugin didn't register, or manifest `handler.typeName` doesn't match | Check startup logs for plugin-load summary + registered handlers |
+| `503 urn:vais-agents:backend-unavailable` | Plugin didn't register, or manifest `handler.typeName` doesn't match the registered key | Check startup logs for plugin-load summary + registered handlers; confirm `[VaisPlugin]` handler name and manifest `typeName` are the same full CLR name |
 | `500 urn:vais-agents:plugin-factory-throw` | Factory threw during activation | `detail` carries the inner exception; transient = retries clear, permanent = code fix |
 | `AssemblyLoadContext` locks DLL during bind-mount rebuild (Windows) | Plugin in non-collectible context holding the file | Kill + restart the container |
 | `TypeLoadException` on invoke | Plugin shipped a different version of a shared type | Confirm plugin's NuGet pin matches runtime's |
