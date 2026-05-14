@@ -28,7 +28,7 @@ That's the entire contract. Streaming, opaque state round-tripping, and gateway-
 
 - Go 1.22+ installed locally.
 - Docker.
-- A running runtime ([DevOps section](../devops/index.md)).
+- A running runtime ([DevOps section](../devops/index.md)) with container plugin support enabled (`VAIS_CONTAINER_PLUGINS_DIRECTORY` set and the Docker socket accessible). The local dev stack (`local-dev/dev.ps1`) is pre-configured.
 
 ## 1. The wire shapes
 
@@ -37,7 +37,7 @@ That's the entire contract. Streaming, opaque state round-tripping, and gateway-
 ```json
 {
   "handlerTypeName": "examples.echo.EchoPlugin",
-  "apiVersion": "0.24"
+  "targetApiVersion": "0.24"
 }
 ```
 
@@ -116,8 +116,8 @@ type InvokeResponse struct {
 }
 
 type Metadata struct {
-    HandlerTypeName string `json:"handlerTypeName"`
-    APIVersion      string `json:"apiVersion"`
+    HandlerTypeName  string `json:"handlerTypeName"`
+    TargetApiVersion string `json:"targetApiVersion"`
 }
 
 func main() {
@@ -129,8 +129,8 @@ func main() {
     http.HandleFunc("/v1/metadata", func(w http.ResponseWriter, _ *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         _ = json.NewEncoder(w).Encode(Metadata{
-            HandlerTypeName: handlerTypeName,
-            APIVersion:      apiVersion,
+            HandlerTypeName:  handlerTypeName,
+            TargetApiVersion: apiVersion,
         })
     })
 
@@ -219,12 +219,13 @@ spec:
 
 ```bash
 vais apply -f plugin.yaml
-# echo-plugin:1.0 built ✓
+# Building echo-plugin:1.0 from .
+# ✓ built echo-plugin:1.0
 # echo created (container-plugin, version 1.0)
 
 vais plugin-status
-# NAME   KIND        TOPOLOGY    STATE   IMAGE
-# echo   Container   standalone  Ready   echo-plugin:1.0
+# NAME   KIND        IMAGE             TOPOLOGY    STATE   API VERSION   HANDLERS / TOOLS
+# echo   container   echo-plugin:1.0   standalone  ready   0.24          examples.echo.EchoPlugin
 ```
 
 Apply an agent manifest:
@@ -250,6 +251,15 @@ vais invoke echo --text "Hello, plugin!"
 ```
 
 A complete, working container plugin in Go — no SDK, no language-specific tooling beyond `go build`.
+
+## Cleanup
+
+```bash
+vais delete echo                                              # remove the agent
+curl -X DELETE http://localhost:8080/v1/container-plugins/echo  # evict the plugin
+```
+
+The second command stops the plugin container and removes it from the registry. A `vais plugin-delete` CLI shorthand will be added in a future release.
 
 ## Going further
 
