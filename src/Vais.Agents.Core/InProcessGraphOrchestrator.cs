@@ -649,16 +649,25 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             updates[GraphStateReducers.WellKnownKey.Messages] = JsonSerializer.SerializeToElement(new[] { turnJson });
 
             // Project output binding. Two modes:
-            //   1. JSON object response → extract each property by name into state (keys must match).
+            //   1. JSON object response → extract each property by name into state.
+            //      If the JSON contains none of the declared output keys (e.g. the LLM
+            //      hallucinated a differently-named key), fall back to mode 2 so the
+            //      declared output key always receives a value.
             //   2. Plain-text response → map the full text to the first declared output key.
-            // Agents that need multi-key extraction must respond with a JSON object containing
-            // the declared keys. Plain-text responses always land in outKeys[0] only.
             if (node.StateBindings?.Output is { Count: > 0 } outKeys)
             {
                 if (TryParseJsonObject(result.Text ?? string.Empty, out var parsed))
                 {
+                    var anyDeclaredKeyMapped = false;
                     foreach (var prop in parsed.EnumerateObject())
+                    {
                         updates[prop.Name] = prop.Value;
+                        if (outKeys.Contains(prop.Name, StringComparer.Ordinal))
+                            anyDeclaredKeyMapped = true;
+                    }
+                    // No declared output key found in the JSON — treat the full text as plain text.
+                    if (!anyDeclaredKeyMapped && !string.IsNullOrEmpty(result.Text))
+                        updates[outKeys[0]] = JsonSerializer.SerializeToElement(result.Text);
                 }
                 else if (!string.IsNullOrEmpty(result.Text))
                 {

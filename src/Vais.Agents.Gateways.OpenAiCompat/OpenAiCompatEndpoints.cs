@@ -547,6 +547,9 @@ public static class OpenAiCompatEndpoints
             return;
         }
 
+        manifest.Annotations.TryGetValue("vais.io/openai-compat-output-key", out var streamOutputKey);
+        streamOutputKey ??= inputKey;
+
         var lastUserIndex = FindLastUserMessageIndex(oaiRequest.Messages);
         if (lastUserIndex < 0)
         {
@@ -567,7 +570,7 @@ public static class OpenAiCompatEndpoints
         var events = graphLifecycleManager.InvokeStreamAsync(handle, graphRequest, ct);
         var completionId = $"chatcmpl-{Guid.NewGuid():N}";
 
-        await WriteGraphEventSseAsync(ctx.Response, completionId, oaiRequest.Model, events, ct).ConfigureAwait(false);
+        await WriteGraphEventSseAsync(ctx.Response, completionId, oaiRequest.Model, streamOutputKey, events, ct).ConfigureAwait(false);
     }
 
     // ── SSE helpers ──────────────────────────────────────────────────────────
@@ -624,6 +627,7 @@ public static class OpenAiCompatEndpoints
         HttpResponse response,
         string completionId,
         string model,
+        string outputKey,
         IAsyncEnumerable<AgentGraphEvent> events,
         CancellationToken ct)
     {
@@ -639,7 +643,9 @@ public static class OpenAiCompatEndpoints
         {
             switch (evt)
             {
-                case NodeStarted n:
+                // Only emit progress markers for agent-kind nodes; End/Interrupt/Code nodes
+                // produce no visible work and their markers confuse readers.
+                case NodeStarted n when string.Equals(n.NodeKind, "Agent", StringComparison.Ordinal):
                     await WriteSseChunkAsync(response, completionId, model,
                         new ChatDelta { Content = $"*[{n.NodeId} running...]*\n\n" }, null, ct).ConfigureAwait(false);
                     break;
@@ -655,11 +661,31 @@ public static class OpenAiCompatEndpoints
                     firstOutput = false;
                     break;
 
-                case GraphCompleted:
+                case GraphCompleted g:
+                {
+                    // Emit the graph's declared output key as the definitive final answer.
+                    // This is the same extraction used by the non-streaming path, so the
+                    // canonical output is always consistent regardless of what intermediate
+                    // node events showed (e.g. a JSON stub from the synthesizer LLM).
+                    if (g.FinalState is not null)
+                    {
+                        var finalContent = ExtractGraphOutput(g.FinalState, outputKey);
+                        if (!string.IsNullOrWhiteSpace(finalContent))
+                        {
+                            if (!firstOutput)
+                            {
+                                await WriteSseChunkAsync(response, completionId, model,
+                                    new ChatDelta { Content = "\n\n---\n\n" }, null, ct).ConfigureAwait(false);
+                            }
+                            await WriteSseChunkAsync(response, completionId, model,
+                                new ChatDelta { Content = finalContent }, null, ct).ConfigureAwait(false);
+                        }
+                    }
                     await WriteSseChunkAsync(response, completionId, model, new ChatDelta(), "stop", ct).ConfigureAwait(false);
                     await response.WriteAsync("data: [DONE]\n\n", ct).ConfigureAwait(false);
                     await response.Body.FlushAsync(ct).ConfigureAwait(false);
                     return;
+                }
 
                 case GraphFailed f:
                     await WriteSseChunkAsync(response, completionId, model,
@@ -764,6 +790,9 @@ public static class OpenAiCompatEndpoints
     }
 
     private static string? ExtractGraphOutput(IDictionary<string, JsonElement> finalState, string outputKey)
+        => ExtractGraphOutput((IReadOnlyDictionary<string, JsonElement>)finalState, outputKey);
+
+    private static string? ExtractGraphOutput(IReadOnlyDictionary<string, JsonElement> finalState, string outputKey)
     {
         if (!finalState.TryGetValue(outputKey, out var el))
             return null;
