@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="Anthropic.SDK" />
+    <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
