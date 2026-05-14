@@ -88,6 +88,12 @@ Vais.Agents.Core.DefaultLlmGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMi
 Vais.Agents.Core.DefaultLlmGatewayMiddlewareFactory.DefaultLlmGatewayMiddlewareFactory(System.Collections.Generic.IEnumerable<Vais.Agents.NamedLlmGatewayMiddlewareRegistration!>! registrations, System.IServiceProvider! services) -> void
 Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory
 Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.ToolGatewayMiddleware!
+Vais.Agents.Core.LocalAgentTool
+Vais.Agents.Core.LocalAgentTool.LocalAgentTool(System.Func<Vais.Agents.IAgentRuntime!>! runtimeFactory, string! effectiveAgentId, string! name, string! description, bool allowCallerSuppliedSession = false, bool propagateAllowedTools = true) -> void
+Vais.Agents.Core.LocalAgentTool.Description.get -> string!
+Vais.Agents.Core.LocalAgentTool.InvokeAsync(System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Core.LocalAgentTool.Name.get -> string!
+Vais.Agents.Core.LocalAgentTool.ParametersSchema.get -> System.Text.Json.JsonElement
 Vais.Agents.Core.DefaultToolGatewayMiddlewareFactory.DefaultToolGatewayMiddlewareFactory(System.Collections.Generic.IEnumerable<Vais.Agents.NamedToolGatewayMiddlewareRegistration!>! registrations, System.IServiceProvider! services) -> void
 static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmLogging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Core.LlmGatewayServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmUsage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -99,3 +105,17 @@ static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatew
 static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolDenyFilter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddNamedToolGatewayMiddleware_ToolResponseTruncation(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddDefaultToolGatewayMiddlewareFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Core.InMemoryBackgroundAgentTracker
+Vais.Agents.Core.InMemoryBackgroundAgentTracker.InMemoryBackgroundAgentTracker(Vais.Agents.IAgentRuntime! runtime) -> void
+Vais.Agents.Core.InMemoryBackgroundAgentTracker.StartAsync(string! parentRunId, string! childAgentId, string! childSessionId, string! message, Vais.Agents.AgentContext! childContext, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Core.InMemoryBackgroundAgentTracker.GetAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.BackgroundAgentRunRecord?>
+Vais.Agents.Core.InMemoryBackgroundAgentTracker.ListAsync(string! parentRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.BackgroundAgentRunRecord!>!>
+Vais.Agents.Core.InMemoryBackgroundAgentTracker.CancelAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Core.BackgroundLocalAgentTool
+Vais.Agents.Core.BackgroundLocalAgentTool.BackgroundLocalAgentTool(System.Func<Vais.Agents.IAgentRuntime!>! runtimeFactory, Vais.Agents.IBackgroundAgentTracker! tracker, string! effectiveAgentId, string! name, string! description, bool allowCallerSuppliedSession = false, bool propagateAllowedTools = true) -> void
+Vais.Agents.Core.BackgroundLocalAgentTool.Description.get -> string!
+Vais.Agents.Core.BackgroundLocalAgentTool.InvokeAsync(System.Text.Json.JsonElement arguments, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Core.BackgroundLocalAgentTool.Name.get -> string!
+Vais.Agents.Core.BackgroundLocalAgentTool.ParametersSchema.get -> System.Text.Json.JsonElement
+Vais.Agents.Core.BackgroundAgentManagementTools
+static Vais.Agents.Core.BackgroundAgentManagementTools.Create(Vais.Agents.IBackgroundAgentTracker! tracker) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!

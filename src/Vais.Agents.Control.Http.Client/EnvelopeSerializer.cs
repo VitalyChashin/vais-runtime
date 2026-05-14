@@ -58,6 +58,7 @@ internal static class EnvelopeSerializer
         AddIfSet(spec, "observability", manifest.Observability);
         AddIfSet(spec, "llmGatewayRef", manifest.LlmGatewayRef);
         AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
+        if (manifest.LocalAgents is { Count: > 0 }) spec["localAgents"] = JsonSerializer.SerializeToNode(manifest.LocalAgents, JsonOptions);
 
         var envelope = new JsonObject
         {

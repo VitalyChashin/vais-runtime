@@ -28,6 +28,7 @@ See also: [Declarative agents concept](../concepts/declarative-agents.md) ·
 | `spec.systemPrompt` | object | no | Prompt source. Exactly one of `inline`, `templateRef`, `fileRef`. |
 | `spec.budget` | object | no | Run budget. All sub-fields optional. See [budget reference](budget.md). |
 | `spec.mcpServers` | array | no | MCP server declarations consumed by `mcp:<name>` tool sources. |
+| `spec.localAgents` | array | no | Local (same-runtime) agent bindings consumed by `agent:<name>` tool sources. v0.18. |
 | `spec.guardrails` | object | no | `{input?, output?, tool?}` guardrail bindings. |
 | `spec.memory` | object | no | `{backend, config?}` pluggable memory store. Null = ephemeral. |
 | `spec.identity` | object | no | `{provider, audience?}` inbound/outbound auth. |
@@ -109,6 +110,40 @@ Exactly one sub-field must be set; setting more than one ⇒
 | `inline: "..."` | Literal string. Supports `{{variable}}` substitution via `variables` map. |
 | `templateRef: "name"` | Resolves through `IPromptTemplateRegistry`. |
 | `fileRef: "file.prompt"` | Resolves through `IPromptFileLoader` (default: filesystem with path-traversal guard). |
+
+---
+
+## `spec.localAgents` — LocalAgentRef
+
+Declares local (same-runtime) agents this coordinator can invoke as tools.
+Referenced by `ToolRef.Source = "agent:<name>"`. Added in v0.18 (closes P7 —
+agent-as-tool over peer A2A is the default pattern).
+
+Use `agent:<name>` instead of `a2a:` when the target agent is in the same runtime;
+reserve `a2a:` for cross-runtime or cross-org delegation. See the
+[delegate-to-a-local-agent](../guides/delegate-to-a-local-agent.md) guide.
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `name` | string | yes | — | Unique binding name within this manifest. Referenced as `agent:<name>`. |
+| `agentId` | string | no | same as `name` | Target agent id in the registry. Defaults to `name` when omitted. |
+| `agentVersion` | string | no | latest | Pinned version. Null = latest lexicographic version. |
+| `mode` | string | no | `Blocking` | `Blocking` (coordinator waits for result) or `Background` (fire-and-forget, Phase 2). |
+| `description` | string | no | derived | Tool description override. Null = derived from target agent's manifest `description`. |
+| `allowCallerSuppliedSession` | bool | no | `false` | When `true`, the LLM may pass an optional `sessionId` argument to enable multi-turn sub-conversations. |
+| `propagateAllowedTools` | bool | no | `true` | Propagate the caller's `allowedTools` set to the child. Set `false` to let the child run under its own manifest's full tool set. |
+
+### Tool source syntax
+
+```yaml
+spec:
+  localAgents:
+    - name: summarizer
+      agentId: summarizer-agent
+  tools:
+    - name: call_summarizer
+      source: agent:summarizer
+```
 
 ---
 

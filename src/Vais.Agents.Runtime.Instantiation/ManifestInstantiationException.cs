@@ -73,6 +73,12 @@ public static class ManifestInstantiationUrns
     /// <summary><c>a2a:&lt;name&gt;</c> references an agent name not declared in <c>AgentManifest.A2ARemoteAgents</c>.</summary>
     public const string A2AAgentNotDeclared = UrnPrefix + "a2a-agent-not-declared";
 
+    /// <summary><c>agent:&lt;name&gt;</c> references a local-agent binding not declared in <c>AgentManifest.LocalAgents</c>.</summary>
+    public const string LocalAgentNotDeclared = UrnPrefix + "local-agent-not-declared";
+
+    /// <summary><c>agent:&lt;name&gt;</c> declares a target <c>AgentId</c> that is not found in <see cref="IAgentRegistry"/>.</summary>
+    public const string LocalAgentTargetNotFound = UrnPrefix + "local-agent-target-not-found";
+
     /// <summary>Guardrail ref name has no registered <see cref="IGuardrailFactory"/> for the requested layer.</summary>
     public const string GuardrailNotRegistered = UrnPrefix + "guardrail-not-registered";
 

@@ -562,11 +562,87 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                 // TODO(pillar-b/v0.17.x): instantiate A2ARemoteAgentTool per declared
                 // A2ARemoteAgentRef, pool per translator, merge into the registry.
             }
+            else if (source.StartsWith("agent:", StringComparison.Ordinal))
+            {
+                var agentName = source["agent:".Length..];
+                var localRef = manifest.LocalAgents?.FirstOrDefault(
+                    a => string.Equals(a.Name, agentName, StringComparison.Ordinal));
+
+                if (localRef is null)
+                {
+                    throw new ManifestInstantiationException(
+                        ManifestInstantiationUrns.LocalAgentNotDeclared,
+                        $"Tool '{toolRef.Name}' source '{source}' references local agent '{agentName}', " +
+                        "which is not declared in manifest.LocalAgents.");
+                }
+
+                var effectiveAgentId = localRef.AgentId ?? localRef.Name;
+
+                // Verify target exists in the registry at translate time for fail-fast
+                // URN errors. Version pinning resolves to null = latest.
+                var targetManifest = await _registry.GetAsync(
+                    effectiveAgentId, localRef.AgentVersion, cancellationToken).ConfigureAwait(false);
+                if (targetManifest is null)
+                {
+                    throw new ManifestInstantiationException(
+                        ManifestInstantiationUrns.LocalAgentTargetNotFound,
+                        $"Tool '{toolRef.Name}' source '{source}': target agent id '{effectiveAgentId}'" +
+                        (localRef.AgentVersion is not null ? $" version '{localRef.AgentVersion}'" : string.Empty) +
+                        " is not found in the registry.");
+                }
+
+                var description = localRef.Description ?? targetManifest.Description ?? string.Empty;
+
+                if (localRef.Mode == LocalAgentInvocationMode.Blocking)
+                {
+                    // Lazy IAgentRuntime via _serviceProvider to avoid a DI construction cycle
+                    // (IAgentRuntime → IAgentManifestTranslator → LocalAgentTool → IAgentRuntime).
+                    IAgentRuntime RuntimeFactory() =>
+                        _serviceProvider.GetRequiredService<IAgentRuntime>();
+
+                    resolved.Add(new LocalAgentTool(
+                        RuntimeFactory,
+                        effectiveAgentId,
+                        toolRef.Name,
+                        description,
+                        localRef.AllowCallerSuppliedSession,
+                        localRef.PropagateAllowedTools));
+                }
+                else
+                {
+                    // Background mode: emit BackgroundLocalAgentTool + idempotently add management tools.
+                    var tracker = _serviceProvider.GetService<IBackgroundAgentTracker>()
+                        ?? throw new ManifestInstantiationException(
+                            ManifestInstantiationUrns.ToolSourceUnknown,
+                            $"Tool '{toolRef.Name}' source '{source}': Background mode requires " +
+                            "IBackgroundAgentTracker to be registered in DI (e.g. InMemoryBackgroundAgentTracker " +
+                            "or OrleansBackgroundAgentTracker).");
+
+                    IAgentRuntime BackgroundRuntimeFactory() =>
+                        _serviceProvider.GetRequiredService<IAgentRuntime>();
+
+                    resolved.Add(new BackgroundLocalAgentTool(
+                        BackgroundRuntimeFactory,
+                        tracker,
+                        effectiveAgentId,
+                        toolRef.Name,
+                        description,
+                        localRef.AllowCallerSuppliedSession,
+                        localRef.PropagateAllowedTools));
+
+                    // Add management tools once per translator build (idempotent by name).
+                    if (!resolved.Any(t => t.Name == "list_background_agents"))
+                    {
+                        foreach (var mgmt in BackgroundAgentManagementTools.Create(tracker))
+                            resolved.Add(mgmt);
+                    }
+                }
+            }
             else
             {
                 throw new ManifestInstantiationException(
                     ManifestInstantiationUrns.ToolSourceUnknown,
-                    $"Tool '{toolRef.Name}' has unknown source prefix '{source}'. Valid prefixes: 'static:', 'mcp:', 'a2a:'.");
+                    $"Tool '{toolRef.Name}' has unknown source prefix '{source}'. Valid prefixes: 'static:', 'mcp:', 'a2a:', 'agent:'.");
             }
         }
 

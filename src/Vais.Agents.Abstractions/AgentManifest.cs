@@ -62,6 +62,9 @@ public sealed record AgentManifest(
     /// <summary>Agent2Agent (A2A) remote-agent bindings. Referenced by <c>ToolRef.Source = "a2a:&lt;name&gt;"</c>. v0.17 Pillar B.</summary>
     public IReadOnlyList<A2ARemoteAgentRef>? A2ARemoteAgents { get; init; }
 
+    /// <summary>Local (same-runtime) agent bindings. Referenced by <c>ToolRef.Source = "agent:&lt;name&gt;"</c>. v0.18 — closes P7 agent-as-tool.</summary>
+    public IReadOnlyList<LocalAgentRef>? LocalAgents { get; init; }
+
     /// <summary>Three-layer guardrail bindings (input / output / tool) — projected onto the equivalent <c>StatefulAgentOptions</c> fields at runtime.</summary>
     public GuardrailsSpec? Guardrails { get; init; }
 

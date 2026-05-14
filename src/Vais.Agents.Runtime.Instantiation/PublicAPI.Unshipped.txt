@@ -1,1 +1,3 @@
 #nullable enable
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.LocalAgentNotDeclared = "urn:vais-agents:local-agent-not-declared" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.LocalAgentTargetNotFound = "urn:vais-agents:local-agent-target-not-found" -> string!

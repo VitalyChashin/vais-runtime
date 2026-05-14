@@ -457,4 +457,67 @@ public sealed class YamlAgentManifestLoaderTests
             Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task LocalAgents_Section_Parses_All_Fields()
+    {
+        var json = """
+        {
+          "apiVersion": "vais.agents/v1",
+          "kind": "Agent",
+          "metadata": { "id": "coordinator", "version": "1.0" },
+          "spec": {
+            "localAgents": [
+              {
+                "name": "summarizer",
+                "agentId": "summarizer-agent",
+                "agentVersion": "2.0",
+                "description": "Summarises text",
+                "allowCallerSuppliedSession": true,
+                "propagateAllowedTools": false,
+                "mode": "Blocking"
+              }
+            ],
+            "tools": [{"name":"call_summarizer","source":"agent:summarizer"}]
+          }
+        }
+        """;
+
+        var manifests = await Loader.LoadFromStringAsync(json);
+        var m = manifests.Should().ContainSingle().Subject;
+        m.LocalAgents.Should().ContainSingle();
+        var la = m.LocalAgents![0];
+        la.Name.Should().Be("summarizer");
+        la.AgentId.Should().Be("summarizer-agent");
+        la.AgentVersion.Should().Be("2.0");
+        la.Description.Should().Be("Summarises text");
+        la.AllowCallerSuppliedSession.Should().BeTrue();
+        la.PropagateAllowedTools.Should().BeFalse();
+        la.Mode.Should().Be(LocalAgentInvocationMode.Blocking);
+    }
+
+    [Fact]
+    public async Task LocalAgents_Minimal_Entry_Uses_Defaults()
+    {
+        var json = """
+        {
+          "apiVersion": "vais.agents/v1",
+          "kind": "Agent",
+          "metadata": { "id": "coordinator", "version": "1.0" },
+          "spec": {
+            "localAgents": [{ "name": "helper" }]
+          }
+        }
+        """;
+
+        var manifests = await Loader.LoadFromStringAsync(json);
+        var la = manifests[0].LocalAgents!.Should().ContainSingle().Subject;
+        la.Name.Should().Be("helper");
+        la.AgentId.Should().BeNull();
+        la.AgentVersion.Should().BeNull();
+        la.Description.Should().BeNull();
+        la.AllowCallerSuppliedSession.Should().BeFalse();
+        la.PropagateAllowedTools.Should().BeTrue();
+        la.Mode.Should().Be(LocalAgentInvocationMode.Blocking);
+    }
 }

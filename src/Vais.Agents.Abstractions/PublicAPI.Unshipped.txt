@@ -39,6 +39,72 @@ Vais.Agents.IInboundIdentityResolver
 Vais.Agents.IInboundIdentityResolver.ResolveAsync(string! bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentContext!>
 Vais.Agents.IAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
 Vais.Agents.IAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
+Vais.Agents.LocalAgentInvocationMode
+Vais.Agents.LocalAgentInvocationMode.Blocking = 0 -> Vais.Agents.LocalAgentInvocationMode
+Vais.Agents.LocalAgentInvocationMode.Background = 1 -> Vais.Agents.LocalAgentInvocationMode
+Vais.Agents.LocalAgentRef
+Vais.Agents.LocalAgentRef.<Clone>$() -> Vais.Agents.LocalAgentRef!
+Vais.Agents.LocalAgentRef.LocalAgentRef(string! Name, string? AgentId = null, string? AgentVersion = null, Vais.Agents.LocalAgentInvocationMode Mode = Vais.Agents.LocalAgentInvocationMode.Blocking) -> void
+Vais.Agents.LocalAgentRef.AgentId.get -> string?
+Vais.Agents.LocalAgentRef.AgentId.init -> void
+Vais.Agents.LocalAgentRef.AgentVersion.get -> string?
+Vais.Agents.LocalAgentRef.AgentVersion.init -> void
+Vais.Agents.LocalAgentRef.AllowCallerSuppliedSession.get -> bool
+Vais.Agents.LocalAgentRef.AllowCallerSuppliedSession.init -> void
+Vais.Agents.LocalAgentRef.Description.get -> string?
+Vais.Agents.LocalAgentRef.Description.init -> void
+Vais.Agents.LocalAgentRef.Deconstruct(out string! Name, out string? AgentId, out string? AgentVersion, out Vais.Agents.LocalAgentInvocationMode Mode) -> void
+Vais.Agents.LocalAgentRef.Equals(Vais.Agents.LocalAgentRef? other) -> bool
+Vais.Agents.LocalAgentRef.Mode.get -> Vais.Agents.LocalAgentInvocationMode
+Vais.Agents.LocalAgentRef.Mode.init -> void
+Vais.Agents.LocalAgentRef.Name.get -> string!
+Vais.Agents.LocalAgentRef.Name.init -> void
+Vais.Agents.LocalAgentRef.PropagateAllowedTools.get -> bool
+Vais.Agents.LocalAgentRef.PropagateAllowedTools.init -> void
+override Vais.Agents.LocalAgentRef.Equals(object? obj) -> bool
+override Vais.Agents.LocalAgentRef.GetHashCode() -> int
+override Vais.Agents.LocalAgentRef.ToString() -> string!
+static Vais.Agents.LocalAgentRef.operator !=(Vais.Agents.LocalAgentRef? left, Vais.Agents.LocalAgentRef? right) -> bool
+static Vais.Agents.LocalAgentRef.operator ==(Vais.Agents.LocalAgentRef? left, Vais.Agents.LocalAgentRef? right) -> bool
+Vais.Agents.AgentManifest.LocalAgents.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.LocalAgentRef!>?
+Vais.Agents.AgentManifest.LocalAgents.init -> void
+Vais.Agents.IBackgroundAgentTracker
+Vais.Agents.IBackgroundAgentTracker.StartAsync(string! parentRunId, string! childAgentId, string! childSessionId, string! message, Vais.Agents.AgentContext! childContext, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.IBackgroundAgentTracker.GetAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.BackgroundAgentRunRecord?>
+Vais.Agents.IBackgroundAgentTracker.ListAsync(string! parentRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.BackgroundAgentRunRecord!>!>
+Vais.Agents.IBackgroundAgentTracker.CancelAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.BackgroundAgentRunRecord
+Vais.Agents.BackgroundAgentRunRecord.<Clone>$() -> Vais.Agents.BackgroundAgentRunRecord!
+Vais.Agents.BackgroundAgentRunRecord.BackgroundAgentRunRecord(string! Handle, string! ParentRunId, string! ChildAgentId, Vais.Agents.BackgroundAgentRunStatus Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt = null, string? Result = null, string? Error = null) -> void
+Vais.Agents.BackgroundAgentRunRecord.ChildAgentId.get -> string!
+Vais.Agents.BackgroundAgentRunRecord.ChildAgentId.init -> void
+Vais.Agents.BackgroundAgentRunRecord.CompletedAt.get -> System.DateTimeOffset?
+Vais.Agents.BackgroundAgentRunRecord.CompletedAt.init -> void
+Vais.Agents.BackgroundAgentRunRecord.Deconstruct(out string! Handle, out string! ParentRunId, out string! ChildAgentId, out Vais.Agents.BackgroundAgentRunStatus Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out string? Result, out string? Error) -> void
+Vais.Agents.BackgroundAgentRunRecord.Equals(Vais.Agents.BackgroundAgentRunRecord? other) -> bool
+Vais.Agents.BackgroundAgentRunRecord.Error.get -> string?
+Vais.Agents.BackgroundAgentRunRecord.Error.init -> void
+Vais.Agents.BackgroundAgentRunRecord.Handle.get -> string!
+Vais.Agents.BackgroundAgentRunRecord.Handle.init -> void
+Vais.Agents.BackgroundAgentRunRecord.ParentRunId.get -> string!
+Vais.Agents.BackgroundAgentRunRecord.ParentRunId.init -> void
+Vais.Agents.BackgroundAgentRunRecord.Result.get -> string?
+Vais.Agents.BackgroundAgentRunRecord.Result.init -> void
+Vais.Agents.BackgroundAgentRunRecord.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.BackgroundAgentRunRecord.StartedAt.init -> void
+Vais.Agents.BackgroundAgentRunRecord.Status.get -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunRecord.Status.init -> void
+override Vais.Agents.BackgroundAgentRunRecord.Equals(object? obj) -> bool
+override Vais.Agents.BackgroundAgentRunRecord.GetHashCode() -> int
+override Vais.Agents.BackgroundAgentRunRecord.ToString() -> string!
+static Vais.Agents.BackgroundAgentRunRecord.operator !=(Vais.Agents.BackgroundAgentRunRecord? left, Vais.Agents.BackgroundAgentRunRecord? right) -> bool
+static Vais.Agents.BackgroundAgentRunRecord.operator ==(Vais.Agents.BackgroundAgentRunRecord? left, Vais.Agents.BackgroundAgentRunRecord? right) -> bool
+Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunStatus.Pending = 0 -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunStatus.Running = 1 -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunStatus.Completed = 2 -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunStatus.Failed = 3 -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.BackgroundAgentRunStatus.Cancelled = 4 -> Vais.Agents.BackgroundAgentRunStatus
 Vais.Agents.IAgentLifecycleManager.EvictSessionAsync(string! agentId, string! sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IModelRouter
 Vais.Agents.IModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
