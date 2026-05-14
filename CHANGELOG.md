@@ -11,6 +11,8 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Option D — server-level `McpGatewayRef` inheritance.** When an agent omits `mcpGatewayRef`, the runtime now consults the `McpGatewayRef` of each bound `transport: registered` server. If exactly one distinct ref is found it is applied; if multiple distinct refs exist, translation fails with `urn:vais-agents:mcp-gateway-ref-ambiguous` (set an agent-level ref to disambiguate). Agent-level ref always takes precedence. `ManifestInstantiationUrns.McpGatewayRefAmbiguous` added. The `virtual-fetch.yaml` + `virtual-agent.yaml` pair in the `declarative-agent-mcp-gateways` sample serves as the canonical demo.
+
 - **MCP virtual-server binding parity (VSB-1–VSB-5, VSB-6).** Binding a `transport: registered` MCP server in `mcpServers[]` now imports that server's full toolset without requiring any `tools[]` entries. This closes the consumption-model gap with IBM Context Forge's virtual-server model.
   - **VSB-1** — `AgentManifestTranslator.ResolveToolsAsync` gains an import-all path. When a `transport: registered` server has no `tools[]` entry referencing it (D1 presence-gated rule), every tool the server exposes is imported automatically. Physical servers are resolved via `INamedToolSourceProvider`; virtual servers use the pre-built `VirtualMcpToolSource`.
   - **VSB-2** — `McpServerRef.Tools` allowlist on the `mcpServers[]` entry narrows the import in import-all mode. Every allowlisted name must exist; absent names throw `urn:vais-agents:mcp-tool-not-found` at apply time.

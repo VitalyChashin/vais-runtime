@@ -188,44 +188,48 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             gatewayMiddleware = _serviceProvider.GetServices<LlmGatewayMiddleware>().ToArray();
         }
 
+        // GCF-24: Expand transport:registered McpServerRefs into IToolSources.
+        // Virtual servers → VirtualMcpToolSource; physical servers → INamedToolSourceProvider bridge.
+        // Physical registered servers are served by PhysicalMcpConnectionService (Vais.Agents.Control.Mcp)
+        // which registers as INamedToolSourceProvider and is resolved below in ResolveToolsAsync.
+        // Also collects ServerMcpGatewayRef for GCF-23 Option D in a single registry pass.
+        var registered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+
         // GCF-23: McpGatewayRef — per-agent pipeline replaces DI-global chain entirely.
+        // Agent-level ref wins; if absent, server-level ref applies (Option D); else DI-global.
         // "ToolWorkspacePolicy" is a special case: workspace policies come from the manifest,
         // not from GatewayMiddlewareSpec.Params (the factory is a no-op sentinel).
         ToolGatewayMiddleware[] toolGatewayMiddleware;
-        if (_mcpGatewayConfigRegistry is not null && _toolGatewayFactory is not null
-            && manifest.McpGatewayRef is { } mcpGwRef)
+        if (_mcpGatewayConfigRegistry is not null && _toolGatewayFactory is not null)
         {
-            var mcpCfg = await _mcpGatewayConfigRegistry.GetAsync(mcpGwRef, ct: cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException(
-                    $"Agent '{manifest.Id}' references McpGatewayConfig '{mcpGwRef}' which is not registered.");
-
-            var workspacePolicies = mcpCfg.WorkspacePolicies?
-                .ToDictionary(
-                    kv => kv.Key,
-                    kv => new WorkspaceToolPolicy(
-                        (IReadOnlyList<string>)(kv.Value.AllowedTools ?? []),
-                        (IReadOnlyList<string>)(kv.Value.DeniedTools ?? []),
-                        kv.Value.MinPrivilegeLevel));
-
-            toolGatewayMiddleware = mcpCfg.Middleware
-                .Select(spec =>
-                    spec.Name == "ToolWorkspacePolicy" && workspacePolicies is not null
-                        ? (ToolGatewayMiddleware)new ToolWorkspacePolicyMiddleware(workspacePolicies)
-                        : _toolGatewayFactory.Create(spec))
-                .ToArray();
+            if (manifest.McpGatewayRef is { } mcpGwRef)
+            {
+                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
+                    mcpGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+            else if (registered.McpGatewayRefAmbiguous)
+            {
+                throw new ManifestInstantiationException(
+                    ManifestInstantiationUrns.McpGatewayRefAmbiguous,
+                    $"Agent '{manifest.Id}' binds multiple registered servers that carry different " +
+                    "McpGatewayRef values. Set an agent-level mcpGatewayRef to resolve the ambiguity.");
+            }
+            else if (registered.ServerMcpGatewayRef is { } serverGwRef)
+            {
+                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
+                    serverGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
+            }
         }
         else
         {
             toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
         }
 
-        // GCF-24: Expand transport:registered McpServerRefs into IToolSources.
-        // Virtual servers → VirtualMcpToolSource; physical servers → INamedToolSourceProvider bridge.
-        // Physical registered servers are served by PhysicalMcpConnectionService (Vais.Agents.Control.Mcp)
-        // which registers as INamedToolSourceProvider and is resolved below in ResolveToolsAsync.
-        var registeredSources = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
-
-        var toolRegistry = await ResolveToolsAsync(manifest, registeredSources, cancellationToken).ConfigureAwait(false);
+        var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
         var options = new StatefulAgentOptions
         {
@@ -333,13 +337,45 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         return raw;
     }
 
-    private async ValueTask<IReadOnlyDictionary<string, IToolSource>> ResolveRegisteredMcpSourcesAsync(
+    private async ValueTask<ToolGatewayMiddleware[]> BuildToolGatewayMiddlewareAsync(
+        string mcpGwRef, string agentId, CancellationToken cancellationToken)
+    {
+        var mcpCfg = await _mcpGatewayConfigRegistry!.GetAsync(mcpGwRef, ct: cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException(
+                $"Agent '{agentId}' references McpGatewayConfig '{mcpGwRef}' which is not registered.");
+
+        var workspacePolicies = mcpCfg.WorkspacePolicies?
+            .ToDictionary(
+                kv => kv.Key,
+                kv => new WorkspaceToolPolicy(
+                    (IReadOnlyList<string>)(kv.Value.AllowedTools ?? []),
+                    (IReadOnlyList<string>)(kv.Value.DeniedTools ?? []),
+                    kv.Value.MinPrivilegeLevel));
+
+        return mcpCfg.Middleware
+            .Select(spec =>
+                spec.Name == "ToolWorkspacePolicy" && workspacePolicies is not null
+                    ? (ToolGatewayMiddleware)new ToolWorkspacePolicyMiddleware(workspacePolicies)
+                    : _toolGatewayFactory!.Create(spec))
+            .ToArray();
+    }
+
+    private sealed record RegisteredMcpResolution(
+        IReadOnlyDictionary<string, IToolSource> Sources,
+        string? ServerMcpGatewayRef,
+        bool McpGatewayRefAmbiguous);
+
+    private async ValueTask<RegisteredMcpResolution> ResolveRegisteredMcpSourcesAsync(
         AgentManifest manifest, CancellationToken cancellationToken)
     {
         if (_mcpServerRegistry is null || manifest.McpServers is not { Count: > 0 })
-            return new Dictionary<string, IToolSource>(StringComparer.Ordinal);
+            return new RegisteredMcpResolution(
+                new Dictionary<string, IToolSource>(StringComparer.Ordinal),
+                ServerMcpGatewayRef: null,
+                McpGatewayRefAmbiguous: false);
 
         var result = new Dictionary<string, IToolSource>(StringComparer.Ordinal);
+        var distinctGatewayRefs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var serverRef in manifest.McpServers)
         {
             if (serverRef.Transport != McpServerRef.RegisteredTransport) continue;
@@ -355,8 +391,13 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             // Physical servers: delegated to INamedToolSourceProvider at tool-resolution time.
             // PhysicalMcpConnectionService (Vais.Agents.Control.Mcp) serves them; if that service
             // is not registered, GetByName returns null and tool resolution throws McpServerUnavailable.
+
+            if (srv.McpGatewayRef is { } gwRef)
+                distinctGatewayRefs.Add(gwRef);
         }
-        return result;
+
+        var serverGwRef = distinctGatewayRefs.Count == 1 ? distinctGatewayRefs.First() : (string?)null;
+        return new RegisteredMcpResolution(result, serverGwRef, distinctGatewayRefs.Count > 1);
     }
 
     private VirtualMcpToolSource BuildVirtualMcpToolSource(McpServerManifest srv)

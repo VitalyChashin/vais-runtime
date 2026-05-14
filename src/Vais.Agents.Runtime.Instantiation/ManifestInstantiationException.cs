@@ -100,4 +100,10 @@ public static class ManifestInstantiationUrns
     /// put one server into explicit mode (D1).
     /// </summary>
     public const string McpToolNameCollision = UrnPrefix + "mcp-tool-name-collision";
+
+    /// <summary>
+    /// Multiple transport:registered servers bound by the agent each carry a different
+    /// McpGatewayRef. Set an agent-level mcpGatewayRef to resolve the ambiguity.
+    /// </summary>
+    public const string McpGatewayRefAmbiguous = UrnPrefix + "mcp-gateway-ref-ambiguous";
 }

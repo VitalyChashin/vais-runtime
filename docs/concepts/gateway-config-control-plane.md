@@ -100,6 +100,12 @@ spec:
 
 **Binding a `transport: registered` server is sufficient to import its toolset.** No `tools[]` entry is required. If you want only a subset, add `tools: [name1, name2]` on the `mcpServers` entry (the allowlist), or add explicit `tools[]` entries (explicit mode).
 
+**`McpGatewayRef` precedence (highest → lowest):**
+
+1. Agent manifest `mcpGatewayRef` — replaces all lower tiers.
+2. `McpServer` manifest `McpGatewayRef` — inherited when the agent omits its own; all bound `transport: registered` servers must carry the same ref (or none). Multiple distinct refs → `urn:vais-agents:mcp-gateway-ref-ambiguous`.
+3. DI-registered global `ToolGatewayMiddleware` services — default fallback when no ref is set at either level.
+
 ## Apply order
 
 Gateway configs must exist before the agent that binds to them:

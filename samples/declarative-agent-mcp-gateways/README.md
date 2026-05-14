@@ -186,6 +186,10 @@ Registers the `mcp-fetch` container as a known MCP server. Setting `mcpGatewayRe
 `mcpGatewayRef`. Because `research-agent` sets its own `mcpGatewayRef`, the agent-level gateway
 wins (one active tool pipeline per agent at any time).
 
+This is the **Option D** server-level inheritance mechanism: a server declares its governance
+pipeline once; any agent that binds this server without its own `mcpGatewayRef` inherits it
+automatically. Agent-level ref always takes precedence over server-level.
+
 ### `research-agent.yaml` — Agent (explicit-tools variant)
 
 Binds to both gateway configs. Lists each tool explicitly in `tools[]` — the pre-existing pattern:
@@ -206,7 +210,9 @@ at grain activation time rather than connecting directly from the manifest URL.
 
 ### `virtual-fetch.yaml` — McpServer (virtual)
 
-A virtual `McpServer` that aggregates `mcp-fetch` and curates its toolset via `toolProjection`:
+A virtual `McpServer` that aggregates `mcp-fetch` and curates its toolset via `toolProjection`.
+It also declares `mcpGatewayRef: demo-mcp-governance` — demonstrating server-level governance
+inheritance (Option D):
 
 ```yaml
 spec:
@@ -235,6 +241,11 @@ mcpServers:
 
 This is the IBM Context Forge-compatible consumption model: curate once in the virtual server,
 consume everywhere with a single line.
+
+`virtual-agent` carries no `mcpGatewayRef` by design: governance is inherited from the bound
+virtual server (`virtual-fetch`), which declares `mcpGatewayRef: demo-mcp-governance`. This
+demonstrates Option D — the server-level gateway ref inheritance introduced alongside the
+virtual-server binding model.
 
 ---
 

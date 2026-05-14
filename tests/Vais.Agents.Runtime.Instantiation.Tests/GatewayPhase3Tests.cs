@@ -589,6 +589,193 @@ public class GatewayPhase3Tests
             .Should().BeEquivalentTo(new[] { "calculate", "search" });
     }
 
+    // ── Tests 21–25: Option D — server-level McpGatewayRef inheritance ────────
+
+    [Fact]
+    public async Task ServerGatewayRef_Applied_When_Agent_Has_None()
+    {
+        // T21: agent omits mcpGatewayRef; bound virtual server carries one → server pipeline fires.
+        var expected = new FakeToolMiddleware();
+        var serverManifest = new McpServerManifest("fetch-srv", "1")
+        {
+            Virtual = true,
+            McpGatewayRef = "server-gw",
+        };
+        var mcpCfg = new McpGatewayConfigManifest(
+            "server-gw", "1",
+            new[] { new GatewayMiddlewareSpec("ToolOtel") });
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("fetch-srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var gwRegistry = Substitute.For<IMcpGatewayConfigRegistry>();
+        gwRegistry.GetAsync("server-gw", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpGatewayConfigManifest?>(mcpCfg));
+
+        var toolFactory = Substitute.For<IToolGatewayMiddlewareFactory>();
+        toolFactory.Create(Arg.Any<GatewayMiddlewareSpec>()).Returns(expected);
+
+        var manifest = BuildManifest(
+            mcpServers: new[] { new McpServerRef("fetch-srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithMcpGatewayConfigRegistry(gwRegistry)
+            .WithToolGatewayFactory(toolFactory);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolGatewayMiddleware.Should().HaveCount(1);
+        options.ToolGatewayMiddleware[0].Should().BeSameAs(expected);
+    }
+
+    [Fact]
+    public async Task AgentGatewayRef_Wins_Over_Server_Ref()
+    {
+        // T22: agent has mcpGatewayRef; server also has one → agent pipeline fires; server config never loaded.
+        var agentMw = new FakeToolMiddleware();
+        var serverManifest = new McpServerManifest("fetch-srv", "1")
+        {
+            Virtual = true,
+            McpGatewayRef = "server-gw",
+        };
+        var agentCfg = new McpGatewayConfigManifest(
+            "agent-gw", "1",
+            new[] { new GatewayMiddlewareSpec("AgentOtel") });
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("fetch-srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var gwRegistry = Substitute.For<IMcpGatewayConfigRegistry>();
+        gwRegistry.GetAsync("agent-gw", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpGatewayConfigManifest?>(agentCfg));
+
+        var toolFactory = Substitute.For<IToolGatewayMiddlewareFactory>();
+        toolFactory.Create(Arg.Any<GatewayMiddlewareSpec>()).Returns(agentMw);
+
+        var manifest = BuildManifest(
+            mcpGatewayRef: "agent-gw",
+            mcpServers: new[] { new McpServerRef("fetch-srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithMcpGatewayConfigRegistry(gwRegistry)
+            .WithToolGatewayFactory(toolFactory);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolGatewayMiddleware.Should().HaveCount(1);
+        options.ToolGatewayMiddleware[0].Should().BeSameAs(agentMw);
+        // Server's gateway config must not have been loaded.
+        await gwRegistry.DidNotReceive().GetAsync("server-gw", Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Two_Servers_Same_Ref_No_Ambiguity()
+    {
+        // T23: two registered servers both carry the same McpGatewayRef → single pipeline, no throw.
+        var expected = new FakeToolMiddleware();
+        var srvA = new McpServerManifest("srv-a", "1") { Virtual = true, McpGatewayRef = "shared-gw" };
+        var srvB = new McpServerManifest("srv-b", "1") { Virtual = true, McpGatewayRef = "shared-gw" };
+        var gwCfg = new McpGatewayConfigManifest(
+            "shared-gw", "1",
+            new[] { new GatewayMiddlewareSpec("ToolLogging") });
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv-a", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(srvA));
+        serverRegistry.GetAsync("srv-b", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(srvB));
+
+        var gwRegistry = Substitute.For<IMcpGatewayConfigRegistry>();
+        gwRegistry.GetAsync("shared-gw", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpGatewayConfigManifest?>(gwCfg));
+
+        var toolFactory = Substitute.For<IToolGatewayMiddlewareFactory>();
+        toolFactory.Create(Arg.Any<GatewayMiddlewareSpec>()).Returns(expected);
+
+        var manifest = BuildManifest(mcpServers: new[]
+        {
+            new McpServerRef("srv-a", McpServerRef.RegisteredTransport),
+            new McpServerRef("srv-b", McpServerRef.RegisteredTransport),
+        });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithMcpGatewayConfigRegistry(gwRegistry)
+            .WithToolGatewayFactory(toolFactory);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolGatewayMiddleware.Should().HaveCount(1);
+        options.ToolGatewayMiddleware[0].Should().BeSameAs(expected);
+    }
+
+    [Fact]
+    public async Task Two_Servers_Different_Refs_Throws_McpGatewayRefAmbiguous()
+    {
+        // T24: two registered servers carry different McpGatewayRef values, agent has none → throw.
+        var srvA = new McpServerManifest("srv-a", "1") { Virtual = true, McpGatewayRef = "gw-alpha" };
+        var srvB = new McpServerManifest("srv-b", "1") { Virtual = true, McpGatewayRef = "gw-beta" };
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("srv-a", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(srvA));
+        serverRegistry.GetAsync("srv-b", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(srvB));
+
+        var gwRegistry = Substitute.For<IMcpGatewayConfigRegistry>();
+        var toolFactory = Substitute.For<IToolGatewayMiddlewareFactory>();
+
+        var manifest = BuildManifest(mcpServers: new[]
+        {
+            new McpServerRef("srv-a", McpServerRef.RegisteredTransport),
+            new McpServerRef("srv-b", McpServerRef.RegisteredTransport),
+        });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithMcpGatewayConfigRegistry(gwRegistry)
+            .WithToolGatewayFactory(toolFactory);
+
+        var act = async () => await fixture.Translator.TranslateAsync(AgentId);
+
+        await act.Should().ThrowAsync<ManifestInstantiationException>()
+            .Where(e => e.Urn == ManifestInstantiationUrns.McpGatewayRefAmbiguous)
+            .WithMessage($"*{AgentId}*");
+    }
+
+    [Fact]
+    public async Task No_Server_Ref_No_Agent_Ref_Falls_Back_To_DI_Global()
+    {
+        // T25: neither agent nor servers carry a gateway ref → DI-global chain fires.
+        var globalMw = new FakeToolMiddleware();
+        var serverManifest = new McpServerManifest("bare-srv", "1") { Virtual = true };
+
+        var serverRegistry = Substitute.For<IMcpServerRegistry>();
+        serverRegistry.GetAsync("bare-srv", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<McpServerManifest?>(serverManifest));
+
+        var manifest = BuildManifest(
+            mcpServers: new[] { new McpServerRef("bare-srv", McpServerRef.RegisteredTransport) });
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithMcpServerRegistry(serverRegistry)
+            .WithDiGlobalToolMiddleware(globalMw);
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ToolGatewayMiddleware.Should().HaveCount(1);
+        options.ToolGatewayMiddleware[0].Should().BeSameAs(globalMw);
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static async Task<List<ITool>> CollectToolsAsync(IToolSource source)

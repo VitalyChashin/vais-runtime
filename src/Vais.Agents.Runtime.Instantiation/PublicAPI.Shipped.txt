@@ -107,3 +107,4 @@ static Vais.Agents.Runtime.Instantiation.ModelProviders.BuiltinModelProvidersSer
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpServerUnavailable = "urn:vais-agents:mcp-server-unavailable" -> string!
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpToolNotFound = "urn:vais-agents:mcp-tool-not-found" -> string!
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpToolNameCollision = "urn:vais-agents:mcp-tool-name-collision" -> string!
+const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.McpGatewayRefAmbiguous = "urn:vais-agents:mcp-gateway-ref-ambiguous" -> string!

@@ -133,6 +133,36 @@ How the runtime decides which mode a server is in, per server:
 
 Explicit mode is the pre-existing behavior and is unchanged — every existing manifest keeps working exactly as before.
 
+### Inheriting the gateway pipeline from the server (Option D)
+
+An `McpServer` manifest can carry its own `mcpGatewayRef`. When an agent binds that server and **omits** its own `mcpGatewayRef`, the runtime inherits the server's pipeline automatically:
+
+```yaml
+# fetch-server.yaml — server declares governance
+spec:
+  mcpGatewayRef: observable-mcp-governance
+```
+
+```yaml
+# agent manifest — no mcpGatewayRef needed; governance is inherited
+mcpServers:
+  - name: mcp-fetch
+    transport: registered
+```
+
+The `researcher` example above sets its own `mcpGatewayRef: observable-mcp-gateway`, so the agent-level pipeline wins. If you remove that line, the gateway declared on `mcp-fetch` takes over — curate once, inherit everywhere.
+
+**Precedence (highest → lowest):**
+
+| Agent has `mcpGatewayRef`? | Server has `McpGatewayRef`? | Active pipeline |
+|---|---|---|
+| yes | any | agent-level |
+| no | yes (one distinct value) | server-level |
+| no | yes (multiple distinct values) | error — set an agent-level ref |
+| no | no | DI-registered global (or none) |
+
+"Multiple distinct values" means the agent binds two or more `transport: registered` servers that carry **different** `McpGatewayRef` values. Two servers with the **same** ref is one value — the pipeline applies once, no error.
+
 ### Narrowing the import
 
 If you want only a subset of the server's tools, add a `tools` allowlist directly on the `mcpServers` entry (not in `tools[]`):
