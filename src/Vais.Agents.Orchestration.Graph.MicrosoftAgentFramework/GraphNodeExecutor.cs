@@ -181,7 +181,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             {
                 var prompt = BuildAgentInputText(FilterByInputBinding(state, _node.StateBindings), _node.StateBindings);
                 nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
-                nodeOutput = await ExecuteAgentNodeAsync(state, context, cancellationToken).ConfigureAwait(false);
+                nodeOutput = await ExecuteAgentNodeAsync(state, message.RunId, context, cancellationToken).ConfigureAwait(false);
                 if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
                     nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
             }
@@ -301,6 +301,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
 
     private async ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAgentNodeAsync(
         IDictionary<string, JsonElement> state,
+        string runId,
         IWorkflowContext context,
         CancellationToken cancellationToken)
     {
@@ -325,7 +326,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             result = await _remoteInvoker.InvokeAsync(
                 runtimeUrl,
                 remoteHandle,
-                new AgentInvocationRequest(text, _context.UserId, metadata),
+                new AgentInvocationRequest(text, runId, metadata),
                 _bearerToken,
                 cancellationToken).ConfigureAwait(false);
         }
@@ -355,7 +356,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
             result = await _lifecycle.InvokeAsync(
                 handle,
-                new AgentInvocationRequest(text, _context.UserId, metadata),
+                new AgentInvocationRequest(text, runId, metadata),
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -379,8 +380,17 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         {
             if (TryParseJsonObject(outputText, out var parsed))
             {
+                var anyDeclaredKeyMapped = false;
                 foreach (var prop in parsed.EnumerateObject())
+                {
                     updates[prop.Name] = prop.Value;
+                    if (outKeys.Contains(prop.Name, StringComparer.Ordinal))
+                        anyDeclaredKeyMapped = true;
+                }
+                // No declared output key in the JSON (e.g. LLM hallucinated a different key) —
+                // fall back to plain-text mode so the declared output key always receives a value.
+                if (!anyDeclaredKeyMapped && !string.IsNullOrEmpty(outputText))
+                    updates[outKeys[0]] = JsonSerializer.SerializeToElement(outputText);
             }
             else if (!string.IsNullOrEmpty(outputText))
             {

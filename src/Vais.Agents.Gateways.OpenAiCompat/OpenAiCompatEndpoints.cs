@@ -550,6 +550,14 @@ public static class OpenAiCompatEndpoints
         manifest.Annotations.TryGetValue("vais.io/openai-compat-output-key", out var streamOutputKey);
         streamOutputKey ??= inputKey;
 
+        // Collect all nodes whose output binding declares outputKey (multiple in a branching graph).
+        // Their NodeAgentInvoked.OutputText is the raw LLM response; we suppress it and show only
+        // FinalState[outputKey] from GraphCompleted as the definitive final answer.
+        var outputNodeIds = manifest.Nodes
+            .Where(n => n.StateBindings?.Output?.Contains(streamOutputKey, StringComparer.Ordinal) == true)
+            .Select(static n => n.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
         var lastUserIndex = FindLastUserMessageIndex(oaiRequest.Messages);
         if (lastUserIndex < 0)
         {
@@ -570,7 +578,7 @@ public static class OpenAiCompatEndpoints
         var events = graphLifecycleManager.InvokeStreamAsync(handle, graphRequest, ct);
         var completionId = $"chatcmpl-{Guid.NewGuid():N}";
 
-        await WriteGraphEventSseAsync(ctx.Response, completionId, oaiRequest.Model, streamOutputKey, events, ct).ConfigureAwait(false);
+        await WriteGraphEventSseAsync(ctx.Response, completionId, oaiRequest.Model, streamOutputKey, outputNodeIds, events, ct).ConfigureAwait(false);
     }
 
     // ── SSE helpers ──────────────────────────────────────────────────────────
@@ -628,6 +636,7 @@ public static class OpenAiCompatEndpoints
         string completionId,
         string model,
         string outputKey,
+        HashSet<string> outputNodeIds,
         IAsyncEnumerable<AgentGraphEvent> events,
         CancellationToken ct)
     {
@@ -638,7 +647,6 @@ public static class OpenAiCompatEndpoints
         await WriteSseChunkAsync(response, completionId, model, new ChatDelta { Role = "assistant" }, null, ct).ConfigureAwait(false);
 
         var firstOutput = true;
-        var lastNodeOutput = string.Empty;
 
         await foreach (var evt in events.WithCancellation(ct).ConfigureAwait(false))
         {
@@ -651,7 +659,10 @@ public static class OpenAiCompatEndpoints
                         new ChatDelta { Content = $"*[{n.NodeId} running...]*\n\n" }, null, ct).ConfigureAwait(false);
                     break;
 
-                case NodeAgentInvoked n when n.OutputText.Length > 0:
+                // Suppress any output-node's raw LLM text — it may be a partial or malformed
+                // response. The definitive answer is always FinalState[outputKey] from GraphCompleted.
+                case NodeAgentInvoked n when n.OutputText.Length > 0
+                                          && !outputNodeIds.Contains(n.NodeId):
                     if (!firstOutput)
                     {
                         await WriteSseChunkAsync(response, completionId, model,
@@ -660,21 +671,14 @@ public static class OpenAiCompatEndpoints
                     await WriteSseChunkAsync(response, completionId, model,
                         new ChatDelta { Content = n.OutputText }, null, ct).ConfigureAwait(false);
                     firstOutput = false;
-                    lastNodeOutput = n.OutputText;
                     break;
 
                 case GraphCompleted g:
                 {
-                    // Emit the graph's declared output key as the definitive final answer.
-                    // Skip if it equals the last NodeAgentInvoked output — the synthesizer
-                    // may have already emitted the same text (OutputText is truncated at 8 KB
-                    // so only skip when content is genuinely identical, meaning no truncation
-                    // occurred and the LLM returned a short/wrong response).
                     if (g.FinalState is not null)
                     {
                         var finalContent = ExtractGraphOutput(g.FinalState, outputKey);
-                        if (!string.IsNullOrWhiteSpace(finalContent)
-                            && !string.Equals(finalContent, lastNodeOutput, StringComparison.Ordinal))
+                        if (!string.IsNullOrWhiteSpace(finalContent))
                         {
                             if (!firstOutput)
                             {
