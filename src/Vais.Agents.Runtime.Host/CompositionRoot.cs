@@ -46,6 +46,7 @@ using Vais.Agents.Gateways.McpCache;
 using System.Text.Json;
 using Vais.Agents.Gateways.McpTransformation;
 using Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
+using Vais.Agents.Gateways.OpenAiCompat;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -387,6 +388,14 @@ internal static class CompositionRoot
                 }
             });
         }
+
+        // 4c. OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.
+        //     PassThroughIdentityResolver accepts any bearer token (single-tenant / dev mode).
+        //     InMemoryModelRouter with no aliases means non-agent/graph model IDs return 404;
+        //     agent: and graph: prefixes are handled before the router is consulted.
+        services.AddPassThroughIdentityResolver();
+        services.AddInMemoryModelRouter(_ => { });
+        services.AddOpenAiCompatGateway();
 
         // 5. Agent log sink — in-memory ring buffer for agent grain and Python subprocess stdout.
         //    Always registered; no connection string required. Buffer cap configurable via
