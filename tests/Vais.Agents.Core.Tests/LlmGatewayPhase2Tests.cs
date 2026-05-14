@@ -48,7 +48,8 @@ public sealed class LlmGatewayPhase2Tests
         await agent.AskAsync("hello");
 
         log.Messages.Should().HaveCount(2);
-        log.Levels.Should().AllBeEquivalentTo(LogLevel.Debug);
+        log.Levels[0].Should().Be(LogLevel.Debug);
+        log.Levels[1].Should().Be(LogLevel.Information);
         log.Messages[0].Should().Contain("turns");
         log.Messages[1].Should().Contain("5").And.Contain("3");
     }
@@ -70,7 +71,7 @@ public sealed class LlmGatewayPhase2Tests
 
         log.Messages.Should().HaveCount(2);
         log.Messages[0].Should().Contain("stream start");
-        log.Messages[1].Should().Contain("stream complete");
+        log.Messages[1].Should().Contain("LLM call (stream)");
     }
 
     [Fact]
