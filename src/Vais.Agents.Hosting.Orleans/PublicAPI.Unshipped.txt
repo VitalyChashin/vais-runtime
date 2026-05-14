@@ -1,4 +1,6 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
+Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
 Vais.Agents.Hosting.Orleans.AgentEventKind.CompletionDelta = 9 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TextDelta -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolCallsJson -> string?

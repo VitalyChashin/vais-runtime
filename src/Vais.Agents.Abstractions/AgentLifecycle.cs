@@ -104,6 +104,14 @@ public interface IAgentLifecycleManager
 
     /// <summary>Evict the agent. Persistent state and the handle are invalidated.</summary>
     ValueTask EvictAsync(AgentHandle handle, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evict a session-scoped agent created by <see cref="IAgentRuntime.GetOrCreateForSession"/>.
+    /// Called by the graph orchestrator at run completion to release per-run grain state.
+    /// Default: no-op (for implementations that do not support session isolation).
+    /// </summary>
+    virtual ValueTask EvictSessionAsync(string agentId, string sessionId, CancellationToken cancellationToken = default)
+        => ValueTask.CompletedTask;
 }
 
 /// <summary>

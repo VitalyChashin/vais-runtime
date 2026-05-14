@@ -577,8 +577,10 @@ public sealed class OpenAiCompatAgentGraphTests
     private sealed class FakeStreamingAgentRuntime(IReadOnlyList<AgentEvent> events) : IAgentRuntime
     {
         public IAiAgent GetOrCreate(string id) => new FakeStreamingAgent(events);
+        public IAiAgent GetOrCreateForSession(string id, string sessionId) => new FakeStreamingAgent(events);
         public bool TryGet(string id, out IAiAgent? agent) { agent = null; return false; }
         public bool Remove(string id) => false;
+        public bool RemoveSession(string id, string sessionId) => false;
     }
 
     private sealed class FakeStreamingAgent(IReadOnlyList<AgentEvent> events) : IAiAgent, IStreamingAiAgent
@@ -607,8 +609,10 @@ public sealed class OpenAiCompatAgentGraphTests
     private sealed class FakeNonStreamingAgentRuntime(string reply) : IAgentRuntime
     {
         public IAiAgent GetOrCreate(string id) => new FakeNonStreamingAgent(reply);
+        public IAiAgent GetOrCreateForSession(string id, string sessionId) => new FakeNonStreamingAgent(reply);
         public bool TryGet(string id, out IAiAgent? agent) { agent = null; return false; }
         public bool Remove(string id) => false;
+        public bool RemoveSession(string id, string sessionId) => false;
     }
 
     private sealed class FakeNonStreamingAgent(string reply) : IAiAgent

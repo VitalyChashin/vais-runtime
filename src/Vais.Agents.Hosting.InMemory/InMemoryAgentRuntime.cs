@@ -73,10 +73,26 @@ public sealed class InMemoryAgentRuntime : IAgentRuntime
     }
 
     /// <inheritdoc />
+    public IAiAgent GetOrCreateForSession(string agentId, string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        return _agents.GetOrAdd($"{agentId}/{sessionId}", _ => CreateAgent(agentId));
+    }
+
+    /// <inheritdoc />
     public bool Remove(string agentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         return _agents.TryRemove(agentId, out _);
+    }
+
+    /// <inheritdoc />
+    public bool RemoveSession(string agentId, string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        return _agents.TryRemove($"{agentId}/{sessionId}", out _);
     }
 
     private IAiAgent CreateAgent(string agentId)

@@ -79,7 +79,11 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     /// <inheritdoc />
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _agentId = this.GetPrimaryKeyString();
+        var grainKey = this.GetPrimaryKeyString();
+        // Session-scoped grains have key "agentId/sessionId" — extract the logical
+        // agentId for manifest lookup; the full key is the grain's unique identity.
+        var slash = grainKey.IndexOf('/');
+        _agentId = slash > 0 ? grainKey[..slash] : grainKey;
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
         // OnActivateAsync runs on the Orleans grain scheduler with no ambient Activity.Current.
         // Skip the span when there's no parent — an orphan root trace adds no observability value.

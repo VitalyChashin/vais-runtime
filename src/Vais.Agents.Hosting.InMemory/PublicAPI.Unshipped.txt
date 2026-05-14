@@ -1,4 +1,6 @@
 #nullable enable
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
+Vais.Agents.Hosting.InMemory.InMemoryAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
 Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus
 Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus.InMemoryAgentGraphEventBus(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus!>? logger = null) -> void
 Vais.Agents.Hosting.InMemory.InMemoryAgentGraphEventBus.PublishAsync(Vais.Agents.AgentGraphEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

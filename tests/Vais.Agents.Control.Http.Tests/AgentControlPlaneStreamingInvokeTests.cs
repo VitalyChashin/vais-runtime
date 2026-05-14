@@ -437,8 +437,10 @@ public sealed class AgentControlPlaneStreamingInvokeTests
     {
         private readonly NonStreamingAgent _agent = new();
         public IAiAgent GetOrCreate(string agentId) => _agent;
+        public IAiAgent GetOrCreateForSession(string agentId, string sessionId) => _agent;
         public bool TryGet(string agentId, out IAiAgent? agent) { agent = _agent; return true; }
         public bool Remove(string agentId) => false;
+        public bool RemoveSession(string agentId, string sessionId) => false;
         public void Reset() { }
     }
 }

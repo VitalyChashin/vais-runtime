@@ -29,6 +29,7 @@ public sealed class OrleansAgentRuntime : IAgentRuntime
 {
     private readonly IGrainFactory _grainFactory;
     private readonly ConcurrentDictionary<string, OrleansAiAgentProxy> _proxies = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, OrleansAiAgentProxy> _sessionProxies = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Create a runtime over the given grain factory.
@@ -60,11 +61,28 @@ public sealed class OrleansAgentRuntime : IAgentRuntime
     }
 
     /// <inheritdoc />
+    public IAiAgent GetOrCreateForSession(string agentId, string sessionId)
+    {
+        var key = OrleansSessionGrainKey.Build(agentId, sessionId);
+        return _sessionProxies.GetOrAdd(key, k => new OrleansAiAgentProxy(
+            _grainFactory.GetGrain<IAiAgentGrain>(k), agentId));
+    }
+
+    /// <inheritdoc />
     public bool Remove(string agentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         var removed = _proxies.TryRemove(agentId, out _);
         _ = _grainFactory.GetGrain<IAiAgentGrain>(agentId).DeleteAsync();
+        return removed;
+    }
+
+    /// <inheritdoc />
+    public bool RemoveSession(string agentId, string sessionId)
+    {
+        var key = OrleansSessionGrainKey.Build(agentId, sessionId);
+        var removed = _sessionProxies.TryRemove(key, out _);
+        _ = _grainFactory.GetGrain<IAiAgentGrain>(key).DeleteAsync();
         return removed;
     }
 

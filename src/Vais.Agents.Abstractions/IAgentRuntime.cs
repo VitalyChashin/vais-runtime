@@ -30,6 +30,14 @@ public interface IAgentRuntime
     IAiAgent GetOrCreate(string agentId);
 
     /// <summary>
+    /// Obtain a session-scoped agent. Agents with the same <paramref name="agentId"/>
+    /// but different <paramref name="sessionId"/> values are independent instances with
+    /// isolated conversation history. Pass a graph run ID as the session to prevent runs
+    /// from sharing grain state.
+    /// </summary>
+    IAiAgent GetOrCreateForSession(string agentId, string sessionId);
+
+    /// <summary>
     /// Try to fetch an existing agent without creating one.
     /// </summary>
     bool TryGet(string agentId, out IAiAgent? agent);
@@ -38,4 +46,10 @@ public interface IAgentRuntime
     /// Evict a cached agent. Returns <c>true</c> if an agent existed and was removed.
     /// </summary>
     bool Remove(string agentId);
+
+    /// <summary>
+    /// Evict a session-scoped agent and clear its persisted state.
+    /// Returns <c>true</c> if the session existed and was removed.
+    /// </summary>
+    bool RemoveSession(string agentId, string sessionId);
 }

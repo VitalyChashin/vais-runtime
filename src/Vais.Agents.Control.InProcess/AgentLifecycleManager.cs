@@ -126,7 +126,9 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         string? errorType = null;
         try
         {
-            var agent = _runtime.GetOrCreate(handle.AgentId);
+            var agent = request.SessionId is { Length: > 0 } sid
+                ? _runtime.GetOrCreateForSession(handle.AgentId, sid)
+                : _runtime.GetOrCreate(handle.AgentId);
             var reply = await agent.AskAsync(request.Text, cts.Token).ConfigureAwait(false);
             return new AgentInvocationResult(
                 Text: reply,
@@ -251,6 +253,13 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         {
             await AuditAsync(PolicyOperation.Update, newManifest.Id, newManifest.Version, principal, allowed: true, denyReason: null, errorType).ConfigureAwait(false);
         }
+    }
+
+    /// <inheritdoc />
+    public ValueTask EvictSessionAsync(string agentId, string sessionId, CancellationToken cancellationToken = default)
+    {
+        _runtime.RemoveSession(agentId, sessionId);
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc />

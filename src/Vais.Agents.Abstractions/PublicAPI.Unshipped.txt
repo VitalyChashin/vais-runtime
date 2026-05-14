@@ -37,6 +37,9 @@ Vais.Agents.AgentContext.MaxChainDepth.get -> int?
 Vais.Agents.AgentContext.MaxChainDepth.init -> void
 Vais.Agents.IInboundIdentityResolver
 Vais.Agents.IInboundIdentityResolver.ResolveAsync(string! bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentContext!>
+Vais.Agents.IAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
+Vais.Agents.IAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
+Vais.Agents.IAgentLifecycleManager.EvictSessionAsync(string! agentId, string! sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IModelRouter
 Vais.Agents.IModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
 Vais.Agents.IModelRouter.ResolveAsync(string! modelAlias, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.ModelRoute!>

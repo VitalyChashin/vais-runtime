@@ -268,6 +268,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         // and all descendants. Setting Current=null here forces graph.run to start as a
         // trace root, which the AlwaysOn leg of ParentBased(AlwaysOn) always samples.
         Activity.Current = null;
+        try
+        {
         using var graphActivity = _activitySource.StartActivity("graph.run", ActivityKind.Internal);
         graphActivity?.SetTag("graph.id",      _manifest.Id);
         graphActivity?.SetTag("graph.version", _manifest.Version);
@@ -536,6 +538,21 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
             currentNodeId = nextNodeId;
             superStep++;
         }
+        }
+        finally
+        {
+            // Release per-run session grains for all local Agent-kind nodes.
+            foreach (var node in _manifest.Nodes)
+            {
+                if (string.Equals(node.Kind, "Agent", StringComparison.Ordinal)
+                    && node.Ref?.Id is { } agentId
+                    && node.Ref.RuntimeUrl is null
+                    && node.Ref.A2AUrl is null)
+                {
+                    await _lifecycle.EvictSessionAsync(agentId, runId).ConfigureAwait(false);
+                }
+            }
+        }
     }
 
     private async ValueTask<(IReadOnlyDictionary<string, JsonElement> Output, NodeAgentInvoked? AgentInvoked)> ExecuteNodeAsync(
@@ -610,7 +627,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 var handle = new AgentHandle(resolvedManifest.Id, resolvedManifest.Version);
                 result = await _lifecycle.InvokeAsync(
                     handle,
-                    new AgentInvocationRequest(text, context.UserId, metadata),
+                    new AgentInvocationRequest(text, SessionId: runId, Metadata: metadata),
                     cancellationToken).ConfigureAwait(false);
             }
 
