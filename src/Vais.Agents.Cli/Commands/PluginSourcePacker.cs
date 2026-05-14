@@ -22,13 +22,10 @@ internal static class PluginSourcePacker
     public static MemoryStream Pack(string sourceDir)
     {
         var ms = new MemoryStream();
-        // Use the parent of sourceDir as rootDir so entries are "src/foo.py" not "foo.py".
-        // The server unpacks to <pluginDirectory>/<entry>, so "src/foo.py" lands correctly.
-        var rootDir = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(sourceDir)) ?? sourceDir;
         using (var gzip = new GZipStream(ms, CompressionMode.Compress, leaveOpen: true))
         using (var writer = new TarWriter(gzip, TarEntryFormat.Pax, leaveOpen: false))
         {
-            PackDirectory(writer, rootDir, sourceDir);
+            PackDirectory(writer, sourceDir, sourceDir);
         }
         ms.Position = 0;
         return ms;

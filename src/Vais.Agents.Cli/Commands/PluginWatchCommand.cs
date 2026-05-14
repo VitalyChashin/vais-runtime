@@ -22,7 +22,7 @@ internal sealed class PluginWatchCommand : AsyncCommand<PluginWatchCommand.Setti
         [CommandArgument(0, "<plugin-name>")]
         public string PluginName { get; init; } = "";
 
-        [Description("Directory to watch. Defaults to ./src")]
+        [Description("Directory to watch. Defaults to the current directory (plugin root).")]
         [CommandOption("--source")]
         public string? Source { get; init; }
 
@@ -41,7 +41,7 @@ internal sealed class PluginWatchCommand : AsyncCommand<PluginWatchCommand.Setti
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
-        var sourceDir = Path.GetFullPath(settings.Source ?? Path.Combine(Directory.GetCurrentDirectory(), "src"));
+        var sourceDir = Path.GetFullPath(settings.Source ?? Directory.GetCurrentDirectory());
         if (!Directory.Exists(sourceDir))
         {
             AnsiConsole.MarkupLine($"[red]error[/] source directory not found: {Markup.Escape(sourceDir)}");

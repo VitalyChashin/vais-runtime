@@ -71,8 +71,7 @@ name = "my-py-agent"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "vais-agent-sdk",          # once published to PyPI
-  # "vais-agent-sdk @ path/to/agentic/samples/python-agent-sdk",  # local source for now
+  "vais-agent-sdk",          # pre-installed in the runtime image; on PyPI once published
   "pydantic >=2.8,<3",
 ]
 
@@ -82,12 +81,14 @@ kind = "agent-handler"
 handlerTypeName = "my_py_agent.agent.SimpleAgent"
 ```
 
-Until `vais-agent-sdk` is published to PyPI, install it from source. Clone the repo and point uv at the local path:
+Until `vais-agent-sdk` is published to PyPI, the runtime image pre-installs it. For local venv builds, point uv at the SDK source:
 
 ```bash
-# from inside my-py-agent/
+# from inside my-py-agent/ — sets up the local dev venv only
 uv add --editable /path/to/agentic/samples/python-agent-sdk
 ```
+
+> **Note:** `uv add --editable` writes a `[tool.uv.sources]` entry that uv uses locally. The runtime's `pip install -e .` during bootstrap ignores `[tool.uv.sources]` and resolves `vais-agent-sdk` from the image's pre-installed system packages instead.
 
 ## Step 4 — Define the state model
 
@@ -183,14 +184,13 @@ No `model` or `systemPrompt` — those are set by the Python code, not the manif
 Python plugins load differently from agent manifests. The runtime discovers plugin subprocesses at startup and via hot-reload — not through `vais apply`. Use two separate commands:
 
 ```bash
-# Push the Python plugin source and hot-reload it into the running runtime
+# Push the Python plugin source. First push bootstraps the venv and starts the
+# subprocess (returns 201 Created). Subsequent pushes hot-reload in-place (200 OK).
 vais plugin-push my-py-agent
 
 # Register the agent manifest (kind: Agent goes through vais apply as normal)
 vais apply -f agent.yaml
 ```
-
-> **First time?** `vais plugin-push` is a hot-reload command — it only works for plugins already present in the runtime's Python plugins directory at startup. If this is your first deployment, see [Bootstrap a Python plugin into the runtime](../guides/bootstrap-a-python-plugin.md) before running `plugin-push`.
 
 Then invoke:
 

@@ -45,7 +45,7 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
         [CommandOption("--plugin")]
         public string? Plugin { get; init; }
 
-        [Description("Source directory to pack and push (source mode). Defaults to ./src")]
+        [Description("Source directory to pack and push (source mode). Defaults to the current directory (plugin root).")]
         [CommandOption("--source")]
         public string? Source { get; init; }
 
@@ -123,7 +123,7 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
     private static async Task<int> ExecuteSourcePushAsync(Settings settings, CancellationToken cancellationToken)
     {
         var pluginName = settings.PluginOrImage;
-        var sourceDir = Path.GetFullPath(settings.Source ?? Path.Combine(Directory.GetCurrentDirectory(), "src"));
+        var sourceDir = Path.GetFullPath(settings.Source ?? Directory.GetCurrentDirectory());
         if (!Directory.Exists(sourceDir))
         {
             AnsiConsole.MarkupLine($"[red]error[/] source directory not found: {Markup.Escape(sourceDir)}");
@@ -143,10 +143,11 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
                     result = await client.PushPluginSourceAsync(pluginName, archive, cancellationToken);
                 });
 
-            if (result!.Status == PluginSourcePushStatus.Success)
+            if (result!.Status is PluginSourcePushStatus.Success or PluginSourcePushStatus.Bootstrapped)
             {
                 var pid = result.ProcessId?.ToString() ?? "?";
-                AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(pluginName)} reloaded (PID {pid})");
+                var verb = result.Status == PluginSourcePushStatus.Bootstrapped ? "bootstrapped" : "reloaded";
+                AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(pluginName)} {verb} (PID {pid})");
                 return ProblemDetailsParser.ExitSuccess;
             }
 

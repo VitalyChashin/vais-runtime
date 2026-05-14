@@ -59,6 +59,9 @@ internal sealed class PythonPluginBootstrapper
         createVenvPsi.ArgumentList.Add("-m");
         createVenvPsi.ArgumentList.Add("venv");
         createVenvPsi.ArgumentList.Add(".venv");
+        // --system-site-packages lets the plugin venv inherit pre-installed
+        // framework packages (vais-agent-sdk) without a PyPI lookup.
+        createVenvPsi.ArgumentList.Add("--system-site-packages");
 
         var (createExitCode, createOutput) = await _runner(createVenvPsi, cts.Token)
             .ConfigureAwait(false);

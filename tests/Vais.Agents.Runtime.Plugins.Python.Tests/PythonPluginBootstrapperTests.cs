@@ -55,6 +55,7 @@ public sealed class PythonPluginBootstrapperTests : IDisposable
         commands.Should().HaveCount(2);
         commands[0].Should().Contain("python3.11");
         commands[0].Should().Contain("-m venv .venv");
+        commands[0].Should().Contain("--system-site-packages");
         commands[1].Should().Contain("pip");
         commands[1].Should().Contain("install");
     }

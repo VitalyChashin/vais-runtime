@@ -58,11 +58,18 @@ FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3.11 \
+    && apt-get install -y --no-install-recommends python3.11 python3.11-venv python3-pip \
     && ln -sf /usr/bin/python3.11 /usr/local/bin/python3.11 \
     && ln -sf /usr/bin/python3.11 /usr/local/bin/python3 \
     && ln -sf /usr/bin/python3.11 /usr/local/bin/python \
     && rm -rf /var/lib/apt/lists/*
+
+# Pre-install vais-agent-sdk into the system Python so bootstrapped plugin venvs
+# (created with --system-site-packages) can satisfy the "vais-agent-sdk" dependency
+# without a PyPI lookup (the SDK is not yet published to PyPI).
+COPY --chown=root:root samples/python-agent-sdk /tmp/vais-agent-sdk
+RUN python3.11 -m pip install --no-cache-dir --break-system-packages /tmp/vais-agent-sdk \
+    && rm -rf /tmp/vais-agent-sdk
 
 RUN groupadd -r -g 65532 vais \
     && useradd -r -u 65532 -g vais vais \
