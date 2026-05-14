@@ -19,6 +19,13 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "8080:8080"
+    # Required for DockerContainerSupervisor to start container plugins.
+    # Mounting the Docker socket grants the runtime container root-equivalent
+    # access to the host Docker daemon — acceptable for local development;
+    # use the Kubernetes topology (plugin.yaml spec.topology: standalone-k8s)
+    # for production or multi-tenant environments.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 10s

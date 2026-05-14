@@ -18,19 +18,23 @@ A larger working example is in [`samples/PluginAgentLangGraphResearcherLive/`](.
 
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) installed locally.
 - Docker.
+- The `agentic` repo checked out locally — `vais-plugin` is not yet published to PyPI and must be installed from source. The Dockerfile in this tutorial copies it directly from the repo.
 - A running runtime ([DevOps section](../devops/index.md)) with `OPENAI_API_KEY` set in its environment — the plugin manifest below references it via `secret://env/OPENAI_API_KEY`, which tells the runtime to read its own env and inject the value into the plugin container.
 
 ## 1. Scaffold
 
+Create the plugin directory inside your `agentic/` checkout (we use `samples/intent-router/` here so the Dockerfile build context can reach `sdk/python`):
+
 ```bash
-mkdir intent-router && cd intent-router
-uv init --lib src/intent_router
+# From the agentic/ root:
+mkdir -p samples/intent-router && cd samples/intent-router
+uv init --lib
 ```
 
 Add the layout:
 
 ```
-intent-router/
+samples/intent-router/
 ├── plugin.yaml
 ├── Dockerfile
 ├── pyproject.toml
@@ -43,6 +47,8 @@ intent-router/
 
 ## 2. `pyproject.toml`
 
+`uv init --lib` generates `[project]` and `[build-system]` sections. Replace only the `[project]` section with the following — leave `[build-system]` intact:
+
 ```toml
 [project]
 name = "intent-router"
@@ -54,6 +60,10 @@ dependencies = [
   "langchain-openai >=0.2",
   "pydantic >=2.8,<3",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 ```
 
 ## 3. Define the LangGraph state and graph
@@ -137,12 +147,15 @@ if __name__ == "__main__":
 
 ## 6. Dockerfile
 
+Because `vais-plugin` is not yet on PyPI, the Dockerfile copies it from the repo before installing the plugin package. The build context is set to the `agentic/` root in `plugin.yaml` so that `sdk/python` is reachable:
+
 ```dockerfile
 FROM python:3.12-slim
 WORKDIR /app
-COPY pyproject.toml ./
-COPY src/intent_router /app/intent_router
-RUN pip install --no-cache-dir .
+COPY sdk/python /sdk/vais-plugin
+COPY samples/intent-router/pyproject.toml ./
+COPY samples/intent-router/src/intent_router /app/intent_router
+RUN pip install --no-cache-dir /sdk/vais-plugin && pip install --no-cache-dir .
 USER 65532:65532
 EXPOSE 8080
 ENV PYTHONPATH=/app
@@ -164,8 +177,8 @@ spec:
   image: intent-router:1.0
   port: 8080
   build:
-    context: .
-    dockerfile: Dockerfile
+    context: ../../
+    dockerfile: samples/intent-router/Dockerfile
   secrets:
     OPENAI_API_KEY: secret://env/OPENAI_API_KEY
 ```
@@ -187,8 +200,8 @@ vais apply -f plugin.yaml
 # intent-router created (container-plugin, version 1.0)
 
 vais plugin-status
-# NAME            KIND        TOPOLOGY    STATE   IMAGE
-# intent-router   Container   standalone  Ready   intent-router:1.0
+# NAME            KIND        TOPOLOGY    STATE   IMAGE              REPLICAS   API VERSION   HANDLERS/TOOLS   PID
+# intent-router   Container   standalone  Ready   intent-router:1.0  1          0.24          1/1              -
 ```
 
 Apply an agent manifest:
