@@ -11,12 +11,15 @@ Tools are the agent's hands. Without a gateway, every tool call is a one-off int
 - A running runtime ([DevOps section](../devops/index.md)).
 - The CLI pointed at it.
 - An agent registered with the runtime ([Your first declarative agent](your-first-declarative-agent.md)).
-- A reachable MCP server. This tutorial uses the public `modelcontextprotocol/servers/fetch` image:
+- A reachable MCP server. This tutorial uses the `modelcontextprotocol/servers/fetch` image from GitHub Container Registry. Authenticate once before pulling:
 
   ```bash
+  docker login ghcr.io   # GitHub account + PAT with read:packages scope
   docker run -d --name mcp-fetch -p 3000:3000 ghcr.io/modelcontextprotocol/servers/fetch:latest
   curl -s http://localhost:3000/health   # → ok
   ```
+
+  > **Port conflict?** If port 3000 is already in use (e.g. by Langfuse in the default local dev stack), map to a free port instead: `docker run -d --name mcp-fetch -p 3001:3000 ...` and replace `3000` with `3001` in the `mcp-fetch-server.yaml` URL below.
 
 ## Step 1 — Declare the gateway config
 
@@ -93,6 +96,7 @@ spec:
   model:
     provider: openai
     id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       For each user question, call the `fetch` tool with a relevant URL and summarise
@@ -140,6 +144,16 @@ for i in {1..40}; do
   vais invoke researcher --text "Fetch https://example.com — request $i"
 done
 ```
+
+<details><summary>PowerShell</summary>
+
+```powershell
+1..40 | ForEach-Object {
+  vais invoke researcher --text "Fetch https://example.com — request $_"
+}
+```
+
+</details>
 
 Around the 30th call you'll see `ToolRateLimitExceeded` outcomes flowing back to the model. The model observes the error string — no exception bubbles up to the agent caller; the conversation continues with the model adapting.
 
