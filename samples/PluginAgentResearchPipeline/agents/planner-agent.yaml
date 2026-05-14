@@ -8,6 +8,10 @@ metadata:
     Output is plain text, one question per line — feeds into the LangGraph
     researcher node in the research pipeline.
 spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   handler:
     typeName: MyApp.ResearchPlannerAgent.ResearchPlannerAgent
   protocols:

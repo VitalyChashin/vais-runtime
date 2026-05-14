@@ -3,6 +3,9 @@ kind: AgentGraph
 metadata:
   id: research-pipeline
   version: "1.0"
+  annotations:
+    vais.io/openai-compat-input-key: query
+    vais.io/openai-compat-output-key: report
   description: >
     Four-agent research pipeline showcasing the full breadth of the Vais.Agents
     runtime: a C# plugin planner, a LangGraph Python researcher, an SGR Python

@@ -106,19 +106,22 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             && _pluginRegistry.TryGet(manifest.Handler.TypeName, out var factory)
             && factory is not null)
         {
+            // When the manifest carries a ModelSpec, build ICompletionProvider from the pool
+            // and pass it via a wrapped IServiceProvider so plugin constructors that declare
+            // ICompletionProvider as a dependency are satisfied (it is never a DI singleton).
+            // Other declarative fields (tools, guardrails, systemPrompt) are not applied to
+            // plugin agents — the plugin implementation owns its own configuration.
+            IServiceProvider factoryProvider = _serviceProvider;
             if (manifest.Model is not null)
             {
-                _diagnosticsSink?.Record(
-                    agentId,
-                    ManifestInstantiationUrns.HandlerAndDeclarativeFieldsBothSet,
-                    $"Agent '{agentId}' has both a loaded plugin handler '{manifest.Handler.TypeName}' " +
-                    "and declarative Model fields. Plugin wins; declarative fields are ignored.");
+                var completionProvider = await _providerPool.GetAsync(manifest.Model, cancellationToken).ConfigureAwait(false);
+                factoryProvider = new CompletionProviderScope(_serviceProvider, completionProvider);
             }
 
             IAiAgent pluginAgent;
             try
             {
-                pluginAgent = await factory.CreateAsync(manifest, _serviceProvider, cancellationToken).ConfigureAwait(false);
+                pluginAgent = await factory.CreateAsync(manifest, factoryProvider, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -521,6 +524,15 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         return await AggregatingToolRegistry
             .BuildAsync(resolved, sources: null, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    // Wraps the host IServiceProvider to surface a pre-built ICompletionProvider so that
+    // plugin constructors declaring ICompletionProvider as a dependency can be satisfied
+    // by ActivatorUtilities.CreateInstance without registering a container singleton.
+    private sealed class CompletionProviderScope(IServiceProvider inner, ICompletionProvider provider) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(ICompletionProvider) ? provider : inner.GetService(serviceType);
     }
 
     private (IReadOnlyList<IInputGuardrail> Input, IReadOnlyList<IOutputGuardrail> Output, IReadOnlyList<IToolGuardrail> Tool)

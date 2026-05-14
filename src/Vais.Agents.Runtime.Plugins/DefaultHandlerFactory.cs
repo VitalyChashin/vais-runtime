@@ -12,6 +12,13 @@ namespace Vais.Agents.Runtime.Plugins;
 /// <see cref="ActivatorUtilities.CreateInstance{T}"/> to DI-resolve
 /// constructor dependencies.
 /// </summary>
+/// <remarks>
+/// When the agent manifest carries a <c>ModelSpec</c>, the caller
+/// (<c>AgentManifestTranslator</c>) pre-builds <c>ICompletionProvider</c>
+/// and wraps the <c>serviceProvider</c> argument so that the constructor
+/// dependency is satisfied without making <c>ICompletionProvider</c> a
+/// container singleton.
+/// </remarks>
 /// <typeparam name="TAgent">Concrete <see cref="IAiAgent"/> type declared by the plugin.</typeparam>
 internal sealed class DefaultHandlerFactory<TAgent> : IAgentHandlerFactory
     where TAgent : IAiAgent
@@ -35,11 +42,7 @@ internal sealed class DefaultHandlerFactory<TAgent> : IAgentHandlerFactory
         ArgumentNullException.ThrowIfNull(serviceProvider);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // ActivatorUtilities picks the best matching ctor given registered services;
-        // plugin authors who want manifest-aware construction supply their own
-        // IAgentHandlerFactory instead.
-        var agent = ActivatorUtilities.CreateInstance<TAgent>(serviceProvider);
-        return new ValueTask<IAiAgent>(agent);
+        return new ValueTask<IAiAgent>(ActivatorUtilities.CreateInstance<TAgent>(serviceProvider));
     }
 }
 
