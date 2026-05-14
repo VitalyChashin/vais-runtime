@@ -453,11 +453,19 @@ public static class OpenAiCompatEndpoints
         manifest.Annotations.TryGetValue("vais.io/openai-compat-output-key", out var outputKey);
         outputKey ??= inputKey;
 
-        var messagesJson = JsonSerializer.SerializeToElement(oaiRequest.Messages, SseJsonOptions);
+        var lastUserIndex = FindLastUserMessageIndex(oaiRequest.Messages);
+        if (lastUserIndex < 0)
+        {
+            await WriteErrorAsync(ctx.Response, StatusCodes.Status400BadRequest, "invalid_request_error",
+                "No user message found in messages.", ct).ConfigureAwait(false);
+            return;
+        }
+        var lastUserText = oaiRequest.Messages[lastUserIndex].Content ?? "";
+        var inputJson = JsonSerializer.SerializeToElement(lastUserText, SseJsonOptions);
         var metadata = BuildCallerMetadata(oaiRequest);
 
         var graphRequest = new GraphInvocationRequest(
-            InitialState: new Dictionary<string, JsonElement> { [inputKey] = messagesJson },
+            InitialState: new Dictionary<string, JsonElement> { [inputKey] = inputJson },
             Metadata: metadata.Count > 0 ? metadata : null,
             RunId: Guid.NewGuid().ToString("N"));
 
@@ -539,11 +547,19 @@ public static class OpenAiCompatEndpoints
             return;
         }
 
-        var messagesJson = JsonSerializer.SerializeToElement(oaiRequest.Messages, SseJsonOptions);
+        var lastUserIndex = FindLastUserMessageIndex(oaiRequest.Messages);
+        if (lastUserIndex < 0)
+        {
+            await WriteErrorAsync(ctx.Response, StatusCodes.Status400BadRequest, "invalid_request_error",
+                "No user message found in messages.", ct).ConfigureAwait(false);
+            return;
+        }
+        var lastUserText = oaiRequest.Messages[lastUserIndex].Content ?? "";
+        var inputJson = JsonSerializer.SerializeToElement(lastUserText, SseJsonOptions);
         var metadata = BuildCallerMetadata(oaiRequest);
 
         var graphRequest = new GraphInvocationRequest(
-            InitialState: new Dictionary<string, JsonElement> { [inputKey] = messagesJson },
+            InitialState: new Dictionary<string, JsonElement> { [inputKey] = inputJson },
             Metadata: metadata.Count > 0 ? metadata : null,
             RunId: Guid.NewGuid().ToString("N"));
 
@@ -617,13 +633,26 @@ public static class OpenAiCompatEndpoints
         // Role header chunk
         await WriteSseChunkAsync(response, completionId, model, new ChatDelta { Role = "assistant" }, null, ct).ConfigureAwait(false);
 
+        var firstOutput = true;
+
         await foreach (var evt in events.WithCancellation(ct).ConfigureAwait(false))
         {
             switch (evt)
             {
+                case NodeStarted n:
+                    await WriteSseChunkAsync(response, completionId, model,
+                        new ChatDelta { Content = $"*[{n.NodeId} running...]*\n\n" }, null, ct).ConfigureAwait(false);
+                    break;
+
                 case NodeAgentInvoked n when n.OutputText.Length > 0:
+                    if (!firstOutput)
+                    {
+                        await WriteSseChunkAsync(response, completionId, model,
+                            new ChatDelta { Content = "\n\n---\n\n" }, null, ct).ConfigureAwait(false);
+                    }
                     await WriteSseChunkAsync(response, completionId, model,
                         new ChatDelta { Content = n.OutputText }, null, ct).ConfigureAwait(false);
+                    firstOutput = false;
                     break;
 
                 case GraphCompleted:
