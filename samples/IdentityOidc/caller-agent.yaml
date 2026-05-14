@@ -10,7 +10,7 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
   systemPrompt:
     inline: |
       You are a helpful assistant. Respond in one concise sentence.
