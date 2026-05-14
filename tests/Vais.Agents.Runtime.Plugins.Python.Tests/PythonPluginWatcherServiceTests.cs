@@ -66,6 +66,7 @@ public sealed class PythonPluginWatcherServiceTests : IDisposable
             }).ToList();
         }
 
+        public string PluginsDirectory => Path.GetDirectoryName(_plugins.FirstOrDefault()?.Descriptor.PluginDirectory) ?? "/var/lib/vais/plugins";
         public IReadOnlyCollection<LoadedPythonPlugin> LoadedPlugins => _plugins;
     }
 

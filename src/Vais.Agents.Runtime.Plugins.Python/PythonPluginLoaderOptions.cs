@@ -79,4 +79,11 @@ public sealed class PythonPluginLoaderOptions
     /// (P12 mandatory-outbound contract).
     /// </summary>
     public string InternalGatewayBaseUrl { get; init; } = "http://localhost:5001";
+
+    /// <summary>
+    /// Maximum seconds allowed for <c>python3.11 -m venv + pip install</c> during a
+    /// first-push bootstrap. Only relevant when <see cref="ReloadPolicy"/> is
+    /// <see cref="Plugins.ReloadPolicy.DrainAndSwap"/>. Defaults to 120 seconds.
+    /// </summary>
+    public int BootstrapTimeoutSeconds { get; init; } = 120;
 }

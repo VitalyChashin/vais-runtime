@@ -614,15 +614,41 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                     "Hot-reload is disabled. Set VAIS_PYTHON_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
                 statusCode: StatusCodes.Status503ServiceUnavailable);
 
+        if (!IsValidPluginName(name))
+            return Results.Json(
+                new PluginSourcePushResponse(name, PluginSourcePushStatus.UnpackFailed, null,
+                    $"Invalid plugin name '{name}'."),
+                statusCode: StatusCodes.Status400BadRequest);
+
+        string pluginDirectory;
         var plugin = host?.LoadedPlugins.FirstOrDefault(p =>
             string.Equals(p.Descriptor.Name, name, StringComparison.OrdinalIgnoreCase));
-        if (plugin is null)
+
+        if (plugin is not null)
+        {
+            pluginDirectory = plugin.Descriptor.PluginDirectory;
+        }
+        else if (host is not null)
+        {
+            // New plugin: derive directory from plugins root (first-push bootstrap path).
+            var pluginsRoot = Path.GetFullPath(host.PluginsDirectory);
+            pluginDirectory = Path.GetFullPath(Path.Combine(pluginsRoot, name));
+            if (!pluginDirectory.StartsWith(pluginsRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                return Results.Json(
+                    new PluginSourcePushResponse(name, PluginSourcePushStatus.UnpackFailed, null,
+                        $"Invalid plugin name '{name}'."),
+                    statusCode: StatusCodes.Status400BadRequest);
+        }
+        else
+        {
             return Results.Json(
                 new PluginSourcePushResponse(name, PluginSourcePushStatus.NoSupervisor, null,
-                    $"No plugin '{name}' is loaded. Verify the plugin name and that it was loaded at startup."),
+                    $"No plugin '{name}' is loaded and no Python plugin host is configured."),
                 statusCode: StatusCodes.Status404NotFound);
+        }
 
-        var pluginDirectory = plugin.Descriptor.PluginDirectory;
+        Directory.CreateDirectory(pluginDirectory);
+
         try
         {
             await UnpackTarGzAsync(http.Request.Body, pluginDirectory, ct).ConfigureAwait(false);
@@ -637,6 +663,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         var result = await reloader.ReloadAsync(pluginDirectory, ct).ConfigureAwait(false);
         return MapReloadResult(result, host, name);
     }
+
+    private static bool IsValidPluginName(string name) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        name.Length <= 128 &&
+        name.IndexOfAny(['/', '\\', '\0', ':']) == -1 &&
+        !name.Equals("..", StringComparison.Ordinal) &&
+        !name.Equals(".", StringComparison.Ordinal);
 
     private static async Task UnpackTarGzAsync(Stream source, string targetDirectory, CancellationToken ct)
     {
@@ -709,6 +742,9 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             PythonPluginReloadStatus.Success =>
                 Results.Ok(new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.Success, currentPid, null)),
+            PythonPluginReloadStatus.Bootstrapped =>
+                Results.Created((string?)null,
+                    new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.Bootstrapped, currentPid, null)),
             PythonPluginReloadStatus.HandshakeFailed =>
                 Results.Ok(new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.HandshakeFailed, null, result.FailureUrn)),
             PythonPluginReloadStatus.HandlerTypeNameChanged =>
@@ -719,6 +755,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 Results.Json(
                     new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.ScanFailed, null, result.FailureUrn),
                     statusCode: StatusCodes.Status400BadRequest),
+            PythonPluginReloadStatus.BootstrapFailed =>
+                Results.Json(
+                    new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.BootstrapFailed, null, result.FailureUrn),
+                    statusCode: StatusCodes.Status500InternalServerError),
             _ =>
                 Results.Json(
                     new PluginSourcePushResponse(result.PluginName, PluginSourcePushStatus.NoSupervisor, null, result.FailureUrn),

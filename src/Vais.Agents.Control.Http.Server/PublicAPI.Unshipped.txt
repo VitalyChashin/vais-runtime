@@ -166,6 +166,8 @@ Vais.Agents.Control.Http.PluginSourcePushStatus.NoSupervisor = 3 -> Vais.Agents.
 Vais.Agents.Control.Http.PluginSourcePushStatus.ReloadDisabled = 4 -> Vais.Agents.Control.Http.PluginSourcePushStatus
 Vais.Agents.Control.Http.PluginSourcePushStatus.UnpackFailed = 5 -> Vais.Agents.Control.Http.PluginSourcePushStatus
 Vais.Agents.Control.Http.PluginSourcePushStatus.ScanFailed = 6 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.Bootstrapped = 7 -> Vais.Agents.Control.Http.PluginSourcePushStatus
+Vais.Agents.Control.Http.PluginSourcePushStatus.BootstrapFailed = 8 -> Vais.Agents.Control.Http.PluginSourcePushStatus
 Vais.Agents.Control.Http.PluginSourcePushResponse
 Vais.Agents.Control.Http.PluginSourcePushResponse.<Clone>$() -> Vais.Agents.Control.Http.PluginSourcePushResponse!
 Vais.Agents.Control.Http.PluginSourcePushResponse.Deconstruct(out string! PluginName, out Vais.Agents.Control.Http.PluginSourcePushStatus Status, out int? ProcessId, out string? ErrorMessage) -> void

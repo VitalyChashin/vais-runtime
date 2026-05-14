@@ -25,6 +25,7 @@ internal sealed class PyprojectTomlReader
     {
         var lines = tomlContent.Split('\n');
         var inSection = false;
+        var sectionFound = false;
         string? targetApiVersion = null;
         List<string>? tools = null;
         var arrayBuffer = new System.Text.StringBuilder();
@@ -58,6 +59,7 @@ internal sealed class PyprojectTomlReader
                 // Strip one or two leading/trailing brackets (handles both [x] and [[x]]).
                 var sectionName = trimmed.TrimStart('[').TrimEnd(']').Trim();
                 inSection = string.Equals(sectionName, "tool.vais.plugin", StringComparison.OrdinalIgnoreCase);
+                if (inSection) sectionFound = true;
                 continue;
             }
 
@@ -95,9 +97,12 @@ internal sealed class PyprojectTomlReader
         if (insideMultilineArray)
             throw new FormatException($"Unclosed array for 'tools' in [tool.vais.plugin]: {arrayBuffer}");
 
-        if (targetApiVersion is null)
+        if (!sectionFound)
             return null;
 
+        // Section was found; return it even if targetApiVersion is absent so the scanner
+        // can emit a precise "missing targetApiVersion" diagnostic instead of the generic
+        // "no [tool.vais.plugin] section" warning.
         return new PyprojectTomlSection(targetApiVersion, tools ?? []);
     }
 
@@ -135,6 +140,11 @@ internal sealed class PyprojectTomlReader
 }
 
 /// <summary>Parsed content of the <c>[tool.vais.plugin]</c> TOML section.</summary>
+/// <remarks>
+/// <c>TargetApiVersion</c> is <see langword="null"/> when the section exists but
+/// the <c>targetApiVersion</c> key is absent; the scanner emits a precise diagnostic
+/// in that case rather than the generic "no section" warning.
+/// </remarks>
 internal sealed record PyprojectTomlSection(
-    string TargetApiVersion,
+    string? TargetApiVersion,
     IReadOnlyList<string> Tools);

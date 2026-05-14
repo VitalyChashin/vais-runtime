@@ -117,6 +117,10 @@ public enum PluginSourcePushStatus
     UnpackFailed = 5,
     /// <summary><c>plugin.yaml</c> could not be re-parsed after the unpack. Old subprocess unaffected.</summary>
     ScanFailed = 6,
+    /// <summary>First push: venv provisioned and new subprocess started. HTTP 201 Created.</summary>
+    Bootstrapped = 7,
+    /// <summary>First push: venv provisioning (<c>python3.11 -m venv</c> or <c>pip install</c>) failed.</summary>
+    BootstrapFailed = 8,
 }
 
 /// <summary>Response body for <c>POST /v1/plugins/{name}/source</c>.</summary>

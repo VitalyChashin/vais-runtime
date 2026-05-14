@@ -21,13 +21,15 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
     private readonly TimeSpan _drainTimeout;
     private readonly ILogger<DefaultPythonPluginReloader> _logger;
     private readonly ISecretResolver? _secretResolver;
+    private readonly PythonPluginBootstrapper? _bootstrapper;
 
     internal DefaultPythonPluginReloader(
         PythonPluginHostService host,
         PythonPluginLoaderOptions options,
         TimeSpan drainTimeout,
         ILoggerFactory? loggerFactory = null,
-        ISecretResolver? secretResolver = null)
+        ISecretResolver? secretResolver = null,
+        PythonPluginBootstrapper? bootstrapper = null)
     {
         _host = host;
         _options = options;
@@ -35,6 +37,7 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
         _logger = (loggerFactory ?? NullLoggerFactory.Instance)
             .CreateLogger<DefaultPythonPluginReloader>();
         _secretResolver = secretResolver;
+        _bootstrapper = bootstrapper;
     }
 
     /// <inheritdoc />
@@ -90,12 +93,40 @@ internal sealed class DefaultPythonPluginReloader : IPythonPluginReloader
         // Look up the running supervisor.
         if (!_host.TryGetSupervisor(newDescriptor.Name, out var supervisor))
         {
-            _logger.LogWarning(
-                "[{Urn}] python-plugin-reload: no supervisor found for plugin '{Name}'. " +
-                "New plugin folders require a silo restart.",
-                PythonPluginUrns.ReloadNoSupervisor, newDescriptor.Name);
-            return Failure(newDescriptor.Name, PythonPluginReloadStatus.NoSupervisor,
-                PythonPluginUrns.ReloadNoSupervisor, null);
+            // No supervisor: treat as first push — bootstrap venv, then load.
+            if (_bootstrapper is null)
+            {
+                _logger.LogWarning(
+                    "[{Urn}] python-plugin-reload: no supervisor for '{Name}' and bootstrap is disabled " +
+                    "(ReloadPolicy != DrainAndSwap).",
+                    PythonPluginUrns.ReloadNoSupervisor, newDescriptor.Name);
+                return Failure(newDescriptor.Name, PythonPluginReloadStatus.NoSupervisor,
+                    PythonPluginUrns.ReloadNoSupervisor, null);
+            }
+
+            _logger.LogInformation(
+                "python-plugin-bootstrap: no supervisor for '{Name}' — bootstrapping.", newDescriptor.Name);
+
+            var bootstrapResult = await _bootstrapper
+                .BootstrapAsync(newDescriptor.PluginDirectory, _options.BootstrapTimeoutSeconds, ct)
+                .ConfigureAwait(false);
+
+            if (!bootstrapResult.Success)
+                return Failure(newDescriptor.Name, PythonPluginReloadStatus.BootstrapFailed,
+                    PythonPluginUrns.BootstrapFailed, null);
+
+            var loadResult = await _host.LoadPluginAsync(newDescriptor, ct).ConfigureAwait(false);
+            return loadResult.Status switch
+            {
+                PythonPluginLoadStatus.Success or PythonPluginLoadStatus.AlreadyLoaded =>
+                    new PythonPluginReloadResult(newDescriptor.Name, PythonPluginReloadStatus.Bootstrapped, null, null),
+                PythonPluginLoadStatus.HandshakeFailed =>
+                    Failure(newDescriptor.Name, PythonPluginReloadStatus.HandshakeFailed,
+                        PythonPluginUrns.ReloadHandshakeFailed, null),
+                _ =>
+                    Failure(newDescriptor.Name, PythonPluginReloadStatus.BootstrapFailed,
+                        PythonPluginUrns.BootstrapFailed, null),
+            };
         }
 
         // Drain + kill + respawn.

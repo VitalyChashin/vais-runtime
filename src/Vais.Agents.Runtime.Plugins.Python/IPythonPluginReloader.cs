@@ -63,4 +63,16 @@ public enum PythonPluginReloadStatus
     /// startup or the folder appeared after the host started. Silo restart required.
     /// </summary>
     NoSupervisor = 4,
+
+    /// <summary>
+    /// First-push bootstrap succeeded: venv provisioned and new subprocess started.
+    /// The HTTP endpoint returns 201 Created for this outcome.
+    /// </summary>
+    Bootstrapped = 5,
+
+    /// <summary>
+    /// First-push bootstrap failed: venv provisioning (<c>python3.11 -m venv</c> or
+    /// <c>pip install</c>) returned a non-zero exit code.
+    /// </summary>
+    BootstrapFailed = 6,
 }

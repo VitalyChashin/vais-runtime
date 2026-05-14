@@ -92,6 +92,36 @@ public sealed class DefaultPythonPluginReloaderTests : IDisposable
         return folder;
     }
 
+    /// <summary>Same as <see cref="CreateAgentPluginDir"/> but without a pre-existing venv.</summary>
+    private string CreateAgentPluginDirNoVenv(string name, string handlerTypeName)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_pluginsRoot, name)).FullName;
+
+        File.WriteAllText(Path.Combine(folder, "plugin.yaml"), $"""
+            apiVersion: vais.agents/v1
+            kind: Plugin
+            metadata:
+              name: {name}
+            spec:
+              runtime: python
+              kind: agent-handler
+              handler:
+                typeName: {handlerTypeName}
+              python:
+                interpreter: .venv/bin/python
+              entrypoint: server.py
+            """);
+
+        File.WriteAllText(Path.Combine(folder, "pyproject.toml"), """
+            [tool.vais.plugin]
+            targetApiVersion = "0.24"
+            """);
+
+        File.WriteAllText(Path.Combine(folder, "server.py"), "# fake");
+
+        return folder;
+    }
+
     // -------------------------------------------------------------------------
     // Tests
     // -------------------------------------------------------------------------
@@ -132,7 +162,7 @@ public sealed class DefaultPythonPluginReloaderTests : IDisposable
         var dir = CreateAgentPluginDir("my-agent", "MyHandlerType");
         var options = new PythonPluginLoaderOptions { PluginsDirectory = _pluginsRoot };
 
-        // Host has no supervisors (StartAsync was never called).
+        // Host has no supervisors (StartAsync was never called) and no bootstrapper.
         var host = new PythonPluginHostService(options, NullLoggerFactory.Instance);
         var reloader = new DefaultPythonPluginReloader(
             host, options, TimeSpan.FromSeconds(5), NullLoggerFactory.Instance);
@@ -142,6 +172,62 @@ public sealed class DefaultPythonPluginReloaderTests : IDisposable
         result.Status.Should().Be(PythonPluginReloadStatus.NoSupervisor);
         result.FailureUrn.Should().Be(PythonPluginUrns.ReloadNoSupervisor);
         result.PluginName.Should().Be("my-agent");
+    }
+
+    [Fact]
+    public async Task ReloadAsync_NoSupervisor_WithBootstrapper_BootstrapFails_ReturnsBootstrapFailed()
+    {
+        // Directory with plugin.yaml + pyproject.toml but NO .venv — so bootstrap is actually invoked.
+        var dir = CreateAgentPluginDirNoVenv("new-agent", "NewHandlerType");
+        var options = new PythonPluginLoaderOptions { PluginsDirectory = _pluginsRoot };
+
+        var host = new PythonPluginHostService(options, NullLoggerFactory.Instance);
+        var failingBootstrapper = new PythonPluginBootstrapper(
+            runner: (_, _) => Task.FromResult((1, "python3.11 not found")));
+
+        var reloader = new DefaultPythonPluginReloader(
+            host, options, TimeSpan.FromSeconds(5), NullLoggerFactory.Instance,
+            bootstrapper: failingBootstrapper);
+
+        var result = await reloader.ReloadAsync(dir);
+
+        result.Status.Should().Be(PythonPluginReloadStatus.BootstrapFailed);
+        result.FailureUrn.Should().Be(PythonPluginUrns.BootstrapFailed);
+        result.PluginName.Should().Be("new-agent");
+    }
+
+    [Fact]
+    public async Task ReloadAsync_NoSupervisor_WithBootstrapper_HandshakeSucceeds_ReturnsBootstrapped()
+    {
+        var dir = CreateAgentPluginDir("fresh-agent", "FreshHandlerType");
+        var options = new PythonPluginLoaderOptions { PluginsDirectory = _pluginsRoot };
+
+        var (pipes, responder, handle) = MakeAgentPlugin(pid: 77);
+        using var responderCts = new CancellationTokenSource();
+        _ = Task.Run(() => responder.RunAsync(responderCts.Token));
+
+        var host = new PythonPluginHostService(
+            options,
+            NullLoggerFactory.Instance,
+            supervisorFactory: _ => new PythonSubprocessSupervisor(
+                _, NullLoggerFactory.Instance,
+                _ => handle,
+                FastBackoff));
+
+        var successBootstrapper = new PythonPluginBootstrapper(
+            runner: (_, _) => Task.FromResult((0, "")));
+
+        var reloader = new DefaultPythonPluginReloader(
+            host, options, TimeSpan.FromSeconds(5), NullLoggerFactory.Instance,
+            bootstrapper: successBootstrapper);
+
+        var result = await reloader.ReloadAsync(dir).WaitAsync(TimeSpan.FromSeconds(15));
+
+        result.Status.Should().Be(PythonPluginReloadStatus.Bootstrapped);
+        result.PluginName.Should().Be("fresh-agent");
+
+        await responderCts.CancelAsync();
+        await host.StopAsync(default);
     }
 
     [Fact]

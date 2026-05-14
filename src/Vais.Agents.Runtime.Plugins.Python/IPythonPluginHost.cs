@@ -14,6 +14,11 @@ namespace Vais.Agents.Runtime.Plugins.Python;
 public interface IPythonPluginHost
 {
     /// <summary>
+    /// Root directory that contains one subfolder per plugin.
+    /// </summary>
+    string PluginsDirectory { get; }
+
+    /// <summary>
     /// A snapshot of every plugin the host attempted to load, together with its current
     /// supervisor status and the live <see cref="McpClient"/> when the plugin is
     /// <see cref="PythonPluginStatus.Ready"/>.

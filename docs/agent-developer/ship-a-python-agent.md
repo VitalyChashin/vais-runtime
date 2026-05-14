@@ -1,6 +1,6 @@
 # Ship a simple Python agent
 
-You'll author an agent's logic in Python, package it as a container plugin, and deploy it via `vais apply`. The runtime supervises the Python subprocess; durability and state survive subprocess restarts, silo relocations, and pod rolls. End state: an agent whose loop runs entirely in Python, invokable through the same `vais invoke` you used for declarative YAML agents.
+You'll author an agent's logic in Python, package it as a plugin, and ship it via `vais plugin-push`. The runtime supervises the Python subprocess; durability and state survive subprocess restarts, silo relocations, and pod rolls. End state: an agent whose loop runs entirely in Python, invokable through the same `vais invoke` you used for declarative YAML agents.
 
 ## Why Python, not YAML?
 
@@ -23,7 +23,7 @@ The plugin contract is uniform across languages — the grain is the durability 
 
 ```bash
 mkdir my-py-agent && cd my-py-agent
-uv init --lib src/my_py_agent
+uv init --lib .
 ```
 
 The runtime expects this layout:
@@ -54,13 +54,14 @@ spec:
   entrypoint: src/my_py_agent/server.py
   python:
     version: "3.11"
+    interpreter: .venv/bin/python
   health:
     handshakeTimeoutSeconds: 10
     restartPolicy: exponentialBackoff
     invokeTimeoutSeconds: 60
 ```
 
-`handler.typeName` is the routing key — it must match exactly in the agent manifest you write later.
+`handler.typeName` is an opaque routing key — the runtime uses it to match this plugin subprocess to the agent manifest you write later. It does not need to name an importable Python class; the value in `plugin.yaml` and `agent.yaml` just have to match each other.
 
 ## Step 3 — Set up `pyproject.toml`
 
@@ -70,13 +71,22 @@ name = "my-py-agent"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "vais-agent-sdk",
+  "vais-agent-sdk",          # once published to PyPI
+  # "vais-agent-sdk @ path/to/agentic/samples/python-agent-sdk",  # local source for now
   "pydantic >=2.8,<3",
 ]
 
 [tool.vais.plugin]
+targetApiVersion = "0.24"
 kind = "agent-handler"
 handlerTypeName = "my_py_agent.agent.SimpleAgent"
+```
+
+Until `vais-agent-sdk` is published to PyPI, install it from source. Clone the repo and point uv at the local path:
+
+```bash
+# from inside my-py-agent/
+uv add --editable /path/to/agentic/samples/python-agent-sdk
 ```
 
 ## Step 4 — Define the state model
@@ -134,8 +144,13 @@ if _src not in sys.path:
 from vais_agent_sdk import run
 from my_py_agent.agent import invoke
 
-if __name__ == "__main__":
+
+def main() -> None:
     run(invoke)
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ## Step 7 — Lock dependencies
@@ -165,10 +180,21 @@ No `model` or `systemPrompt` — those are set by the Python code, not the manif
 
 ## Step 9 — Deploy and invoke
 
-```bash
-vais apply -f plugin.yaml
-vais apply -f agent.yaml
+Python plugins load differently from agent manifests. The runtime discovers plugin subprocesses at startup and via hot-reload — not through `vais apply`. Use two separate commands:
 
+```bash
+# Push the Python plugin source and hot-reload it into the running runtime
+vais plugin-push my-py-agent
+
+# Register the agent manifest (kind: Agent goes through vais apply as normal)
+vais apply -f agent.yaml
+```
+
+> **First time?** `vais plugin-push` is a hot-reload command — it only works for plugins already present in the runtime's Python plugins directory at startup. If this is your first deployment, see [Bootstrap a Python plugin into the runtime](../guides/bootstrap-a-python-plugin.md) before running `plugin-push`.
+
+Then invoke:
+
+```bash
 vais invoke simple-py --text "Hello!"
 # Turn 1: you said 'Hello!'.
 
@@ -182,7 +208,7 @@ The turn counter persists across invocations — state is round-tripping correct
 
 - A first-class agent whose loop runs entirely in Python.
 - State survives subprocess crashes, grain deactivation, and silo relocations.
-- Same `vais apply` / `vais invoke` operator surface as declarative YAML agents.
+- Same `vais invoke` operator surface as declarative YAML agents; agent manifest applied with `vais apply` as normal.
 
 ## Going further — LangGraph, real LLMs, streaming
 

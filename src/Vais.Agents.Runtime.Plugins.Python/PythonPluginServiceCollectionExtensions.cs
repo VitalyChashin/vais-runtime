@@ -67,13 +67,14 @@ public static class PythonPluginServiceCollectionExtensions
         {
             services.TryAddSingleton<IPythonPluginReloader>(sp =>
             {
-                // Resolve the concrete type so we can call TryGetSupervisor.
+                // Resolve the concrete type so we can call TryGetSupervisor / LoadPluginAsync.
                 var host = (PythonPluginHostService)sp.GetRequiredService<IPythonPluginHost>();
                 var loggerFactory = sp.GetService<ILoggerFactory>();
                 var drainTimeout = TimeSpan.FromSeconds(opts.ReloadDrainTimeoutSeconds);
                 var secretResolver = sp.GetService<ISecretResolver>();
+                var bootstrapper = new PythonPluginBootstrapper(loggerFactory);
                 return new DefaultPythonPluginReloader(host, opts, drainTimeout, loggerFactory,
-                    secretResolver);
+                    secretResolver, bootstrapper);
             });
 
             services.AddSingleton<IHostedService>(sp =>

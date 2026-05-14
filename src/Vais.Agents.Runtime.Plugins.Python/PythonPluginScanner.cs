@@ -172,6 +172,15 @@ internal sealed class PythonPluginScanner
             return null;
         }
 
+        if (section.TargetApiVersion is null)
+        {
+            _logger.LogWarning(
+                "[{Urn}] pyproject.toml in '{Folder}' has [tool.vais.plugin] but is missing " +
+                "the required 'targetApiVersion' field (e.g. targetApiVersion = \"0.24\").",
+                PythonPluginUrns.LoadFailed, folder);
+            return null;
+        }
+
         // ABI check: exact match on major version string during 0.x.
         if (!string.Equals(_options.RuntimeAbiVersion, section.TargetApiVersion, StringComparison.Ordinal))
         {

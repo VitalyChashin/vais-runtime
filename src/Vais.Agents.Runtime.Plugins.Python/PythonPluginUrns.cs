@@ -113,6 +113,17 @@ public static class PythonPluginUrns
     public const string SecretResolutionFailed = UrnPrefix + "python-plugin-secret-resolution-failed";
 
     // -----------------------------------------------------------------------
+    // v0.34 — Python plugin CLI bootstrap URNs
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// First-push bootstrap failed: <c>python3.11 -m venv</c> or <c>pip install</c>
+    /// returned a non-zero exit code inside the runtime container. Check the venv
+    /// provisioning logs for the actual error output.
+    /// </summary>
+    public const string BootstrapFailed = UrnPrefix + "python-plugin-bootstrap-failed";
+
+    // -----------------------------------------------------------------------
     // v0.25 — Python plugin hot-reload URNs
     // -----------------------------------------------------------------------
 

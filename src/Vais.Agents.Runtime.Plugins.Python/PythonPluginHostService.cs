@@ -71,6 +71,9 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     // -------------------------------------------------------------------------
 
     /// <inheritdoc />
+    public string PluginsDirectory => _options.PluginsDirectory;
+
+    /// <inheritdoc />
     public IReadOnlyCollection<LoadedPythonPlugin> LoadedPlugins
     {
         get
@@ -96,6 +99,72 @@ internal sealed class PythonPluginHostService : IPythonPluginHost, IHostedServic
     {
         lock (_supervisors)
             return _supervisors.TryGetValue(name, out supervisor);
+    }
+
+    /// <summary>
+    /// Dynamically loads a plugin that was not present at startup (first-push bootstrap).
+    /// Thread-safe: concurrent calls for the same plugin name are serialised via the
+    /// <c>_supervisors</c> lock; the second caller returns <see cref="PythonPluginLoadStatus.AlreadyLoaded"/>.
+    /// </summary>
+    internal async Task<PythonPluginLoadResult> LoadPluginAsync(
+        PythonPluginDescriptor descriptor,
+        CancellationToken ct = default)
+    {
+        lock (_supervisors)
+        {
+            if (_supervisors.ContainsKey(descriptor.Name))
+                return new PythonPluginLoadResult(descriptor.Name, PythonPluginLoadStatus.AlreadyLoaded);
+        }
+
+        var resolved = await ResolveSecretsAsync(descriptor, ct).ConfigureAwait(false);
+        if (resolved is null)
+            return new PythonPluginLoadResult(descriptor.Name, PythonPluginLoadStatus.SecretResolutionFailed,
+                "Secret resolution failed.");
+
+        PythonSubprocessSupervisor supervisor;
+        lock (_supervisors)
+        {
+            if (_supervisors.ContainsKey(descriptor.Name))
+                return new PythonPluginLoadResult(descriptor.Name, PythonPluginLoadStatus.AlreadyLoaded);
+
+            supervisor = _supervisorFactory(resolved);
+            _supervisors[resolved.Name] = supervisor;
+        }
+
+        supervisor.Start();
+        await supervisor.InitialHandshakeTask.ConfigureAwait(false);
+
+        if (supervisor.Status != PythonPluginStatus.Ready)
+        {
+            lock (_supervisors) _supervisors.Remove(descriptor.Name);
+            return new PythonPluginLoadResult(descriptor.Name, PythonPluginLoadStatus.HandshakeFailed,
+                supervisor.LastErrorSnippet);
+        }
+
+        if (resolved.HandlerKind == PythonHandlerKind.AgentHandler && _handlerRegistry is { } registry)
+        {
+            try
+            {
+                var factory = new PythonAgentShimFactory(
+                    supervisor,
+                    _options.MaxAgentStateSizeBytes,
+                    _loggerFactory,
+                    _callTokenService,
+                    _options.InternalGatewayBaseUrl);
+                registry.Register(factory, resolved.Name);
+                _logger.LogInformation(
+                    "python-plugin-bootstrap: registered Python agent handler '{TypeName}' for plugin '{Name}'.",
+                    resolved.HandlerTypeName, resolved.Name);
+            }
+            catch (PluginLoadException ex)
+            {
+                _logger.LogWarning(ex,
+                    "[{Urn}] python-plugin-bootstrap: handler '{TypeName}' collides — plugin '{Name}' marked unavailable.",
+                    PythonPluginUrns.AgentHandlerCollision, resolved.HandlerTypeName, resolved.Name);
+            }
+        }
+
+        return new PythonPluginLoadResult(descriptor.Name, PythonPluginLoadStatus.Success);
     }
 
     // -------------------------------------------------------------------------
