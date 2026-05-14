@@ -16,3 +16,4 @@ Vais.Agents.Gateways.Governance.LlmRateLimitMiddleware
 Vais.Agents.Gateways.Governance.LlmRateLimitMiddleware.LlmRateLimitMiddleware(Vais.Agents.Gateways.Governance.IRateLimitStore! store, Vais.Agents.Gateways.Governance.RateLimitOptions! options, Vais.Agents.IAgentContextAccessor! contextAccessor) -> void
 Vais.Agents.Gateways.Governance.LlmGovernanceServiceCollectionExtensions
 static Vais.Agents.Gateways.Governance.LlmGovernanceServiceCollectionExtensions.AddLlmRateLimitMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Governance.RateLimitOptions! options) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Gateways.Governance.LlmGovernanceServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_LlmRateLimit(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

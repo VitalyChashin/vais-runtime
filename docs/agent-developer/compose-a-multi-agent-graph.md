@@ -28,7 +28,7 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
   systemPrompt:
     inline: |
       You are an intent classifier. Given a user message, respond with exactly one word:
@@ -60,7 +60,7 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
   systemPrompt:
     inline: |
       You are a helpful assistant. Answer the user's question in 2-3 sentences.

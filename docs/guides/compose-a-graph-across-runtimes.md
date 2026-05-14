@@ -29,7 +29,7 @@ This guide shows how to run a graph on runtime A where one node invokes an agent
   spec:
     model:
       provider: openai
-      name: gpt-4o-mini
+      id: gpt-4o-mini
     systemPrompt:
       inline: "Enrich the user's input with one concrete fact."
     handler:

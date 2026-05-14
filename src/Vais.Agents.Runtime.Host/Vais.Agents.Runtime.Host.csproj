@@ -42,6 +42,7 @@
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Container\Vais.Agents.Runtime.Plugins.Container.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.Prometheus\Vais.Agents.Gateways.Prometheus.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.Fallback\Vais.Agents.Gateways.Fallback.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Gateways.Governance\Vais.Agents.Gateways.Governance.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.SemanticCache\Vais.Agents.Gateways.SemanticCache.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.StructuredOutput\Vais.Agents.Gateways.StructuredOutput.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.McpGovernance\Vais.Agents.Gateways.McpGovernance.csproj" />

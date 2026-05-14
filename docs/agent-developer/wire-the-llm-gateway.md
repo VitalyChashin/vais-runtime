@@ -33,11 +33,11 @@ spec:
 
 **What these middleware do:**
 
-- `LlmLogging` — one structured log line per call: provider, model, prompt tokens, completion tokens, latency.
-- `LlmOtel` — one `vais.llm.request` OTel span per call. Wraps provider duration; tagged with `gen_ai.*` semantic conventions plus `vais.*` extensions.
-- `Prometheus` — increments `llm_requests_total`, records `llm_request_duration_seconds`, and counts `llm_tokens_total` by `type` (prompt vs completion). Labeled by `model` and `workspace`.
+- `LlmLogging` — one structured `Information`-level log line per call with `model`, `promptTokens`, `completionTokens`, and `latencyMs`.
+- `LlmOtel` — one `llm.completion` OTel span per call (or `llm.completion.stream` on the streaming path). Wraps provider duration; tagged with `gen_ai.*` semantic conventions plus `vais.*` extensions.
+- `Prometheus` — increments OTel metrics that Prometheus can scrape: `gen_ai_client_token_usage_tokens` (by `gen_ai_token_type`) and `gen_ai_client_operation_duration_seconds`. Available at `GET /metrics` when `VAIS_OTEL_ENDPOINT` or `VAIS_OTEL_CONSOLE=true` is set.
 
-Order matters — middleware runs **right-to-left**: the first entry is the outermost and sees the request first / response last. For observability middleware the order is rarely consequential; for rate limiting and fallback it is.
+Order matters — middleware runs **left-to-right**: the first entry is the outermost and sees the request first / response last. For observability middleware the order is rarely consequential; for rate limiting and fallback it is.
 
 Apply:
 
@@ -58,7 +58,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: "Be friendly and concise."
   handler:
@@ -84,9 +85,9 @@ docker logs -f vais-runtime
 
 In the runtime logs you'll see, for that single invocation:
 
-- A `LlmLogging` structured entry (`request_id`, `model`, `tokens.prompt`, `tokens.completion`, `latency_ms`).
-- The corresponding `vais.llm.request` OTel span — visible in the console if `VAIS_OTEL_CONSOLE=true`, otherwise exported to your collector via `VAIS_OTEL_ENDPOINT`.
-- Prometheus counters incremented at `GET /metrics` on the runtime port.
+- A `LlmLogging` `Information` line: `LLM call: model=gpt-4o-mini promptTokens=… completionTokens=… latencyMs=…`
+- The corresponding `llm.completion` OTel span — visible in the console if `VAIS_OTEL_CONSOLE=true`, otherwise exported to your collector via `VAIS_OTEL_ENDPOINT`.
+- OTel metrics incremented at `GET /metrics`: `gen_ai_client_token_usage_tokens` and `gen_ai_client_operation_duration_seconds`.
 
 ## Step 4 — Add a more interesting middleware
 
@@ -105,22 +106,26 @@ spec:
     - name: LlmOtel
 ```
 
-Per-user, per-workspace, or global. The key is resolved from `AgentContext` (`UserId` → `TenantId` → `WorkspaceId` → `"global"`). Excess calls fail with `429 ToolRateLimitExceeded`.
+Per-user, per-workspace, or global. The key is resolved from `AgentContext` (`UserId` → `TenantId` → `WorkspaceId` → `AgentName` → `"global"`). Excess calls fail with a 429 response. `maxTokensPerWindow` is an optional additional cap.
 
-### Fallback across providers (`LlmFallback`)
+### Fallback across providers (`Fallback`)
 
 ```yaml
 spec:
   middleware:
     - name: LlmLogging
-    - name: LlmFallback
+    - name: Fallback
       params:
         pool:
-          - name: openai-primary
-          - name: anthropic-backup
+          - provider: openai
+            id: gpt-4o
+            apiKeyRef: secret://env/OPENAI_API_KEY
+          - provider: anthropic
+            id: claude-3-haiku-20240307
+            apiKeyRef: secret://env/ANTHROPIC_API_KEY
 ```
 
-On a provider failure (timeout, 5xx, transient error), the middleware tries the next entry in `pool`. The default `ResiliencePipeline` for individual providers is bypassed — fallback handles retries holistically.
+On a provider failure (timeout, 5xx, transient error), the middleware tries the next entry in `pool` in order. Each pool entry is a full model spec — the same fields as `spec.model`. On the streaming path, fallback commits to the first provider that delivers at least one delta; it does not retry a stream already in progress.
 
 ## What you built
 

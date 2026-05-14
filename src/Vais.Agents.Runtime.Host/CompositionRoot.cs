@@ -36,6 +36,7 @@ using Vais.Agents.Runtime.Plugins.Python;
 using Vais.Agents.Runtime.Plugins.Container;
 using Vais.Agents.Gateways.Prometheus;
 using Vais.Agents.Gateways.Fallback;
+using Vais.Agents.Gateways.Governance;
 using Vais.Agents.Gateways.SemanticCache;
 using Vais.Agents.Gateways.StructuredOutput;
 using Vais.Agents.Gateways.McpGovernance;
@@ -238,7 +239,8 @@ internal static class CompositionRoot
         services.AddNamedLlmGatewayMiddleware_LlmPromptEnrichment();
         // Package LLM middleware
         services.AddNamedLlmGatewayMiddleware_Prometheus();
-        services.AddNamedLlmGatewayMiddleware_Fallback();
+        services.AddNamedLlmGatewayMiddleware_LlmRateLimit();
+        RegisterManifestDrivenFallback(services);
         services.AddNamedLlmGatewayMiddleware_SemanticCache();
         services.AddNamedLlmGatewayMiddleware_StructuredOutput();
         // Core Tool middleware
@@ -624,5 +626,44 @@ internal static class CompositionRoot
                     "Set VAIS_OTEL_ENDPOINT to your OTLP collector endpoint.");
             }
         }
+    }
+
+    // Registers "Fallback" as a manifest-driven named LLM gateway middleware.
+    // Each pool entry in spec.Params is a full model spec (provider, id, apiKeyRef);
+    // ICompletionProviderPool resolves and caches the provider instances.
+    // Called from ConfigureServices instead of AddNamedLlmGatewayMiddleware_Fallback()
+    // so the factory can resolve ICompletionProviderPool without the Fallback package
+    // needing a dependency on Runtime.Instantiation.
+    private static void RegisterManifestDrivenFallback(IServiceCollection services)
+    {
+        services.AddSingleton(sp =>
+        {
+            var providerPool = sp.GetRequiredService<ICompletionProviderPool>();
+            return new NamedLlmGatewayMiddlewareRegistration(
+                "Fallback",
+                (spec, _) =>
+                {
+                    var providers = BuildProviderPool(spec.Params, providerPool);
+                    return new LlmFallbackMiddleware(new InMemoryFallbackProviderPool(providers));
+                });
+        });
+    }
+
+    private static ICompletionProvider[] BuildProviderPool(JsonElement? paramsEl, ICompletionProviderPool pool)
+    {
+        if (paramsEl is not { } p || !p.TryGetProperty("pool", out var poolEl))
+            return [];
+
+        var providers = new List<ICompletionProvider>();
+        foreach (var entry in poolEl.EnumerateArray())
+        {
+            var provider = entry.GetProperty("provider").GetString()!;
+            var id = entry.GetProperty("id").GetString()!;
+            var apiKeyRef = entry.TryGetProperty("apiKeyRef", out var kEl) ? kEl.GetString() : null;
+            var modelSpec = new ModelSpec(provider, id, ApiKeyRef: apiKeyRef);
+            // GetAsync is async; safe to block here — runs once at agent activation, not per request.
+            providers.Add(pool.GetAsync(modelSpec).AsTask().GetAwaiter().GetResult());
+        }
+        return [.. providers];
     }
 }

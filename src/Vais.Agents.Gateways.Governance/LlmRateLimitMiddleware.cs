@@ -1,7 +1,9 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Vais.Agents.Gateways.Governance;
 
@@ -80,5 +82,42 @@ public static class LlmGovernanceServiceCollectionExtensions
         services.AddSingleton<IRateLimitStore, InMemorySlidingWindowRateLimitStore>();
         services.AddSingleton<LlmGatewayMiddleware, LlmRateLimitMiddleware>();
         return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="LlmRateLimitMiddleware"/> as a named factory under the key
+    /// <c>"LlmRateLimit"</c>. Options are read from the manifest <c>params</c> block at
+    /// agent activation time: <c>maxRequestsPerWindow</c>, <c>maxTokensPerWindow</c>,
+    /// <c>windowSeconds</c> (defaults to 60).
+    /// </summary>
+    public static IServiceCollection AddNamedLlmGatewayMiddleware_LlmRateLimit(
+        this IServiceCollection services)
+    {
+        services.TryAddSingleton<IRateLimitStore, InMemorySlidingWindowRateLimitStore>();
+        services.AddSingleton(sp =>
+        {
+            var store = sp.GetRequiredService<IRateLimitStore>();
+            var contextAccessor = sp.GetRequiredService<IAgentContextAccessor>();
+            return new NamedLlmGatewayMiddlewareRegistration(
+                "LlmRateLimit",
+                (spec, _) => new LlmRateLimitMiddleware(store, ParseOptions(spec.Params), contextAccessor));
+        });
+        return services;
+    }
+
+    private static RateLimitOptions ParseOptions(JsonElement? paramsEl)
+    {
+        int? maxRequests = null, maxTokens = null;
+        var window = TimeSpan.FromMinutes(1);
+        if (paramsEl is { } p)
+        {
+            if (p.TryGetProperty("maxRequestsPerWindow", out var r) && r.TryGetInt32(out var ri))
+                maxRequests = ri;
+            if (p.TryGetProperty("maxTokensPerWindow", out var t) && t.TryGetInt32(out var ti))
+                maxTokens = ti;
+            if (p.TryGetProperty("windowSeconds", out var w) && w.TryGetInt32(out var wi))
+                window = TimeSpan.FromSeconds(wi);
+        }
+        return new RateLimitOptions { MaxRequestsPerWindow = maxRequests, MaxTokensPerWindow = maxTokens, Window = window };
     }
 }

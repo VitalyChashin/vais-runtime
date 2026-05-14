@@ -92,7 +92,7 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
   systemPrompt:
     inline: |
       For each user question, call the `fetch` tool with a relevant URL and summarise

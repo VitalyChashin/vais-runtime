@@ -1,14 +1,17 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Vais.Agents.Core;
 
 /// <summary>
-/// Gateway middleware that logs each LLM request and response at <see cref="LogLevel.Debug"/> level on both
-/// the non-streaming and streaming paths. Does not mutate requests or responses.
+/// Gateway middleware that logs each LLM call at <see cref="LogLevel.Information"/> level on both
+/// the non-streaming and streaming paths. Emits one structured line per call with model, token
+/// counts, and latency. Does not mutate requests or responses.
 /// </summary>
 public sealed class LlmLoggingMiddleware(ILogger<LlmLoggingMiddleware> logger) : LlmGatewayMiddleware
 {
@@ -20,9 +23,12 @@ public sealed class LlmLoggingMiddleware(ILogger<LlmLoggingMiddleware> logger) :
     {
         logger.LogDebug("LLM request: {TurnCount} turns, {ToolCount} tools",
             request.History.Count, request.Tools?.Count ?? 0);
+        var sw = Stopwatch.StartNew();
         var response = await next(request, cancellationToken).ConfigureAwait(false);
-        logger.LogDebug("LLM response: {PromptTokens} prompt + {CompletionTokens} completion tokens",
-            response.PromptTokens, response.CompletionTokens);
+        sw.Stop();
+        logger.LogInformation(
+            "LLM call: model={Model} promptTokens={PromptTokens} completionTokens={CompletionTokens} latencyMs={LatencyMs}",
+            response.ModelId, response.PromptTokens, response.CompletionTokens, sw.ElapsedMilliseconds);
         return response;
     }
 
@@ -31,10 +37,17 @@ public sealed class LlmLoggingMiddleware(ILogger<LlmLoggingMiddleware> logger) :
         CompletionRequest request,
         Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
         CancellationToken cancellationToken)
+        => StreamWithLoggingAsync(request, next, cancellationToken);
+
+    private async IAsyncEnumerable<CompletionUpdate> StreamWithLoggingAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         logger.LogDebug("LLM stream start: {TurnCount} turns, {ToolCount} tools",
             request.History.Count, request.Tools?.Count ?? 0);
-        return next(request, cancellationToken);
+        await foreach (var update in next(request, cancellationToken).ConfigureAwait(false))
+            yield return update;
     }
 
     /// <inheritdoc/>
@@ -42,8 +55,9 @@ public sealed class LlmLoggingMiddleware(ILogger<LlmLoggingMiddleware> logger) :
         CompletionResponse final,
         CancellationToken cancellationToken = default)
     {
-        logger.LogDebug("LLM stream complete: {PromptTokens} prompt + {CompletionTokens} completion tokens",
-            final.PromptTokens, final.CompletionTokens);
+        logger.LogInformation(
+            "LLM call (stream): model={Model} promptTokens={PromptTokens} completionTokens={CompletionTokens}",
+            final.ModelId, final.PromptTokens, final.CompletionTokens);
         return ValueTask.CompletedTask;
     }
 }
@@ -51,8 +65,8 @@ public sealed class LlmLoggingMiddleware(ILogger<LlmLoggingMiddleware> logger) :
 public static partial class LlmGatewayServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="LlmLoggingMiddleware"/> as gateway middleware. Logs each LLM request and
-    /// response at <see cref="LogLevel.Debug"/> on both paths.
+    /// Registers <see cref="LlmLoggingMiddleware"/> as gateway middleware. Logs each LLM call at
+    /// <see cref="LogLevel.Information"/> with model, token counts, and latency on both paths.
     /// </summary>
     public static IServiceCollection AddLlmLoggingMiddleware(
         this IServiceCollection services)
