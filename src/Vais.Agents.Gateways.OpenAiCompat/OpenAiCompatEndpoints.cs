@@ -638,6 +638,7 @@ public static class OpenAiCompatEndpoints
         await WriteSseChunkAsync(response, completionId, model, new ChatDelta { Role = "assistant" }, null, ct).ConfigureAwait(false);
 
         var firstOutput = true;
+        var lastNodeOutput = string.Empty;
 
         await foreach (var evt in events.WithCancellation(ct).ConfigureAwait(false))
         {
@@ -659,18 +660,21 @@ public static class OpenAiCompatEndpoints
                     await WriteSseChunkAsync(response, completionId, model,
                         new ChatDelta { Content = n.OutputText }, null, ct).ConfigureAwait(false);
                     firstOutput = false;
+                    lastNodeOutput = n.OutputText;
                     break;
 
                 case GraphCompleted g:
                 {
                     // Emit the graph's declared output key as the definitive final answer.
-                    // This is the same extraction used by the non-streaming path, so the
-                    // canonical output is always consistent regardless of what intermediate
-                    // node events showed (e.g. a JSON stub from the synthesizer LLM).
+                    // Skip if it equals the last NodeAgentInvoked output — the synthesizer
+                    // may have already emitted the same text (OutputText is truncated at 8 KB
+                    // so only skip when content is genuinely identical, meaning no truncation
+                    // occurred and the LLM returned a short/wrong response).
                     if (g.FinalState is not null)
                     {
                         var finalContent = ExtractGraphOutput(g.FinalState, outputKey);
-                        if (!string.IsNullOrWhiteSpace(finalContent))
+                        if (!string.IsNullOrWhiteSpace(finalContent)
+                            && !string.Equals(finalContent, lastNodeOutput, StringComparison.Ordinal))
                         {
                             if (!firstOutput)
                             {

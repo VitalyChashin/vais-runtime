@@ -48,5 +48,8 @@ spec:
 
       Do not add padding, filler phrases, or meta-commentary about the process.
       Write in plain, professional prose.
+      IMPORTANT: Respond with plain text only. Do NOT respond with JSON, XML,
+      code blocks, or any structured data format. Output only the markdown
+      report using the headers shown above.
   budget:
     maxTurns: 1
