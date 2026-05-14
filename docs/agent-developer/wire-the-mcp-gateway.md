@@ -177,6 +177,108 @@ mcpServers:
 
 Any name in the allowlist that the server does not expose fails at apply time with `urn:vais-agents:mcp-tool-not-found`.
 
+## Virtual server: curating tools from multiple sources
+
+A virtual `McpServer` aggregates tools from several physical servers and publishes only the subset you want consumers to see. One virtual server definition replaces per-agent `tools[]` enumeration for every agent that needs the same set.
+
+**Scenario:** you have two physical servers — `mcp-fetch` (web page retrieval) and `mcp-search` (structured search) — and you want agents to get exactly one tool from each, renamed for clarity, behind a shared governance pipeline.
+
+### Register the second physical server
+
+Save as `mcp-search-server.yaml`:
+
+```yaml
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: mcp-search
+  version: "1.0"
+spec:
+  transport: stdio
+  command: npx
+  args:
+    - -y
+    - "@modelcontextprotocol/server-brave-search"
+  mcpGatewayRef: observable-mcp-gateway
+```
+
+```bash
+export BRAVE_API_KEY=<your-key>
+vais apply -f mcp-search-server.yaml
+```
+
+### Declare the virtual server
+
+Save as `research-tools.yaml`:
+
+```yaml
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: research-tools
+  version: "1.0"
+  description: |
+    Curated research toolset: one fetch tool and one search tool,
+    selectively projected from their respective physical servers.
+spec:
+  virtual: true
+  sources:
+    - ref: mcp-fetch        # first physical upstream
+    - ref: mcp-search       # second physical upstream
+  toolProjection:
+    - name: fetch_page      # published name the model sees
+      from: mcp-fetch
+      sourceToolName: fetch
+    - name: web_search      # published name the model sees
+      from: mcp-search
+      sourceToolName: search
+  mcpGatewayRef: observable-mcp-gateway
+```
+
+`toolProjection` is the curation boundary. Only listed tools are published — any other tool on either physical server is invisible to consumers of this virtual server. Renaming (`fetch` → `fetch_page`) is optional; omit `sourceToolName` if the name is already correct.
+
+```bash
+vais apply -f mcp-fetch-server.yaml    # already applied in Step 2
+vais apply -f mcp-search-server.yaml
+vais apply -f research-tools.yaml
+```
+
+### Bind the virtual server in an agent
+
+```yaml
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: researcher
+  version: "2.0"
+spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
+  systemPrompt:
+    inline: |
+      You are a research assistant. Use web_search to find relevant pages,
+      then fetch_page to read them. Cite every URL you used.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  mcpServers:
+    - name: research-tools
+      transport: registered
+  # No tools[] — fetch_page and web_search arrive from toolProjection.
+  # No mcpGatewayRef — inherited from research-tools (Option D).
+  budget:
+    maxTurns: 8
+```
+
+```bash
+vais apply -f researcher.yaml
+```
+
+The agent gets two tools (`fetch_page`, `web_search`) and the full `observable-mcp-gateway` pipeline — via a single `mcpServers` line with nothing in `tools[]` and no `mcpGatewayRef`. To add a third tool or swap the backend search server, you update `research-tools.yaml` only; every agent that binds it picks up the change on next activation with no manifest changes of their own.
+
 ## Step 4 — Invoke and observe
 
 ```bash
