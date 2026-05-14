@@ -11,15 +11,13 @@ Tools are the agent's hands. Without a gateway, every tool call is a one-off int
 - A running runtime ([DevOps section](../devops/index.md)).
 - The CLI pointed at it.
 - An agent registered with the runtime ([Your first declarative agent](your-first-declarative-agent.md)).
-- A reachable MCP server. This tutorial uses the `modelcontextprotocol/servers/fetch` image from GitHub Container Registry. Authenticate once before pulling:
+- Docker available on the host running the runtime. Pull the MCP fetch image once:
 
   ```bash
-  docker login ghcr.io   # GitHub account + PAT with read:packages scope
-  docker run -d --name mcp-fetch -p 3000:3000 ghcr.io/modelcontextprotocol/servers/fetch:latest
-  curl -s http://localhost:3000/health   # → ok
+  docker pull mcp/fetch:latest
   ```
 
-  > **Port conflict?** If port 3000 is already in use (e.g. by Langfuse in the default local dev stack), map to a free port instead: `docker run -d --name mcp-fetch -p 3001:3000 ...` and replace `3000` with `3001` in the `mcp-fetch-server.yaml` URL below.
+  The runtime spawns `mcp/fetch` as a stdio subprocess on each connection — no separate container to manage.
 
 ## Step 1 — Declare the gateway config
 
@@ -71,12 +69,17 @@ metadata:
   version: "1.0"
   description: HTTP fetch tool via MCP.
 spec:
-  transport: streamableHttp
-  url: http://host.docker.internal:3000/mcp
+  transport: stdio
+  command: docker
+  args:
+    - run
+    - --rm
+    - -i
+    - mcp/fetch:latest
   mcpGatewayRef: observable-mcp-gateway
 ```
 
-On Docker Desktop, `host.docker.internal` resolves to the host from inside the runtime container. On Linux without Docker Desktop, use the container's host-network address or join the runtime + MCP server to a shared user-defined bridge.
+The runtime spawns `docker run --rm -i mcp/fetch:latest` as a child process and speaks the MCP stdio protocol over its stdin/stdout. No port to expose, no network routing required.
 
 ```bash
 vais apply -f mcp-fetch-server.yaml
