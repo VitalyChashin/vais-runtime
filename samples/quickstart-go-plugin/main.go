@@ -39,8 +39,8 @@ type InvokeResponse struct {
 }
 
 type Metadata struct {
-	HandlerTypeName string `json:"handlerTypeName"`
-	APIVersion      string `json:"apiVersion"`
+	HandlerTypeName  string `json:"handlerTypeName"`
+	TargetApiVersion string `json:"targetApiVersion"`
 }
 
 func main() {
@@ -52,8 +52,8 @@ func main() {
 	http.HandleFunc("/v1/metadata", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(Metadata{
-			HandlerTypeName: handlerTypeName,
-			APIVersion:      apiVersion,
+			HandlerTypeName:  handlerTypeName,
+			TargetApiVersion: apiVersion,
 		})
 	})
 

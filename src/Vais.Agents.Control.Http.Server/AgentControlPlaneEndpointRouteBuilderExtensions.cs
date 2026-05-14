@@ -2793,9 +2793,16 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         return Results.Ok(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
     }
 
+    private static IResult ContainerPluginsNotAvailable() =>
+        Results.Problem(
+            title: "Container plugin support not enabled",
+            detail: "Set VAIS_CONTAINER_PLUGINS_DIRECTORY in the runtime environment to enable container plugins.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
     private static async Task<IResult> ContainerPluginCreateAsync(HttpContext http, CancellationToken ct)
     {
-        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var manager = http.RequestServices.GetService<IContainerPluginLifecycleManager>();
+        if (manager is null) return ContainerPluginsNotAvailable();
         var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
         string body;
         using (var reader = new StreamReader(http.Request.Body))
@@ -2850,7 +2857,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     private static async Task<IResult> ContainerPluginQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
     {
         var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
-        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var manager = http.RequestServices.GetService<IContainerPluginLifecycleManager>();
+        if (manager is null) return ContainerPluginsNotAvailable();
         try
         {
             var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
@@ -2868,7 +2876,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static async Task<IResult> ContainerPluginUpdateAsync(HttpContext http, string id, string? version, CancellationToken ct)
     {
-        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var manager = http.RequestServices.GetService<IContainerPluginLifecycleManager>();
+        if (manager is null) return ContainerPluginsNotAvailable();
         var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
         var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
         string body;
@@ -2906,7 +2915,8 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static async Task<IResult> ContainerPluginEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
     {
-        var manager = http.RequestServices.GetRequiredService<IContainerPluginLifecycleManager>();
+        var manager = http.RequestServices.GetService<IContainerPluginLifecycleManager>();
+        if (manager is null) return ContainerPluginsNotAvailable();
         var registry = http.RequestServices.GetRequiredService<IContainerPluginRegistry>();
         try
         {
