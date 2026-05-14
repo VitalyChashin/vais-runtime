@@ -14,56 +14,11 @@ WORKDIR /src
 # Copy solution-level MSBuild files first to maximise layer caching.
 COPY Directory.Build.props Directory.Packages.props NuGet.config* ./
 
-# Bring in the csproj files referenced by the host's publish graph so `dotnet
-# restore` can resolve the package + project graph without pulling the sources.
-COPY src/Vais.Agents.Abstractions/Vais.Agents.Abstractions.csproj                                       src/Vais.Agents.Abstractions/
-COPY src/Vais.Agents.Core/Vais.Agents.Core.csproj                                                       src/Vais.Agents.Core/
-COPY src/Vais.Agents.Control.Abstractions/Vais.Agents.Control.Abstractions.csproj                       src/Vais.Agents.Control.Abstractions/
-COPY src/Vais.Agents.Control.InProcess/Vais.Agents.Control.InProcess.csproj                             src/Vais.Agents.Control.InProcess/
-COPY src/Vais.Agents.Control.Manifests.Json/Vais.Agents.Control.Manifests.Json.csproj                   src/Vais.Agents.Control.Manifests.Json/
-COPY src/Vais.Agents.Control.Manifests.Yaml/Vais.Agents.Control.Manifests.Yaml.csproj                   src/Vais.Agents.Control.Manifests.Yaml/
-COPY src/Vais.Agents.Control.Http.Server/Vais.Agents.Control.Http.Server.csproj                         src/Vais.Agents.Control.Http.Server/
-COPY src/Vais.Agents.Control.Policy.Opa/Vais.Agents.Control.Policy.Opa.csproj                           src/Vais.Agents.Control.Policy.Opa/
-COPY src/Vais.Agents.Hosting.Orleans/Vais.Agents.Hosting.Orleans.csproj                                 src/Vais.Agents.Hosting.Orleans/
-COPY src/Vais.Agents.Persistence.Redis/Vais.Agents.Persistence.Redis.csproj                             src/Vais.Agents.Persistence.Redis/
-COPY src/Vais.Agents.Persistence.Postgres/Vais.Agents.Persistence.Postgres.csproj                       src/Vais.Agents.Persistence.Postgres/
-COPY src/Vais.Agents.Observability.OpenTelemetry/Vais.Agents.Observability.OpenTelemetry.csproj         src/Vais.Agents.Observability.OpenTelemetry/
-COPY src/Vais.Agents.Observability.Langfuse/Vais.Agents.Observability.Langfuse.csproj                   src/Vais.Agents.Observability.Langfuse/
-COPY src/Vais.Agents.Protocols.Mcp/Vais.Agents.Protocols.Mcp.csproj                                   src/Vais.Agents.Protocols.Mcp/
-COPY src/Vais.Agents.Protocols.A2A/Vais.Agents.Protocols.A2A.csproj                                   src/Vais.Agents.Protocols.A2A/
-COPY src/Vais.Agents.Control.Http.Client/Vais.Agents.Control.Http.Client.csproj                       src/Vais.Agents.Control.Http.Client/
-COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/Vais.Agents.Ai.MicrosoftAgentFramework.csproj         src/Vais.Agents.Ai.MicrosoftAgentFramework/
-COPY src/Vais.Agents.Runtime.Instantiation/Vais.Agents.Runtime.Instantiation.csproj                   src/Vais.Agents.Runtime.Instantiation/
-COPY src/Vais.Agents.Runtime.Plugins/Vais.Agents.Runtime.Plugins.csproj                               src/Vais.Agents.Runtime.Plugins/
-COPY src/Vais.Agents.Runtime.Plugins.Python/Vais.Agents.Runtime.Plugins.Python.csproj                 src/Vais.Agents.Runtime.Plugins.Python/
-COPY src/Vais.Agents.Runtime.Plugins.Container/Vais.Agents.Runtime.Plugins.Container.csproj           src/Vais.Agents.Runtime.Plugins.Container/
-COPY src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj                                     src/Vais.Agents.Runtime.Host/
+# Copy all sources. A single wildcard COPY is simpler and always correct as new
+# projects are added; the NuGet restore cache is preserved by the layer above.
+COPY src/ src/
 
 RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
-
-# Copy the rest of the sources the host transitively depends on.
-COPY src/Vais.Agents.Abstractions/                       src/Vais.Agents.Abstractions/
-COPY src/Vais.Agents.Core/                               src/Vais.Agents.Core/
-COPY src/Vais.Agents.Control.Abstractions/               src/Vais.Agents.Control.Abstractions/
-COPY src/Vais.Agents.Control.InProcess/                  src/Vais.Agents.Control.InProcess/
-COPY src/Vais.Agents.Control.Manifests.Json/             src/Vais.Agents.Control.Manifests.Json/
-COPY src/Vais.Agents.Control.Manifests.Yaml/             src/Vais.Agents.Control.Manifests.Yaml/
-COPY src/Vais.Agents.Control.Http.Server/                src/Vais.Agents.Control.Http.Server/
-COPY src/Vais.Agents.Control.Policy.Opa/                 src/Vais.Agents.Control.Policy.Opa/
-COPY src/Vais.Agents.Hosting.Orleans/                    src/Vais.Agents.Hosting.Orleans/
-COPY src/Vais.Agents.Persistence.Redis/                  src/Vais.Agents.Persistence.Redis/
-COPY src/Vais.Agents.Persistence.Postgres/               src/Vais.Agents.Persistence.Postgres/
-COPY src/Vais.Agents.Observability.OpenTelemetry/        src/Vais.Agents.Observability.OpenTelemetry/
-COPY src/Vais.Agents.Observability.Langfuse/             src/Vais.Agents.Observability.Langfuse/
-COPY src/Vais.Agents.Protocols.Mcp/                      src/Vais.Agents.Protocols.Mcp/
-COPY src/Vais.Agents.Protocols.A2A/                      src/Vais.Agents.Protocols.A2A/
-COPY src/Vais.Agents.Control.Http.Client/                src/Vais.Agents.Control.Http.Client/
-COPY src/Vais.Agents.Ai.MicrosoftAgentFramework/         src/Vais.Agents.Ai.MicrosoftAgentFramework/
-COPY src/Vais.Agents.Runtime.Instantiation/              src/Vais.Agents.Runtime.Instantiation/
-COPY src/Vais.Agents.Runtime.Plugins/                    src/Vais.Agents.Runtime.Plugins/
-COPY src/Vais.Agents.Runtime.Plugins.Python/             src/Vais.Agents.Runtime.Plugins.Python/
-COPY src/Vais.Agents.Runtime.Plugins.Container/          src/Vais.Agents.Runtime.Plugins.Container/
-COPY src/Vais.Agents.Runtime.Host/                       src/Vais.Agents.Runtime.Host/
 
 RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj \
         -c Release \

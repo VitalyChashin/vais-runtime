@@ -27,16 +27,16 @@ You'll build the `vais-agents-runtime` image, start it with Docker Compose, and 
 cd agentic
 
 docker build \
-  -t vais-agents-runtime:local \
+  -t vais-agents-runtime:0.16.0-preview \
   -f src/Vais.Agents.Runtime.Host/Dockerfile \
   .
 ```
 
-The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` at runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume, and exposes `/healthz`, `/readyz`, and `/openapi/v1.json` on port 8080. Expect ~150 MB.
+The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` at runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume, and exposes `/healthz`, `/readyz`, and `/openapi/v1.json` on port 8080. Expect ~175 MB.
 
 ```bash
 docker images | grep vais-agents-runtime
-# vais-agents-runtime  local  …  148MB
+# vais-agents-runtime  0.16.0-preview  …  177MB
 ```
 
 ## 2. Localhost mode — 30-second start
@@ -48,10 +48,10 @@ cd deploy/compose
 docker compose -f docker-compose.localhost.yml up -d
 ```
 
-The container's HEALTHCHECK converges in ~5 s. Verify:
+The container's HEALTHCHECK converges in ~15–60 s depending on host hardware. Verify:
 
 ```bash
-curl -s http://localhost:8080/healthz       # → {"status":"Healthy"}
+curl -s http://localhost:8080/healthz       # → Healthy
 curl -s http://localhost:8080/openapi/v1.json | head
 ```
 
@@ -163,7 +163,10 @@ Five services, three integration points, fully wired. Use this shape to demo the
 ## 5. Talk to the runtime with the `vais` CLI
 
 ```bash
-dotnet tool install -g Vais.Agents.Cli
+# From the agentic/ directory:
+dotnet tool install -g Vais.Agents.Cli \
+  --add-source artifacts/packages \
+  --version 0.15.0-preview
 
 vais config set-context local --server http://localhost:8080
 vais config use-context local

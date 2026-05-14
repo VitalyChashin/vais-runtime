@@ -12,13 +12,21 @@ You'll write a YAML manifest, push it to the runtime, and invoke it. About 10 mi
   vais config use-context local
   ```
 
-- An OpenAI API key in the environment for the model call:
+- An OpenAI API key forwarded into the runtime container. `docker-compose.localhost.yml` reads `OPENAI_API_KEY` from your shell automatically — just export it before starting (or restarting) the runtime:
 
   ```bash
-  export OPENAI_API_KEY=sk-...
+  export OPENAI_API_KEY=sk-...          # bash / zsh
+  # $env:OPENAI_API_KEY = "sk-..."      # PowerShell
   ```
 
-  The runtime reads this from its own environment. Pass it via `docker compose` or Helm values in production.
+  Then start (or restart) the runtime so the value is picked up:
+
+  ```bash
+  cd agentic/deploy/compose
+  docker compose -f docker-compose.localhost.yml up -d
+  ```
+
+  For Kubernetes or other runtimes, pass the key as a secret-backed env var in the Helm values.
 
 ## Step 1 — Write the manifest
 
@@ -34,7 +42,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You are a friendly assistant that greets the user warmly and asks how you can help.
@@ -49,7 +58,8 @@ spec:
 **What these fields mean:**
 
 - `model.provider: openai` — the built-in OpenAI model provider factory.
-- `model.name: gpt-4o-mini` — forwarded to the OpenAI API as the model name.
+- `model.id: gpt-4o-mini` — model identifier forwarded to the OpenAI API.
+- `model.apiKeyRef: secret://env/OPENAI_API_KEY` — secret URI the runtime resolves to the API key at activation time. `secret://env/` reads from the container's environment.
 - `systemPrompt.inline` — embedded system prompt (no file or template ref needed).
 - `handler.typeName: declarative` — the manifest instantiation tier wires the agent from the `model` + `systemPrompt` fields; no plugin DLL required.
 
@@ -62,7 +72,7 @@ vais apply -f greeter.yaml
 Expected output:
 
 ```
-applied Agent greeter@1.0
+greeter created (version 1.0)
 ```
 
 Under the hood `vais apply` sends `POST /v1/agents` with the manifest envelope. The runtime stores it in its Orleans-backed registry.
@@ -74,15 +84,16 @@ vais get
 ```
 
 ```
-NAME       VERSION   STATUS   AGE
-greeter    1.0       Active   3s
+ ID      | VERSION | DESCRIPTION              | LABELS
+---------+---------+--------------------------+--------
+ greeter | 1.0     | Friendly greeting agent. | -
 ```
 
 ```bash
 vais get greeter
 ```
 
-Prints the full manifest back as YAML.
+Prints the agent record as YAML — the `manifest` stanza (your fields, normalized), plus a `handle` and `status` section added by the runtime.
 
 ## Step 4 — Invoke the agent
 
@@ -121,7 +132,7 @@ Change the system prompt and re-apply:
 vais apply -f greeter.yaml
 ```
 
-The runtime updates the stored manifest. The next invoke picks up the new system prompt without restarting the container.
+The runtime updates the stored manifest. The new system prompt takes effect once the agent grain deactivates — typically within a few minutes of the last invocation. `vais apply` always prints `created` for localhost mode (the in-memory registry uses upsert), which is expected behavior.
 
 ## Step 7 — Clean up
 
