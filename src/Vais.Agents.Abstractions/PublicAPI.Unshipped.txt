@@ -731,3 +731,127 @@ Vais.Agents.CompletionRequest.ResponseFormat.init -> void
 Vais.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools = null, Vais.Agents.ResponseFormatSpec? ResponseFormat = null) -> void
 Vais.Agents.CompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, out string? SystemPrompt, out float? Temperature, out int? MaxTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools, out Vais.Agents.ResponseFormatSpec? ResponseFormat) -> void
 Vais.Agents.ICompletionProvider.SupportsResponseFormat.get -> bool
+Vais.Agents.MetadataPayload
+Vais.Agents.MetadataPayload.Deconstruct(out System.Collections.Generic.IReadOnlyDictionary<string!, object?>! Values) -> void
+Vais.Agents.MetadataPayload.Equals(Vais.Agents.MetadataPayload? other) -> bool
+Vais.Agents.MetadataPayload.MetadataPayload(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! Values) -> void
+Vais.Agents.MetadataPayload.Values.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+Vais.Agents.MetadataPayload.Values.init -> void
+Vais.Agents.ResponseFormatPayload
+Vais.Agents.ResponseFormatPayload.Deconstruct(out Vais.Agents.ResponseFormatSpec! Spec) -> void
+Vais.Agents.ResponseFormatPayload.Equals(Vais.Agents.ResponseFormatPayload? other) -> bool
+Vais.Agents.ResponseFormatPayload.ResponseFormatPayload(Vais.Agents.ResponseFormatSpec! Spec) -> void
+Vais.Agents.ResponseFormatPayload.Spec.get -> Vais.Agents.ResponseFormatSpec!
+Vais.Agents.ResponseFormatPayload.Spec.init -> void
+Vais.Agents.Section
+Vais.Agents.Section.<Clone>$() -> Vais.Agents.Section!
+Vais.Agents.Section.Budget.get -> Vais.Agents.SectionBudget?
+Vais.Agents.Section.Budget.init -> void
+Vais.Agents.Section.Deconstruct(out string! Id, out Vais.Agents.SectionKind Kind, out Vais.Agents.SectionPayload! Payload, out int? Order, out string? ProducerId, out Vais.Agents.SectionBudget? Budget) -> void
+Vais.Agents.Section.Equals(Vais.Agents.Section? other) -> bool
+Vais.Agents.Section.Id.get -> string!
+Vais.Agents.Section.Id.init -> void
+Vais.Agents.Section.Kind.get -> Vais.Agents.SectionKind
+Vais.Agents.Section.Kind.init -> void
+Vais.Agents.Section.Order.get -> int?
+Vais.Agents.Section.Order.init -> void
+Vais.Agents.Section.Payload.get -> Vais.Agents.SectionPayload!
+Vais.Agents.Section.Payload.init -> void
+Vais.Agents.Section.ProducerId.get -> string?
+Vais.Agents.Section.ProducerId.init -> void
+Vais.Agents.Section.Section(string! Id, Vais.Agents.SectionKind Kind, Vais.Agents.SectionPayload! Payload, int? Order = null, string? ProducerId = null, Vais.Agents.SectionBudget? Budget = null) -> void
+Vais.Agents.SectionBudget
+Vais.Agents.SectionBudget.<Clone>$() -> Vais.Agents.SectionBudget!
+Vais.Agents.SectionBudget.Deconstruct(out int Priority, out int? MaxChars) -> void
+Vais.Agents.SectionBudget.Equals(Vais.Agents.SectionBudget? other) -> bool
+Vais.Agents.SectionBudget.MaxChars.get -> int?
+Vais.Agents.SectionBudget.MaxChars.init -> void
+Vais.Agents.SectionBudget.Priority.get -> int
+Vais.Agents.SectionBudget.Priority.init -> void
+Vais.Agents.SectionBudget.SectionBudget(int Priority, int? MaxChars = null) -> void
+Vais.Agents.SectionId
+Vais.Agents.SectionKind
+Vais.Agents.SectionKind.AssistantMessage = 2 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.Metadata = 6 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.ResponseFormat = 5 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.SystemSegment = 0 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.ToolDeclaration = 4 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.ToolMessage = 3 -> Vais.Agents.SectionKind
+Vais.Agents.SectionKind.UserMessage = 1 -> Vais.Agents.SectionKind
+Vais.Agents.SectionPayload
+Vais.Agents.SectionPayload.SectionPayload() -> void
+Vais.Agents.SectionPayload.SectionPayload(Vais.Agents.SectionPayload! original) -> void
+Vais.Agents.TextPayload
+Vais.Agents.TextPayload.Deconstruct(out string! Value) -> void
+Vais.Agents.TextPayload.Equals(Vais.Agents.TextPayload? other) -> bool
+Vais.Agents.TextPayload.TextPayload(string! Value) -> void
+Vais.Agents.TextPayload.Value.get -> string!
+Vais.Agents.TextPayload.Value.init -> void
+Vais.Agents.ToolsPayload
+Vais.Agents.ToolsPayload.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>! Tools) -> void
+Vais.Agents.ToolsPayload.Equals(Vais.Agents.ToolsPayload? other) -> bool
+Vais.Agents.ToolsPayload.Tools.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!
+Vais.Agents.ToolsPayload.Tools.init -> void
+Vais.Agents.ToolsPayload.ToolsPayload(System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>! Tools) -> void
+Vais.Agents.TurnPayload
+Vais.Agents.TurnPayload.Deconstruct(out Vais.Agents.ChatTurn! Turn) -> void
+Vais.Agents.TurnPayload.Equals(Vais.Agents.TurnPayload? other) -> bool
+Vais.Agents.TurnPayload.Turn.get -> Vais.Agents.ChatTurn!
+Vais.Agents.TurnPayload.Turn.init -> void
+Vais.Agents.TurnPayload.TurnPayload(Vais.Agents.ChatTurn! Turn) -> void
+abstract Vais.Agents.SectionPayload.<Clone>$() -> Vais.Agents.SectionPayload!
+const Vais.Agents.SectionId.MaxLength = 200 -> int
+override Vais.Agents.MetadataPayload.<Clone>$() -> Vais.Agents.MetadataPayload!
+override Vais.Agents.MetadataPayload.Equals(object? obj) -> bool
+override Vais.Agents.MetadataPayload.GetHashCode() -> int
+override Vais.Agents.MetadataPayload.ToString() -> string!
+override Vais.Agents.ResponseFormatPayload.<Clone>$() -> Vais.Agents.ResponseFormatPayload!
+override Vais.Agents.ResponseFormatPayload.Equals(object? obj) -> bool
+override Vais.Agents.ResponseFormatPayload.GetHashCode() -> int
+override Vais.Agents.ResponseFormatPayload.ToString() -> string!
+override Vais.Agents.Section.Equals(object? obj) -> bool
+override Vais.Agents.Section.GetHashCode() -> int
+override Vais.Agents.Section.ToString() -> string!
+override Vais.Agents.SectionBudget.Equals(object? obj) -> bool
+override Vais.Agents.SectionBudget.GetHashCode() -> int
+override Vais.Agents.SectionBudget.ToString() -> string!
+override Vais.Agents.SectionPayload.Equals(object? obj) -> bool
+override Vais.Agents.SectionPayload.GetHashCode() -> int
+override Vais.Agents.SectionPayload.ToString() -> string!
+override Vais.Agents.TextPayload.<Clone>$() -> Vais.Agents.TextPayload!
+override Vais.Agents.TextPayload.Equals(object? obj) -> bool
+override Vais.Agents.TextPayload.GetHashCode() -> int
+override Vais.Agents.TextPayload.ToString() -> string!
+override Vais.Agents.ToolsPayload.<Clone>$() -> Vais.Agents.ToolsPayload!
+override Vais.Agents.ToolsPayload.Equals(object? obj) -> bool
+override Vais.Agents.ToolsPayload.GetHashCode() -> int
+override Vais.Agents.ToolsPayload.ToString() -> string!
+override Vais.Agents.TurnPayload.<Clone>$() -> Vais.Agents.TurnPayload!
+override Vais.Agents.TurnPayload.Equals(object? obj) -> bool
+override Vais.Agents.TurnPayload.GetHashCode() -> int
+override Vais.Agents.TurnPayload.ToString() -> string!
+override sealed Vais.Agents.MetadataPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+override sealed Vais.Agents.ResponseFormatPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+override sealed Vais.Agents.TextPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+override sealed Vais.Agents.ToolsPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+override sealed Vais.Agents.TurnPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+static Vais.Agents.MetadataPayload.operator !=(Vais.Agents.MetadataPayload? left, Vais.Agents.MetadataPayload? right) -> bool
+static Vais.Agents.MetadataPayload.operator ==(Vais.Agents.MetadataPayload? left, Vais.Agents.MetadataPayload? right) -> bool
+static Vais.Agents.ResponseFormatPayload.operator !=(Vais.Agents.ResponseFormatPayload? left, Vais.Agents.ResponseFormatPayload? right) -> bool
+static Vais.Agents.ResponseFormatPayload.operator ==(Vais.Agents.ResponseFormatPayload? left, Vais.Agents.ResponseFormatPayload? right) -> bool
+static Vais.Agents.Section.operator !=(Vais.Agents.Section? left, Vais.Agents.Section? right) -> bool
+static Vais.Agents.Section.operator ==(Vais.Agents.Section? left, Vais.Agents.Section? right) -> bool
+static Vais.Agents.SectionBudget.operator !=(Vais.Agents.SectionBudget? left, Vais.Agents.SectionBudget? right) -> bool
+static Vais.Agents.SectionBudget.operator ==(Vais.Agents.SectionBudget? left, Vais.Agents.SectionBudget? right) -> bool
+static Vais.Agents.SectionId.Validate(string! id) -> string!
+static Vais.Agents.SectionPayload.operator !=(Vais.Agents.SectionPayload? left, Vais.Agents.SectionPayload? right) -> bool
+static Vais.Agents.SectionPayload.operator ==(Vais.Agents.SectionPayload? left, Vais.Agents.SectionPayload? right) -> bool
+static Vais.Agents.TextPayload.operator !=(Vais.Agents.TextPayload? left, Vais.Agents.TextPayload? right) -> bool
+static Vais.Agents.TextPayload.operator ==(Vais.Agents.TextPayload? left, Vais.Agents.TextPayload? right) -> bool
+static Vais.Agents.ToolsPayload.operator !=(Vais.Agents.ToolsPayload? left, Vais.Agents.ToolsPayload? right) -> bool
+static Vais.Agents.ToolsPayload.operator ==(Vais.Agents.ToolsPayload? left, Vais.Agents.ToolsPayload? right) -> bool
+static Vais.Agents.TurnPayload.operator !=(Vais.Agents.TurnPayload? left, Vais.Agents.TurnPayload? right) -> bool
+static Vais.Agents.TurnPayload.operator ==(Vais.Agents.TurnPayload? left, Vais.Agents.TurnPayload? right) -> bool
+virtual Vais.Agents.SectionPayload.EqualityContract.get -> System.Type!
+virtual Vais.Agents.SectionPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
+virtual Vais.Agents.SectionPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
