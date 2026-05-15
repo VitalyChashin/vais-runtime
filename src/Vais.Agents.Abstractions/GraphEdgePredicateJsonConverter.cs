@@ -211,12 +211,16 @@ public sealed class GraphEdgeEffectJsonConverter : JsonConverter<GraphEdgeEffect
                     ["value"] = JsonNode.Parse(a.Value.GetRawText()),
                 },
             },
-            GraphEdgeEffect.HandlerRef h => new JsonObject
-            {
-                ["handlerRef"] = new JsonObject { ["typeName"] = h.Handler.TypeName, ["assemblyName"] = h.Handler.AssemblyName },
-            },
+            GraphEdgeEffect.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeEffectHandlerRef(h.Handler) },
             _ => throw new NotSupportedException($"Unknown GraphEdgeEffect subtype '{value.GetType().Name}'."),
         };
         node.WriteTo(writer);
+    }
+
+    private static JsonObject SerializeEffectHandlerRef(GraphHandlerRef handler)
+    {
+        var obj = new JsonObject { ["typeName"] = handler.TypeName };
+        if (handler.AssemblyName is not null) obj["assemblyName"] = handler.AssemblyName;
+        return obj;
     }
 }
