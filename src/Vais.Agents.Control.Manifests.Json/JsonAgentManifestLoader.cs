@@ -284,6 +284,8 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             ? llmRefEl.GetString() : null;
         var mcpGatewayRef = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("mcpGatewayRef", out var mcpGwRefEl)
             ? mcpGwRefEl.GetString() : null;
+        var localAgents = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("localAgents", out var laEl)
+            ? ParseLocalAgents(laEl, errors, prefix) : null;
 
         return new AgentManifest(
             id, version, handler, protocols, tools,
@@ -307,6 +309,7 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             Annotations = annotations,
             LlmGatewayRef = llmGatewayRef,
             McpGatewayRef = mcpGatewayRef,
+            LocalAgents = localAgents,
         };
     }
 
@@ -494,6 +497,44 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
                 When: item.TryGetProperty("when", out var wEl) ? wEl.GetString() : null,
                 CarryHistory: item.TryGetProperty("carryHistory", out var chEl) && chEl.ValueKind != JsonValueKind.Null
                     ? chEl.GetBoolean() : null));
+        }
+        return list;
+    }
+
+    private static IReadOnlyList<LocalAgentRef> ParseLocalAgents(JsonElement arr, List<string> errors, string prefix)
+    {
+        if (arr.ValueKind != JsonValueKind.Array) return Array.Empty<LocalAgentRef>();
+        var list = new List<LocalAgentRef>();
+        foreach (var item in arr.EnumerateArray())
+        {
+            var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+            if (string.IsNullOrEmpty(name))
+            {
+                errors.Add($"{prefix}spec.localAgents[].name is required");
+                continue;
+            }
+            var agentId = item.TryGetProperty("agentId", out var aiEl) ? aiEl.GetString() : null;
+            var agentVersion = item.TryGetProperty("agentVersion", out var avEl) ? avEl.GetString() : null;
+            var description = item.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+            var allowCallerSuppliedSession = item.TryGetProperty("allowCallerSuppliedSession", out var acssEl)
+                && acssEl.ValueKind == JsonValueKind.True;
+            var propagateAllowedTools = !item.TryGetProperty("propagateAllowedTools", out var patEl)
+                || patEl.ValueKind != JsonValueKind.False;
+            var mode = LocalAgentInvocationMode.Blocking;
+            if (item.TryGetProperty("mode", out var mEl) && mEl.ValueKind == JsonValueKind.String)
+            {
+                var raw = mEl.GetString();
+                if (!Enum.TryParse(raw, ignoreCase: true, out mode))
+                {
+                    errors.Add($"{prefix}spec.localAgents[{name}].mode '{raw}' is not a known LocalAgentInvocationMode");
+                }
+            }
+            list.Add(new LocalAgentRef(name, agentId, agentVersion, mode)
+            {
+                Description = description,
+                AllowCallerSuppliedSession = allowCallerSuppliedSession,
+                PropagateAllowedTools = propagateAllowedTools,
+            });
         }
         return list;
     }

@@ -180,3 +180,70 @@ Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.RemoveAsync(string! i
 static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.DeserializeManifest(string! json) -> Vais.Agents.ContainerPluginManifest!
 static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.SerializeManifest(Vais.Agents.ContainerPluginManifest! manifest) -> string!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansContainerPluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.BackgroundAgentRunRecordSurrogate() -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Handle -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ParentRunId -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ChildAgentId -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Status -> int
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.StartedAt -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.CompletedAt -> System.DateTimeOffset?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Result -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Error -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.BackgroundAgentRunRecordSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate surrogate) -> Vais.Agents.BackgroundAgentRunRecord!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.ConvertToSurrogate(in Vais.Agents.BackgroundAgentRunRecord! value) -> Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate
+Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain
+Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.StartAsync(string! parentRunId, string! childAgentId, string! message, Vais.Agents.AgentContext! childContext) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.RunAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.CancelAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.BackgroundAgentRunRecord?>!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.BackgroundAgentRunGrainState() -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Handle.get -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Handle.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ParentRunId.get -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ParentRunId.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ChildAgentId.get -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ChildAgentId.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Message.get -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Message.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ChildContext.get -> Vais.Agents.AgentContext?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.ChildContext.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Status.get -> Vais.Agents.BackgroundAgentRunStatus
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Status.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.StartedAt.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.CompletedAt.get -> System.DateTimeOffset?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.CompletedAt.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Result.get -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Result.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Error.get -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.Error.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.CancellationRequested.get -> bool
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState.CancellationRequested.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.BackgroundAgentRunGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.StartAsync(string! parentRunId, string! childAgentId, string! message, Vais.Agents.AgentContext! childContext) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.RunAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.CancelAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.BackgroundAgentRunRecord?>!
+override Vais.Agents.Hosting.Orleans.BackgroundAgentRunGrain.OnActivateAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IBackgroundAgentIndexGrain
+Vais.Agents.Hosting.Orleans.IBackgroundAgentIndexGrain.AddHandleAsync(string! handle) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IBackgroundAgentIndexGrain.ListHandlesAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrainState
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrainState.BackgroundAgentIndexGrainState() -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrainState.Handles.get -> System.Collections.Generic.List<string!>!
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrainState.Handles.set -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrain
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrain.BackgroundAgentIndexGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrain.AddHandleAsync(string! handle) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.BackgroundAgentIndexGrain.ListHandlesAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker.OrleansBackgroundAgentTracker(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker.StartAsync(string! parentRunId, string! childAgentId, string! childSessionId, string! message, Vais.Agents.AgentContext! childContext, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker.GetAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.BackgroundAgentRunRecord?>
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker.ListAsync(string! parentRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.BackgroundAgentRunRecord!>!>
+Vais.Agents.Hosting.Orleans.OrleansBackgroundAgentTracker.CancelAsync(string! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>

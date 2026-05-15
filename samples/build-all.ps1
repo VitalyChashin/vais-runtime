@@ -14,7 +14,7 @@ $deterministic = @(
   'ToolGuardrailsAndInterrupt', 'BudgetEnforcement', 'ToolFromFunc', 'AgentManifestAndRegistry',
   'HelloStreaming', 'HelloStreamingTools', 'SequentialOrchestration', 'RoundRobinOrchestration',
   'HandoffBetweenAgents', 'ObservabilityOtelConsole', 'VectorDataRag',
-  'McpToolSourceExample', 'A2ARemoteAgentExample',
+  'McpToolSourceExample', 'A2ARemoteAgentExample', 'AgentAsToolDelegation',
   # v0.7 MCP inbound
   'McpServerStdio', 'McpServerHttp',
   # v0.8 A2A basics

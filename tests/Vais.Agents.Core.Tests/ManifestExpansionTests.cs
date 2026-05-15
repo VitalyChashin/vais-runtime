@@ -26,6 +26,7 @@ public sealed class ManifestExpansionTests
         manifest.Model.Should().BeNull();
         manifest.SystemPrompt.Should().BeNull();
         manifest.McpServers.Should().BeNull();
+        manifest.LocalAgents.Should().BeNull();
         manifest.Guardrails.Should().BeNull();
         manifest.Handoffs.Should().BeNull();
         manifest.Budget.Should().BeNull();

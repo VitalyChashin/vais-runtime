@@ -39,6 +39,7 @@ public static class AgentControlPlaneAuthServiceCollectionExtensions
         services.TryAddSingleton<IPrincipalMapper, DefaultPrincipalMapper>();
         services.TryAddSingleton<AsyncLocalAgentContextAccessor>();
         services.TryAddSingleton<IAgentContextAccessor>(sp => sp.GetRequiredService<AsyncLocalAgentContextAccessor>());
+        services.TryAddSingleton<IAgentContextSetter>(sp => sp.GetRequiredService<AsyncLocalAgentContextAccessor>());
         return services;
     }
 }
