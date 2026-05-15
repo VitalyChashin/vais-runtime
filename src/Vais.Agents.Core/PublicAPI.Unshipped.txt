@@ -135,3 +135,9 @@ Vais.Agents.LegacyPackerAdapter.LegacyPackerAdapter(Vais.Agents.IContextWindowPa
 Vais.Agents.LegacyPackerAdapter.PackAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.SectionBudgetContext! budget, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.SectionPackResult!>
 const Vais.Agents.DefaultSectionWindowPacker.DefaultPriority = 5 -> int
 static Vais.Agents.DefaultSectionWindowPacker.Instance.get -> Vais.Agents.DefaultSectionWindowPacker!
+Vais.Agents.Core.StatefulAgentOptions.SectionResolver.get -> Vais.Agents.ISectionResolver?
+Vais.Agents.Core.StatefulAgentOptions.SectionResolver.init -> void
+Vais.Agents.Core.StatefulAgentOptions.SectionWindowPacker.get -> Vais.Agents.ISectionWindowPacker?
+Vais.Agents.Core.StatefulAgentOptions.SectionWindowPacker.init -> void
+Vais.Agents.Core.StatefulAgentOptions.SectionBudget.get -> Vais.Agents.SectionBudgetContext?
+Vais.Agents.Core.StatefulAgentOptions.SectionBudget.init -> void

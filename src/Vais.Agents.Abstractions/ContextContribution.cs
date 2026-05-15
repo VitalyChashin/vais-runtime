@@ -86,12 +86,17 @@ public sealed record ContextContribution(
             return Array.Empty<Section>();
         }
 
+        // Per-contribution discriminator: each ContextContribution instance gets a fresh suffix
+        // so multiple legacy providers in the same turn don't collide on shared base ids like
+        // `system.legacy_addendum`. Short hex form keeps log output readable.
+        var discriminator = Guid.NewGuid().ToString("N").AsSpan(0, 8).ToString();
+
         var list = new List<Section>();
 
         if (!string.IsNullOrEmpty(addendum))
         {
             list.Add(new Section(
-                LegacySystemAddendumSectionId,
+                $"{LegacySystemAddendumSectionId}.{discriminator}",
                 SectionKind.SystemSegment,
                 new TextPayload(addendum),
                 ProducerId: LegacyProducerId));
@@ -101,11 +106,14 @@ public sealed record ContextContribution(
         {
             for (var i = 0; i < history.Count; i++)
             {
+                // No explicit Order: relative position falls back to registration order in the
+                // resolver. When the StatefulAiAgent pipeline combines base + provider sections,
+                // these legacy-injected turns naturally land after base history (which is added
+                // first to the combined section list), matching the v0.4 "append after" semantics.
                 list.Add(new Section(
-                    LegacyInjectedHistorySectionIdPrefix + i,
+                    $"{LegacyInjectedHistorySectionIdPrefix}{discriminator}.{i}",
                     MapTurnRoleToKind(history[i].Role),
                     new TurnPayload(history[i]),
-                    Order: i,
                     ProducerId: LegacyProducerId));
             }
         }
@@ -113,7 +121,7 @@ public sealed record ContextContribution(
         if (tools is { Count: > 0 })
         {
             list.Add(new Section(
-                LegacyAdditionalToolsSectionId,
+                $"{LegacyAdditionalToolsSectionId}.{discriminator}",
                 SectionKind.ToolDeclaration,
                 new ToolsPayload(tools),
                 ProducerId: LegacyProducerId));

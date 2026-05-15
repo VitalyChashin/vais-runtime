@@ -36,12 +36,26 @@ public sealed class ContextContributionTests
         c.SystemPromptAddendum.Should().Be("extra");
         c.Sections.Should().ContainSingle()
             .Which.Should().Match<Section>(s =>
-                s.Id == "system.legacy_addendum"
+                s.Id.StartsWith("system.legacy_addendum.")
                 && s.Kind == SectionKind.SystemSegment
                 && s.ProducerId == "legacy");
 
         var payload = c.Sections[0].Payload.Should().BeOfType<TextPayload>().Subject;
         payload.Value.Should().Be("extra");
+    }
+
+    [Fact]
+    public void Legacy_Ctor_Suffixes_Section_Ids_Uniquely_Per_Instance()
+    {
+        // Two ContextContribution instances must not collide on shared base ids — the section
+        // resolver enforces id uniqueness, so multiple legacy providers in one turn need
+        // per-emission discriminators.
+        var c1 = new ContextContribution(SystemPromptAddendum: "a");
+        var c2 = new ContextContribution(SystemPromptAddendum: "b");
+
+        c1.Sections[0].Id.Should().NotBe(c2.Sections[0].Id);
+        c1.Sections[0].Id.Should().StartWith("system.legacy_addendum.");
+        c2.Sections[0].Id.Should().StartWith("system.legacy_addendum.");
     }
 
     [Fact]
@@ -57,13 +71,14 @@ public sealed class ContextContributionTests
 
         c.InjectedHistory.Should().BeEquivalentTo(turns);
         c.Sections.Should().HaveCount(2);
-        c.Sections[0].Id.Should().Be("history.legacy_injected.0");
+        c.Sections[0].Id.Should().StartWith("history.legacy_injected.").And.EndWith(".0");
         c.Sections[0].Kind.Should().Be(SectionKind.UserMessage);
-        c.Sections[0].Order.Should().Be(0);
+        // No explicit Order — relative position falls back to registration index in the resolver.
+        c.Sections[0].Order.Should().BeNull();
         c.Sections[0].ProducerId.Should().Be("legacy");
-        c.Sections[1].Id.Should().Be("history.legacy_injected.1");
+        c.Sections[1].Id.Should().StartWith("history.legacy_injected.").And.EndWith(".1");
         c.Sections[1].Kind.Should().Be(SectionKind.AssistantMessage);
-        c.Sections[1].Order.Should().Be(1);
+        c.Sections[1].Order.Should().BeNull();
     }
 
     [Fact]
@@ -76,7 +91,7 @@ public sealed class ContextContributionTests
         c.AdditionalTools.Should().BeEquivalentTo(tools);
         c.Sections.Should().ContainSingle()
             .Which.Should().Match<Section>(s =>
-                s.Id == "tools.legacy_additional"
+                s.Id.StartsWith("tools.legacy_additional.")
                 && s.Kind == SectionKind.ToolDeclaration
                 && s.ProducerId == "legacy");
     }
@@ -90,10 +105,9 @@ public sealed class ContextContributionTests
             AdditionalTools: new ITool[] { new FakeTool("t") });
 
         c.Sections.Should().HaveCount(3);
-        c.Sections.Select(s => s.Id).Should().Equal(
-            "system.legacy_addendum",
-            "history.legacy_injected.0",
-            "tools.legacy_additional");
+        c.Sections[0].Id.Should().StartWith("system.legacy_addendum.");
+        c.Sections[1].Id.Should().StartWith("history.legacy_injected.").And.EndWith(".0");
+        c.Sections[2].Id.Should().StartWith("tools.legacy_additional.");
         c.Sections.Should().OnlyContain(s => s.ProducerId == "legacy");
     }
 

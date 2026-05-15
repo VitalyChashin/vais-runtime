@@ -45,7 +45,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly IToolRegistry? _toolRegistry;
     private readonly IHistoryReducer _historyReducer;
     private readonly IReadOnlyList<IContextProvider> _contextProviders;
-    private readonly IContextWindowPacker _contextWindowPacker;
+    private readonly ISectionResolver _sectionResolver;
+    private readonly ISectionWindowPacker _sectionWindowPacker;
+    private readonly SectionBudgetContext _sectionBudget;
     private readonly ISystemPromptComposer? _systemPromptComposer;
     private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
@@ -97,7 +99,12 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _toolRegistry = options.ToolRegistry;
         _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
         _contextProviders = options.ContextProviders;
-        _contextWindowPacker = options.ContextWindowPacker ?? NoopContextWindowPacker.Instance;
+        _sectionResolver = options.SectionResolver ?? DefaultSectionResolver.Instance;
+        _sectionWindowPacker = options.SectionWindowPacker
+            ?? (options.ContextWindowPacker is not null
+                ? new LegacyPackerAdapter(options.ContextWindowPacker)
+                : DefaultSectionWindowPacker.Instance);
+        _sectionBudget = options.SectionBudget ?? SectionBudgetContext.Unlimited;
         _systemPromptComposer = options.SystemPromptComposer;
         _inputGuardrails = options.InputGuardrails;
         _outputGuardrails = options.OutputGuardrails;
@@ -223,22 +230,11 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     throw new AgentBudgetExceededException(nameof(RunBudget.MaxDuration), maxDuration, runStopwatch.Elapsed);
                 }
 
-                var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
-                var baseSystemPrompt = _systemPromptComposer is null
-                    ? SystemPrompt
-                    : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
-                var tools = _toolRegistry?.Tools;
-                var hasTurnsTools = tools is { Count: > 0 };
-                var candidate = new CompletionRequest(
-                    reduced,
-                    baseSystemPrompt,
-                    Tools: hasTurnsTools ? tools : null,
-                    ResponseFormat: hasTurnsTools ? null : _responseFormat);
-
-                // Context-provider chain + packer run each round so providers can react
-                // to tool results landing in the working history between rounds.
-                candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
-                candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
+                // Section pipeline: composer + providers emit Section[]; resolver orders them;
+                // packer applies the budget; flattener produces the wire-shaped CompletionRequest.
+                // Runs each round so providers can react to tool results landing in the working
+                // history between rounds.
+                var candidate = await BuildPerTurnRequestAsync(workingHistory, context, cancellationToken).ConfigureAwait(false);
 
                 // Input guardrails fire on every model invocation — tool-call loops
                 // should be able to block a mid-run escalation, not just the first turn.
@@ -528,25 +524,13 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             CompletionRequest request;
             try
             {
-                var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
-                var baseSystemPrompt = _systemPromptComposer is null
-                    ? SystemPrompt
-                    : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
-                var tools = _toolRegistry?.Tools;
-                var hasTurnsTools = tools is { Count: > 0 };
-                var candidate = new CompletionRequest(
-                    reduced,
-                    baseSystemPrompt,
-                    Tools: hasTurnsTools ? tools : null,
-                    ResponseFormat: hasTurnsTools ? null : _responseFormat);
-
-                candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
-                candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);
+                // Same section pipeline as AskAsyncCore — composer + providers contribute Section[],
+                // resolver orders, packer applies budget, flattener produces the wire-shaped request.
+                request = await BuildPerTurnRequestAsync(workingHistory, context, cancellationToken).ConfigureAwait(false);
 
                 // Input guardrails fire on every model invocation — tool-call loops
                 // must be able to block a mid-run escalation, not just the first turn.
-                await RunInputGuardrailsAsync(candidate, context, cancellationToken).ConfigureAwait(false);
-                request = candidate;
+                await RunInputGuardrailsAsync(request, context, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -1266,85 +1250,123 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         }
     }
 
-    private async Task<CompletionRequest> ApplyContextProvidersAsync(
-        CompletionRequest candidate,
-        AgentContext ambient,
+    /// <summary>
+    /// Build the per-turn <see cref="CompletionRequest"/> via the section pipeline:
+    /// history reducer → composer + base sections → context-provider chain (Section[] contributions)
+    /// → section resolver → section window packer → flattener.
+    /// </summary>
+    private async Task<CompletionRequest> BuildPerTurnRequestAsync(
+        IReadOnlyList<ChatTurn> workingHistory,
+        AgentContext context,
         CancellationToken cancellationToken)
     {
-        if (_contextProviders.Count == 0)
+        var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
+        var baseSystemPrompt = _systemPromptComposer is null
+            ? SystemPrompt
+            : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
+        var tools = _toolRegistry?.Tools;
+        var hasTools = tools is { Count: > 0 };
+
+        // Build the base section list — sections derived from the candidate template that providers
+        // can inspect via the ContextInvocationContext and build on top of.
+        var sections = BuildBaseSections(reduced, baseSystemPrompt, hasTools ? tools : null, hasTools ? null : _responseFormat);
+
+        if (_contextProviders.Count > 0)
         {
-            return candidate;
-        }
+            // Providers receive a CompletionRequest snapshot of the base candidate (matching
+            // the v0.4 contract — they see the request as it stood before any provider
+            // contributed, not an accumulated view).
+            var template = new CompletionRequest(
+                reduced,
+                baseSystemPrompt,
+                Tools: hasTools ? tools : null,
+                ResponseFormat: hasTools ? null : _responseFormat);
+            var invocation = new ContextInvocationContext(template, context, _session);
 
-        var invocation = new ContextInvocationContext(candidate, ambient, _session);
-        var systemPrompt = candidate.SystemPrompt;
-        List<ChatTurn>? historyAccum = null;
-        List<ITool>? toolsAccum = null;
-
-        foreach (var provider in _contextProviders)
-        {
-            // Exceptions propagate — providers are load-bearing; swallowing here
-            // would mask missing retrieval results. Consumers who want swallow
-            // semantics wrap with a resilience-handling provider.
-            var contribution = await provider.InvokeAsync(invocation, cancellationToken).ConfigureAwait(false);
-
-            if (!string.IsNullOrEmpty(contribution.SystemPromptAddendum))
+            foreach (var provider in _contextProviders)
             {
-                systemPrompt = string.IsNullOrEmpty(systemPrompt)
-                    ? contribution.SystemPromptAddendum
-                    : systemPrompt + "\n\n" + contribution.SystemPromptAddendum;
-            }
-            if (contribution.InjectedHistory is { Count: > 0 } injected)
-            {
-                historyAccum ??= new List<ChatTurn>();
-                historyAccum.AddRange(injected);
-            }
-            if (contribution.AdditionalTools is { Count: > 0 } addTools)
-            {
-                toolsAccum ??= new List<ITool>();
-                toolsAccum.AddRange(addTools);
+                // Exceptions propagate — providers are load-bearing; swallowing here would mask
+                // missing retrieval results. Consumers who want swallow semantics wrap with a
+                // resilience-handling provider.
+                var contribution = await provider.InvokeAsync(invocation, cancellationToken).ConfigureAwait(false);
+                if (contribution.Sections.Count > 0)
+                {
+                    sections.AddRange(contribution.Sections);
+                }
             }
         }
 
-        if (ReferenceEquals(systemPrompt, candidate.SystemPrompt) && historyAccum is null && toolsAccum is null)
-        {
-            return candidate;
-        }
+        var resolved = await _sectionResolver.ResolveAsync(sections, cancellationToken).ConfigureAwait(false);
+        var packed = await _sectionWindowPacker.PackAsync(resolved, _sectionBudget, cancellationToken).ConfigureAwait(false);
 
-        IReadOnlyList<ChatTurn> finalHistory = candidate.History;
-        if (historyAccum is not null)
-        {
-            // Injected history appended AFTER session history — keeps the most
-            // recent user turn at the tail where models expect it. This is the
-            // canonical "here's some retrieved context, now here's the conversation"
-            // layering pattern.
-            var combined = new List<ChatTurn>(candidate.History.Count + historyAccum.Count);
-            combined.AddRange(candidate.History);
-            combined.AddRange(historyAccum);
-            finalHistory = combined;
-        }
-
-        IReadOnlyList<ITool>? finalTools = candidate.Tools;
-        if (toolsAccum is not null)
-        {
-            var combined = candidate.Tools is { Count: > 0 } existing
-                ? new List<ITool>(existing.Count + toolsAccum.Count)
-                : new List<ITool>(toolsAccum.Count);
-            if (candidate.Tools is { Count: > 0 } existingTools)
-            {
-                combined.AddRange(existingTools);
-            }
-            combined.AddRange(toolsAccum);
-            finalTools = combined;
-        }
-
-        return candidate with
-        {
-            History = finalHistory,
-            SystemPrompt = systemPrompt,
-            Tools = finalTools,
-        };
+        return CompletionRequestFlattener.Flatten(packed.Sections, logger: _logger);
     }
+
+    /// <summary>
+    /// Build the base section list from the per-turn candidate template. Section IDs use the
+    /// reserved <c>*.base</c> namespace and <c>ProducerId="base"</c> so per-section telemetry
+    /// can distinguish runtime-emitted sections from provider contributions.
+    /// </summary>
+    private static List<Section> BuildBaseSections(
+        IReadOnlyList<ChatTurn> history,
+        string? systemPrompt,
+        IReadOnlyList<ITool>? tools,
+        ResponseFormatSpec? responseFormat)
+    {
+        // Pre-size for the common case: optional system + history turns + optional tools + optional response format.
+        var sections = new List<Section>(capacity: history.Count + 3);
+
+        if (!string.IsNullOrEmpty(systemPrompt))
+        {
+            sections.Add(new Section(
+                "system.base",
+                SectionKind.SystemSegment,
+                new TextPayload(systemPrompt),
+                ProducerId: BaseProducerId));
+        }
+
+        for (var i = 0; i < history.Count; i++)
+        {
+            var turn = history[i];
+            sections.Add(new Section(
+                $"history.base.{i}",
+                MapTurnRoleToSectionKind(turn.Role),
+                new TurnPayload(turn),
+                Order: i,
+                ProducerId: BaseProducerId));
+        }
+
+        if (tools is { Count: > 0 })
+        {
+            sections.Add(new Section(
+                "tools.base",
+                SectionKind.ToolDeclaration,
+                new ToolsPayload(tools),
+                ProducerId: BaseProducerId));
+        }
+
+        if (responseFormat is not null)
+        {
+            sections.Add(new Section(
+                "format.base",
+                SectionKind.ResponseFormat,
+                new ResponseFormatPayload(responseFormat),
+                ProducerId: BaseProducerId));
+        }
+
+        return sections;
+    }
+
+    private const string BaseProducerId = "base";
+
+    private static SectionKind MapTurnRoleToSectionKind(AgentChatRole role) => role switch
+    {
+        AgentChatRole.User => SectionKind.UserMessage,
+        AgentChatRole.Assistant => SectionKind.AssistantMessage,
+        AgentChatRole.Tool => SectionKind.ToolMessage,
+        AgentChatRole.System => SectionKind.SystemSegment,
+        _ => SectionKind.UserMessage,
+    };
 
     private async Task RunInputGuardrailsAsync(
         CompletionRequest request,
