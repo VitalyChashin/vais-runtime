@@ -166,6 +166,13 @@ internal static class CompositionRoot
         services.AddOrleansAgentRuntime();
         services.AddOrleansAgentEventBus();
 
+        // Background agent-as-tool tracker — durable, grain-backed, cluster-wide.
+        // Required by AgentManifestTranslator when any localAgents entry sets
+        // mode: Background. Without this registration the translator throws at
+        // first activation of a coordinator that declares a background sub-agent.
+        services.TryAddSingleton<IBackgroundAgentTracker>(sp =>
+            new OrleansBackgroundAgentTracker(sp.GetRequiredService<IGrainFactory>()));
+
         // IAgentGraphEventBus — in-process fan-out bus shared by AgentGraphLifecycleManager
         // (publishes events) and RunStoreSubscriber (persists them). Singleton so all components
         // share the same instance.

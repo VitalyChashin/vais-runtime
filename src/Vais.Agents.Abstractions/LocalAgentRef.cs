@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json.Serialization;
+
 namespace Vais.Agents;
 
 /// <summary>
@@ -8,6 +10,7 @@ namespace Vais.Agents;
 /// waits for the sub-agent's result (<see cref="Blocking"/>) or fires and monitors it
 /// asynchronously (<see cref="Background"/>).
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum LocalAgentInvocationMode
 {
     /// <summary>
