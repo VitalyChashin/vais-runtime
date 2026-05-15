@@ -384,14 +384,14 @@ public sealed class OpenAiCompatAgentGraphTests
             lines.Should().Contain("[DONE]");
 
             var dataLines = lines.Where(l => l != "[DONE]").ToList();
-            // role header + 2 content chunks + stop chunk
-            dataLines.Should().HaveCount(4);
+            // role header + 2 content chunks + 1 separator between them + stop chunk
+            dataLines.Should().HaveCount(5);
 
             JsonSerializer.Deserialize<JsonElement>(dataLines[1])
                 .GetProperty("choices")[0].GetProperty("delta")
                 .GetProperty("content").GetString().Should().Be("Step 1");
 
-            JsonSerializer.Deserialize<JsonElement>(dataLines[2])
+            JsonSerializer.Deserialize<JsonElement>(dataLines[3])
                 .GetProperty("choices")[0].GetProperty("delta")
                 .GetProperty("content").GetString().Should().Be(" done");
         }

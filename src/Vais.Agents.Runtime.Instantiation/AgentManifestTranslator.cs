@@ -114,6 +114,11 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             IServiceProvider factoryProvider = _serviceProvider;
             if (manifest.Model is not null)
             {
+                _diagnosticsSink?.Record(
+                    agentId,
+                    ManifestInstantiationUrns.HandlerAndDeclarativeFieldsBothSet,
+                    $"Agent '{agentId}' has both a plugin handler ('{manifest.Handler.TypeName}') and declarative Model fields set. Plugin wins; declarative fields are ignored.");
+
                 var completionProvider = await _providerPool.GetAsync(manifest.Model, cancellationToken).ConfigureAwait(false);
                 factoryProvider = new CompletionProviderScope(_serviceProvider, completionProvider);
             }
