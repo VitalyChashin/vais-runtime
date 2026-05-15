@@ -35,4 +35,20 @@ public static class AgenticLangfuseExtensions
         services.AddSingleton<IAgentFilter>(sp => sp.GetRequiredService<LangfuseEnrichmentFilter>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="LangfuseSectionEnrichment"/> as an <see cref="ISectionTelemetrySink"/>.
+    /// The sink decorates the per-turn <see cref="System.Diagnostics.Activity"/> with
+    /// <c>langfuse.section.*</c> tags + a JSON <c>section_breakdown</c> metadata blob. Langfuse
+    /// reads them through the standard OTel exporter; the metadata panel on every generation
+    /// surfaces both flat per-section tags (filterable in the UI) and the breakdown blob.
+    /// </summary>
+    /// <returns>The same service collection for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="services"/> is null.</exception>
+    public static IServiceCollection AddLangfuseSectionEnrichment(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddSingleton<ISectionTelemetrySink>(LangfuseSectionEnrichment.Instance);
+        return services;
+    }
 }
