@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
@@ -187,5 +188,82 @@ public sealed class OrleansAgentGraphRegistryTests
         result.Nodes.Should().HaveCount(2);
         result.Edges.Should().HaveCount(1);
         result.Labels.Should().ContainKey("owner");
+    }
+
+    // ── Predicate round-trips ──────────────────────────────────────────────────
+
+    public static IEnumerable<object[]> PredicateRoundTripCases()
+    {
+        yield return new object[] { new GraphEdgePredicate.Always() };
+        yield return new object[] { new GraphEdgePredicate.Expression("=Local.retryCount < 3") };
+        yield return new object[] { new GraphEdgePredicate.PropertyMatcher("status", GraphPredicateOperator.Eq, JsonDocument.Parse("\"done\"").RootElement.Clone()) };
+        yield return new object[] { new GraphEdgePredicate.PropertyMatcher("count", GraphPredicateOperator.Gt, JsonDocument.Parse("5").RootElement.Clone()) };
+        yield return new object[] { new GraphEdgePredicate.PropertyMatcher("tags", GraphPredicateOperator.Contains, JsonDocument.Parse("\"urgent\"").RootElement.Clone()) };
+        yield return new object[] { new GraphEdgePredicate.PropertyMatcher("result", GraphPredicateOperator.Exists, null) };
+        yield return new object[] { new GraphEdgePredicate.AllOf(new GraphEdgePredicate[] { new GraphEdgePredicate.Always(), new GraphEdgePredicate.Expression("=Local.x > 0") }) };
+        yield return new object[] { new GraphEdgePredicate.AnyOf(new GraphEdgePredicate[] { new GraphEdgePredicate.Always() }) };
+        yield return new object[] { new GraphEdgePredicate.Not(new GraphEdgePredicate.Always()) };
+        yield return new object[] { new GraphEdgePredicate.HandlerRef(new GraphHandlerRef("MyPredicate", "My.Assembly")) };
+    }
+
+    [Theory]
+    [MemberData(nameof(PredicateRoundTripCases))]
+    public void SerializeDeserialize_RoundTrips_EveryPredicateSubtype(GraphEdgePredicate predicate)
+    {
+        var manifest = MinimalManifest() with
+        {
+            Edges = new[] { new GraphEdge("start", "end", predicate, null) },
+        };
+
+        var json = OrleansAgentGraphRegistry.SerializeManifest(manifest);
+        var result = OrleansAgentGraphRegistry.DeserializeManifest(json);
+
+        JsonSerializer.Serialize(result.Edges.Single().When).Should().Be(JsonSerializer.Serialize(predicate));
+    }
+
+    // ── Effect round-trips ────────────────────────────────────────────────────
+
+    public static IEnumerable<object[]> EffectRoundTripCases()
+    {
+        yield return new object[] { new GraphEdgeEffect.Set("status", JsonDocument.Parse("\"done\"").RootElement.Clone()) };
+        yield return new object[] { new GraphEdgeEffect.Increment("retryCount") };
+        yield return new object[] { new GraphEdgeEffect.Increment("retryCount", 3) };
+        yield return new object[] { new GraphEdgeEffect.Append("messages", JsonDocument.Parse("\"hello\"").RootElement.Clone()) };
+        yield return new object[] { new GraphEdgeEffect.HandlerRef(new GraphHandlerRef("MyEffect", "My.Assembly")) };
+    }
+
+    [Theory]
+    [MemberData(nameof(EffectRoundTripCases))]
+    public void SerializeDeserialize_RoundTrips_EveryEffectSubtype(GraphEdgeEffect effect)
+    {
+        var manifest = MinimalManifest() with
+        {
+            Edges = new[] { new GraphEdge("start", "end", null, effect) },
+        };
+
+        var json = OrleansAgentGraphRegistry.SerializeManifest(manifest);
+        var result = OrleansAgentGraphRegistry.DeserializeManifest(json);
+
+        JsonSerializer.Serialize(result.Edges.Single().OnTraverse).Should().Be(JsonSerializer.Serialize(effect));
+    }
+
+    // ── Combined ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SerializeDeserialize_RoundTrips_CombinedPredicateAndEffect()
+    {
+        GraphEdgePredicate predicate = new GraphEdgePredicate.Expression("=Local.retryCount < 3");
+        GraphEdgeEffect effect = new GraphEdgeEffect.Increment("retryCount");
+        var manifest = MinimalManifest() with
+        {
+            Edges = new[] { new GraphEdge("start", "end", predicate, effect) },
+        };
+
+        var json = OrleansAgentGraphRegistry.SerializeManifest(manifest);
+        var result = OrleansAgentGraphRegistry.DeserializeManifest(json);
+        var edge = result.Edges.Single();
+
+        JsonSerializer.Serialize(edge.When).Should().Be(JsonSerializer.Serialize(predicate));
+        JsonSerializer.Serialize(edge.OnTraverse).Should().Be(JsonSerializer.Serialize(effect));
     }
 }
