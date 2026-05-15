@@ -96,11 +96,9 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         HttpContext ctx,
         OpenAiChatRequest body,
         ICompletionProviderPool pool,
+        IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
         CancellationToken ct)
     {
-        if (body.Stream == true)
-            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
-
         var provider = await pool.GetAsync(
             new ModelSpec("openai", body.Model, ApiKeyRef: "secret://env/OPENAI_API_KEY"), ct)
             .ConfigureAwait(false);
@@ -117,12 +115,40 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 m.Content ?? ""))
             .ToArray();
 
-        var request = new CompletionRequest(history, Temperature: body.Temperature, MaxTokens: body.MaxTokens);
-        var response = await provider.CompleteAsync(request, ct).ConfigureAwait(false);
+        ResponseFormatSpec? responseFormat = null;
+        if (body.ResponseFormat is { Type: "json_schema", JsonSchema: { } js })
+            responseFormat = new ResponseFormatSpec(js.Schema, js.Name, js.Strict ?? true);
+
+        var request = new CompletionRequest(
+            history,
+            Temperature:    body.Temperature,
+            MaxTokens:      body.MaxTokens,
+            ResponseFormat: responseFormat);
+
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
+            ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
+
+        var completionId = $"chatcmpl-{Guid.NewGuid():N}";
+
+        if (body.Stream == true)
+        {
+            if (provider is not IStreamingCompletionProvider streamingProvider)
+                return Results.StatusCode(StatusCodes.Status422UnprocessableEntity);
+
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            await ContainerGatewaySseWriter.WriteAsync(ctx.Response, completionId, body.Model, stream, ct)
+                .ConfigureAwait(false);
+            return Results.Empty;
+        }
+
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+            .ConfigureAwait(false);
 
         return Results.Ok(new OpenAiChatResponse
         {
-            Id      = $"chatcmpl-{Guid.NewGuid():N}",
+            Id      = completionId,
             Object  = "chat.completion",
             Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Model   = body.Model,

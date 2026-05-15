@@ -127,11 +127,53 @@ internal sealed class OpenAiChatMessage
 
 internal sealed class OpenAiChatRequest
 {
-    [JsonPropertyName("model")]      public string Model       { get; init; } = "";
-    [JsonPropertyName("messages")]   public IReadOnlyList<OpenAiChatMessage> Messages { get; init; } = [];
-    [JsonPropertyName("temperature")] public float? Temperature { get; init; }
-    [JsonPropertyName("max_tokens")] public int?   MaxTokens   { get; init; }
-    [JsonPropertyName("stream")]     public bool?  Stream      { get; init; }
+    [JsonPropertyName("model")]           public string Model       { get; init; } = "";
+    [JsonPropertyName("messages")]        public IReadOnlyList<OpenAiChatMessage> Messages { get; init; } = [];
+    [JsonPropertyName("temperature")]     public float? Temperature { get; init; }
+    [JsonPropertyName("max_tokens")]      public int?   MaxTokens   { get; init; }
+    [JsonPropertyName("stream")]          public bool?  Stream      { get; init; }
+    [JsonPropertyName("response_format")] public OpenAiResponseFormat? ResponseFormat { get; init; }
+}
+
+internal sealed class OpenAiResponseFormat
+{
+    [JsonPropertyName("type")]        public string Type { get; init; } = "text";
+    [JsonPropertyName("json_schema")] public OpenAiJsonSchema? JsonSchema { get; init; }
+}
+
+internal sealed class OpenAiJsonSchema
+{
+    [JsonPropertyName("name")]   public string      Name   { get; init; } = "";
+    [JsonPropertyName("schema")] public System.Text.Json.JsonElement Schema { get; init; }
+    [JsonPropertyName("strict")] public bool?       Strict { get; init; }
+}
+
+// ── Streaming chunk types (SSE response body) ─────────────────────────────
+internal sealed class OpenAiChatChunk
+{
+    [JsonPropertyName("id")]      public string Id      { get; init; } = "";
+    [JsonPropertyName("object")]  public string Object  { get; init; } = "chat.completion.chunk";
+    [JsonPropertyName("created")] public long   Created { get; init; }
+    [JsonPropertyName("model")]   public string Model   { get; init; } = "";
+    [JsonPropertyName("choices")] public IReadOnlyList<OpenAiChatChunkChoice> Choices { get; init; } = [];
+}
+
+internal sealed class OpenAiChatChunkChoice
+{
+    [JsonPropertyName("index")]         public int            Index        { get; init; }
+    [JsonPropertyName("delta")]         public OpenAiChatDelta Delta       { get; init; } = new();
+    [JsonPropertyName("finish_reason")] public string?        FinishReason { get; init; }
+}
+
+internal sealed class OpenAiChatDelta
+{
+    [JsonPropertyName("role")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Role { get; init; }
+
+    [JsonPropertyName("content")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Content { get; init; }
 }
 
 internal sealed class OpenAiUsage
