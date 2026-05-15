@@ -855,3 +855,6 @@ static Vais.Agents.TurnPayload.operator ==(Vais.Agents.TurnPayload? left, Vais.A
 virtual Vais.Agents.SectionPayload.EqualityContract.get -> System.Type!
 virtual Vais.Agents.SectionPayload.Equals(Vais.Agents.SectionPayload? other) -> bool
 virtual Vais.Agents.SectionPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Vais.Agents.ContextContribution.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!
+Vais.Agents.ContextContribution.Sections.init -> void
+Vais.Agents.ContextContribution.ContextContribution(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections) -> void
