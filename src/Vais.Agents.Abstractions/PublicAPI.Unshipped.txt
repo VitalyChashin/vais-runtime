@@ -708,3 +708,26 @@ Vais.Agents.GraphEdgeEffectJsonConverter
 Vais.Agents.GraphEdgeEffectJsonConverter.GraphEdgeEffectJsonConverter() -> void
 override Vais.Agents.GraphEdgeEffectJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> Vais.Agents.GraphEdgeEffect?
 override Vais.Agents.GraphEdgeEffectJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, Vais.Agents.GraphEdgeEffect! value, System.Text.Json.JsonSerializerOptions! options) -> void
+Vais.Agents.ResponseFormatSpec
+Vais.Agents.ResponseFormatSpec.<Clone>$() -> Vais.Agents.ResponseFormatSpec!
+Vais.Agents.ResponseFormatSpec.Deconstruct(out System.Text.Json.JsonElement Schema, out string? SchemaName, out bool Strict) -> void
+Vais.Agents.ResponseFormatSpec.Equals(Vais.Agents.ResponseFormatSpec? other) -> bool
+Vais.Agents.ResponseFormatSpec.ResponseFormatSpec(System.Text.Json.JsonElement Schema, string? SchemaName = null, bool Strict = true) -> void
+Vais.Agents.ResponseFormatSpec.Schema.get -> System.Text.Json.JsonElement
+Vais.Agents.ResponseFormatSpec.Schema.init -> void
+Vais.Agents.ResponseFormatSpec.SchemaName.get -> string?
+Vais.Agents.ResponseFormatSpec.SchemaName.init -> void
+Vais.Agents.ResponseFormatSpec.Strict.get -> bool
+Vais.Agents.ResponseFormatSpec.Strict.init -> void
+override Vais.Agents.ResponseFormatSpec.Equals(object? obj) -> bool
+override Vais.Agents.ResponseFormatSpec.GetHashCode() -> int
+override Vais.Agents.ResponseFormatSpec.ToString() -> string!
+static Vais.Agents.ResponseFormatSpec.operator !=(Vais.Agents.ResponseFormatSpec? left, Vais.Agents.ResponseFormatSpec? right) -> bool
+static Vais.Agents.ResponseFormatSpec.operator ==(Vais.Agents.ResponseFormatSpec? left, Vais.Agents.ResponseFormatSpec? right) -> bool
+Vais.Agents.CompletionRequest.ResponseFormat.get -> Vais.Agents.ResponseFormatSpec?
+Vais.Agents.CompletionRequest.ResponseFormat.init -> void
+*REMOVED*Vais.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools = null) -> void
+*REMOVED*Vais.Agents.CompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, out string? SystemPrompt, out float? Temperature, out int? MaxTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools) -> void
+Vais.Agents.CompletionRequest.CompletionRequest(System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, string? SystemPrompt = null, float? Temperature = null, int? MaxTokens = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools = null, Vais.Agents.ResponseFormatSpec? ResponseFormat = null) -> void
+Vais.Agents.CompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>! History, out string? SystemPrompt, out float? Temperature, out int? MaxTokens, out System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>? Tools, out Vais.Agents.ResponseFormatSpec? ResponseFormat) -> void
+Vais.Agents.ICompletionProvider.SupportsResponseFormat.get -> bool

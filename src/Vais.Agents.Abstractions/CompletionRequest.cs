@@ -1,7 +1,26 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
+
 namespace Vais.Agents;
+
+/// <summary>
+/// Structured-output schema spec carried on a <see cref="CompletionRequest"/>.
+/// When set, providers that support <c>response_format: json_schema</c> (e.g. OpenAI)
+/// constrain the model's reply to this shape on the wire.
+/// </summary>
+/// <param name="Schema">Inline JSON Schema document.</param>
+/// <param name="SchemaName">Optional schema name passed to the provider. Defaults to <c>"response"</c>.</param>
+/// <param name="Strict">
+/// When true, strict-mode schema enforcement is requested. The provider may reject
+/// schemas that contain constructs it does not support in strict mode (e.g. <c>pattern</c>,
+/// non-required properties, <c>additionalProperties: true</c>).
+/// </param>
+public sealed record ResponseFormatSpec(
+    JsonElement Schema,
+    string? SchemaName = null,
+    bool Strict = true);
 
 /// <summary>
 /// A single-turn completion request submitted to an <see cref="ICompletionProvider"/>.
@@ -25,9 +44,15 @@ namespace Vais.Agents;
 /// so any tool calls the model emits are executed and their results fed back before
 /// the final response is returned.
 /// </param>
+/// <param name="ResponseFormat">
+/// Optional structured-output schema. When set and the provider supports it, the model
+/// API enforces the shape on the wire. Null means the provider uses its default output
+/// mode (typically free-form text or prompt-driven JSON).
+/// </param>
 public sealed record CompletionRequest(
     IReadOnlyList<ChatTurn> History,
     string? SystemPrompt = null,
     float? Temperature = null,
     int? MaxTokens = null,
-    IReadOnlyList<ITool>? Tools = null);
+    IReadOnlyList<ITool>? Tools = null,
+    ResponseFormatSpec? ResponseFormat = null);

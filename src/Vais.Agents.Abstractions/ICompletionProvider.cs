@@ -29,6 +29,14 @@ public interface ICompletionProvider
     string ProviderName { get; }
 
     /// <summary>
+    /// Indicates whether this provider supports wire-level structured output
+    /// (<c>response_format: json_schema</c> or equivalent). Default: false.
+    /// Providers that support it override this to return true and wire
+    /// <see cref="CompletionRequest.ResponseFormat"/> onto the underlying SDK call.
+    /// </summary>
+    bool SupportsResponseFormat => false;
+
+    /// <summary>
     /// Execute a single completion turn.
     /// </summary>
     /// <param name="request">Conversation history plus optional knobs.</param>

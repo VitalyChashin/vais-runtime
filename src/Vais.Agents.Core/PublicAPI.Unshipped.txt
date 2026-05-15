@@ -119,3 +119,5 @@ Vais.Agents.Core.BackgroundLocalAgentTool.Name.get -> string!
 Vais.Agents.Core.BackgroundLocalAgentTool.ParametersSchema.get -> System.Text.Json.JsonElement
 Vais.Agents.Core.BackgroundAgentManagementTools
 static Vais.Agents.Core.BackgroundAgentManagementTools.Create(Vais.Agents.IBackgroundAgentTracker! tracker) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!
+Vais.Agents.Core.StatefulAgentOptions.ResponseFormat.get -> Vais.Agents.ResponseFormatSpec?
+Vais.Agents.Core.StatefulAgentOptions.ResponseFormat.init -> void

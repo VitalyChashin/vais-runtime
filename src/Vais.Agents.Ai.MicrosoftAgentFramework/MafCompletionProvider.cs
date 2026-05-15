@@ -82,6 +82,9 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
     public string ProviderName => "MicrosoftAgentFramework";
 
     /// <inheritdoc />
+    public bool SupportsResponseFormat => true;
+
+    /// <inheritdoc />
     public async Task<CompletionResponse> CompleteAsync(
         CompletionRequest request,
         CancellationToken cancellationToken = default)
@@ -104,6 +107,14 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         if (request.Tools is { Count: > 0 } tools)
         {
             chatOptions.Tools = MafToolBinder.BuildTools(tools);
+        }
+
+        if (request.ResponseFormat is { } rf)
+        {
+            chatOptions.ResponseFormat = ChatResponseFormat.ForJsonSchema(
+                schema: rf.Schema,
+                schemaName: rf.SchemaName ?? "response",
+                schemaDescription: null);
         }
 
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
@@ -150,6 +161,14 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
         if (request.Tools is { Count: > 0 } tools)
         {
             chatOptions.Tools = MafToolBinder.BuildTools(tools);
+        }
+
+        if (request.ResponseFormat is { } streamRf)
+        {
+            chatOptions.ResponseFormat = ChatResponseFormat.ForJsonSchema(
+                schema: streamRf.Schema,
+                schemaName: streamRf.SchemaName ?? "response",
+                schemaDescription: null);
         }
 
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };

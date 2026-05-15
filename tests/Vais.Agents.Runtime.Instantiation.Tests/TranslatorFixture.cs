@@ -48,6 +48,23 @@ internal sealed class TranslatorFixture
     {
         var provider = Substitute.For<ICompletionProvider>();
         provider.ProviderName.Returns(providerName);
+        // SupportsResponseFormat defaults to false via DIM.
+
+        var factory = Substitute.For<IModelProviderFactory>();
+        factory.Provider.Returns(providerName);
+        factory.CreateAsync(Arg.Any<ModelSpec>(), Arg.Any<ISecretResolver>(), Arg.Any<CancellationToken>())
+            .Returns(new ValueTask<ICompletionProvider>(provider));
+
+        _providers.Add(factory);
+        _translator = null;
+        return this;
+    }
+
+    public TranslatorFixture WithSupportingResponseFormatProvider(string providerName)
+    {
+        var provider = Substitute.For<ICompletionProvider>();
+        provider.ProviderName.Returns(providerName);
+        provider.SupportsResponseFormat.Returns(true);
 
         var factory = Substitute.For<IModelProviderFactory>();
         factory.Provider.Returns(providerName);
@@ -230,7 +247,7 @@ internal sealed class TranslatorFixture
 
         if (_diagnosticsSink is not null)
         {
-            services.AddSingleton(_diagnosticsSink);
+            services.AddSingleton<IManifestApplyDiagnosticsSink>(_diagnosticsSink);
         }
 
         foreach (var provider in _toolSourceProviders)
