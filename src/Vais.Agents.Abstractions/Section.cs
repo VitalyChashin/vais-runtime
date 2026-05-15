@@ -21,8 +21,10 @@ namespace Vais.Agents;
 /// </param>
 /// <param name="Payload">Typed content — see the <see cref="SectionPayload"/> hierarchy.</param>
 /// <param name="Order">
-/// Optional sort key within the same <see cref="Kind"/>. Null sections sort by registration
-/// order (stable). Lower values come first, matching ASP.NET middleware ordering.
+/// Optional sort key within the same <see cref="Kind"/>. Sections with an explicit
+/// <see cref="Order"/> always sort before sections with null <see cref="Order"/> in the same
+/// kind; among null-Order sections, registration order is preserved (stable tiebreak). Lower
+/// values come first, matching ASP.NET middleware ordering.
 /// </param>
 /// <param name="ProducerId">
 /// Identifier of the component that produced the section. Conventionally the producer's type name.

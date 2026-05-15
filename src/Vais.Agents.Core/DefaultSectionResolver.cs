@@ -77,12 +77,14 @@ public sealed class DefaultSectionResolver : ISectionResolver
 
     private static IReadOnlyList<Section> Sort(IReadOnlyList<Section> sections)
     {
-        // Decorate-sort-undecorate. Effective order: section.Order ?? registrationIndex
-        // (null falls back to position in input). Stable tiebreak by registrationIndex.
+        // Decorate-sort-undecorate. Effective order: section.Order ?? int.MaxValue. Explicit-
+        // Order sections always sort before null-Order sections within the same kind; null-Order
+        // sections cluster at the end in registration order (the stable tiebreak below). This
+        // matches the user intent that "no Order specified" means "no positioning preference".
         var indexed = new (Section Section, int Index, int Effective)[sections.Count];
         for (var i = 0; i < sections.Count; i++)
         {
-            indexed[i] = (sections[i], i, sections[i].Order ?? i);
+            indexed[i] = (sections[i], i, sections[i].Order ?? int.MaxValue);
         }
 
         Array.Sort(indexed, static (a, b) =>

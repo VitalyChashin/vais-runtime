@@ -21,9 +21,10 @@ namespace Vais.Agents;
 ///     <see cref="SectionKind.AssistantMessage"/> / <see cref="SectionKind.ToolMessage"/> as one
 ///     interleaved group sorted by <see cref="Section.Order"/>; then <see cref="SectionKind.ToolDeclaration"/>;
 ///     then <see cref="SectionKind.ResponseFormat"/>; then <see cref="SectionKind.Metadata"/>.
-///     Within any group, <see cref="Section.Order"/> ascending; null <see cref="Section.Order"/> falls
-///     back to the section's position in the input list. Ties in the effective order resolve by the
-///     section's position in the input (stable).
+///     Within any group, sections with an explicit <see cref="Section.Order"/> sort first
+///     (ascending); sections with null <see cref="Section.Order"/> cluster at the end in
+///     registration order. Ties in the effective order resolve by the section's position in
+///     the input list (stable).
 ///   </description></item>
 /// </list>
 /// </remarks>

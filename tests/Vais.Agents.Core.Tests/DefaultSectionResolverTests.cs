@@ -137,20 +137,22 @@ public sealed class DefaultSectionResolverTests
     }
 
     [Fact]
-    public async Task Null_Order_Falls_Back_To_Registration_Index()
+    public async Task Null_Order_Clusters_At_End_After_Explicit_Order_Sections()
     {
-        // null-order sections sit at their registration index. Explicit Order=2 ties with
-        // the third section's effective order (its index), and registration order breaks the tie.
+        // Explicit-Order sections sort first (by Order ascending); null-Order sections cluster
+        // at the end in registration order. This rule keeps mixed-Order scenarios predictable:
+        // a user wiring composer (explicit Order=Priority) + RAG (no Order set) gets composer
+        // sections first, RAG after — no surprising interleaving on registration index.
         var input = new[]
         {
-            System("a"),               // null order, index 0 → effective 0
-            System("b", order: 2),     // effective 2
-            System("c"),               // null order, index 2 → effective 2 (tie with b; b registered first)
+            System("a"),               // null order → end-of-block, registration tiebreak
+            System("b", order: 2),     // explicit Order=2 → sorts first
+            System("c"),               // null order → end-of-block, after "a" (later registration)
         };
 
         var result = await _resolver.ResolveAsync(input);
 
-        result.Select(s => s.Id).Should().Equal("a", "b", "c");
+        result.Select(s => s.Id).Should().Equal("b", "a", "c");
     }
 
     [Fact]
