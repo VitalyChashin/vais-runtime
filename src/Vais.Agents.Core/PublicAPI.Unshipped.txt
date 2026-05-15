@@ -127,3 +127,11 @@ Vais.Agents.DefaultSectionResolver.ResolveAsync(System.Collections.Generic.IRead
 static Vais.Agents.DefaultSectionResolver.Instance.get -> Vais.Agents.DefaultSectionResolver!
 Vais.Agents.CompletionRequestFlattener
 static Vais.Agents.CompletionRequestFlattener.Flatten(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.CompletionRequest? template = null, Microsoft.Extensions.Logging.ILogger? logger = null) -> Vais.Agents.CompletionRequest!
+Vais.Agents.DefaultSectionWindowPacker
+Vais.Agents.DefaultSectionWindowPacker.DefaultSectionWindowPacker() -> void
+Vais.Agents.DefaultSectionWindowPacker.PackAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.SectionBudgetContext! budget, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.SectionPackResult!>
+Vais.Agents.LegacyPackerAdapter
+Vais.Agents.LegacyPackerAdapter.LegacyPackerAdapter(Vais.Agents.IContextWindowPacker! legacyPacker) -> void
+Vais.Agents.LegacyPackerAdapter.PackAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.SectionBudgetContext! budget, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.SectionPackResult!>
+const Vais.Agents.DefaultSectionWindowPacker.DefaultPriority = 5 -> int
+static Vais.Agents.DefaultSectionWindowPacker.Instance.get -> Vais.Agents.DefaultSectionWindowPacker!

@@ -864,3 +864,59 @@ Vais.Agents.SectionCollisionException
 Vais.Agents.SectionCollisionException.OffendingKey.get -> string!
 Vais.Agents.SectionCollisionException.ProducerIds.get -> System.Collections.Generic.IReadOnlyList<string?>!
 Vais.Agents.SectionCollisionException.SectionCollisionException(string! offendingKey, System.Collections.Generic.IReadOnlyList<string?>! producerIds, string! message) -> void
+Vais.Agents.ISectionWindowPacker
+Vais.Agents.ISectionWindowPacker.PackAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.SectionBudgetContext! budget, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.SectionPackResult!>
+Vais.Agents.ITokenCounter
+Vais.Agents.ITokenCounter.Count(string! text) -> int
+Vais.Agents.PackerOutcome
+Vais.Agents.PackerOutcome.<Clone>$() -> Vais.Agents.PackerOutcome!
+Vais.Agents.PackerOutcome.Deconstruct(out string! SectionId, out string! Outcome, out int DroppedChars) -> void
+Vais.Agents.PackerOutcome.DroppedChars.get -> int
+Vais.Agents.PackerOutcome.DroppedChars.init -> void
+Vais.Agents.PackerOutcome.Equals(Vais.Agents.PackerOutcome? other) -> bool
+Vais.Agents.PackerOutcome.Outcome.get -> string!
+Vais.Agents.PackerOutcome.Outcome.init -> void
+Vais.Agents.PackerOutcome.PackerOutcome(string! SectionId, string! Outcome, int DroppedChars = 0) -> void
+Vais.Agents.PackerOutcome.SectionId.get -> string!
+Vais.Agents.PackerOutcome.SectionId.init -> void
+Vais.Agents.PackerOutcomes
+Vais.Agents.SectionBudgetContext
+Vais.Agents.SectionBudgetContext.<Clone>$() -> Vais.Agents.SectionBudgetContext!
+Vais.Agents.SectionBudgetContext.Deconstruct(out int? MaxChars, out int? MaxTokens, out Vais.Agents.ITokenCounter? TokenCounter) -> void
+Vais.Agents.SectionBudgetContext.Equals(Vais.Agents.SectionBudgetContext? other) -> bool
+Vais.Agents.SectionBudgetContext.MaxChars.get -> int?
+Vais.Agents.SectionBudgetContext.MaxChars.init -> void
+Vais.Agents.SectionBudgetContext.MaxTokens.get -> int?
+Vais.Agents.SectionBudgetContext.MaxTokens.init -> void
+Vais.Agents.SectionBudgetContext.SectionBudgetContext(int? MaxChars = null, int? MaxTokens = null, Vais.Agents.ITokenCounter? TokenCounter = null) -> void
+Vais.Agents.SectionBudgetContext.TokenCounter.get -> Vais.Agents.ITokenCounter?
+Vais.Agents.SectionBudgetContext.TokenCounter.init -> void
+Vais.Agents.SectionPackResult
+Vais.Agents.SectionPackResult.<Clone>$() -> Vais.Agents.SectionPackResult!
+Vais.Agents.SectionPackResult.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! Sections, out System.Collections.Generic.IReadOnlyList<Vais.Agents.PackerOutcome!>! Outcomes) -> void
+Vais.Agents.SectionPackResult.Equals(Vais.Agents.SectionPackResult? other) -> bool
+Vais.Agents.SectionPackResult.Outcomes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.PackerOutcome!>!
+Vais.Agents.SectionPackResult.Outcomes.init -> void
+Vais.Agents.SectionPackResult.SectionPackResult(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! Sections, System.Collections.Generic.IReadOnlyList<Vais.Agents.PackerOutcome!>! Outcomes) -> void
+Vais.Agents.SectionPackResult.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!
+Vais.Agents.SectionPackResult.Sections.init -> void
+const Vais.Agents.PackerOutcomes.Dropped = "dropped" -> string!
+const Vais.Agents.PackerOutcomes.Included = "included" -> string!
+const Vais.Agents.PackerOutcomes.Legacy = "legacy" -> string!
+const Vais.Agents.PackerOutcomes.Truncated = "truncated" -> string!
+override Vais.Agents.PackerOutcome.Equals(object? obj) -> bool
+override Vais.Agents.PackerOutcome.GetHashCode() -> int
+override Vais.Agents.PackerOutcome.ToString() -> string!
+override Vais.Agents.SectionBudgetContext.Equals(object? obj) -> bool
+override Vais.Agents.SectionBudgetContext.GetHashCode() -> int
+override Vais.Agents.SectionBudgetContext.ToString() -> string!
+override Vais.Agents.SectionPackResult.Equals(object? obj) -> bool
+override Vais.Agents.SectionPackResult.GetHashCode() -> int
+override Vais.Agents.SectionPackResult.ToString() -> string!
+static Vais.Agents.PackerOutcome.operator !=(Vais.Agents.PackerOutcome? left, Vais.Agents.PackerOutcome? right) -> bool
+static Vais.Agents.PackerOutcome.operator ==(Vais.Agents.PackerOutcome? left, Vais.Agents.PackerOutcome? right) -> bool
+static Vais.Agents.SectionBudgetContext.Unlimited.get -> Vais.Agents.SectionBudgetContext!
+static Vais.Agents.SectionBudgetContext.operator !=(Vais.Agents.SectionBudgetContext? left, Vais.Agents.SectionBudgetContext? right) -> bool
+static Vais.Agents.SectionBudgetContext.operator ==(Vais.Agents.SectionBudgetContext? left, Vais.Agents.SectionBudgetContext? right) -> bool
+static Vais.Agents.SectionPackResult.operator !=(Vais.Agents.SectionPackResult? left, Vais.Agents.SectionPackResult? right) -> bool
+static Vais.Agents.SectionPackResult.operator ==(Vais.Agents.SectionPackResult? left, Vais.Agents.SectionPackResult? right) -> bool
