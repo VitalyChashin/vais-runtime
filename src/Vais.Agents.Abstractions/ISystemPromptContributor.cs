@@ -21,4 +21,46 @@ public interface ISystemPromptContributor
     /// Return this contributor's slice of the prompt, or null/empty to contribute nothing.
     /// </summary>
     ValueTask<string?> ContributeAsync(AgentContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Section id used when the contributor's output is emitted as a <see cref="Section"/> by
+    /// <c>AggregatingSystemPromptComposer</c>. Defaults to <c>"system.&lt;type-name-kebab-case&gt;"</c>
+    /// — override when registering multiple contributors of the same type so the section resolver
+    /// can tell them apart.
+    /// </summary>
+    string SectionId => DefaultSectionId(GetType());
+
+    /// <summary>
+    /// Default section id factory exposed so test helpers and custom composers can reproduce the
+    /// convention without re-implementing the kebab-case rule.
+    /// </summary>
+    static string DefaultSectionId(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        var name = type.Name;
+        if (name.Length == 0)
+        {
+            return "system.contributor";
+        }
+
+        var sb = new System.Text.StringBuilder("system.", capacity: name.Length + 8);
+        for (var i = 0; i < name.Length; i++)
+        {
+            var ch = name[i];
+            if (char.IsUpper(ch))
+            {
+                if (i > 0) sb.Append('-');
+                sb.Append(char.ToLowerInvariant(ch));
+            }
+            else if (char.IsLetterOrDigit(ch) || ch is '_' or '-')
+            {
+                sb.Append(ch);
+            }
+            else
+            {
+                sb.Append('_');
+            }
+        }
+        return sb.ToString();
+    }
 }

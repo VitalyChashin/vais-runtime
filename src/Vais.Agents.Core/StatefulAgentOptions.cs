@@ -172,11 +172,33 @@ public sealed class StatefulAgentOptions
     public IReadOnlyList<IContextProvider> ContextProviders { get; init; } = Array.Empty<IContextProvider>();
 
     /// <summary>
-    /// Runs after all <see cref="ContextProviders"/> have contributed, to fit the merged
-    /// candidate into whatever window the packer cares about. Default:
-    /// <see cref="NoopContextWindowPacker.Instance"/> (identity).
+    /// Legacy packer that operates on a flattened <see cref="CompletionRequest"/>. When set and
+    /// <see cref="SectionWindowPacker"/> is null, the agent wraps this instance in a
+    /// <c>LegacyPackerAdapter</c> so it participates in the section pipeline. Will be marked
+    /// <c>[Obsolete(DiagnosticId="VAIS0011")]</c> in SC-7 once shipped consumers migrate.
     /// </summary>
     public IContextWindowPacker? ContextWindowPacker { get; init; }
+
+    /// <summary>
+    /// Resolver that runs after <see cref="ContextProviders"/> contribute, before the packer.
+    /// Detects id collisions, enforces the <see cref="SectionKind.ResponseFormat"/> singleton,
+    /// and sorts sections into canonical order. Default: <see cref="DefaultSectionResolver.Instance"/>.
+    /// </summary>
+    public ISectionResolver? SectionResolver { get; init; }
+
+    /// <summary>
+    /// Packer that fits the resolved section list to <see cref="SectionBudget"/>. Default
+    /// (when null and <see cref="ContextWindowPacker"/> is null): <see cref="DefaultSectionWindowPacker.Instance"/>.
+    /// When <see cref="ContextWindowPacker"/> is set and this is null, the legacy packer is
+    /// wrapped in <c>LegacyPackerAdapter</c>.
+    /// </summary>
+    public ISectionWindowPacker? SectionWindowPacker { get; init; }
+
+    /// <summary>
+    /// Budget context handed to the section packer. Default: <see cref="SectionBudgetContext.Unlimited"/>
+    /// (identity behaviour — no shedding).
+    /// </summary>
+    public SectionBudgetContext? SectionBudget { get; init; }
 
     /// <summary>
     /// Optional multi-part system prompt composer. When non-null, <see cref="StatefulAiAgent"/>

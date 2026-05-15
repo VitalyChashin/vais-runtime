@@ -24,4 +24,43 @@ public interface ISystemPromptComposer
     /// or trailing whitespace if they want any.
     /// </summary>
     ValueTask<string?> ComposeAsync(AgentContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Section-shaped composition entry point. Overriding implementations emit one
+    /// <see cref="SectionKind.SystemSegment"/> section per logical part (e.g. per
+    /// <see cref="ISystemPromptContributor"/>) so the section resolver, packer, and
+    /// telemetry surface can operate per-contributor instead of seeing one concatenated
+    /// string. The default implementation wraps <see cref="ComposeAsync"/>: it emits a
+    /// single <c>system.composed</c> section when <see cref="ComposeAsync"/> returns a
+    /// non-empty string, or an empty list otherwise — so custom composers keep working
+    /// without recompilation.
+    /// </summary>
+    ValueTask<IReadOnlyList<Section>> ComposeSectionsAsync(AgentContext context, CancellationToken cancellationToken = default)
+        => DefaultComposeSectionsAsync(this, context, cancellationToken);
+
+    /// <summary>
+    /// Default <see cref="ComposeSectionsAsync"/> implementation extracted so derived classes
+    /// can opt back into the wrap-single-section behaviour explicitly.
+    /// </summary>
+    static async ValueTask<IReadOnlyList<Section>> DefaultComposeSectionsAsync(
+        ISystemPromptComposer composer,
+        AgentContext context,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(composer);
+        var text = await composer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(text))
+        {
+            return Array.Empty<Section>();
+        }
+
+        return new[]
+        {
+            new Section(
+                "system.composed",
+                SectionKind.SystemSegment,
+                new TextPayload(text),
+                ProducerId: composer.GetType().Name),
+        };
+    }
 }
