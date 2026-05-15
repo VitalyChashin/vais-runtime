@@ -152,3 +152,6 @@ Vais.Agents.EventBusSectionSink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! 
 Vais.Agents.SectionTelemetryEmitter.IsNoOp.get -> bool
 Vais.Agents.SectionTelemetryEmitter.SectionTelemetryEmitter(System.Collections.Generic.IEnumerable<Vais.Agents.ISectionTelemetrySink!>? sinks, Microsoft.Extensions.Logging.ILogger? logger = null) -> void
 static Vais.Agents.SectionTelemetryEmitter.NoOp.get -> Vais.Agents.SectionTelemetryEmitter!
+Vais.Agents.LoggingSectionSink
+Vais.Agents.LoggingSectionSink.LoggingSectionSink(Microsoft.Extensions.Logging.ILogger<Vais.Agents.LoggingSectionSink!>! logger) -> void
+Vais.Agents.LoggingSectionSink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
