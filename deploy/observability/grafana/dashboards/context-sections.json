@@ -1,0 +1,173 @@
+{
+  "title": "Vais — Context Sections",
+  "uid": "vais-context-sections",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "description": "Per-section observability for the Vais.Agents context pipeline. Six metrics from Vais.Agents.Observability.Prometheus.PrometheusSectionSink drive five panels: stacked-area composition, per-agent breakdown table, budget-pressure gauge, drop/truncate timeline, sections-per-turn heatmap.",
+  "tags": ["vais", "sections", "observability"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Context Composition Over Time (chars/s, stacked by section)",
+      "description": "Per-section character throughput, stacked. Reveals which producers dominate the context window and how the mix shifts as agents handle different workloads.",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (section_id) (rate(vais_request_section_chars_sum[5m]))",
+          "legendFormat": "{{section_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 30,
+            "stacking": { "mode": "normal", "group": "A" },
+            "showPoints": "never"
+          },
+          "unit": "cps"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Average Section Ratio by Agent",
+      "description": "Per-(agent, section) mean ratio over the window. Cells where a single section averages above 0.5 highlight a producer that's eating half the context window for that agent — usually a tuning signal.",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "avg by (agent_id, section_id) (rate(vais_request_section_ratio_sum[5m]) / rate(vais_request_section_ratio_count[5m]))",
+          "legendFormat": "{{agent_id}} — {{section_id}}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 0.75 }
+            ]
+          },
+          "unit": "percentunit"
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Budget Pressure (used / target, per agent)",
+      "description": "Mean budget-used ratio per agent. Green below 0.7, yellow up to 0.9, red above — operators usually want to investigate any agent staying above 0.9.",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "avg by (agent_id) (rate(vais_request_budget_used_ratio_sum[5m]) / rate(vais_request_budget_used_ratio_count[5m]))",
+          "legendFormat": "{{agent_id}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Drop / Truncate Events (per section, /s)",
+      "description": "Rate of dropped + truncated outcomes by section. Sustained non-zero values mean the budget is tight enough that the packer is shedding load — usually a signal to grow the budget or trim noisy producers.",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (section_id, outcome) (rate(vais_request_section_outcome_total{outcome!=\"included\"}[5m]))",
+          "legendFormat": "{{section_id}} ({{outcome}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 5,
+      "type": "heatmap",
+      "title": "Sections per Turn (distribution)",
+      "description": "Heatmap of section-count distribution across turns. Distribution shifts indicate provider-chain changes (e.g. a memory provider got registered) — useful for catching unintentional regressions after a manifest rollout.",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (le) (rate(vais_request_sections_per_turn_bucket[5m]))",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "yAxis": { "axisPlacement": "left", "unit": "short" },
+        "color": { "mode": "scheme", "scheme": "Spectral", "steps": 64 },
+        "cellGap": 1,
+        "showValue": "never",
+        "legend": { "show": true }
+      }
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Drops",
+        "datasource": { "type": "prometheus" },
+        "enable": false,
+        "iconColor": "red",
+        "expr": "increase(vais_request_section_outcome_total{outcome=\"dropped\"}[1m]) > 0",
+        "tagKeys": "section_id,agent_id"
+      }
+    ]
+  }
+}
