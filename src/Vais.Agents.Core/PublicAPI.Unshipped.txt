@@ -121,3 +121,7 @@ Vais.Agents.Core.BackgroundAgentManagementTools
 static Vais.Agents.Core.BackgroundAgentManagementTools.Create(Vais.Agents.IBackgroundAgentTracker! tracker) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!
 Vais.Agents.Core.StatefulAgentOptions.ResponseFormat.get -> Vais.Agents.ResponseFormatSpec?
 Vais.Agents.Core.StatefulAgentOptions.ResponseFormat.init -> void
+Vais.Agents.DefaultSectionResolver
+Vais.Agents.DefaultSectionResolver.DefaultSectionResolver() -> void
+Vais.Agents.DefaultSectionResolver.ResolveAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! contributed, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
+static Vais.Agents.DefaultSectionResolver.Instance.get -> Vais.Agents.DefaultSectionResolver!

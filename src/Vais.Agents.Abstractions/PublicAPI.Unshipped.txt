@@ -858,3 +858,9 @@ virtual Vais.Agents.SectionPayload.PrintMembers(System.Text.StringBuilder! build
 Vais.Agents.ContextContribution.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!
 Vais.Agents.ContextContribution.Sections.init -> void
 Vais.Agents.ContextContribution.ContextContribution(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections) -> void
+Vais.Agents.ISectionResolver
+Vais.Agents.ISectionResolver.ResolveAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! contributed, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
+Vais.Agents.SectionCollisionException
+Vais.Agents.SectionCollisionException.OffendingKey.get -> string!
+Vais.Agents.SectionCollisionException.ProducerIds.get -> System.Collections.Generic.IReadOnlyList<string?>!
+Vais.Agents.SectionCollisionException.SectionCollisionException(string! offendingKey, System.Collections.Generic.IReadOnlyList<string?>! producerIds, string! message) -> void
