@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Vais.Agents;
 
@@ -35,6 +36,7 @@ public sealed record ReasoningSpec(
 /// shape (sequential reasoning steps); routing + cycle cover decision-gated and
 /// iterative patterns surveyed during v0.6 scoping.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ReasoningPattern
 {
     /// <summary>Sequential reasoning steps — fields fill top-to-bottom, each sees prior fields as primed context.</summary>
