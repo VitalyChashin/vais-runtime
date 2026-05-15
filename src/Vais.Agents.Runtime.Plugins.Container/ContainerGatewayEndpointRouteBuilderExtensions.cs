@@ -104,15 +104,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             .ConfigureAwait(false);
 
         var history = body.Messages
-            .Select(m => new ChatTurn(
-                m.Role switch
-                {
-                    "system"    => AgentChatRole.System,
-                    "assistant" => AgentChatRole.Assistant,
-                    "tool"      => AgentChatRole.Tool,
-                    _           => AgentChatRole.User,
-                },
-                m.Content ?? ""))
+            .Select(OpenAiMessageToChatTurn)
             .ToArray();
 
         ResponseFormatSpec? responseFormat = null;
@@ -263,6 +255,49 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         }
 
         return Results.Ok(new GatewayToolListResponse { Tools = tools });
+    }
+
+    private static ChatTurn OpenAiMessageToChatTurn(OpenAiChatMessage msg)
+    {
+        var role = msg.Role switch
+        {
+            "system"    => AgentChatRole.System,
+            "assistant" => AgentChatRole.Assistant,
+            "tool"      => AgentChatRole.Tool,
+            _           => AgentChatRole.User,
+        };
+
+        IReadOnlyList<ToolCallRequest>? toolCalls = null;
+        if (msg.ToolCalls is { Count: > 0 } tcs)
+        {
+            toolCalls = tcs.Select(tc =>
+            {
+                // OpenAI sends function.arguments as a JSON-encoded string; parse so downstream
+                // providers receive structured JsonElement values rather than an opaque string.
+                JsonElement args;
+                if (string.IsNullOrEmpty(tc.Function.Arguments))
+                {
+                    using var empty = JsonDocument.Parse("{}");
+                    args = empty.RootElement.Clone();
+                }
+                else
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(tc.Function.Arguments);
+                        args = doc.RootElement.Clone();
+                    }
+                    catch (JsonException)
+                    {
+                        using var fallback = JsonDocument.Parse("{}");
+                        args = fallback.RootElement.Clone();
+                    }
+                }
+                return new ToolCallRequest(tc.Function.Name, args, tc.Id);
+            }).ToArray();
+        }
+
+        return new ChatTurn(role, msg.Content ?? "", ToolCalls: toolCalls, ToolCallId: msg.ToolCallId);
     }
 
     private static ChatTurn PluginMessageToChatTurn(PluginMessage msg)

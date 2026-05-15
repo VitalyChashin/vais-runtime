@@ -121,8 +121,31 @@ internal sealed class GatewayToolListResponse
 // OpenAI-compat chat completions types for POST /v1/container-gateway/chat/completions
 internal sealed class OpenAiChatMessage
 {
-    [JsonPropertyName("role")]   public string Role    { get; init; } = "";
-    [JsonPropertyName("content")] public string? Content { get; init; }
+    [JsonPropertyName("role")]         public string Role    { get; init; } = "";
+    [JsonPropertyName("content")]      public string? Content { get; init; }
+    // Assistant-side tool calls: model requested tool invocations.
+    [JsonPropertyName("tool_calls")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<OpenAiToolCall>? ToolCalls { get; init; }
+    // Tool-message correlation: ties the result back to the assistant tool_call.
+    [JsonPropertyName("tool_call_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolCallId { get; init; }
+}
+
+internal sealed class OpenAiToolCall
+{
+    [JsonPropertyName("id")]       public string             Id       { get; init; } = "";
+    [JsonPropertyName("type")]     public string             Type     { get; init; } = "function";
+    [JsonPropertyName("function")] public OpenAiToolFunction Function { get; init; } = new();
+}
+
+internal sealed class OpenAiToolFunction
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = "";
+    // OpenAI sends arguments as a JSON STRING (not a nested object); the model's structured
+    // emission is escaped into a string at protocol level. Deserialize on read.
+    [JsonPropertyName("arguments")] public string Arguments { get; init; } = "";
 }
 
 internal sealed class OpenAiChatRequest
