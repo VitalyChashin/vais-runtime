@@ -180,6 +180,19 @@ Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.RemoveAsync(string! i
 static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.DeserializeManifest(string! json) -> Vais.Agents.ContainerPluginManifest!
 static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.SerializeManifest(Vais.Agents.ContainerPluginManifest! manifest) -> string!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansContainerPluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Handle -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ParentRunId -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ChildAgentId -> string!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Status -> int
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.StartedAt -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.CompletedAt -> System.DateTimeOffset?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Result -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Error -> string?
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.BackgroundAgentRunRecordSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate surrogate) -> Vais.Agents.BackgroundAgentRunRecord!
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogateConverter.ConvertToSurrogate(in Vais.Agents.BackgroundAgentRunRecord! value) -> Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate
 Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain
 Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.StartAsync(string! parentRunId, string! childAgentId, string! message, Vais.Agents.AgentContext! childContext) -> System.Threading.Tasks.Task<string!>!
 Vais.Agents.Hosting.Orleans.IBackgroundAgentRunGrain.RunAsync() -> System.Threading.Tasks.Task!
