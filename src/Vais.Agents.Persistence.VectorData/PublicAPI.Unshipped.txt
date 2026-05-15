@@ -1,1 +1,3 @@
 #nullable enable
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.SectionId.get -> string!
+Vais.Agents.Persistence.VectorData.KnowledgeRetrievalOptions.SectionId.init -> void

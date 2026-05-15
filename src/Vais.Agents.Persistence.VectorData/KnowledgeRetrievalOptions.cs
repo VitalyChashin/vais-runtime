@@ -26,4 +26,12 @@ public sealed record KnowledgeRetrievalOptions
     /// <see cref="Template"/>. Default: <c>"\n---\n"</c>.
     /// </summary>
     public string ChunkSeparator { get; init; } = "\n---\n";
+
+    /// <summary>
+    /// Section id emitted by <c>KnowledgeRetrievalContextProvider</c>. Default: <c>"retrieval.docs"</c>.
+    /// Override when wiring multiple <see cref="IKnowledgeRetriever"/>s to the same agent so
+    /// the section resolver can distinguish them (e.g. <c>"retrieval.support_kb"</c>,
+    /// <c>"retrieval.product_specs"</c>).
+    /// </summary>
+    public string SectionId { get; init; } = "retrieval.docs";
 }

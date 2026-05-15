@@ -1252,8 +1252,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
 
     /// <summary>
     /// Build the per-turn <see cref="CompletionRequest"/> via the section pipeline:
-    /// history reducer → composer + base sections → context-provider chain (Section[] contributions)
-    /// → section resolver → section window packer → flattener.
+    /// history reducer → composer (Section[] via <see cref="ISystemPromptComposer.ComposeSectionsAsync"/>)
+    /// or inline <see cref="SystemPrompt"/> → base history/tools/format sections → context-provider
+    /// chain (Section[] contributions) → section resolver → section window packer → flattener.
     /// </summary>
     private async Task<CompletionRequest> BuildPerTurnRequestAsync(
         IReadOnlyList<ChatTurn> workingHistory,
@@ -1261,15 +1262,53 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         CancellationToken cancellationToken)
     {
         var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
-        var baseSystemPrompt = _systemPromptComposer is null
-            ? SystemPrompt
-            : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
         var tools = _toolRegistry?.Tools;
         var hasTools = tools is { Count: > 0 };
 
-        // Build the base section list — sections derived from the candidate template that providers
-        // can inspect via the ContextInvocationContext and build on top of.
-        var sections = BuildBaseSections(reduced, baseSystemPrompt, hasTools ? tools : null, hasTools ? null : _responseFormat);
+        var sections = new List<Section>(capacity: reduced.Count + 4);
+
+        // System sections: composer emits N sections (one per contributor in the aggregating impl),
+        // or the inline SystemPrompt becomes a single `system.base` section. The legacy
+        // `templateSystemPrompt` mirror is preserved so context providers reading
+        // `ContextInvocationContext.Candidate.SystemPrompt` see the same string the v0.4 pipeline
+        // produced — useful for providers that key off the system prompt content.
+        string? templateSystemPrompt = null;
+        if (_systemPromptComposer is not null)
+        {
+            var composed = await _systemPromptComposer.ComposeSectionsAsync(context, cancellationToken).ConfigureAwait(false);
+            if (composed.Count > 0)
+            {
+                sections.AddRange(composed);
+                templateSystemPrompt = JoinSystemSegmentText(composed);
+            }
+        }
+        else if (!string.IsNullOrEmpty(SystemPrompt))
+        {
+            templateSystemPrompt = SystemPrompt;
+            sections.Add(new Section(
+                "system.base",
+                SectionKind.SystemSegment,
+                new TextPayload(SystemPrompt),
+                ProducerId: BaseProducerId));
+        }
+
+        AddHistoryBaseSections(sections, reduced);
+        if (hasTools)
+        {
+            sections.Add(new Section(
+                "tools.base",
+                SectionKind.ToolDeclaration,
+                new ToolsPayload(tools!),
+                ProducerId: BaseProducerId));
+        }
+        else if (_responseFormat is not null)
+        {
+            sections.Add(new Section(
+                "format.base",
+                SectionKind.ResponseFormat,
+                new ResponseFormatPayload(_responseFormat),
+                ProducerId: BaseProducerId));
+        }
 
         if (_contextProviders.Count > 0)
         {
@@ -1278,7 +1317,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             // contributed, not an accumulated view).
             var template = new CompletionRequest(
                 reduced,
-                baseSystemPrompt,
+                templateSystemPrompt,
                 Tools: hasTools ? tools : null,
                 ResponseFormat: hasTools ? null : _responseFormat);
             var invocation = new ContextInvocationContext(template, context, _session);
@@ -1302,29 +1341,8 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         return CompletionRequestFlattener.Flatten(packed.Sections, logger: _logger);
     }
 
-    /// <summary>
-    /// Build the base section list from the per-turn candidate template. Section IDs use the
-    /// reserved <c>*.base</c> namespace and <c>ProducerId="base"</c> so per-section telemetry
-    /// can distinguish runtime-emitted sections from provider contributions.
-    /// </summary>
-    private static List<Section> BuildBaseSections(
-        IReadOnlyList<ChatTurn> history,
-        string? systemPrompt,
-        IReadOnlyList<ITool>? tools,
-        ResponseFormatSpec? responseFormat)
+    private static void AddHistoryBaseSections(List<Section> sections, IReadOnlyList<ChatTurn> history)
     {
-        // Pre-size for the common case: optional system + history turns + optional tools + optional response format.
-        var sections = new List<Section>(capacity: history.Count + 3);
-
-        if (!string.IsNullOrEmpty(systemPrompt))
-        {
-            sections.Add(new Section(
-                "system.base",
-                SectionKind.SystemSegment,
-                new TextPayload(systemPrompt),
-                ProducerId: BaseProducerId));
-        }
-
         for (var i = 0; i < history.Count; i++)
         {
             var turn = history[i];
@@ -1335,26 +1353,28 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 Order: i,
                 ProducerId: BaseProducerId));
         }
+    }
 
-        if (tools is { Count: > 0 })
+    private static string? JoinSystemSegmentText(IReadOnlyList<Section> sections)
+    {
+        StringBuilder? sb = null;
+        foreach (var section in sections)
         {
-            sections.Add(new Section(
-                "tools.base",
-                SectionKind.ToolDeclaration,
-                new ToolsPayload(tools),
-                ProducerId: BaseProducerId));
-        }
+            if (section.Kind != SectionKind.SystemSegment || section.Payload is not TextPayload text || text.Value.Length == 0)
+            {
+                continue;
+            }
 
-        if (responseFormat is not null)
-        {
-            sections.Add(new Section(
-                "format.base",
-                SectionKind.ResponseFormat,
-                new ResponseFormatPayload(responseFormat),
-                ProducerId: BaseProducerId));
+            if (sb is null)
+            {
+                sb = new StringBuilder(text.Value);
+            }
+            else
+            {
+                sb.Append("\n\n").Append(text.Value);
+            }
         }
-
-        return sections;
+        return sb?.ToString();
     }
 
     private const string BaseProducerId = "base";

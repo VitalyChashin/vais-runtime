@@ -65,7 +65,17 @@ public sealed class KnowledgeRetrievalContextProvider : IContextProvider
 
         var joined = string.Join(_options.ChunkSeparator, chunks.Select(c => c.Text));
         var contextBlock = _options.Template.Replace("{chunks}", joined, StringComparison.Ordinal);
-        return new ContextContribution(SystemPromptAddendum: contextBlock);
+
+        // Emit a section-shaped contribution. Priority 5 (mid) — retrieved context is droppable
+        // under budget pressure ahead of persona (priority 0) but before opt-in extras (7+).
+        var section = new Section(
+            _options.SectionId,
+            SectionKind.SystemSegment,
+            new TextPayload(contextBlock),
+            ProducerId: nameof(KnowledgeRetrievalContextProvider),
+            Budget: new SectionBudget(Priority: 5));
+
+        return new ContextContribution(new[] { section });
     }
 
     private static string? ExtractQuery(CompletionRequest request)

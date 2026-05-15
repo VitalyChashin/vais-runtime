@@ -920,3 +920,7 @@ static Vais.Agents.SectionBudgetContext.operator !=(Vais.Agents.SectionBudgetCon
 static Vais.Agents.SectionBudgetContext.operator ==(Vais.Agents.SectionBudgetContext? left, Vais.Agents.SectionBudgetContext? right) -> bool
 static Vais.Agents.SectionPackResult.operator !=(Vais.Agents.SectionPackResult? left, Vais.Agents.SectionPackResult? right) -> bool
 static Vais.Agents.SectionPackResult.operator ==(Vais.Agents.SectionPackResult? left, Vais.Agents.SectionPackResult? right) -> bool
+Vais.Agents.ISystemPromptComposer.ComposeSectionsAsync(Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
+Vais.Agents.ISystemPromptComposer.DefaultComposeSectionsAsync(Vais.Agents.ISystemPromptComposer! composer, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
+Vais.Agents.ISystemPromptContributor.DefaultSectionId(System.Type! type) -> string!
+Vais.Agents.ISystemPromptContributor.SectionId.get -> string!

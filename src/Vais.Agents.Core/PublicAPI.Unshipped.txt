@@ -141,3 +141,4 @@ Vais.Agents.Core.StatefulAgentOptions.SectionWindowPacker.get -> Vais.Agents.ISe
 Vais.Agents.Core.StatefulAgentOptions.SectionWindowPacker.init -> void
 Vais.Agents.Core.StatefulAgentOptions.SectionBudget.get -> Vais.Agents.SectionBudgetContext?
 Vais.Agents.Core.StatefulAgentOptions.SectionBudget.init -> void
+Vais.Agents.Core.AggregatingSystemPromptComposer.ComposeSectionsAsync(Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>

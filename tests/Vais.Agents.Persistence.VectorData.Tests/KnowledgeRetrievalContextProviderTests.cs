@@ -105,6 +105,48 @@ public sealed class KnowledgeRetrievalContextProviderTests
     }
 
     [Fact]
+    public async Task Emits_Retrieval_Section_With_Default_Id_And_Priority_5()
+    {
+        var retriever = new StubRetriever(new[] { new KnowledgeChunk("fact") });
+        var provider = new KnowledgeRetrievalContextProvider(retriever);
+
+        var invocation = BuildInvocation(
+            history: new[] { new ChatTurn(AgentChatRole.User, "q") },
+            systemPrompt: null);
+
+        var contribution = await provider.InvokeAsync(invocation);
+
+        contribution.Sections.Should().ContainSingle();
+        var section = contribution.Sections[0];
+        section.Id.Should().Be("retrieval.docs");
+        section.Kind.Should().Be(SectionKind.SystemSegment);
+        section.ProducerId.Should().Be(nameof(KnowledgeRetrievalContextProvider));
+        section.Budget.Should().NotBeNull();
+        section.Budget!.Priority.Should().Be(5);
+        section.Payload.Should().BeOfType<TextPayload>()
+            .Which.Value.Should().Contain("fact");
+    }
+
+    [Fact]
+    public async Task Custom_SectionId_Option_Is_Honored_For_Multi_Retriever_Scenarios()
+    {
+        var retriever = new StubRetriever(new[] { new KnowledgeChunk("fact") });
+        var provider = new KnowledgeRetrievalContextProvider(retriever, new KnowledgeRetrievalOptions
+        {
+            SectionId = "retrieval.support_kb",
+        });
+
+        var invocation = BuildInvocation(
+            history: new[] { new ChatTurn(AgentChatRole.User, "q") },
+            systemPrompt: null);
+
+        var contribution = await provider.InvokeAsync(invocation);
+
+        contribution.Sections.Should().ContainSingle()
+            .Which.Id.Should().Be("retrieval.support_kb");
+    }
+
+    [Fact]
     public async Task Uses_Most_Recent_User_Turn_As_Query_When_History_Has_Assistant_In_Between()
     {
         var retriever = new StubRetriever(new[] { new KnowledgeChunk("x") });

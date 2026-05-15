@@ -57,4 +57,36 @@ public sealed class AggregatingSystemPromptComposer : ISystemPromptComposer
 
         return sb?.ToString();
     }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<Section>> ComposeSectionsAsync(AgentContext context, CancellationToken cancellationToken = default)
+    {
+        if (_ordered.Count == 0)
+        {
+            return Array.Empty<Section>();
+        }
+
+        // Emit one SystemSegment per contributor with the contributor's SectionId and Priority.
+        // Section.Order is set to Priority so the resolver preserves the same lexical order the
+        // string-concatenation path produced.
+        var sections = new List<Section>(_ordered.Count);
+        foreach (var contributor in _ordered)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var piece = await contributor.ContributeAsync(context, cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(piece))
+            {
+                continue;
+            }
+
+            sections.Add(new Section(
+                contributor.SectionId,
+                SectionKind.SystemSegment,
+                new TextPayload(piece),
+                Order: contributor.Priority,
+                ProducerId: contributor.GetType().Name));
+        }
+
+        return sections;
+    }
 }
