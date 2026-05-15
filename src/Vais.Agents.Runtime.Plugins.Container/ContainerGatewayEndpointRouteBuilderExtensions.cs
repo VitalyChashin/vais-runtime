@@ -57,6 +57,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         HttpContext ctx,
         GatewayLlmCompleteRequest body,
         ICompletionProviderPool pool,
+        IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
         CancellationToken ct)
     {
         if (ctx.Request.Headers.Accept.Any(
@@ -72,8 +73,14 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             .Select(PluginMessageToChatTurn)
             .ToArray();
 
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
+            ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
+
         var request = new CompletionRequest(history);
-        var response = await provider.CompleteAsync(request, ct).ConfigureAwait(false);
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+            .ConfigureAwait(false);
 
         var replyMessage = new PluginMessage
         {
@@ -160,68 +167,99 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
     }
 
     private static async Task<IResult> HandleToolInvokeAsync(
+        HttpContext ctx,
         GatewayToolInvokeRequest body,
         IMcpServerRegistry? registry,
         IEnumerable<INamedToolSourceProvider> providers,
+        IEnumerable<IToolGuardrail> guardrails,
+        IEnumerable<ToolGatewayMiddleware> toolMiddleware,
         CancellationToken ct)
     {
         if (registry is null)
+            return ToolNotFound(body.ToolCallId, body.ToolName, "no tool registry");
+
+        var tool = await FindToolAsync(body.ToolName, registry, providers, ct).ConfigureAwait(false);
+        if (tool is null)
+            return ToolNotFound(body.ToolCallId, body.ToolName, "not found");
+
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
+
+        // DefaultToolCallDispatcher gives us: IToolGuardrail Before/After hooks,
+        // IAgentJournal append (when RunId is set), IAgentEventBus ToolCallStarted/Completed,
+        // ToolGatewayMiddleware chain — same path C# agents use via StatefulAiAgent.
+        var dispatcher = new DefaultToolCallDispatcher(
+            toolRegistry:      new SingleToolRegistry(tool),
+            toolGuardrails:    guardrails.ToArray(),
+            eventBus:          ctx.RequestServices.GetService<IAgentEventBus>(),
+            journal:           ctx.RequestServices.GetService<IAgentJournal>(),
+            gatewayMiddleware: toolMiddleware);
+
+        ToolCallOutcome outcome;
+        try
+        {
+            outcome = await dispatcher.DispatchAsync(
+                new ToolCallRequest(body.ToolName, body.Arguments, body.ToolCallId),
+                agentCtx,
+                ct).ConfigureAwait(false);
+        }
+        catch (AgentGuardrailDeniedException ex)
+        {
             return Results.Ok(new GatewayToolInvokeResponse
             {
                 ToolCallId = body.ToolCallId,
-                Content = $"Tool '{body.ToolName}' not found: no tool registry.",
-                IsError = true,
+                Content    = $"Tool '{body.ToolName}' denied by guardrail: {ex.Message}",
+                IsError    = true,
             });
+        }
 
-        ITool? tool = null;
+        return Results.Ok(new GatewayToolInvokeResponse
+        {
+            ToolCallId = body.ToolCallId,
+            Content    = outcome.Result ?? outcome.Error ?? "",
+            IsError    = outcome.Error is not null,
+        });
+    }
+
+    private static IResult ToolNotFound(string toolCallId, string toolName, string reason) =>
+        Results.Ok(new GatewayToolInvokeResponse
+        {
+            ToolCallId = toolCallId,
+            Content    = $"Tool '{toolName}' not found: {reason}.",
+            IsError    = true,
+        });
+
+    private static async Task<ITool?> FindToolAsync(
+        string toolName,
+        IMcpServerRegistry registry,
+        IEnumerable<INamedToolSourceProvider> providers,
+        CancellationToken ct)
+    {
         await foreach (var server in registry.ListAsync(ct: ct).ConfigureAwait(false))
         {
             IToolSource? source = null;
-            foreach (var provider in providers)
+            foreach (var p in providers)
             {
-                source = provider.GetByName(server.Id);
+                source = p.GetByName(server.Id);
                 if (source is not null) break;
             }
             if (source is null) continue;
 
             await foreach (var t in source.DiscoverAsync(ct).ConfigureAwait(false))
-            {
-                if (string.Equals(t.Name, body.ToolName, StringComparison.OrdinalIgnoreCase))
-                {
-                    tool = t;
-                    break;
-                }
-            }
-            if (tool is not null) break;
+                if (string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase))
+                    return t;
         }
+        return null;
+    }
 
-        if (tool is null)
-            return Results.Ok(new GatewayToolInvokeResponse
-            {
-                ToolCallId = body.ToolCallId,
-                Content = $"Tool '{body.ToolName}' not found.",
-                IsError = true,
-            });
+    private sealed class SingleToolRegistry(ITool tool) : IToolRegistry
+    {
+        public IReadOnlyList<ITool> Tools { get; } = [tool];
 
-        try
-        {
-            var result = await tool.InvokeAsync(body.Arguments, ct).ConfigureAwait(false);
-            return Results.Ok(new GatewayToolInvokeResponse
-            {
-                ToolCallId = body.ToolCallId,
-                Content = result,
-                IsError = false,
-            });
-        }
-        catch (Exception ex)
-        {
-            return Results.Ok(new GatewayToolInvokeResponse
-            {
-                ToolCallId = body.ToolCallId,
-                Content = $"Tool '{body.ToolName}' failed: {ex.Message}",
-                IsError = true,
-            });
-        }
+        public ITool? GetByName(string name)
+            => string.Equals(name, tool.Name, StringComparison.OrdinalIgnoreCase) ? tool : null;
     }
 
     private static async Task<IResult> HandleToolsListAsync(
