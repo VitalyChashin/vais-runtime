@@ -136,10 +136,81 @@ internal static class EnvelopeSerializer
         foreach (var edge in edges)
         {
             var obj = new JsonObject { ["from"] = edge.From, ["to"] = edge.To };
+            if (edge.When is not null) obj["when"] = SerializeGraphPredicate(edge.When);
+            if (edge.OnTraverse is not null) obj["onTraverse"] = SerializeGraphEffect(edge.OnTraverse);
             if (edge.Concurrent) obj["concurrent"] = true;
             arr.Add(obj);
         }
         return arr;
+    }
+
+    private static JsonNode SerializeGraphPredicate(Vais.Agents.GraphEdgePredicate predicate)
+    {
+        return predicate switch
+        {
+            Vais.Agents.GraphEdgePredicate.Always => (JsonNode)"always",
+            Vais.Agents.GraphEdgePredicate.Expression e => (JsonNode)e.Expr,
+            Vais.Agents.GraphEdgePredicate.PropertyMatcher m => SerializeGraphMatcher(m),
+            Vais.Agents.GraphEdgePredicate.AllOf a => new JsonObject { ["allOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializeGraphPredicate(p)).ToArray()) },
+            Vais.Agents.GraphEdgePredicate.AnyOf a => new JsonObject { ["anyOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializeGraphPredicate(p)).ToArray()) },
+            Vais.Agents.GraphEdgePredicate.Not n => new JsonObject { ["not"] = SerializeGraphPredicate(n.Predicate) },
+            Vais.Agents.GraphEdgePredicate.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeGraphHandlerRef(h.Handler) },
+            _ => throw new NotSupportedException($"Unknown predicate subtype '{predicate.GetType().Name}'."),
+        };
+    }
+
+    private static JsonObject SerializeGraphMatcher(Vais.Agents.GraphEdgePredicate.PropertyMatcher matcher)
+    {
+        var obj = new JsonObject
+        {
+            ["property"] = matcher.Property,
+            ["operator"] = matcher.Operator.ToString(),
+        };
+        if (matcher.Value is JsonElement value)
+        {
+            obj["value"] = JsonNode.Parse(value.GetRawText());
+        }
+        return obj;
+    }
+
+    private static JsonObject SerializeGraphEffect(Vais.Agents.GraphEdgeEffect effect)
+    {
+        return effect switch
+        {
+            Vais.Agents.GraphEdgeEffect.Set s => new JsonObject
+            {
+                ["set"] = new JsonObject
+                {
+                    ["property"] = s.Property,
+                    ["value"] = JsonNode.Parse(s.Value.GetRawText()),
+                },
+            },
+            Vais.Agents.GraphEdgeEffect.Increment i => new JsonObject
+            {
+                ["increment"] = new JsonObject
+                {
+                    ["property"] = i.Property,
+                    ["by"] = i.By,
+                },
+            },
+            Vais.Agents.GraphEdgeEffect.Append a => new JsonObject
+            {
+                ["append"] = new JsonObject
+                {
+                    ["property"] = a.Property,
+                    ["value"] = JsonNode.Parse(a.Value.GetRawText()),
+                },
+            },
+            Vais.Agents.GraphEdgeEffect.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeGraphHandlerRef(h.Handler) },
+            _ => throw new NotSupportedException($"Unknown effect subtype '{effect.GetType().Name}'."),
+        };
+    }
+
+    private static JsonObject SerializeGraphHandlerRef(Vais.Agents.GraphHandlerRef handler)
+    {
+        var obj = new JsonObject { ["typeName"] = handler.TypeName };
+        if (handler.AssemblyName is not null) obj["assemblyName"] = handler.AssemblyName;
+        return obj;
     }
 
     public static string Serialize(LlmGatewayConfigManifest manifest)

@@ -156,15 +156,15 @@ You'll see the structured event sequence:
 
 ```
 ▶ graph.started  HH:MM:SS.mmm  qa-pipeline v1.0  run=<runId>
-▷ node.started   HH:MM:SS.mmm  step=0  classify (classify)
+▷ node.started   HH:MM:SS.mmm  step=0  classify (Agent)
 ~ state.updated  HH:MM:SS.mmm  step=0  [lastAssistantText, messages]
 → edge.traversed HH:MM:SS.mmm  step=0  classify → respond
 ◁ node.completed HH:MM:SS.mmm  step=0  classify (Nms)
-▷ node.started   HH:MM:SS.mmm  step=1  respond (respond)
+▷ node.started   HH:MM:SS.mmm  step=1  respond (Agent)
 ~ state.updated  HH:MM:SS.mmm  step=1  [lastAssistantText, messages]
 → edge.traversed HH:MM:SS.mmm  step=1  respond → end
 ◁ node.completed HH:MM:SS.mmm  step=1  respond (Nms)
-▷ node.started   HH:MM:SS.mmm  step=2  end (end)
+▷ node.started   HH:MM:SS.mmm  step=2  end (End)
 ◁ node.completed HH:MM:SS.mmm  step=2  end (Nms)
 ■ graph.completed HH:MM:SS.mmm step=3  final=end (Nms)
 ```
@@ -219,6 +219,7 @@ vais delete responder
 
 ## Next
 
+- **[Route graph edges with PowerFx](route-graph-edges-with-powerfx.md)** — add conditional routing with inline `=...` expressions; loop on quality with a retry budget.
 - **[Deep agent development](../deep-development/index.md)** — author plugin code (C#, LangGraph, Go) for nodes that need more than declarative YAML.
 - **[Extensions](../extensions/index.md)** — customize gateways and other extension seams.
 - [Concepts → Graph orchestration](../concepts/graph-orchestration.md) — node kinds, edge predicates (conditional routing), effects.

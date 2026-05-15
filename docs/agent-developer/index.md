@@ -11,7 +11,8 @@ You'll deploy a declarative agent against the runtime, route every model call an
 3. **[Wire the MCP gateway](wire-the-mcp-gateway.md)** — give the agent tools through an `McpGatewayConfig` middleware chain — logging, OTel, rate limit, truncation.
 4. **[Ship a simple Python agent](ship-a-python-agent.md)** — drop into Python when YAML isn't enough. Same operator surface; supervisor handles durability.
 5. **[Compose a multi-agent graph](compose-a-multi-agent-graph.md)** — sequential nodes, edges, shared state. `vais invoke-graph --stream` emits a structured event log.
-6. **[Connect OpenWebUI](connect-openwebui.md)** — point OpenWebUI at the runtime's OpenAI-compatible endpoint; chat with agents and graphs from a browser UI.
+6. **[Route graph edges with PowerFx](route-graph-edges-with-powerfx.md)** — inline `=...` expressions for conditional routing the `PropertyMatcher` vocabulary can't express; quality loop with retry budget.
+7. **[Connect OpenWebUI](connect-openwebui.md)** — point OpenWebUI at the runtime's OpenAI-compatible endpoint; chat with agents and graphs from a browser UI.
 
 ## After this section
 
