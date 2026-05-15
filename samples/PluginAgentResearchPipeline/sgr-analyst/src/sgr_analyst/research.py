@@ -73,8 +73,12 @@ class _GatewayWebSearchTool(WebSearchTool):
             "X-Run-Id": run_id,
             "X-Agent-Id": agent_id,
         }
+        # The Tavily MCP server (samples/.../tavily-mcp-server/server.py) registers
+        # the tool as `search`, not `tavily_search`. FastMCP uses the Python function
+        # name verbatim; the server identifier "tavily-search" is the MCP *server*
+        # name, not the tool name.
         payload = {
-            "toolName": "tavily_search",
+            "toolName": "search",
             "arguments": {"query": self.query, "max_results": self.max_results},
             "toolCallId": f"sgr-{abs(hash(self.query)) % 65536:04x}",
         }
