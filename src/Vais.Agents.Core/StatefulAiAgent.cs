@@ -56,6 +56,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly ReplayMode _replayMode;
     private readonly Func<string> _runIdFactory;
     private readonly string? _agentName;
+    private readonly ResponseFormatSpec? _responseFormat;
 
     /// <summary>
     /// Create a new agent bound to a completion provider. All cross-cutting
@@ -121,6 +122,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             initialHistory: options.InitialHistory);
 
         SystemPrompt = options.SystemPrompt;
+        _responseFormat = options.ResponseFormat;
     }
 
     /// <inheritdoc />
@@ -226,10 +228,12 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     ? SystemPrompt
                     : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
                 var tools = _toolRegistry?.Tools;
+                var hasTurnsTools = tools is { Count: > 0 };
                 var candidate = new CompletionRequest(
                     reduced,
                     baseSystemPrompt,
-                    Tools: tools is { Count: > 0 } ? tools : null);
+                    Tools: hasTurnsTools ? tools : null,
+                    ResponseFormat: hasTurnsTools ? null : _responseFormat);
 
                 // Context-provider chain + packer run each round so providers can react
                 // to tool results landing in the working history between rounds.
@@ -529,10 +533,12 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     ? SystemPrompt
                     : await _systemPromptComposer.ComposeAsync(context, cancellationToken).ConfigureAwait(false);
                 var tools = _toolRegistry?.Tools;
+                var hasTurnsTools = tools is { Count: > 0 };
                 var candidate = new CompletionRequest(
                     reduced,
                     baseSystemPrompt,
-                    Tools: tools is { Count: > 0 } ? tools : null);
+                    Tools: hasTurnsTools ? tools : null,
+                    ResponseFormat: hasTurnsTools ? null : _responseFormat);
 
                 candidate = await ApplyContextProvidersAsync(candidate, context, cancellationToken).ConfigureAwait(false);
                 candidate = await _contextWindowPacker.PackAsync(candidate, cancellationToken).ConfigureAwait(false);

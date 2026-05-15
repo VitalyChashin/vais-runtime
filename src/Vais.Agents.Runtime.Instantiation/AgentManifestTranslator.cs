@@ -236,6 +236,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
 
         var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
+        var responseFormat = ResolveResponseFormat(manifest, provider);
+
         var options = new StatefulAgentOptions
         {
             AgentName = manifest.Id,
@@ -249,6 +251,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             GatewayMiddleware = gatewayMiddleware,
             ToolGatewayMiddleware = toolGatewayMiddleware,
             UsageSink = _serviceProvider.GetService<IUsageSink>(),
+            ResponseFormat = responseFormat,
         };
 
         _logger.LogDebug(
@@ -274,6 +277,33 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         return new ValueTask<bool>(_cache.TryRemove(agentId, out _));
+    }
+
+    private ResponseFormatSpec? ResolveResponseFormat(AgentManifest manifest, ICompletionProvider provider)
+    {
+        if (manifest.OutputSchema is not { ValueKind: System.Text.Json.JsonValueKind.Object } schema)
+            return null;
+
+        if (!provider.SupportsResponseFormat)
+        {
+            _logger.LogInformation(
+                "Agent '{AgentId}': OutputSchema is set but provider '{ProviderName}' does not support " +
+                "response_format — continuing with prompt-driven enforcement.",
+                manifest.Id, provider.ProviderName);
+            return null;
+        }
+
+        var hasTools = (manifest.Tools is { Count: > 0 }) || (manifest.McpServers is { Count: > 0 });
+        if (hasTools)
+        {
+            _logger.LogWarning(
+                "Agent '{AgentId}': OutputSchema and tools are both configured. " +
+                "response_format will be dropped for turns that include tools (soft-degrade). " +
+                "Schema enforcement applies to schema-only turns only.",
+                manifest.Id);
+        }
+
+        return new ResponseFormatSpec(schema, SchemaName: manifest.Id);
     }
 
     private async ValueTask<string?> ResolveSystemPromptAsync(SystemPromptSpec? spec, CancellationToken cancellationToken)

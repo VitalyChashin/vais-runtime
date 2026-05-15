@@ -1,1 +1,2 @@
 #nullable enable
+Vais.Agents.Ai.MicrosoftAgentFramework.MafCompletionProvider.SupportsResponseFormat.get -> bool

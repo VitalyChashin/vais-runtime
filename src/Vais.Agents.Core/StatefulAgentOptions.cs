@@ -29,6 +29,16 @@ public sealed class StatefulAgentOptions
     public ICompletionProvider? CompletionProvider { get; init; }
 
     /// <summary>
+    /// Optional structured-output schema for this agent. When set, every
+    /// <see cref="CompletionRequest"/> built by <see cref="StatefulAiAgent"/>
+    /// carries this schema (unless a tools-plus-schema conflict drops it for
+    /// that turn — see <see cref="ICompletionProvider.SupportsResponseFormat"/>).
+    /// Populated by the manifest translator from <c>AgentManifest.OutputSchema</c>
+    /// when the resolved provider supports structured output.
+    /// </summary>
+    public ResponseFormatSpec? ResponseFormat { get; init; }
+
+    /// <summary>
     /// Optional pre-constructed agent instance supplied by the manifest
     /// instantiation pipeline (v0.18 Pillar C — plugin model). When set,
     /// host-side grain activation uses this instance verbatim instead of

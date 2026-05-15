@@ -405,6 +405,82 @@ public class AgentManifestTranslatorTests
         options.SystemPrompt.Should().BeNull();
     }
 
+    // ── OutputSchema / ResponseFormat ─────────────────────────────────
+
+    [Fact]
+    public async Task TranslateAsync_OutputSchema_FlowsToResponseFormat_When_Provider_Supports_It()
+    {
+        var schema = System.Text.Json.JsonDocument.Parse("""{"type":"object","properties":{"label":{"type":"string"}}}""").RootElement;
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: Array.Empty<ProtocolBinding>(),
+            Tools: Array.Empty<ToolRef>())
+        {
+            Model = new ModelSpec(Provider: "openai", Id: "gpt-4o"),
+            OutputSchema = schema,
+        };
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithSupportingResponseFormatProvider("openai");
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ResponseFormat.Should().NotBeNull();
+        options.ResponseFormat!.SchemaName.Should().Be(AgentId);
+        options.ResponseFormat.Schema.GetRawText().Should().Be(schema.GetRawText());
+    }
+
+    [Fact]
+    public async Task TranslateAsync_OutputSchemaWithTools_DoesNotDropResponseFormat_But_Warns()
+    {
+        var schema = System.Text.Json.JsonDocument.Parse("""{"type":"object"}""").RootElement;
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: Array.Empty<ProtocolBinding>(),
+            Tools: new[] { new ToolRef("weather", "static:weather") })
+        {
+            Model = new ModelSpec(Provider: "openai", Id: "gpt-4o"),
+            OutputSchema = schema,
+        };
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithSupportingResponseFormatProvider("openai")
+            .WithStaticTool("weather", new NoopTool("weather"));
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        // ResponseFormat is still set — per-turn soft-degrade happens in StatefulAiAgent when tools are present.
+        options.ResponseFormat.Should().NotBeNull();
+        options.ResponseFormat!.SchemaName.Should().Be(AgentId);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_OutputSchema_With_NonSupporting_Provider_Leaves_ResponseFormat_Null()
+    {
+        var schema = System.Text.Json.JsonDocument.Parse("""{"type":"object"}""").RootElement;
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: Array.Empty<ProtocolBinding>(),
+            Tools: Array.Empty<ToolRef>())
+        {
+            Model = new ModelSpec(Provider: "openai", Id: "gpt-4o"),
+            OutputSchema = schema,
+        };
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithProvider("openai");   // default mock does not support response format
+
+        var options = await fixture.Translator.TranslateAsync(AgentId);
+
+        options.ResponseFormat.Should().BeNull();
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private static AgentManifest BuildManifest(
