@@ -125,3 +125,5 @@ Vais.Agents.DefaultSectionResolver
 Vais.Agents.DefaultSectionResolver.DefaultSectionResolver() -> void
 Vais.Agents.DefaultSectionResolver.ResolveAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! contributed, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
 static Vais.Agents.DefaultSectionResolver.Instance.get -> Vais.Agents.DefaultSectionResolver!
+Vais.Agents.CompletionRequestFlattener
+static Vais.Agents.CompletionRequestFlattener.Flatten(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! sections, Vais.Agents.CompletionRequest? template = null, Microsoft.Extensions.Logging.ILogger? logger = null) -> Vais.Agents.CompletionRequest!
