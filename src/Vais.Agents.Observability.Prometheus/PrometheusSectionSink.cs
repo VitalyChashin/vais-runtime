@@ -117,7 +117,7 @@ public sealed class PrometheusSectionSink : ISectionTelemetrySink
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var agentId = snapshot.AgentId ?? "_unknown";
+        var agentId = snapshot.Context.AgentName ?? "_unknown";
 
         _sectionsPerTurn.WithLabels(agentId).Observe(snapshot.Sections.Count);
         _budgetUsedRatio.WithLabels(agentId).Observe(snapshot.Budget.UsedRatio);

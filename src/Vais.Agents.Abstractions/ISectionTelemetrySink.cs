@@ -25,17 +25,17 @@ public interface ISectionTelemetrySink
 
 /// <summary>
 /// One per-turn measurement record handed to every <see cref="ISectionTelemetrySink"/>. Carries
-/// the run / agent / turn coordinates plus per-input-section measurements and the aggregate
-/// budget summary.
+/// the ambient <see cref="AgentContext"/> + turn index plus per-input-section measurements and
+/// the aggregate budget summary. Sinks reach <c>RunId</c>, <c>AgentName</c>, <c>UserId</c>,
+/// <c>TenantId</c>, <c>WorkspaceId</c>, and <c>CorrelationId</c> via the <see cref="Context"/>
+/// property.
 /// </summary>
-/// <param name="RunId">Stable run identifier stamped by <c>StatefulAiAgent</c>. Null only when no journal / context accessor is wired.</param>
-/// <param name="AgentId">Stable agent identifier (typed name or <see cref="AgentContext.AgentName"/>). Null when not configured.</param>
+/// <param name="Context">Ambient agent context at emission time. <see cref="AgentContext.Empty"/> when no context is available (typically in unit tests).</param>
 /// <param name="TurnIndex">1-based turn index within the run (turn 1 is the first model call; tool-call loops increment).</param>
 /// <param name="Sections">One measurement per section that entered the packer, in input order. Surviving and dropped sections both appear; the outcome field distinguishes them.</param>
 /// <param name="Budget">Aggregate counters: budget target, used, dropped, truncated. Lets dashboards compute "% over budget" without re-summing the section list.</param>
 public sealed record SectionTelemetrySnapshot(
-    string? RunId,
-    string? AgentId,
+    AgentContext Context,
     int TurnIndex,
     IReadOnlyList<SectionMeasurement> Sections,
     SectionBudgetSummary Budget);

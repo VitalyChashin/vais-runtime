@@ -41,8 +41,7 @@ public sealed class LangfuseSectionEnrichmentTests
 
     private static SectionTelemetrySnapshot Snapshot(params SectionMeasurement[] sections)
         => new(
-            RunId: "run-1",
-            AgentId: "agent-1",
+            Context: new AgentContext { RunId = "run-1", AgentName = "agent-1" },
             TurnIndex: 1,
             Sections: sections,
             Budget: new SectionBudgetSummary(null, null, sections.Sum(s => s.Chars), null, 0, 0, 0));

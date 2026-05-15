@@ -231,3 +231,35 @@ public sealed record CompletionDelta(
     int? CompletionTokens = null,
     IReadOnlyList<ToolCallRequest>? ToolCalls = null)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted once per turn by <c>SectionTelemetryEmitter</c> (when at least one sink is wired)
+/// after the section pipeline runs the resolver and packer, before the flattener. Carries the
+/// per-section breakdown that drives downstream observability surfaces (Prometheus dashboards,
+/// Langfuse trace metadata, custom audit / eval pipelines).
+/// </summary>
+/// <remarks>
+/// <para>
+/// Consumers typically subscribe to assert invariants ("every successful run includes a
+/// <c>cognition.diee.goal_stack</c> section"), fail evals on missing producers, or feed a
+/// drift detector that watches section ratios over time. The event fires <em>before</em>
+/// guardrails and the completion provider, so even cancelled or guardrail-denied turns emit it.
+/// </para>
+/// <para>
+/// Subscribers must not mutate <paramref name="Sections"/> or <paramref name="Budget"/>;
+/// the records are immutable but the lists are <see cref="IReadOnlyList{T}"/> — treat them as
+/// snapshots.
+/// </para>
+/// </remarks>
+/// <param name="At">UTC timestamp when the snapshot was built.</param>
+/// <param name="Context">Ambient agent context at emission time.</param>
+/// <param name="TurnIndex">1-based turn index within the run (turn 1 is the first model call; tool-call loops increment).</param>
+/// <param name="Sections">One measurement per section that entered the packer, in input order. Surviving and dropped sections both appear; the outcome field distinguishes them.</param>
+/// <param name="Budget">Aggregate counters: budget target, used, dropped, truncated.</param>
+public sealed record RequestSectionsBuilt(
+    DateTimeOffset At,
+    AgentContext Context,
+    int TurnIndex,
+    IReadOnlyList<SectionMeasurement> Sections,
+    SectionBudgetSummary Budget)
+    : AgentEvent(At, Context);

@@ -39,8 +39,7 @@ public sealed class SectionTelemetryEmitterTests
             inputSections: Array.Empty<Section>(),
             packResult: new SectionPackResult(Array.Empty<Section>(), Array.Empty<PackerOutcome>()),
             budget: SectionBudgetContext.Unlimited,
-            runId: null,
-            agentId: null,
+            context: AgentContext.Empty,
             turnIndex: 1);
     }
 
@@ -64,18 +63,18 @@ public sealed class SectionTelemetryEmitterTests
             Sys("retrieval.docs", "retrieved text", order: 10, priority: 5, producer: "rag"),
         };
 
+        var ctx = new AgentContext { RunId = "run-1", AgentName = "agent-1" };
         await emitter.EmitAsync(
             inputSections: sections,
             packResult: IdentityResult(sections),
             budget: SectionBudgetContext.Unlimited,
-            runId: "run-1",
-            agentId: "agent-1",
+            context: ctx,
             turnIndex: 2);
 
         sink.Snapshots.Should().ContainSingle();
         var snap = sink.Snapshots[0];
-        snap.RunId.Should().Be("run-1");
-        snap.AgentId.Should().Be("agent-1");
+        snap.Context.RunId.Should().Be("run-1");
+        snap.Context.AgentName.Should().Be("agent-1");
         snap.TurnIndex.Should().Be(2);
         snap.Sections.Should().HaveCount(2);
 
@@ -105,7 +104,7 @@ public sealed class SectionTelemetryEmitterTests
             Sys("c", "0123456789AB"),
         };
 
-        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1);
 
         var snap = sink.Snapshots[0];
         snap.Sections.Sum(s => s.Ratio).Should().BeApproximately(1.0, 0.0001);
@@ -126,7 +125,7 @@ public sealed class SectionTelemetryEmitterTests
             sections,
             IdentityResult(sections),
             new SectionBudgetContext(MaxTokens: 100, TokenCounter: counter),
-            null, null, 1);
+            AgentContext.Empty, 1);
 
         var snap = sink.Snapshots[0];
         snap.Sections[0].Tokens.Should().Be(4);
@@ -143,7 +142,7 @@ public sealed class SectionTelemetryEmitterTests
 
         var sections = new[] { Sys("a", "abcd") };
 
-        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1);
 
         var snap = sink.Snapshots[0];
         snap.Sections[0].Tokens.Should().BeNull();
@@ -170,7 +169,7 @@ public sealed class SectionTelemetryEmitterTests
                 Outcome("dropped", PackerOutcomes.Dropped, droppedChars: 8),
             });
 
-        await emitter.EmitAsync(sections, packResult, new SectionBudgetContext(MaxChars: 100), null, null, 1);
+        await emitter.EmitAsync(sections, packResult, new SectionBudgetContext(MaxChars: 100), AgentContext.Empty, 1);
 
         var snap = sink.Snapshots[0];
         snap.Sections.Single(s => s.Id == "dropped").Outcome.Should().Be(PackerOutcomes.Dropped);
@@ -195,7 +194,7 @@ public sealed class SectionTelemetryEmitterTests
                 ProducerId: "tracer"),
         };
 
-        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1);
 
         var snap = sink.Snapshots[0];
         snap.Sections.Single(s => s.Id == "trace.metadata").Chars.Should().Be(0);
@@ -210,7 +209,7 @@ public sealed class SectionTelemetryEmitterTests
         var emitter = new SectionTelemetryEmitter(new[] { sink });
         var sections = new[] { Sys("a", new string('X', 250)) };
 
-        await emitter.EmitAsync(sections, IdentityResult(sections), new SectionBudgetContext(MaxChars: 1000), null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), new SectionBudgetContext(MaxChars: 1000), AgentContext.Empty, 1);
 
         sink.Snapshots[0].Budget.UsedRatio.Should().BeApproximately(0.25, 0.001);
     }
@@ -225,7 +224,7 @@ public sealed class SectionTelemetryEmitterTests
 
         var sections = new[] { Sys("a", "abcd") };
 
-        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1);
 
         observing.Snapshots.Should().HaveCount(1);
         logger.Warnings.Should().ContainSingle(w => w.Contains("ThrowingSink"));
@@ -243,7 +242,7 @@ public sealed class SectionTelemetryEmitterTests
         });
 
         var sections = new[] { Sys("a", "x") };
-        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1);
+        await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1);
 
         order.Should().Equal("first", "second", "third");
     }
@@ -292,7 +291,7 @@ public sealed class SectionTelemetryEmitterTests
         cts.Cancel();
 
         var sections = new[] { Sys("a", "x") };
-        var act = async () => await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, null, null, 1, cts.Token);
+        var act = async () => await emitter.EmitAsync(sections, IdentityResult(sections), SectionBudgetContext.Unlimited, AgentContext.Empty, 1, cts.Token);
 
         // RecordingSink doesn't honour the token, so this passes. The contract is that the
         // emitter passes the token through unchanged — verified by inspection in

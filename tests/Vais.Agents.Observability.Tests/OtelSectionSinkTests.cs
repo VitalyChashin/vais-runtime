@@ -34,7 +34,12 @@ public sealed class OtelSectionSinkTests
         int turnIndex = 1,
         string? runId = null,
         string? agentId = null)
-        => new(runId, agentId, turnIndex, sections, budget);
+    {
+        var ctx = runId is null && agentId is null
+            ? AgentContext.Empty
+            : new AgentContext { RunId = runId, AgentName = agentId };
+        return new SectionTelemetrySnapshot(ctx, turnIndex, sections, budget);
+    }
 
     private static SectionMeasurement M(
         string id,

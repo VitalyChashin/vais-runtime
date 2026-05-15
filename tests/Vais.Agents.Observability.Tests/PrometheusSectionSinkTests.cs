@@ -33,8 +33,7 @@ public sealed class PrometheusSectionSinkTests
         double usedRatio,
         params SectionMeasurement[] sections)
         => new(
-            RunId: "run-1",
-            AgentId: agentId,
+            Context: new AgentContext { RunId = "run-1", AgentName = agentId },
             TurnIndex: 1,
             Sections: sections,
             Budget: new SectionBudgetSummary(null, null, sections.Sum(s => s.Chars), null, usedRatio, 0, 0));
@@ -125,8 +124,7 @@ public sealed class PrometheusSectionSinkTests
         var (sink, factory) = Build();
 
         await sink.EmitAsync(new SectionTelemetrySnapshot(
-            RunId: null,
-            AgentId: null,
+            Context: AgentContext.Empty,
             TurnIndex: 1,
             Sections: new[] { M("a", producer: "rag", chars: 10) },
             Budget: new SectionBudgetSummary(null, null, 10, null, 0, 0, 0)));

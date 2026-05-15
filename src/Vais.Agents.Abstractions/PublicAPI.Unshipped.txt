@@ -972,19 +972,34 @@ Vais.Agents.SectionMeasurement.Tokens.get -> int?
 Vais.Agents.SectionMeasurement.Tokens.init -> void
 Vais.Agents.SectionTelemetrySnapshot
 Vais.Agents.SectionTelemetrySnapshot.<Clone>$() -> Vais.Agents.SectionTelemetrySnapshot!
-Vais.Agents.SectionTelemetrySnapshot.AgentId.get -> string?
-Vais.Agents.SectionTelemetrySnapshot.AgentId.init -> void
 Vais.Agents.SectionTelemetrySnapshot.Budget.get -> Vais.Agents.SectionBudgetSummary!
 Vais.Agents.SectionTelemetrySnapshot.Budget.init -> void
-Vais.Agents.SectionTelemetrySnapshot.Deconstruct(out string? RunId, out string? AgentId, out int TurnIndex, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, out Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.SectionTelemetrySnapshot.Context.get -> Vais.Agents.AgentContext!
+Vais.Agents.SectionTelemetrySnapshot.Context.init -> void
+Vais.Agents.SectionTelemetrySnapshot.Deconstruct(out Vais.Agents.AgentContext! Context, out int TurnIndex, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, out Vais.Agents.SectionBudgetSummary! Budget) -> void
 Vais.Agents.SectionTelemetrySnapshot.Equals(Vais.Agents.SectionTelemetrySnapshot? other) -> bool
-Vais.Agents.SectionTelemetrySnapshot.RunId.get -> string?
-Vais.Agents.SectionTelemetrySnapshot.RunId.init -> void
-Vais.Agents.SectionTelemetrySnapshot.SectionTelemetrySnapshot(string? RunId, string? AgentId, int TurnIndex, System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.SectionTelemetrySnapshot.SectionTelemetrySnapshot(Vais.Agents.AgentContext! Context, int TurnIndex, System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, Vais.Agents.SectionBudgetSummary! Budget) -> void
 Vais.Agents.SectionTelemetrySnapshot.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>!
 Vais.Agents.SectionTelemetrySnapshot.Sections.init -> void
 Vais.Agents.SectionTelemetrySnapshot.TurnIndex.get -> int
 Vais.Agents.SectionTelemetrySnapshot.TurnIndex.init -> void
+Vais.Agents.RequestSectionsBuilt
+override Vais.Agents.RequestSectionsBuilt.<Clone>$() -> Vais.Agents.RequestSectionsBuilt!
+Vais.Agents.RequestSectionsBuilt.Budget.get -> Vais.Agents.SectionBudgetSummary!
+Vais.Agents.RequestSectionsBuilt.Budget.init -> void
+Vais.Agents.RequestSectionsBuilt.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out int TurnIndex, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, out Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.RequestSectionsBuilt.Equals(Vais.Agents.RequestSectionsBuilt? other) -> bool
+Vais.Agents.RequestSectionsBuilt.RequestSectionsBuilt(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, int TurnIndex, System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.RequestSectionsBuilt.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>!
+Vais.Agents.RequestSectionsBuilt.Sections.init -> void
+Vais.Agents.RequestSectionsBuilt.TurnIndex.get -> int
+Vais.Agents.RequestSectionsBuilt.TurnIndex.init -> void
+override Vais.Agents.RequestSectionsBuilt.GetHashCode() -> int
+override Vais.Agents.RequestSectionsBuilt.ToString() -> string!
+override Vais.Agents.RequestSectionsBuilt.Equals(object? obj) -> bool
+override sealed Vais.Agents.RequestSectionsBuilt.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.RequestSectionsBuilt.operator !=(Vais.Agents.RequestSectionsBuilt? left, Vais.Agents.RequestSectionsBuilt? right) -> bool
+static Vais.Agents.RequestSectionsBuilt.operator ==(Vais.Agents.RequestSectionsBuilt? left, Vais.Agents.RequestSectionsBuilt? right) -> bool
 override Vais.Agents.SectionBudgetSummary.Equals(object? obj) -> bool
 override Vais.Agents.SectionBudgetSummary.GetHashCode() -> int
 override Vais.Agents.SectionBudgetSummary.ToString() -> string!

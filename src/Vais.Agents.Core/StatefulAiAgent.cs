@@ -1348,12 +1348,16 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         // so this is zero-cost unless observability is opted into.
         if (!_sectionTelemetryEmitter.IsNoOp)
         {
+            // Overlay the agent name onto the snapshot's context when configured at the options
+            // level — same pattern as BuildEventContext for AgentEvents.
+            var snapshotContext = _agentName is not null && string.IsNullOrEmpty(context.AgentName)
+                ? context with { AgentName = _agentName }
+                : context;
             await _sectionTelemetryEmitter.EmitAsync(
                 resolved,
                 packed,
                 _sectionBudget,
-                context.RunId,
-                _agentName ?? context.AgentName,
+                snapshotContext,
                 turnIndex,
                 cancellationToken).ConfigureAwait(false);
         }

@@ -48,29 +48,28 @@ public sealed class SectionTelemetryEmitter
     /// <param name="inputSections">Sections handed to the packer — the resolver's output. Always non-null; empty means no sections this turn.</param>
     /// <param name="packResult">The packer's result: surviving sections + per-input outcomes (one entry per <paramref name="inputSections"/>, in input order).</param>
     /// <param name="budget">The budget context the packer ran against.</param>
-    /// <param name="runId">Run id stamped on the turn.</param>
-    /// <param name="agentId">Agent id, if known.</param>
+    /// <param name="context">Ambient <see cref="AgentContext"/> at emission time. Sinks read <c>RunId</c>, <c>AgentName</c>, and other ambient fields from this. Pass <see cref="AgentContext.Empty"/> when no context is available.</param>
     /// <param name="turnIndex">1-based turn index within the run.</param>
     /// <param name="cancellationToken">Cancellation token honoured by the sinks.</param>
     public async ValueTask EmitAsync(
         IReadOnlyList<Section> inputSections,
         SectionPackResult packResult,
         SectionBudgetContext budget,
-        string? runId,
-        string? agentId,
+        AgentContext context,
         int turnIndex,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inputSections);
         ArgumentNullException.ThrowIfNull(packResult);
         ArgumentNullException.ThrowIfNull(budget);
+        ArgumentNullException.ThrowIfNull(context);
 
         if (_sinks.Count == 0)
         {
             return;
         }
 
-        var snapshot = BuildSnapshot(inputSections, packResult, budget, runId, agentId, turnIndex);
+        var snapshot = BuildSnapshot(inputSections, packResult, budget, context, turnIndex);
 
         foreach (var sink in _sinks)
         {
@@ -97,8 +96,7 @@ public sealed class SectionTelemetryEmitter
         IReadOnlyList<Section> inputSections,
         SectionPackResult packResult,
         SectionBudgetContext budget,
-        string? runId,
-        string? agentId,
+        AgentContext context,
         int turnIndex)
     {
         // Pre-compute char + optional token sizes for every input section, plus the totals
@@ -192,8 +190,7 @@ public sealed class SectionTelemetryEmitter
             TruncatedCount: truncatedCount);
 
         return new SectionTelemetrySnapshot(
-            RunId: runId,
-            AgentId: agentId,
+            Context: context,
             TurnIndex: turnIndex,
             Sections: measurements,
             Budget: summary);
