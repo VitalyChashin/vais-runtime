@@ -73,6 +73,17 @@ public sealed class GraphEdgePredicateJsonConverterTests
         incObj.GetProperty("by").GetInt32().Should().Be(1);
     }
 
+    [Fact]
+    public void EffectHandlerRef_NullAssemblyName_OmitsField()
+    {
+        var json = JsonSerializer.Serialize<GraphEdgeEffect>(
+            new GraphEdgeEffect.HandlerRef(new GraphHandlerRef("MyEffect")));
+
+        var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty("handlerRef", out var hrObj).Should().BeTrue();
+        hrObj.TryGetProperty("assemblyName", out _).Should().BeFalse();
+    }
+
     // ── GraphEdgePredicate deserialization error cases ────────────────────────
 
     [Fact]
