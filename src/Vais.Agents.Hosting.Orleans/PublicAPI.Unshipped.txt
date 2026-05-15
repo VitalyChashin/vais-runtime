@@ -181,6 +181,7 @@ static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.DeserializeMan
 static Vais.Agents.Hosting.Orleans.OrleansContainerPluginRegistry.SerializeManifest(Vais.Agents.ContainerPluginManifest! manifest) -> string!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansContainerPluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate
+Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.BackgroundAgentRunRecordSurrogate() -> void
 Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.Handle -> string!
 Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ParentRunId -> string!
 Vais.Agents.Hosting.Orleans.BackgroundAgentRunRecordSurrogate.ChildAgentId -> string!
