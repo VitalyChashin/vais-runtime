@@ -286,6 +286,8 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             ? mcpGwRefEl.GetString() : null;
         var localAgents = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("localAgents", out var laEl)
             ? ParseLocalAgents(laEl, errors, prefix) : null;
+        var a2aRemoteAgents = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("a2aRemoteAgents", out var a2aEl)
+            ? ParseA2ARemoteAgents(a2aEl, errors, prefix) : null;
 
         return new AgentManifest(
             id, version, handler, protocols, tools,
@@ -310,6 +312,7 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             LlmGatewayRef = llmGatewayRef,
             McpGatewayRef = mcpGatewayRef,
             LocalAgents = localAgents,
+            A2ARemoteAgents = a2aRemoteAgents,
         };
     }
 
@@ -535,6 +538,37 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
                 AllowCallerSuppliedSession = allowCallerSuppliedSession,
                 PropagateAllowedTools = propagateAllowedTools,
             });
+        }
+        return list;
+    }
+
+    private static IReadOnlyList<A2ARemoteAgentRef>? ParseA2ARemoteAgents(JsonElement arr, List<string> errors, string prefix)
+    {
+        if (arr.ValueKind != JsonValueKind.Array) return null;
+        var list = new List<A2ARemoteAgentRef>();
+        foreach (var item in arr.EnumerateArray())
+        {
+            var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+            if (string.IsNullOrEmpty(name))
+            {
+                errors.Add($"{prefix}spec.a2aRemoteAgents[].name is required");
+                continue;
+            }
+            var urlStr = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
+            if (string.IsNullOrEmpty(urlStr) || !Uri.TryCreate(urlStr, UriKind.Absolute, out var url))
+            {
+                errors.Add($"{prefix}spec.a2aRemoteAgents[{name}].url must be an absolute URL");
+                continue;
+            }
+            var authRef = item.TryGetProperty("authRef", out var arEl) ? arEl.GetString() : null;
+            IReadOnlyDictionary<string, string>? metadata = null;
+            if (item.TryGetProperty("metadata", out var metaEl) && metaEl.ValueKind == JsonValueKind.Object)
+            {
+                var dict = new Dictionary<string, string>();
+                foreach (var p in metaEl.EnumerateObject()) dict[p.Name] = p.Value.GetString() ?? "";
+                metadata = dict;
+            }
+            list.Add(new A2ARemoteAgentRef(name, url, authRef, metadata));
         }
         return list;
     }

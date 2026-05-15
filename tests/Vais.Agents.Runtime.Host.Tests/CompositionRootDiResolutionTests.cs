@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Vais.Agents.Hosting.InMemory;
 using Xunit;
 
 namespace Vais.Agents.Runtime.Host.Tests;
@@ -53,5 +54,26 @@ public sealed class CompositionRootDiResolutionTests
         // IBackgroundAgentTracker is in the Vais.Agents namespace (parent of this test namespace).
         sp.GetRequiredService<IBackgroundAgentTracker>().Should().NotBeNull(
             because: "Background-mode LocalAgentRef requires IBackgroundAgentTracker at manifest translation time");
+    }
+
+    [Fact]
+    public void CompositionRoot_Covers_All_InMemoryAgentRuntime_ServiceTypes()
+    {
+        // M2.3 parity guard: every service type registered by AddInMemoryAgentRuntime (the
+        // test/sample runtime) must also be registered by CompositionRoot (the production runtime).
+        // Today that is only IAgentRuntime; as AddInMemoryAgentRuntime gains new registrations,
+        // this test automatically catches any CompositionRoot omission before it reaches production.
+        var inMemoryServices = new ServiceCollection();
+        inMemoryServices.AddInMemoryAgentRuntime();
+        var inMemoryTypes = inMemoryServices.Select(d => d.ServiceType).ToHashSet();
+
+        var prodServices = BuildBaseline();
+        CompositionRoot.ConfigureServices(prodServices, new RuntimeOptions());
+        var prodTypes = prodServices.Select(d => d.ServiceType).ToHashSet();
+
+        var missing = inMemoryTypes.Except(prodTypes).OrderBy(t => t.FullName).ToList();
+        missing.Should().BeEmpty(
+            because: "CompositionRoot must register every service that AddInMemoryAgentRuntime provides; " +
+                     "add the missing registration(s) to CompositionRoot.ConfigureServices");
     }
 }
