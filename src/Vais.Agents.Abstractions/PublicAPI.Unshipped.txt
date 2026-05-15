@@ -700,3 +700,11 @@ Vais.Agents.IContainerPluginRegistry.GetAsync(string! id, string? version = null
 Vais.Agents.IContainerPluginRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.ContainerPluginManifest!>!
 Vais.Agents.IContainerPluginRegistry.RegisterAsync(Vais.Agents.ContainerPluginManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IContainerPluginRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.GraphEdgePredicateJsonConverter
+Vais.Agents.GraphEdgePredicateJsonConverter.GraphEdgePredicateJsonConverter() -> void
+override Vais.Agents.GraphEdgePredicateJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> Vais.Agents.GraphEdgePredicate?
+override Vais.Agents.GraphEdgePredicateJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, Vais.Agents.GraphEdgePredicate! value, System.Text.Json.JsonSerializerOptions! options) -> void
+Vais.Agents.GraphEdgeEffectJsonConverter
+Vais.Agents.GraphEdgeEffectJsonConverter.GraphEdgeEffectJsonConverter() -> void
+override Vais.Agents.GraphEdgeEffectJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> Vais.Agents.GraphEdgeEffect?
+override Vais.Agents.GraphEdgeEffectJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, Vais.Agents.GraphEdgeEffect! value, System.Text.Json.JsonSerializerOptions! options) -> void

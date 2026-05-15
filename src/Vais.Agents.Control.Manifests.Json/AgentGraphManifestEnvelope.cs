@@ -128,6 +128,7 @@ public static class AgentGraphManifestEnvelope
         return predicate switch
         {
             GraphEdgePredicate.Always => (JsonNode)"always",
+            GraphEdgePredicate.Expression e => (JsonNode)e.Expr,
             GraphEdgePredicate.PropertyMatcher m => SerializeMatcher(m),
             GraphEdgePredicate.AllOf a => new JsonObject { ["allOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializePredicate(p)).ToArray()) },
             GraphEdgePredicate.AnyOf a => new JsonObject { ["anyOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializePredicate(p)).ToArray()) },

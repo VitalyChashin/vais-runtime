@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Vais.Agents;
 
@@ -18,6 +19,7 @@ namespace Vais.Agents;
 /// Use <see cref="Expression"/> for inline PowerFx conditions as an alternative to
 /// registering a <see cref="HandlerRef"/> handler.
 /// </remarks>
+[JsonConverter(typeof(GraphEdgePredicateJsonConverter))]
 public abstract record GraphEdgePredicate
 {
     private GraphEdgePredicate() { }

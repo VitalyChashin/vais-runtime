@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Vais.Agents;
 
@@ -11,6 +12,7 @@ namespace Vais.Agents;
 /// <see cref="Append"/>) plus a <see cref="HandlerRef"/> escape hatch for richer
 /// mutations via a DI-resolved <see cref="IGraphEdgeEffect"/>.
 /// </summary>
+[JsonConverter(typeof(GraphEdgeEffectJsonConverter))]
 public abstract record GraphEdgeEffect
 {
     private GraphEdgeEffect() { }
