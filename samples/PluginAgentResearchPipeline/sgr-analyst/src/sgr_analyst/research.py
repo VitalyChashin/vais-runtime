@@ -7,9 +7,11 @@ No provider API keys are stored in the subprocess environment.
 from __future__ import annotations
 
 import logging
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from sgr_agent_core import AgentFactory
 from sgr_agent_core.agent_definition import AgentDefinition, LLMConfig, ToolDefinition
@@ -21,6 +23,33 @@ from sgr_agent_core.tools import (
     GeneratePlanTool,
     WebSearchTool,
 )
+
+_GATEWAY_HEADERS: ContextVar[dict[str, str]] = ContextVar(
+    "_GATEWAY_HEADERS", default={}
+)
+
+
+class _GatewayAgentFactory(AgentFactory):
+    """AgentFactory that injects VAIS gateway HMAC headers into AsyncOpenAI.
+
+    The runtime's container-gateway endpoint validates each request's bearer call
+    token against the X-Run-Id and X-Agent-Id headers; without them the HMAC
+    compare fails and the call returns 401. Stock sgr-agent-core builds an
+    AsyncOpenAI client with only base_url + api_key, so we override the client
+    construction to add default_headers from a contextvar that run_research sets
+    per invocation.
+    """
+
+    @classmethod
+    def _create_client(cls, llm_config: LLMConfig) -> AsyncOpenAI:
+        kwargs: dict[str, Any] = {
+            "base_url": llm_config.base_url,
+            "api_key": llm_config.api_key,
+            "default_headers": _GATEWAY_HEADERS.get() or {},
+        }
+        if llm_config.proxy:
+            kwargs["http_client"] = httpx.AsyncClient(proxy=llm_config.proxy)
+        return AsyncOpenAI(**kwargs)
 
 if TYPE_CHECKING:
     from sgr_agent_core.agent_definition import AgentConfig
@@ -44,8 +73,12 @@ class _GatewayWebSearchTool(WebSearchTool):
             "X-Run-Id": run_id,
             "X-Agent-Id": agent_id,
         }
+        # The Tavily MCP server (samples/.../tavily-mcp-server/server.py) registers
+        # the tool as `search`, not `tavily_search`. FastMCP uses the Python function
+        # name verbatim; the server identifier "tavily-search" is the MCP *server*
+        # name, not the tool name.
         payload = {
-            "toolName": "tavily_search",
+            "toolName": "search",
             "arguments": {"query": self.query, "max_results": self.max_results},
             "toolCallId": f"sgr-{abs(hash(self.query)) % 65536:04x}",
         }
@@ -118,12 +151,16 @@ async def run_research(
     task_messages: list[ChatCompletionMessageParam] = [
         {"role": "user", "content": query}
     ]
-    agent = await AgentFactory.create(agent_def, task_messages)
-    # sgr-agent-core 0.7.0: NextStepToolsBuilder wraps each tool in D_<ToolName>,
-    # which gets tool_name="d_<toolname>" via BaseTool.__init_subclass__ instead of
-    # inheriting the original. _action_phase looks up configs by that name, so
-    # add aliased entries so gateway kwargs reach _GatewayWebSearchTool(**kwargs).
-    for key, val in list(agent.tool_configs.items()):
-        agent.tool_configs[f"d_{key}"] = val
-    _log.info("SGR agent created: tool_configs keys=%s", list(agent.tool_configs.keys()))
-    return await agent.execute()
+    token = _GATEWAY_HEADERS.set({"X-Run-Id": run_id, "X-Agent-Id": agent_id})
+    try:
+        agent = await _GatewayAgentFactory.create(agent_def, task_messages)
+        # sgr-agent-core 0.7.0: NextStepToolsBuilder wraps each tool in D_<ToolName>,
+        # which gets tool_name="d_<toolname>" via BaseTool.__init_subclass__ instead of
+        # inheriting the original. _action_phase looks up configs by that name, so
+        # add aliased entries so gateway kwargs reach _GatewayWebSearchTool(**kwargs).
+        for key, val in list(agent.tool_configs.items()):
+            agent.tool_configs[f"d_{key}"] = val
+        _log.info("SGR agent created: tool_configs keys=%s", list(agent.tool_configs.keys()))
+        return await agent.execute()
+    finally:
+        _GATEWAY_HEADERS.reset(token)

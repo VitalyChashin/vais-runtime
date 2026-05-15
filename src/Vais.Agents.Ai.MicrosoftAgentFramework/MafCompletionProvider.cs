@@ -115,6 +115,14 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
                 schema: rf.Schema,
                 schemaName: rf.SchemaName ?? "response",
                 schemaDescription: null);
+            // MEAI 10.x's ChatResponseFormat.ForJsonSchema has no strict parameter.
+            // MEAI.OpenAI's OpenAIChatClient.ToOpenAIChatResponseFormat reads the
+            // strict flag from ChatOptions.AdditionalProperties["strict"] via
+            // OpenAIClientExtensions.HasStrict — that's how we get
+            // OpenAI.Chat.ChatResponseFormat.CreateJsonSchemaFormat(..., jsonSchemaIsStrict:true)
+            // on the wire and have the model enforce the schema.
+            chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+            chatOptions.AdditionalProperties["strict"] = rf.Strict;
         }
 
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };
@@ -169,6 +177,8 @@ public sealed class MafCompletionProvider : ICompletionProvider, IStreamingCompl
                 schema: streamRf.Schema,
                 schemaName: streamRf.SchemaName ?? "response",
                 schemaDescription: null);
+            // See CompleteAsync above for why strict goes via AdditionalProperties.
+            chatOptions.AdditionalProperties["strict"] = streamRf.Strict;
         }
 
         var options = new ChatClientAgentRunOptions { ChatOptions = chatOptions };

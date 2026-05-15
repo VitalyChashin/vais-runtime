@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Vais.Agents.Runtime.Plugins.Container\Vais.Agents.Runtime.Plugins.Container.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
@@ -23,6 +27,7 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>

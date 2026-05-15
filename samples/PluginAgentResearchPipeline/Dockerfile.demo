@@ -111,7 +111,10 @@ COPY --chown=vais:vais \
 ENV VAIS_PYTHON_PLUGINS_DIRECTORY=/var/lib/vais/python-plugins
 ENV VAIS_PLUGINS_DIRECTORY=/var/lib/vais/plugins
 
-VOLUME ["/var/lib/vais/plugins"]
+# No VOLUME on /var/lib/vais/plugins — plugins are baked into this demo image.
+# Declaring VOLUME makes Docker create an anonymous volume on first run that
+# persists across `compose up` cycles and masks subsequent image rebuilds with
+# stale plugin DLLs.
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
