@@ -222,6 +222,7 @@ vais delete grader
 
 ## Next
 
+- **[Dispatch from a graph node with agent-as-tool](dispatch-from-a-graph-node.md)** — let the coordinator's LLM pick among sibling specialists rather than fanning edges off a classifier node.
 - **[Connect OpenWebUI](connect-openwebui.md)** — point a browser UI at the runtime and chat with agents and graphs.
 - [Graph predicate operators reference](../reference/graph-predicate-operators.md) — the full PowerFx contract: `Local.*` namespace, `Local.lastMessage` shortcut, supported PowerFx functions, validation behaviour, `HandlerRef` escape hatch.
 - [Concepts → Graph orchestration](../concepts/graph-orchestration.md) — where predicates fit in the super-step loop.
