@@ -1,1 +1,8 @@
 #nullable enable
+const Vais.Agents.Observability.Langfuse.LangfuseTags.SectionPrefix = "langfuse.section." -> string!
+const Vais.Agents.Observability.Langfuse.LangfuseTags.SectionBreakdownMetadataKey = "langfuse.trace.metadata.section_breakdown" -> string!
+Vais.Agents.Observability.Langfuse.LangfuseSectionEnrichment
+Vais.Agents.Observability.Langfuse.LangfuseSectionEnrichment.LangfuseSectionEnrichment() -> void
+Vais.Agents.Observability.Langfuse.LangfuseSectionEnrichment.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais.Agents.Observability.Langfuse.LangfuseSectionEnrichment.Instance.get -> Vais.Agents.Observability.Langfuse.LangfuseSectionEnrichment!
+static Vais.Agents.Observability.Langfuse.AgenticLangfuseExtensions.AddLangfuseSectionEnrichment(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

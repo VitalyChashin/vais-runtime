@@ -924,3 +924,94 @@ Vais.Agents.ISystemPromptComposer.ComposeSectionsAsync(Vais.Agents.AgentContext!
 Vais.Agents.ISystemPromptComposer.DefaultComposeSectionsAsync(Vais.Agents.ISystemPromptComposer! composer, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
 Vais.Agents.ISystemPromptContributor.DefaultSectionId(System.Type! type) -> string!
 Vais.Agents.ISystemPromptContributor.SectionId.get -> string!
+Vais.Agents.ISectionTelemetrySink
+Vais.Agents.ISectionTelemetrySink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.SectionBudgetSummary
+Vais.Agents.SectionBudgetSummary.<Clone>$() -> Vais.Agents.SectionBudgetSummary!
+Vais.Agents.SectionBudgetSummary.Deconstruct(out int? TargetChars, out int? TargetTokens, out int UsedChars, out int? UsedTokens, out double UsedRatio, out int DroppedCount, out int TruncatedCount) -> void
+Vais.Agents.SectionBudgetSummary.DroppedCount.get -> int
+Vais.Agents.SectionBudgetSummary.DroppedCount.init -> void
+Vais.Agents.SectionBudgetSummary.Equals(Vais.Agents.SectionBudgetSummary? other) -> bool
+Vais.Agents.SectionBudgetSummary.SectionBudgetSummary(int? TargetChars, int? TargetTokens, int UsedChars, int? UsedTokens, double UsedRatio, int DroppedCount, int TruncatedCount) -> void
+Vais.Agents.SectionBudgetSummary.TargetChars.get -> int?
+Vais.Agents.SectionBudgetSummary.TargetChars.init -> void
+Vais.Agents.SectionBudgetSummary.TargetTokens.get -> int?
+Vais.Agents.SectionBudgetSummary.TargetTokens.init -> void
+Vais.Agents.SectionBudgetSummary.TruncatedCount.get -> int
+Vais.Agents.SectionBudgetSummary.TruncatedCount.init -> void
+Vais.Agents.SectionBudgetSummary.UsedChars.get -> int
+Vais.Agents.SectionBudgetSummary.UsedChars.init -> void
+Vais.Agents.SectionBudgetSummary.UsedRatio.get -> double
+Vais.Agents.SectionBudgetSummary.UsedRatio.init -> void
+Vais.Agents.SectionBudgetSummary.UsedTokens.get -> int?
+Vais.Agents.SectionBudgetSummary.UsedTokens.init -> void
+Vais.Agents.SectionMeasurement
+Vais.Agents.SectionMeasurement.<Clone>$() -> Vais.Agents.SectionMeasurement!
+Vais.Agents.SectionMeasurement.Chars.get -> int
+Vais.Agents.SectionMeasurement.Chars.init -> void
+Vais.Agents.SectionMeasurement.Deconstruct(out string! Id, out Vais.Agents.SectionKind Kind, out string? ProducerId, out int? Order, out int? Priority, out int Chars, out int? Tokens, out double Ratio, out string! Outcome, out int DroppedChars) -> void
+Vais.Agents.SectionMeasurement.DroppedChars.get -> int
+Vais.Agents.SectionMeasurement.DroppedChars.init -> void
+Vais.Agents.SectionMeasurement.Equals(Vais.Agents.SectionMeasurement? other) -> bool
+Vais.Agents.SectionMeasurement.Id.get -> string!
+Vais.Agents.SectionMeasurement.Id.init -> void
+Vais.Agents.SectionMeasurement.Kind.get -> Vais.Agents.SectionKind
+Vais.Agents.SectionMeasurement.Kind.init -> void
+Vais.Agents.SectionMeasurement.Order.get -> int?
+Vais.Agents.SectionMeasurement.Order.init -> void
+Vais.Agents.SectionMeasurement.Outcome.get -> string!
+Vais.Agents.SectionMeasurement.Outcome.init -> void
+Vais.Agents.SectionMeasurement.Priority.get -> int?
+Vais.Agents.SectionMeasurement.Priority.init -> void
+Vais.Agents.SectionMeasurement.ProducerId.get -> string?
+Vais.Agents.SectionMeasurement.ProducerId.init -> void
+Vais.Agents.SectionMeasurement.Ratio.get -> double
+Vais.Agents.SectionMeasurement.Ratio.init -> void
+Vais.Agents.SectionMeasurement.SectionMeasurement(string! Id, Vais.Agents.SectionKind Kind, string? ProducerId, int? Order, int? Priority, int Chars, int? Tokens, double Ratio, string! Outcome, int DroppedChars) -> void
+Vais.Agents.SectionMeasurement.Tokens.get -> int?
+Vais.Agents.SectionMeasurement.Tokens.init -> void
+Vais.Agents.SectionTelemetrySnapshot
+Vais.Agents.SectionTelemetrySnapshot.<Clone>$() -> Vais.Agents.SectionTelemetrySnapshot!
+Vais.Agents.SectionTelemetrySnapshot.Budget.get -> Vais.Agents.SectionBudgetSummary!
+Vais.Agents.SectionTelemetrySnapshot.Budget.init -> void
+Vais.Agents.SectionTelemetrySnapshot.Context.get -> Vais.Agents.AgentContext!
+Vais.Agents.SectionTelemetrySnapshot.Context.init -> void
+Vais.Agents.SectionTelemetrySnapshot.Deconstruct(out Vais.Agents.AgentContext! Context, out int TurnIndex, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, out Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.SectionTelemetrySnapshot.Equals(Vais.Agents.SectionTelemetrySnapshot? other) -> bool
+Vais.Agents.SectionTelemetrySnapshot.SectionTelemetrySnapshot(Vais.Agents.AgentContext! Context, int TurnIndex, System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.SectionTelemetrySnapshot.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>!
+Vais.Agents.SectionTelemetrySnapshot.Sections.init -> void
+Vais.Agents.SectionTelemetrySnapshot.TurnIndex.get -> int
+Vais.Agents.SectionTelemetrySnapshot.TurnIndex.init -> void
+Vais.Agents.RequestSectionsBuilt
+override Vais.Agents.RequestSectionsBuilt.<Clone>$() -> Vais.Agents.RequestSectionsBuilt!
+Vais.Agents.RequestSectionsBuilt.Budget.get -> Vais.Agents.SectionBudgetSummary!
+Vais.Agents.RequestSectionsBuilt.Budget.init -> void
+Vais.Agents.RequestSectionsBuilt.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out int TurnIndex, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, out Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.RequestSectionsBuilt.Equals(Vais.Agents.RequestSectionsBuilt? other) -> bool
+Vais.Agents.RequestSectionsBuilt.RequestSectionsBuilt(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, int TurnIndex, System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>! Sections, Vais.Agents.SectionBudgetSummary! Budget) -> void
+Vais.Agents.RequestSectionsBuilt.Sections.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.SectionMeasurement!>!
+Vais.Agents.RequestSectionsBuilt.Sections.init -> void
+Vais.Agents.RequestSectionsBuilt.TurnIndex.get -> int
+Vais.Agents.RequestSectionsBuilt.TurnIndex.init -> void
+override Vais.Agents.RequestSectionsBuilt.GetHashCode() -> int
+override Vais.Agents.RequestSectionsBuilt.ToString() -> string!
+override Vais.Agents.RequestSectionsBuilt.Equals(object? obj) -> bool
+override sealed Vais.Agents.RequestSectionsBuilt.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.RequestSectionsBuilt.operator !=(Vais.Agents.RequestSectionsBuilt? left, Vais.Agents.RequestSectionsBuilt? right) -> bool
+static Vais.Agents.RequestSectionsBuilt.operator ==(Vais.Agents.RequestSectionsBuilt? left, Vais.Agents.RequestSectionsBuilt? right) -> bool
+override Vais.Agents.SectionBudgetSummary.Equals(object? obj) -> bool
+override Vais.Agents.SectionBudgetSummary.GetHashCode() -> int
+override Vais.Agents.SectionBudgetSummary.ToString() -> string!
+override Vais.Agents.SectionMeasurement.Equals(object? obj) -> bool
+override Vais.Agents.SectionMeasurement.GetHashCode() -> int
+override Vais.Agents.SectionMeasurement.ToString() -> string!
+override Vais.Agents.SectionTelemetrySnapshot.Equals(object? obj) -> bool
+override Vais.Agents.SectionTelemetrySnapshot.GetHashCode() -> int
+override Vais.Agents.SectionTelemetrySnapshot.ToString() -> string!
+static Vais.Agents.SectionBudgetSummary.operator !=(Vais.Agents.SectionBudgetSummary? left, Vais.Agents.SectionBudgetSummary? right) -> bool
+static Vais.Agents.SectionBudgetSummary.operator ==(Vais.Agents.SectionBudgetSummary? left, Vais.Agents.SectionBudgetSummary? right) -> bool
+static Vais.Agents.SectionMeasurement.operator !=(Vais.Agents.SectionMeasurement? left, Vais.Agents.SectionMeasurement? right) -> bool
+static Vais.Agents.SectionMeasurement.operator ==(Vais.Agents.SectionMeasurement? left, Vais.Agents.SectionMeasurement? right) -> bool
+static Vais.Agents.SectionTelemetrySnapshot.operator !=(Vais.Agents.SectionTelemetrySnapshot? left, Vais.Agents.SectionTelemetrySnapshot? right) -> bool
+static Vais.Agents.SectionTelemetrySnapshot.operator ==(Vais.Agents.SectionTelemetrySnapshot? left, Vais.Agents.SectionTelemetrySnapshot? right) -> bool

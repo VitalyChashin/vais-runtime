@@ -142,3 +142,16 @@ Vais.Agents.Core.StatefulAgentOptions.SectionWindowPacker.init -> void
 Vais.Agents.Core.StatefulAgentOptions.SectionBudget.get -> Vais.Agents.SectionBudgetContext?
 Vais.Agents.Core.StatefulAgentOptions.SectionBudget.init -> void
 Vais.Agents.Core.AggregatingSystemPromptComposer.ComposeSectionsAsync(Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>!>
+Vais.Agents.Core.StatefulAgentOptions.SectionTelemetrySinks.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ISectionTelemetrySink!>!
+Vais.Agents.Core.StatefulAgentOptions.SectionTelemetrySinks.init -> void
+Vais.Agents.SectionTelemetryEmitter
+Vais.Agents.SectionTelemetryEmitter.EmitAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.Section!>! inputSections, Vais.Agents.SectionPackResult! packResult, Vais.Agents.SectionBudgetContext! budget, Vais.Agents.AgentContext! context, int turnIndex, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.EventBusSectionSink
+Vais.Agents.EventBusSectionSink.EventBusSectionSink(Vais.Agents.IAgentEventBus! bus) -> void
+Vais.Agents.EventBusSectionSink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.SectionTelemetryEmitter.IsNoOp.get -> bool
+Vais.Agents.SectionTelemetryEmitter.SectionTelemetryEmitter(System.Collections.Generic.IEnumerable<Vais.Agents.ISectionTelemetrySink!>? sinks, Microsoft.Extensions.Logging.ILogger? logger = null) -> void
+static Vais.Agents.SectionTelemetryEmitter.NoOp.get -> Vais.Agents.SectionTelemetryEmitter!
+Vais.Agents.LoggingSectionSink
+Vais.Agents.LoggingSectionSink.LoggingSectionSink(Microsoft.Extensions.Logging.ILogger<Vais.Agents.LoggingSectionSink!>! logger) -> void
+Vais.Agents.LoggingSectionSink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

@@ -48,6 +48,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly ISectionResolver _sectionResolver;
     private readonly ISectionWindowPacker _sectionWindowPacker;
     private readonly SectionBudgetContext _sectionBudget;
+    private readonly SectionTelemetryEmitter _sectionTelemetryEmitter;
     private readonly ISystemPromptComposer? _systemPromptComposer;
     private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
@@ -105,6 +106,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 ? new LegacyPackerAdapter(options.ContextWindowPacker)
                 : DefaultSectionWindowPacker.Instance);
         _sectionBudget = options.SectionBudget ?? SectionBudgetContext.Unlimited;
+        _sectionTelemetryEmitter = options.SectionTelemetrySinks.Count == 0
+            ? SectionTelemetryEmitter.NoOp
+            : new SectionTelemetryEmitter(options.SectionTelemetrySinks, _logger);
         _systemPromptComposer = options.SystemPromptComposer;
         _inputGuardrails = options.InputGuardrails;
         _outputGuardrails = options.OutputGuardrails;
@@ -234,7 +238,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 // packer applies the budget; flattener produces the wire-shaped CompletionRequest.
                 // Runs each round so providers can react to tool results landing in the working
                 // history between rounds.
-                var candidate = await BuildPerTurnRequestAsync(workingHistory, context, cancellationToken).ConfigureAwait(false);
+                var candidate = await BuildPerTurnRequestAsync(workingHistory, context, turnIndex, cancellationToken).ConfigureAwait(false);
 
                 // Input guardrails fire on every model invocation — tool-call loops
                 // should be able to block a mid-run escalation, not just the first turn.
@@ -526,7 +530,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
             {
                 // Same section pipeline as AskAsyncCore — composer + providers contribute Section[],
                 // resolver orders, packer applies budget, flattener produces the wire-shaped request.
-                request = await BuildPerTurnRequestAsync(workingHistory, context, cancellationToken).ConfigureAwait(false);
+                request = await BuildPerTurnRequestAsync(workingHistory, context, turnIndex, cancellationToken).ConfigureAwait(false);
 
                 // Input guardrails fire on every model invocation — tool-call loops
                 // must be able to block a mid-run escalation, not just the first turn.
@@ -1259,6 +1263,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private async Task<CompletionRequest> BuildPerTurnRequestAsync(
         IReadOnlyList<ChatTurn> workingHistory,
         AgentContext context,
+        int turnIndex,
         CancellationToken cancellationToken)
     {
         var reduced = await _historyReducer.ReduceAsync(workingHistory, cancellationToken).ConfigureAwait(false);
@@ -1337,6 +1342,25 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
 
         var resolved = await _sectionResolver.ResolveAsync(sections, cancellationToken).ConfigureAwait(false);
         var packed = await _sectionWindowPacker.PackAsync(resolved, _sectionBudget, cancellationToken).ConfigureAwait(false);
+
+        // Telemetry fan-out runs between packer and flattener so every sink sees the same
+        // per-turn snapshot. NoOp short-circuits when no sinks are wired (the common case),
+        // so this is zero-cost unless observability is opted into.
+        if (!_sectionTelemetryEmitter.IsNoOp)
+        {
+            // Overlay the agent name onto the snapshot's context when configured at the options
+            // level — same pattern as BuildEventContext for AgentEvents.
+            var snapshotContext = _agentName is not null && string.IsNullOrEmpty(context.AgentName)
+                ? context with { AgentName = _agentName }
+                : context;
+            await _sectionTelemetryEmitter.EmitAsync(
+                resolved,
+                packed,
+                _sectionBudget,
+                snapshotContext,
+                turnIndex,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         return CompletionRequestFlattener.Flatten(packed.Sections, logger: _logger);
     }

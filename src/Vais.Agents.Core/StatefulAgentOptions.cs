@@ -201,6 +201,15 @@ public sealed class StatefulAgentOptions
     public SectionBudgetContext? SectionBudget { get; init; }
 
     /// <summary>
+    /// Section telemetry sinks invoked once per turn between the packer and the flattener.
+    /// Each registered <see cref="ISectionTelemetrySink"/> receives the same
+    /// <see cref="SectionTelemetrySnapshot"/> in registration order; failures are logged at
+    /// <c>Warning</c> and swallowed. Default: empty (no-op). Wire OTel, Prometheus, Langfuse,
+    /// event-bus, or logging sinks via their respective <c>Add*Sink</c> DI helpers.
+    /// </summary>
+    public IReadOnlyList<ISectionTelemetrySink> SectionTelemetrySinks { get; init; } = Array.Empty<ISectionTelemetrySink>();
+
+    /// <summary>
     /// Optional multi-part system prompt composer. When non-null, <see cref="StatefulAiAgent"/>
     /// calls <see cref="ISystemPromptComposer.ComposeAsync"/> at the start of every turn
     /// and uses the returned string as the base system prompt — the plain

@@ -24,4 +24,20 @@ public static class LangfuseTags
 
     /// <summary>Prefix for structured metadata attributes; append the key (e.g. <c>langfuse.trace.metadata.flow_id</c>).</summary>
     public const string MetadataPrefix = "langfuse.trace.metadata.";
+
+    /// <summary>
+    /// Prefix for per-section context-window breakdown tags emitted by
+    /// <c>LangfuseSectionEnrichment</c>. The full form is
+    /// <c>langfuse.section.&lt;id_normalised&gt;.&lt;field&gt;</c> where <c>id_normalised</c>
+    /// is the <see cref="Section.Id"/> with dots replaced by underscores (Langfuse renders
+    /// dot-separated tag names as nested groups in the UI, so we normalise to one flat key).
+    /// </summary>
+    public const string SectionPrefix = "langfuse.section.";
+
+    /// <summary>
+    /// Well-known metadata key for the per-turn JSON section-breakdown blob, written as
+    /// <c>langfuse.trace.metadata.section_breakdown</c>. Trace-review-friendly summary; the
+    /// per-section <see cref="SectionPrefix"/> tags remain queryable in the UI filter bar.
+    /// </summary>
+    public const string SectionBreakdownMetadataKey = MetadataPrefix + "section_breakdown";
 }

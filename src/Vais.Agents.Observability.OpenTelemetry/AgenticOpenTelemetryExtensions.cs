@@ -57,4 +57,18 @@ public static class AgenticOpenTelemetryExtensions
         services.TryAddSingleton<IUsageSink>(sp => sp.GetRequiredService<OpenTelemetryUsageSink>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OtelSectionSink"/> as an <see cref="ISectionTelemetrySink"/>. The sink
+    /// decorates the per-turn <see cref="System.Diagnostics.Activity"/> with section-breakdown
+    /// tags; downstream OTel exporters and Langfuse pick them up automatically.
+    /// </summary>
+    /// <returns>The same service collection for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="services"/> is null.</exception>
+    public static IServiceCollection AddAgenticOpenTelemetrySectionSink(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddSingleton<ISectionTelemetrySink>(OtelSectionSink.Instance);
+        return services;
+    }
 }

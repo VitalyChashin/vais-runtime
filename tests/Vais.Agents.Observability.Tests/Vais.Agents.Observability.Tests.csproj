@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Observability.OpenTelemetry\Vais.Agents.Observability.OpenTelemetry.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Observability.Prometheus\Vais.Agents.Observability.Prometheus.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="prometheus-net" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,7 @@
+#nullable enable
+Vais.Agents.Observability.Prometheus.AgenticPrometheusExtensions
+Vais.Agents.Observability.Prometheus.PrometheusSectionSink
+Vais.Agents.Observability.Prometheus.PrometheusSectionSink.EmitAsync(Vais.Agents.SectionTelemetrySnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Observability.Prometheus.PrometheusSectionSink.PrometheusSectionSink() -> void
+Vais.Agents.Observability.Prometheus.PrometheusSectionSink.PrometheusSectionSink(Prometheus.MetricFactory! metricFactory) -> void
+static Vais.Agents.Observability.Prometheus.AgenticPrometheusExtensions.AddAgenticPrometheusSectionSink(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
