@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
+
 namespace Vais.Agents.Hosting.Orleans;
 
 /// <summary>
@@ -30,6 +32,8 @@ public enum AgentEventKind
     ToolCallReplayed = 8,
     /// <summary><see cref="CompletionDelta"/>.</summary>
     CompletionDelta = 9,
+    /// <summary><see cref="RequestSectionsBuilt"/>.</summary>
+    RequestSectionsBuilt = 10,
 }
 
 /// <summary>
@@ -143,6 +147,22 @@ public struct AgentEventSurrogate
     /// </summary>
     [Id(23)]
     public string? ToolCallsJson;
+
+    /// <summary>1-based turn index — populated for <see cref="AgentEventKind.RequestSectionsBuilt"/>.</summary>
+    [Id(24)]
+    public int? TurnIndex;
+
+    /// <summary>
+    /// JSON-serialised <see cref="System.Collections.Generic.IReadOnlyList{T}"/> of <see cref="SectionMeasurement"/> —
+    /// populated for <see cref="AgentEventKind.RequestSectionsBuilt"/>. Records serialise / deserialise through
+    /// <see cref="JsonSerializer"/> default options.
+    /// </summary>
+    [Id(25)]
+    public string? SectionsJson;
+
+    /// <summary>JSON-serialised <see cref="SectionBudgetSummary"/> — populated for <see cref="AgentEventKind.RequestSectionsBuilt"/>.</summary>
+    [Id(26)]
+    public string? BudgetJson;
 }
 
 /// <summary>
@@ -154,6 +174,28 @@ public struct AgentEventSurrogate
 internal static class AgentEventSurrogateHelpers
 {
     private static readonly AgentContextSurrogateConverter _contextConverter = new();
+
+    // Shared options for SectionMeasurement / SectionBudgetSummary round-trip. Records use their
+    // positional constructors; STJ matches parameter names to property names (PascalCase) so no
+    // naming policy is needed. Enums round-trip as integers — readability isn't a concern here.
+    private static readonly JsonSerializerOptions SectionJsonOptions = new();
+
+    internal static string? SerializeSections(IReadOnlyList<SectionMeasurement>? sections)
+        => sections is null || sections.Count == 0 ? null : JsonSerializer.Serialize(sections, SectionJsonOptions);
+
+    internal static IReadOnlyList<SectionMeasurement> ParseSections(string? json)
+        => string.IsNullOrEmpty(json)
+            ? Array.Empty<SectionMeasurement>()
+            : JsonSerializer.Deserialize<IReadOnlyList<SectionMeasurement>>(json, SectionJsonOptions) ?? Array.Empty<SectionMeasurement>();
+
+    internal static string? SerializeBudget(SectionBudgetSummary? budget)
+        => budget is null ? null : JsonSerializer.Serialize(budget, SectionJsonOptions);
+
+    internal static SectionBudgetSummary ParseBudget(string? json)
+        => string.IsNullOrEmpty(json)
+            ? new SectionBudgetSummary(null, null, 0, null, 0d, 0, 0)
+            : JsonSerializer.Deserialize<SectionBudgetSummary>(json, SectionJsonOptions)
+              ?? new SectionBudgetSummary(null, null, 0, null, 0d, 0, 0);
 
     public static AgentEvent FromSurrogate(in AgentEventSurrogate surrogate)
     {
@@ -223,6 +265,12 @@ internal static class AgentEventSurrogateHelpers
                 surrogate.PromptTokens,
                 surrogate.CompletionTokens,
                 JournalEntrySurrogateHelpers.ParseToolCalls(surrogate.ToolCallsJson)),
+            AgentEventKind.RequestSectionsBuilt => new RequestSectionsBuilt(
+                surrogate.At,
+                context,
+                surrogate.TurnIndex ?? 0,
+                ParseSections(surrogate.SectionsJson),
+                ParseBudget(surrogate.BudgetJson)),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -322,6 +370,15 @@ internal static class AgentEventSurrogateHelpers
                 PromptTokens = d.PromptTokens,
                 CompletionTokens = d.CompletionTokens,
                 ToolCallsJson = JournalEntrySurrogateHelpers.SerializeToolCalls(d.ToolCalls),
+            },
+            RequestSectionsBuilt rsb => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.RequestSectionsBuilt,
+                At = rsb.At,
+                Context = contextSurrogate,
+                TurnIndex = rsb.TurnIndex,
+                SectionsJson = SerializeSections(rsb.Sections),
+                BudgetJson = SerializeBudget(rsb.Budget),
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -477,5 +534,18 @@ public sealed class CompletionDeltaSurrogateConverter : IConverter<CompletionDel
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in CompletionDelta value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="RequestSectionsBuilt"/>.</summary>
+[RegisterConverter]
+public sealed class RequestSectionsBuiltSurrogateConverter : IConverter<RequestSectionsBuilt, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public RequestSectionsBuilt ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (RequestSectionsBuilt)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in RequestSectionsBuilt value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

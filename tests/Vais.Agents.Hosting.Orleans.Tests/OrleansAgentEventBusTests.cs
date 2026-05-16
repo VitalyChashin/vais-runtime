@@ -313,6 +313,60 @@ public sealed class OrleansAgentEventBusTests
     }
 
     [Fact]
+    public async Task Publishes_And_Subscribes_RequestSectionsBuilt_Round_Trip()
+    {
+        var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);
+
+        RequestSectionsBuilt? observed = null;
+        var tcs = new TaskCompletionSource();
+        using var subscription = bus.Subscribe((e, _) =>
+        {
+            if (e is RequestSectionsBuilt built)
+            {
+                observed = built;
+                tcs.TrySetResult();
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        var sections = new SectionMeasurement[]
+        {
+            new("system.persona", SectionKind.SystemSegment, "PersonaContributor", Order: 0, Priority: 0,
+                Chars: 48, Tokens: null, Ratio: 0.04, Outcome: PackerOutcomes.Included, DroppedChars: 0),
+            new("retrieval.docs", SectionKind.SystemSegment, "KnowledgeRetrievalContextProvider", Order: null, Priority: 5,
+                Chars: 1042, Tokens: 260, Ratio: 0.89, Outcome: PackerOutcomes.Dropped, DroppedChars: 1042),
+        };
+        var budget = new SectionBudgetSummary(
+            TargetChars: 256, TargetTokens: null, UsedChars: 48, UsedTokens: null,
+            UsedRatio: 0.1875, DroppedCount: 1, TruncatedCount: 0);
+        var @event = new RequestSectionsBuilt(
+            DateTimeOffset.UtcNow,
+            AgentContext.Empty with { RunId = "run-42", AgentName = "research-helper" },
+            TurnIndex: 3,
+            sections,
+            budget);
+        await bus.PublishAsync(@event);
+
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        observed.Should().NotBeNull();
+        observed!.TurnIndex.Should().Be(3);
+        observed.Context.RunId.Should().Be("run-42");
+        observed.Context.AgentName.Should().Be("research-helper");
+        observed.Sections.Should().HaveCount(2);
+        observed.Sections[0].Id.Should().Be("system.persona");
+        observed.Sections[0].ProducerId.Should().Be("PersonaContributor");
+        observed.Sections[0].Chars.Should().Be(48);
+        observed.Sections[1].Id.Should().Be("retrieval.docs");
+        observed.Sections[1].Tokens.Should().Be(260);
+        observed.Sections[1].DroppedChars.Should().Be(1042);
+        observed.Sections[1].Outcome.Should().Be(PackerOutcomes.Dropped);
+        observed.Budget.TargetChars.Should().Be(256);
+        observed.Budget.UsedChars.Should().Be(48);
+        observed.Budget.UsedRatio.Should().BeApproximately(0.1875, 0.0001);
+        observed.Budget.DroppedCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Dispose_Unsubscribes_And_Later_Events_Are_Not_Received()
     {
         var bus = new OrleansAgentEventBus(_fx.Cluster.Client, OrleansAgentEventBus.StreamNamespace);

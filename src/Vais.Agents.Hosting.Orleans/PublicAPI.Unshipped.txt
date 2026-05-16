@@ -2,12 +2,20 @@
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
 Vais.Agents.Hosting.Orleans.AgentEventKind.CompletionDelta = 9 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.RequestSectionsBuilt = 10 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TextDelta -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolCallsJson -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TurnIndex -> int?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.SectionsJson -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.BudgetJson -> string?
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.CompletionDeltaSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.CompletionDelta!
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.ConvertToSurrogate(in Vais.Agents.CompletionDelta! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
+Vais.Agents.Hosting.Orleans.RequestSectionsBuiltSurrogateConverter
+Vais.Agents.Hosting.Orleans.RequestSectionsBuiltSurrogateConverter.RequestSectionsBuiltSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.RequestSectionsBuiltSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.RequestSectionsBuilt!
+Vais.Agents.Hosting.Orleans.RequestSectionsBuiltSurrogateConverter.ConvertToSurrogate(in Vais.Agents.RequestSectionsBuilt! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
 *REMOVED*Vais.Agents.Hosting.Orleans.AiAgentGrain.AiAgentGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AiAgentGrainState!>! state, Vais.Agents.ICompletionProvider? provider = null, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Vais.Agents.Core.StatefulAgentOptions!>>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
 Vais.Agents.Hosting.Orleans.AiAgentGrain.AiAgentGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AiAgentGrainState!>! state, Vais.Agents.ICompletionProvider? provider = null, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Vais.Agents.Core.StatefulAgentOptions!>>? optionsFactory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, Vais.Agents.IAgentContextAccessor? contextAccessor = null) -> void
 Vais.Agents.Hosting.Orleans.AiAgentGrain.StreamAgentAsync(string! userMessage, Vais.Agents.AgentContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.AgentEvent!>!

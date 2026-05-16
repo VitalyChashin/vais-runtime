@@ -127,14 +127,14 @@ Core contract families:
 | Providers | `ICompletionProvider`, `IStreamingCompletionProvider` |
 | Agent | `IAiAgent`, `IStreamingAiAgent` (v0.12), `IAgentSession`, `IAgentRuntime` |
 | Memory | `IMemoryStore`, `MemoryScope`, `MemoryItem`, `MemorySearchResult`, `MemoryDurability`, `IHistoryReducer` |
-| Context | `IContextProvider`, `IContextWindowPacker`, `ContextContribution`, `ContextInvocationContext` |
-| Prompt | `IPromptTemplate`, `ISystemPromptComposer`, `ISystemPromptContributor` |
+| Context | `IContextProvider`, `ISectionResolver`, `ISectionWindowPacker`, `ISectionTelemetrySink`, `ITokenCounter`, `ContextContribution`, `Section`, `SectionKind`, `SectionPayload` (+ `TextPayload`/`TurnPayload`/`ToolsPayload`/`ResponseFormatPayload`/`MetadataPayload`), `SectionBudget`, `SectionBudgetContext`, `SectionPackResult`, `PackerOutcome`, `PackerOutcomes`, `SectionTelemetrySnapshot`, `SectionMeasurement`, `SectionBudgetSummary`, `ContextInvocationContext`. Legacy `IContextWindowPacker` still works via `LegacyPackerAdapter`. |
+| Prompt | `IPromptTemplate`, `ISystemPromptComposer` (+ `ComposeSectionsAsync`), `ISystemPromptContributor` (+ `SectionId`) |
 | Guardrails | `IInputGuardrail`, `IOutputGuardrail`, `IToolGuardrail`, `GuardrailOutcome`, `GuardrailDecision`, `GuardrailLayer`, `AgentGuardrailDeniedException` |
 | Execution | `IToolCallDispatcher`, `RunBudget`, `AgentBudgetExceededException`, `AgentInterrupt`, `ResumeInput`, `AgentInterruptedException`, `IStreamingAgentFilter` |
 | Tools | `ITool`, `IToolRegistry`, `IToolSource` |
 | Orchestration | `IAgentOrchestrator`, `AgentParticipant`, `OrchestrationStep`, `Handoff`, `ITerminationCondition` |
 | Graph orchestration (v0.9) | `IAgentGraph<TState>` / `IAgentGraph`, `IResumableAgentGraph<TState>`, `AgentGraphManifest`, `GraphNode`, `GraphEdge`, `GraphEdgePredicate`, `GraphPredicateOperator`, `GraphEdgeEffect`, `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` / `IGraphCheckpointer` |
-| Events | `AgentEvent` (9 subclasses incl. v0.12 `CompletionDelta`), `AgentGraphEvent` (9 subclasses, v0.9), `IAgentEventBus` |
+| Events | `AgentEvent` (10 subclasses — adds `RequestSectionsBuilt` to the v0.12 set), `AgentGraphEvent` (9 subclasses, v0.9), `IAgentEventBus` |
 | Control plane (contract) | `AgentManifest` (+ sub-records — `Model`, `SystemPromptSpec`, `Guardrails`, `Budget`, `OutputSchema`, `SecretRefs`, …) |
 | Observability | `UsageRecord`, `IUsageSink`, `AgentContext`, `IAgentContextAccessor`, `IAgentFilter` |
 | RAG | `IKnowledgeRetriever`, `KnowledgeChunk` |

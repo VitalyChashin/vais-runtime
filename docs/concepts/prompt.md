@@ -59,7 +59,7 @@ var agent = new StatefulAiAgent(
 
 The composer replaces `StatefulAgentOptions.SystemPrompt` entirely when both are set — composer wins. (Decision option (a) from the v0.4 prompt pillar — avoids merge-order ambiguity between "static string" and "dynamic composer".)
 
-Context providers' `SystemPromptAddendum` contributions still concatenate on top of the composer's result — canonical shape for a RAG-plus-persona prompt is `{composed-base}\n\n{retrieved-context}`.
+Context providers' contributions still concatenate on top of the composer's result through the section pipeline: `AggregatingSystemPromptComposer.ComposeSectionsAsync` emits one `SystemSegment` section per contributor (id = `contributor.SectionId`, default `system.<type-name-kebab-case>`; order = `contributor.Priority`), then providers' `Section[]` join the same list at the resolver. The canonical shape for a RAG-plus-persona prompt is `{composed-base sections}\n\n{retrieved-context section}` after the flattener concatenates `SystemSegment` payloads with `"\n\n"`.
 
 ## A custom contributor
 
@@ -113,7 +113,7 @@ Use `Vais.Agents.IPromptTemplate` (fully qualified) if your consumer file also i
 
 ## Observability
 
-No per-contributor events in v0.4. The composed result lives in `CompletionRequest.SystemPrompt` at the provider boundary — visible to `IAgentFilter`s and to the `gen_ai.*` activity tags (the prompt itself isn't tagged — only model-side metadata is).
+Each contributor's slice is a separate `Section` (id from `ISystemPromptContributor.SectionId`) flowing through the section pipeline. `SectionTelemetryEmitter` reports per-contributor chars, tokens, ratio, and outcome — register `ISectionTelemetrySink`s (logging, OTel, Langfuse, Prometheus, event bus) and you get per-contributor attribution on every turn. See the [wire-context-sections tutorial](../guides/wire-context-sections.md) and the [context concept](context.md#observability) for the full surface. The composed `SystemPrompt` string at the provider boundary is still visible to `IAgentFilter`s and to the `gen_ai.*` activity tags.
 
 ## Limitations / known gaps
 
