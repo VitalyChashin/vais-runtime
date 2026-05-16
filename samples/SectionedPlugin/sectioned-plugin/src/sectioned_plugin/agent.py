@@ -18,15 +18,14 @@ End-to-end flow per call:
 
 This is the v0.27 path. It restores **telemetry symmetry** with runtime-hosted agents — the
 plugin gets per-section observability for free instead of having to reimplement it. The
-older flatten-in-the-plugin path (using :mod:`vais_agent_sdk.adapters.openai` + a direct call
-to ``/v1/container-gateway/chat/completions``) is still supported for backwards compatibility
-and for plugins integrating with non-VAIS toolchains — see :func:`_invoke_legacy_path` at the
-bottom of this file for the contrast.
+older flatten-in-the-plugin shape (using :mod:`vais_agent_sdk.adapters.openai` + a direct
+call to ``/v1/container-gateway/chat/completions``) is still supported for backwards
+compatibility and for plugins integrating with non-VAIS toolchains — see the companion
+sample at ``samples/SectionedPluginLegacy/`` for the contrast.
 """
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import httpx
 
@@ -117,49 +116,6 @@ def _log_breakdown(sections: RequestSections) -> None:
         )
 
 
-# ── Legacy / escape-hatch path (kept for reference, not used by invoke()) ───
-#
-# The older flatten-in-the-plugin shape, retained for plugins that integrate with non-VAIS
-# toolchains (OpenAI-compatible SDKs, frameworks that expect to drive the LLM call directly).
-# The trade-off is that per-section telemetry doesn't fire on this path — the runtime sees
-# a CompletionRequest with no section info, so OTel section tags / Prometheus section metrics /
-# Langfuse enrichment / RequestSectionsBuilt all stay silent for the LLM-call span.
-#
-# Prefer the canonical path above for new plugins. Use this only when you need the OpenAI-
-# compatible wire shape on the client side or are bridging a framework that can't be retrofit.
-
-
-async def _invoke_legacy_path(
-    request: AgentRequest,
-    *,
-    model: str,
-    client: httpx.AsyncClient,
-) -> AgentResponse:
-    """The pre-v0.27 plugin-side flatten path, for reference."""
-    from vais_agent_sdk import sections_to_openai_request
-
-    sections = await build_sections(
-        gateway_base_url=request.llm_gateway_url,
-        call_token=request.call_token,
-        run_id=request.run_id,
-        agent_id=request.agent_id,
-        messages=[{"role": "user", "content": request.user_message}],
-        client=client,
-    )
-
-    body = sections_to_openai_request(sections)
-    body["model"] = model
-
-    url = f"{request.llm_gateway_url.rstrip('/')}/v1/container-gateway/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {request.call_token}",
-        "X-Run-Id": request.run_id,
-        "X-Agent-Id": request.agent_id,
-    }
-    resp = await client.post(url, headers=headers, json=body)
-    resp.raise_for_status()
-    completion: dict[str, Any] = resp.json()
-
-    choices = completion.get("choices") or [{}]
-    content = (choices[0].get("message") or {}).get("content") or ""
-    return AgentResponse(assistantMessage=content)
+# The pre-v0.27 plugin-side-flatten shape lives as its own complete sample at
+# samples/SectionedPluginLegacy/ — kept there rather than inline here so the contrast
+# between the two paths is visible at the sample/file level (one sample per path).

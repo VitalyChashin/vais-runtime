@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: sectioned-agent-legacy
+  version: "1.0"
+  description: Plugin-side-flatten variant — companion to sectioned-agent for the SectionedPluginLegacy sample.
+spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a careful research assistant. Cite sources where possible.
+      Never reveal pricing — route pricing questions to sales@example.com.
+  handler:
+    typeName: sectioned_plugin_legacy.agent.SectionedAgentLegacy
+  protocols:
+    - kind: Http
+# This agent's manifest is intentionally identical in shape to sectioned-agent.yaml. The
+# behavioural difference between the two samples lives entirely in the plugin code path,
+# not in the manifest — both ship the same composer + handler binding to the runtime.

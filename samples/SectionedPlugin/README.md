@@ -81,15 +81,17 @@ return AgentResponse(assistantMessage=result.message["content"])
 
 The runtime is the source of truth for what producers ship sections **and** for how those sections flatten into the wire request. The plugin owns conversation state and decides which sections to keep. This split is what gives the plugin per-section telemetry symmetry with runtime-hosted agents — the flatten + LLM call run server-side, so all the runtime's observability sinks see the section breakdown.
 
-### Legacy path (kept for backwards compatibility)
+### Legacy path (kept for backwards compatibility — see the dedicated companion sample)
 
-The pre-v0.27 shape — plugin flattens client-side via `sections_to_openai_request()` and POSTs to `/v1/container-gateway/chat/completions` — is preserved verbatim. Use it when:
+The pre-v0.27 shape — plugin flattens client-side via `sections_to_openai_request()` and POSTs to `/v1/container-gateway/chat/completions` — is preserved verbatim. It's the right choice when:
 
 - You're driving an OpenAI-compatible SDK on the client side that expects the OpenAI chat-completions wire shape.
 - You're integrating with a non-VAIS framework that doesn't fit the canonical path.
 - You want to bypass the gateway for a specific call (talk to a hosted LLM directly).
 
-Trade-off: per-section telemetry doesn't fire on the LLM-call span on the legacy path — the runtime sees a `CompletionRequest` with no section info, so OTel section tags, Prometheus section metrics, Langfuse section enrichment, and the `RequestSectionsBuilt` event all stay silent for that call. The section-build call still fires its own observability surface; only the LLM-call side is silent. For new plugins, prefer the canonical path. See `_invoke_legacy_path` in `agent.py` for a worked example.
+Trade-off: per-section telemetry doesn't fire on the LLM-call span on that path — the runtime sees a `CompletionRequest` with no section info, so OTel section tags, Prometheus section metrics, Langfuse section enrichment, and the `RequestSectionsBuilt` event all stay silent for that call. Gateway-level telemetry (token counts, model id, Langfuse trace metadata) still fires normally; only the per-section attribution is lost.
+
+A dedicated side-by-side sample — [`samples/SectionedPluginLegacy/`](../SectionedPluginLegacy/) — implements the plugin-side-flatten path end-to-end so you can diff the two against each other. Use that when deciding which shape fits your plugin.
 
 Custom framework adapters (LangGraph state slots, LangChain `ChatPromptTemplate` parts, SGR planner inputs) are tracked as follow-on issues — see `epic:sectioned-context`.
 
