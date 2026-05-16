@@ -13,6 +13,10 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBound
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.ResourceBounds.set -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork.get -> string?
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork.set -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.OtlpEndpointUrl.get -> string?
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.OtlpEndpointUrl.set -> void
+Vais.Agents.Runtime.Plugins.Container.Otlp.PluginOtlpEndpointRouteBuilderExtensions
+static Vais.Agents.Runtime.Plugins.Container.Otlp.PluginOtlpEndpointRouteBuilderExtensions.MapPluginOtlpEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.ContainerPluginResourceBounds() -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxMemoryBytes.get -> long

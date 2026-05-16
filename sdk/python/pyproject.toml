@@ -11,6 +11,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest >=8", "pytest-asyncio >=0.23", "ruff"]
+otlp = [
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
+otlp-grpc = [
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

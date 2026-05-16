@@ -28,6 +28,16 @@ public sealed class ContainerPluginLoaderOptions
     /// Set via <c>VAIS_DOCKER_PLUGIN_NETWORK</c> (e.g. <c>vais-internal</c>).
     /// </summary>
     public string? PluginNetwork { get; set; }
+
+    /// <summary>
+    /// OTLP HTTP endpoint injected into Docker plugin containers as
+    /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c>. When set, the runtime also injects
+    /// <c>OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf</c> and a per-plugin HMAC token
+    /// in the <c>OTEL_EXPORTER_OTLP_HEADERS</c> variable so spans arrive authenticated.
+    /// Defaults to the runtime's own internal gateway URL (<c>/v1/otlp</c>).
+    /// Set to null to disable OTLP injection.
+    /// </summary>
+    public string? OtlpEndpointUrl { get; set; }
 }
 
 /// <summary>

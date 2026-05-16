@@ -50,7 +50,8 @@ public static class ContainerPluginServiceCollectionExtensions
             sp.GetRequiredService<ContainerPluginLoaderOptions>(),
             sp.GetRequiredService<IPluginHandlerRegistry>(),
             sp.GetRequiredService<ILoggerFactory>(),
-            sp.GetService<IContainerPluginRegistry>()));
+            sp.GetService<IContainerPluginRegistry>(),
+            sp.GetService<ICallTokenService>()));
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ContainerPluginHostService>());
         services.AddSingleton<IContainerPluginHost>(sp => sp.GetRequiredService<ContainerPluginHostService>());
         services.AddSingleton<IContainerPluginReloader>(sp =>

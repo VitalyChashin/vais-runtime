@@ -16,4 +16,10 @@ public interface ICallTokenService
 
     /// <summary>Returns true when the token is valid, unexpired, and matches runId + agentId.</summary>
     bool Validate(string token, string runId, string agentId);
+
+    /// <summary>
+    /// Validates the token's HMAC and expiry, then extracts the embedded runId and agentId.
+    /// Returns false if the token is malformed, tampered with, or expired.
+    /// </summary>
+    bool TryExtract(string token, out string runId, out string agentId);
 }

@@ -133,6 +133,10 @@
     <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
   </ItemGroup>
 
+  <ItemGroup Label="Protobuf runtime (Vais.Agents.Runtime.Plugins.Container). Google.Protobuf used to parse incoming OTLP trace export requests from container plugins.">
+    <PackageVersion Include="Google.Protobuf" Version="3.30.2" />
+  </ItemGroup>
+
   <ItemGroup Label="ASP.NET Core TestHost — integration tests for the HTTP control plane.">
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.16" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />

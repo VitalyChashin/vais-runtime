@@ -62,6 +62,22 @@ networkPolicy:
     namespace: vais-system
     name: vais-agents-runtime
     port: 8080
+    ## Internal port of the runtime service (OTLP + container-gateway callbacks).
+    ## Must match the port the runtime binds for its internal API (default 5001).
+    internalPort: 5001
   ## Extra egress rules appended verbatim (e.g. to allow outbound to a database).
   ## Each entry follows the Kubernetes NetworkPolicyEgressRule schema.
   extraEgress: []
+
+## OTLP telemetry (P12 optional-outbound — opt-in).
+## When enabled, the plugin container is configured to export OpenTelemetry spans to
+## the runtime's OTLP receiver so they appear alongside the graph-node span in Langfuse.
+otlp:
+  enabled: false
+  ## OTLP HTTP endpoint on the runtime's internal port (the /v1/otlp prefix is the receiver route).
+  endpoint: "http://vais-agents-runtime.vais-system.svc.cluster.local:5001/v1/otlp"
+  ## Optional: reference a Kubernetes Secret that holds the Authorization header value
+  ## (e.g. "vais-plugin-token <hmac-token>").  If absent, inject the header via env directly.
+  headersSecretRef: {}
+  #   name: my-plugin-otlp-token
+  #   key: authorization

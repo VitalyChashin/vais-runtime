@@ -104,4 +104,60 @@ public sealed class HmacCallTokenServiceTests
         var t2 = svc.Generate("run-2", "agent-1", 60);
         t1.Should().NotBe(t2);
     }
+
+    // TryExtract tests
+
+    [Fact]
+    public void TryExtract_ValidToken_ExtractsRunIdAndAgentId()
+    {
+        var svc = MakeService();
+        var token = svc.Generate("run-42", "agent-7", 60);
+        svc.TryExtract(token, out var runId, out var agentId).Should().BeTrue();
+        runId.Should().Be("run-42");
+        agentId.Should().Be("agent-7");
+    }
+
+    [Fact]
+    public void TryExtract_ExpiredToken_ReturnsFalse()
+    {
+        var svc = MakeService();
+        var token = svc.Generate("run-1", "agent-1", -31);
+        svc.TryExtract(token, out _, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryExtract_TamperedPayload_ReturnsFalse()
+    {
+        var svc = MakeService();
+        var token = svc.Generate("run-1", "agent-1", 60);
+        var tampered = (char)(token[0] ^ 1) + token[1..];
+        svc.TryExtract(tampered, out _, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryExtract_MalformedToken_ReturnsFalse()
+    {
+        var svc = MakeService();
+        svc.TryExtract("not-a-token", out _, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryExtract_EmptyToken_ReturnsFalse()
+    {
+        var svc = MakeService();
+        svc.TryExtract("", out _, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryExtract_ValidatesViaSameHmacAsValidate()
+    {
+        var svc = MakeService();
+        var token = svc.Generate("run-x", "agent-y", 60);
+        var viaValidate = svc.Validate(token, "run-x", "agent-y");
+        var viaExtract = svc.TryExtract(token, out var r, out var a);
+        viaValidate.Should().BeTrue();
+        viaExtract.Should().BeTrue();
+        r.Should().Be("run-x");
+        a.Should().Be("agent-y");
+    }
 }

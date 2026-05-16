@@ -6,6 +6,7 @@ using Docker.DotNet;
 using k8s;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Core;
 using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
@@ -24,6 +25,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ContainerPluginHostService> _logger;
     private readonly IContainerPluginRegistry? _containerPluginRegistry;
+    private readonly ICallTokenService? _callTokenService;
     private readonly List<IContainerSupervisor> _supervisors = new();
 
     public IReadOnlyList<LoadedContainerPlugin> LoadedPlugins
@@ -64,13 +66,15 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         ContainerPluginLoaderOptions options,
         IPluginHandlerRegistry registry,
         ILoggerFactory loggerFactory,
-        IContainerPluginRegistry? containerPluginRegistry = null)
+        IContainerPluginRegistry? containerPluginRegistry = null,
+        ICallTokenService? callTokenService = null)
     {
         _options = options;
         _registry = registry;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<ContainerPluginHostService>();
         _containerPluginRegistry = containerPluginRegistry;
+        _callTokenService = callTokenService;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -169,7 +173,8 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         {
             var docker = new DockerClientConfiguration().CreateClient();
             supervisor = new DockerContainerSupervisor(
-                descriptor, docker, _loggerFactory.CreateLogger<DockerContainerSupervisor>());
+                descriptor, docker, _loggerFactory.CreateLogger<DockerContainerSupervisor>(),
+                _callTokenService, _options.OtlpEndpointUrl);
         }
 
         try
