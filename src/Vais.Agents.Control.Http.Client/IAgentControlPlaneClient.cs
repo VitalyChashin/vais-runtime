@@ -378,6 +378,42 @@ public interface IAgentControlPlaneClient
     Task<ContainerPluginValidationResult> ValidateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
         => Task.FromResult(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
 
+    // ── Eval suite operations (E1) ────────────────────────────────────────────
+
+    /// <summary>POST /v1/eval-suites — register or overwrite an eval suite manifest (upsert). Default: throws NotSupportedException.</summary>
+    Task<EvalSuiteApplyResponse> UpsertEvalSuiteAsync(EvalSuiteManifest manifest, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval suite management. Use AgentControlPlaneClient.");
+
+    /// <summary>GET /v1/eval-suites — list registered eval suite manifests. Default: empty list.</summary>
+    Task<EvalSuiteListResponse> ListEvalSuitesAsync(string? labelPrefix = null, int? limit = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(new EvalSuiteListResponse(Array.Empty<EvalSuiteManifest>()));
+
+    /// <summary>GET /v1/eval-suites/{id} — fetch eval suite manifest. Default: null (not found).</summary>
+    Task<EvalSuiteQueryResponse?> QueryEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => Task.FromResult((EvalSuiteQueryResponse?)null);
+
+    /// <summary>DELETE /v1/eval-suites/{id} — remove an eval suite manifest. Default: throws NotSupportedException.</summary>
+    Task EvictEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval suite management. Use AgentControlPlaneClient.");
+
+    // ── Eval run operations (EH-13) ───────────────────────────────────────────
+
+    /// <summary>POST /v1/eval-suites/{name}/runs — start an eval run and get its ID. Default: throws NotSupportedException.</summary>
+    Task<EvalRunStartResponse> StartEvalRunAsync(string suiteName, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval run management. Use AgentControlPlaneClient.");
+
+    /// <summary>GET /v1/eval-runs — list eval runs, optionally filtered by suite. Default: empty list.</summary>
+    Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(new EvalRunListResponse(Array.Empty<Vais.Agents.Eval.EvalRunSummary>()));
+
+    /// <summary>GET /v1/eval-runs/{evalRunId} — get detail for a single eval run. Default: null (not found).</summary>
+    Task<Vais.Agents.Eval.EvalRunDetail?> GetEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+        => Task.FromResult((Vais.Agents.Eval.EvalRunDetail?)null);
+
+    /// <summary>POST /v1/eval-runs/{evalRunId}/cancel — request cancellation of a running eval run. Default: no-op.</summary>
+    Task CancelEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

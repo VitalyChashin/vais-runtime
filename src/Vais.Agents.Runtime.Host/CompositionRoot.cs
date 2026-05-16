@@ -15,6 +15,7 @@ using Vais.Agents.Control.Mcp;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Core.PowerFx;
+using Vais.Agents.Eval;
 using Vais.Agents.Hosting.Orleans;
 using Vais.Agents.Protocols.A2A;
 using Vais.Agents.Hosting.InMemory;
@@ -194,6 +195,10 @@ internal static class CompositionRoot
         services.AddOrleansMcpGatewayConfigRegistry();
         services.AddOrleansMcpServerRegistry();
         services.AddOrleansContainerPluginRegistry();
+        services.AddOrleansEvalSuiteRegistry();
+        services.AddOrleansEvalRunLifecycleManager();
+        services.AddVaisAgentsEval();
+        services.TryAddSingleton<IEvalAssertionKindRegistry>(new PassthroughEvalAssertionKindRegistry());
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
@@ -536,6 +541,7 @@ internal static class CompositionRoot
                 sp.GetRequiredService<ILlmGatewayConfigLifecycleManager>(),
                 sp.GetRequiredService<IMcpGatewayConfigLifecycleManager>(),
                 sp.GetRequiredService<IMcpServerLifecycleManager>(),
+                sp.GetRequiredService<IEvalSuiteRegistry>(),
                 sp.GetService<ILogger<BootManifestApplyService>>() ?? NullLogger<BootManifestApplyService>.Instance));
         }
 
@@ -681,5 +687,10 @@ internal static class CompositionRoot
             providers.Add(pool.GetAsync(modelSpec).AsTask().GetAwaiter().GetResult());
         }
         return [.. providers];
+    }
+
+    private sealed class PassthroughEvalAssertionKindRegistry : IEvalAssertionKindRegistry
+    {
+        public bool IsRegistered(string kind) => true;
     }
 }

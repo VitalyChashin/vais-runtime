@@ -30,6 +30,7 @@ public sealed class JsonAgentGraphManifestLoader
     internal const string McpGatewayConfigKind = "McpGatewayConfig";
     internal const string McpServerKind = "McpServer";
     internal const string ContainerPluginKind = "ContainerPlugin";
+    internal const string EvalSuiteKind = "EvalSuite";
 
     /// <summary>Parse graph manifests from an in-memory string. Agent-kind documents in the stream are silently skipped.</summary>
     public ValueTask<IReadOnlyList<AgentGraphManifest>> LoadFromStringAsync(string content, CancellationToken cancellationToken = default)
@@ -194,9 +195,14 @@ public sealed class JsonAgentGraphManifestLoader
             var plugin = ParseContainerPlugin(root, errors, prefix);
             return plugin is null ? null : new ManifestResource.ContainerPluginCase(plugin);
         }
+        if (string.Equals(kind, EvalSuiteKind, StringComparison.Ordinal))
+        {
+            var suite = EvalSuiteManifestParser.Parse(root, errors, prefix);
+            return suite is null ? null : new ManifestResource.EvalSuiteCase(suite);
+        }
 
         errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' " +
-            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', or '{ContainerPluginKind}')");
+            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', '{ContainerPluginKind}', or '{EvalSuiteKind}')");
         return null;
     }
 
@@ -648,6 +654,7 @@ public sealed class JsonAgentGraphManifestLoader
                 ManifestResource.McpGatewayConfigCase m => ("McpGatewayConfig", m.Config.Id, m.Config.Version),
                 ManifestResource.McpServerCase s => ("McpServer", s.Server.Id, s.Server.Version),
                 ManifestResource.ContainerPluginCase p => ("ContainerPlugin", p.Manifest.Id, p.Manifest.Version),
+                ManifestResource.EvalSuiteCase e => ("EvalSuite", e.Suite.Id, e.Suite.Version),
                 _ => throw new NotSupportedException($"Unknown ManifestResource type: {r.GetType().Name}"),
             };
             if (!seen.Add(key))

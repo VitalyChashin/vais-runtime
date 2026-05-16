@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace Vais.Agents.Core.Guardrails;
 
@@ -31,8 +30,6 @@ namespace Vais.Agents.Core.Guardrails;
 /// </remarks>
 public sealed class LlmAsJudgeOutputGuardrail : IOutputGuardrail
 {
-    private static readonly Regex ScoreRegex = new(@"\b(0(?:\.\d+)?|1(?:\.0+)?)\b", RegexOptions.Compiled);
-
     private readonly ICompletionProvider _judge;
     private readonly string _judgePrompt;
     private readonly double _minScore;
@@ -63,18 +60,12 @@ public sealed class LlmAsJudgeOutputGuardrail : IOutputGuardrail
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        var renderedPrompt = _judgePrompt.Replace("{{response}}", response.Text, StringComparison.Ordinal);
+        var score = await LlmJudgeScorer.TryScoreAsync(_judge, _judgePrompt, response.Text, cancellationToken).ConfigureAwait(false);
 
-        var judgeRequest = new CompletionRequest(
-            History: new[] { new ChatTurn(AgentChatRole.User, "Score this response per the system prompt's rubric. Reply with just the decimal score.") },
-            SystemPrompt: renderedPrompt);
-
-        var judgeResponse = await _judge.CompleteAsync(judgeRequest, cancellationToken).ConfigureAwait(false);
-
-        if (!TryParseScore(judgeResponse.Text, out var score))
+        if (score is null)
         {
             return GuardrailOutcome.Deny(
-                $"LLM-as-judge could not parse a score in [0, 1] from the judge's response: '{Truncate(judgeResponse.Text, 120)}'.");
+                $"LLM-as-judge could not parse a score in [0, 1] from the judge's response.");
         }
 
         if (score < _minScore)
@@ -87,18 +78,4 @@ public sealed class LlmAsJudgeOutputGuardrail : IOutputGuardrail
 
         return GuardrailOutcome.Pass;
     }
-
-    private static bool TryParseScore(string judgeText, out double score)
-    {
-        var match = ScoreRegex.Match(judgeText);
-        if (!match.Success)
-        {
-            score = double.NaN;
-            return false;
-        }
-        return double.TryParse(match.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out score);
-    }
-
-    private static string Truncate(string value, int max) =>
-        value.Length <= max ? value : value[..max] + "…";
 }

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Eval</RootNamespace>
+    <AssemblyName>Vais.Agents.Eval</AssemblyName>
+    <Description>Eval harness for Vais.Agents: IEvalAssertion pipeline, built-in assertion catalog (ToolCallSequence, JudgeScore, ResponseRegex, NoTurnFailed), and DI wiring. Invoke via IEvalRunGrain in Vais.Agents.Hosting.Orleans.</Description>
+    <PackageTags>agents;ai;llm;eval;testing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Eval.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Core.Tests" />
+  </ItemGroup>
+
+</Project>

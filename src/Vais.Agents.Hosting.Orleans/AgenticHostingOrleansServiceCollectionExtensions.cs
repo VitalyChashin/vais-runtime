@@ -236,4 +236,31 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IContainerPluginRegistry>(sp => sp.GetRequiredService<OrleansContainerPluginRegistry>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansEvalSuiteRegistry"/> as the durable eval suite registry.
+    /// Suite registrations survive silo restart via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansEvalSuiteRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansEvalSuiteRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IEvalSuiteRegistry>(sp => sp.GetRequiredService<OrleansEvalSuiteRegistry>());
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="OrleansEvalRunLifecycleManager"/> as the <see cref="Vais.Agents.Eval.IEvalRunLifecycleManager"/>.
+    /// Each eval run is backed by an <see cref="IEvalRunGrain"/> (one grain per run id).
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansEvalRunLifecycleManager(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<OrleansEvalRunLifecycleManager>();
+        services.TryAddSingleton<Vais.Agents.Eval.IEvalRunLifecycleManager>(
+            sp => sp.GetRequiredService<OrleansEvalRunLifecycleManager>());
+        return services;
+    }
 }

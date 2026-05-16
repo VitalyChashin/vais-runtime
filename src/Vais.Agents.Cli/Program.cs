@@ -54,6 +54,26 @@ app.Configure(config =>
     config.AddCommand<GetMcpServersCommand>("get-mcp-servers")
         .WithDescription("List MCP server manifests, or fetch a single manifest by id.");
 
+    config.AddCommand<GetEvalSuitesCommand>("get-eval-suites")
+        .WithDescription("List eval suite manifests, or fetch a single manifest by id.");
+
+    config.AddBranch("eval", branch =>
+    {
+        branch.SetDescription("Run, inspect, and cancel eval suite runs.");
+
+        branch.AddCommand<EvalRunCommand>("run")
+            .WithDescription("Start a new eval run for a named suite. Prints the evalRunId.");
+
+        branch.AddCommand<EvalResultsCommand>("results")
+            .WithDescription("Fetch and display per-case assertion results for an eval run.");
+
+        branch.AddCommand<EvalListCommand>("list")
+            .WithDescription("List recent eval runs, optionally filtered by suite name.");
+
+        branch.AddCommand<EvalCancelCommand>("cancel")
+            .WithDescription("Request cancellation of an in-progress eval run.");
+    });
+
     config.AddCommand<LlmGatewayValidateCommand>("llm-gateway-validate")
         .WithDescription("Validate an LLM gateway config manifest without registering it.");
 

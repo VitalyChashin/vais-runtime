@@ -165,3 +165,5 @@ Vais.Agents.Core.DefaultAgentInputMiddlewareFactory.Create(Vais.Agents.GatewayMi
 Vais.Agents.Core.DefaultAgentInputMiddlewareFactory.DefaultAgentInputMiddlewareFactory(System.Collections.Generic.IEnumerable<Vais.Agents.NamedAgentInputMiddlewareRegistration!>! registrations, System.IServiceProvider! services) -> void
 Vais.Agents.Core.StatefulAgentOptions.InputMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentInputMiddleware!>!
 Vais.Agents.Core.StatefulAgentOptions.InputMiddleware.init -> void
+Vais.Agents.Core.Guardrails.LlmJudgeScorer
+static Vais.Agents.Core.Guardrails.LlmJudgeScorer.TryScoreAsync(Vais.Agents.ICompletionProvider! judge, string! judgePrompt, string! response, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<double?>!

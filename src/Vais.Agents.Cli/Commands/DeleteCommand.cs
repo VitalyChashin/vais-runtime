@@ -12,7 +12,7 @@ namespace Vais.Agents.Cli.Commands;
 /// Destructive delete. Accepts either a plain agent id (backward-compat) or a
 /// <c>&lt;resource-type&gt;/&lt;id&gt;</c> path for gateway resources:
 /// <c>agents/&lt;id&gt;</c>, <c>llm-gateways/&lt;id&gt;</c>,
-/// <c>mcp-gateways/&lt;id&gt;</c>, <c>mcp-servers/&lt;id&gt;</c>.
+/// <c>mcp-gateways/&lt;id&gt;</c>, <c>mcp-servers/&lt;id&gt;</c>, <c>eval-suites/&lt;id&gt;</c>.
 /// Prompts confirm when stdin is a TTY and <c>--force</c> is not set.
 /// </summary>
 internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
@@ -74,6 +74,9 @@ internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
                     break;
                 case "mcp-servers":
                     await client.EvictMcpServerAsync(resourceId, settings.Version, cancellationToken);
+                    break;
+                case "eval-suites":
+                    await client.EvictEvalSuiteAsync(resourceId, settings.Version, cancellationToken);
                     break;
                 default:
                     await client.EvictAsync(resourceId, settings.Version, idempotencyKey, cancellationToken);

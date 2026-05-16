@@ -276,6 +276,68 @@ internal static class EnvelopeSerializer
         return WrapEnvelope("ContainerPlugin", metadata, spec).ToJsonString(JsonOptions);
     }
 
+    public static string Serialize(EvalSuiteManifest manifest)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
+        var s = manifest.Spec;
+        var spec = new JsonObject();
+        if (s.AgentId is not null) spec["agentId"] = s.AgentId;
+        if (s.GraphId is not null) spec["graphId"] = s.GraphId;
+        if (s.ReplayMode != EvalReplayMode.Live)
+            spec["replayMode"] = s.ReplayMode.ToString().ToLowerInvariant();
+        if (s.Target is { } t)
+        {
+            var targetObj = new JsonObject();
+            if (t.AgentRef is not null) targetObj["agentRef"] = t.AgentRef;
+            if (t.GraphRef is not null) targetObj["graphRef"] = t.GraphRef;
+            if (t.AgentVersion is not null) targetObj["agentVersion"] = t.AgentVersion;
+            spec["target"] = targetObj;
+        }
+        if (s.Defaults is { } d)
+        {
+            var dObj = new JsonObject();
+            if (d.JudgeModel is not null) dObj["judgeModel"] = d.JudgeModel;
+            if (d.Timeout is { } ts) dObj["timeout"] = ts.ToString();
+            spec["defaults"] = dObj;
+        }
+        if (s.Baseline is { } b)
+            spec["baseline"] = new JsonObject { ["runId"] = b.RunId };
+        var casesArr = new JsonArray();
+        foreach (var c in s.Cases)
+        {
+            var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
+            if (c.Name is not null) caseObj["name"] = c.Name;
+            if (c.Description is not null) caseObj["description"] = c.Description;
+            if (c.ExpectedOutput is not null) caseObj["expectedOutput"] = c.ExpectedOutput;
+            if (c.Replay is { } cr) caseObj["replay"] = cr.ToString().ToLowerInvariant();
+            if (c.InitialHistory is { Count: > 0 })
+            {
+                var histArr = new JsonArray();
+                foreach (var turn in c.InitialHistory)
+                    histArr.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Content });
+                caseObj["initialHistory"] = histArr;
+            }
+            if (c.Variables is { Count: > 0 })
+                caseObj["variables"] = JsonSerializer.SerializeToNode(c.Variables, JsonOptions);
+            if (c.Assertions.Count > 0)
+            {
+                var assertArr = new JsonArray();
+                foreach (var a in c.Assertions)
+                {
+                    var assertObj = new JsonObject { ["kind"] = a.Kind };
+                    if (a.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
+                        assertObj["params"] = JsonNode.Parse(p.GetRawText());
+                    assertArr.Add(assertObj);
+                }
+                caseObj["assertions"] = assertArr;
+            }
+            casesArr.Add(caseObj);
+        }
+        spec["cases"] = casesArr;
+        return WrapEnvelope("EvalSuite", metadata, spec).ToJsonString(JsonOptions);
+    }
+
     private static JsonObject BuildGatewayMetadata(string id, string version, string? description,
         IReadOnlyDictionary<string, string>? labels, IReadOnlyDictionary<string, string>? annotations)
     {

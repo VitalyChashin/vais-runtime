@@ -110,4 +110,15 @@ public enum PolicyOperation
 
     /// <summary>Remove a container plugin manifest and stop the container.</summary>
     ContainerPluginEvict = 29,
+
+    // ── Eval suite operations (E1) ────────────────────────────────────────
+
+    /// <summary>Register or overwrite an eval suite manifest (upsert).</summary>
+    EvalSuiteUpsert = 30,
+
+    /// <summary>Read-only query of eval suite manifests.</summary>
+    EvalSuiteQuery = 31,
+
+    /// <summary>Remove an eval suite manifest.</summary>
+    EvalSuiteEvict = 32,
 }
