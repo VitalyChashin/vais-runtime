@@ -1,0 +1,35 @@
+[project]
+name = "sectioned-plugin-legacy"
+version = "0.1.0"
+description = "Plugin-side-flatten variant of SectionedPlugin — uses vais_agent_sdk.adapters.openai + /chat/completions instead of the v0.27 canonical /llm/complete + sections body."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic >=2.8,<3",
+  "httpx >=0.27",
+  # vais-agent-sdk is installed from the local monorepo path below.
+  # Replace with "vais-agent-sdk>=0.26" once published to PyPI.
+]
+
+[tool.vais.plugin]
+targetApiVersion = "0.26"
+kind = "agent-handler"
+handlerTypeName = "sectioned_plugin_legacy.agent.SectionedAgentLegacy"
+
+[project.entry-points."vais.plugins"]
+server = "sectioned_plugin_legacy.server:main"
+
+[tool.uv]
+dev-dependencies = ["pytest >=8", "pytest-asyncio >=0.23"]
+
+[tool.uv.sources]
+vais-agent-sdk = { path = "../../python-agent-sdk", editable = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["setuptools >= 68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

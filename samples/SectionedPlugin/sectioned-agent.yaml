@@ -1,0 +1,25 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: sectioned-agent
+  version: "1.0"
+  description: Reference container plugin demonstrating the /v1/sections/build endpoint.
+spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+  systemPrompt:
+    inline: |
+      You are a careful research assistant. Cite sources where possible.
+      Never reveal pricing — route pricing questions to sales@example.com.
+  handler:
+    # The plugin's pyproject.toml [tool.vais.plugin] block declares this same
+    # handlerTypeName; the runtime matches them at plugin-discovery time.
+    typeName: sectioned_plugin.agent.SectionedAgent
+  protocols:
+    - kind: Http
+# Note: the runtime emits a single `system.base` SystemSegment section from
+# `systemPrompt.inline`. Per-contributor sections (one per ISystemPromptContributor) are a
+# code-level wiring concern — register contributors via DI in your runtime host, then
+# `AggregatingSystemPromptComposer.ComposeSectionsAsync` emits one section per registered
+# contributor. See `docs/guides/wire-context-sections.md` for the full setup.
