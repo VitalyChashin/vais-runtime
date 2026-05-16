@@ -263,3 +263,27 @@ public sealed record RequestSectionsBuilt(
     IReadOnlyList<SectionMeasurement> Sections,
     SectionBudgetSummary Budget)
     : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted by the eval runner grain as cases complete so SSE subscribers receive
+/// real-time progress. One event per case completion plus a terminal
+/// <c>run-completed</c> event when all cases finish.
+/// </summary>
+/// <param name="At">UTC timestamp when the event was emitted.</param>
+/// <param name="Context">Ambient context at emission time.</param>
+/// <param name="EvalRunId">The eval run that produced this progress event.</param>
+/// <param name="ProgressKind">
+/// Discriminator: <c>case-started</c>, <c>case-completed</c>, <c>run-completed</c>.
+/// </param>
+/// <param name="CaseId">Case identifier — non-null for <c>case-started</c> and <c>case-completed</c>.</param>
+/// <param name="CaseStatus">
+/// Case result status — non-null for <c>case-completed</c>.
+/// </param>
+public sealed record EvalRunProgress(
+    DateTimeOffset At,
+    AgentContext Context,
+    string EvalRunId,
+    string ProgressKind,
+    string? CaseId = null,
+    int? CaseStatus = null)
+    : AgentEvent(At, Context);

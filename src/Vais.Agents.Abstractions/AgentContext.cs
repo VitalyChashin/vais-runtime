@@ -70,6 +70,14 @@ public sealed record AgentContext(
     /// </remarks>
     public string? RunId { get; init; }
 
+    /// <summary>
+    /// Optional baseline run id for eval cached-replay mode. When set, the tool-call
+    /// dispatcher first looks up outcomes in the baseline run's journal by
+    /// <c>(ToolName, Arguments)</c> match before invoking the tool live. Null = live
+    /// invocation only.
+    /// </summary>
+    public string? BaselineRunId { get; init; }
+
     // ── Reasoning Control Block (RCB) fields ─────────────────────────────────
     // All fields are nullable; null = no enforcement. Gateway middleware and the
     // tool dispatcher treat null as "no constraint", preserving the pre-RCB

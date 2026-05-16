@@ -72,6 +72,9 @@ app.Configure(config =>
 
         branch.AddCommand<EvalCancelCommand>("cancel")
             .WithDescription("Request cancellation of an in-progress eval run.");
+
+        branch.AddCommand<EvalDiffCommand>("diff")
+            .WithDescription("Compare two eval runs case-by-case and show assertion deltas.");
     });
 
     config.AddCommand<LlmGatewayValidateCommand>("llm-gateway-validate")

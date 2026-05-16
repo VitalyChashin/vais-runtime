@@ -1053,6 +1053,42 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<EvalDiffResponse?> GetEvalDiffAsync(string baseRunId, string candidateRunId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseRunId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(candidateRunId);
+        var path = $"/v1/eval-runs/diff?a={Uri.EscapeDataString(baseRunId)}&b={Uri.EscapeDataString(candidateRunId)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalDiffResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<string> StreamEvalRunAsync(
+        string evalRunId,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(evalRunId);
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            $"/v1/eval-runs/{Uri.EscapeDataString(evalRunId)}/stream");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var reader = new System.IO.StreamReader(stream);
+        string? line;
+        while ((line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)) is not null
+               && !cancellationToken.IsCancellationRequested)
+        {
+            if (line.StartsWith("data:", StringComparison.Ordinal))
+                yield return line[5..].TrimStart();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();

@@ -34,6 +34,8 @@ public enum AgentEventKind
     CompletionDelta = 9,
     /// <summary><see cref="RequestSectionsBuilt"/>.</summary>
     RequestSectionsBuilt = 10,
+    /// <summary><see cref="EvalRunProgress"/>.</summary>
+    EvalRunProgress = 11,
 }
 
 /// <summary>
@@ -163,6 +165,22 @@ public struct AgentEventSurrogate
     /// <summary>JSON-serialised <see cref="SectionBudgetSummary"/> — populated for <see cref="AgentEventKind.RequestSectionsBuilt"/>.</summary>
     [Id(26)]
     public string? BudgetJson;
+
+    /// <summary>Eval run id — populated for <see cref="AgentEventKind.EvalRunProgress"/>.</summary>
+    [Id(27)]
+    public string? EvalRunId;
+
+    /// <summary>Progress kind discriminator — populated for <see cref="AgentEventKind.EvalRunProgress"/>.</summary>
+    [Id(28)]
+    public string? ProgressKind;
+
+    /// <summary>Case id — populated for <see cref="AgentEventKind.EvalRunProgress"/> case events.</summary>
+    [Id(29)]
+    public string? EvalCaseId;
+
+    /// <summary>Case status integer — populated for <see cref="AgentEventKind.EvalRunProgress"/> case-completed events.</summary>
+    [Id(30)]
+    public int? EvalCaseStatus;
 }
 
 /// <summary>
@@ -271,6 +289,13 @@ internal static class AgentEventSurrogateHelpers
                 surrogate.TurnIndex ?? 0,
                 ParseSections(surrogate.SectionsJson),
                 ParseBudget(surrogate.BudgetJson)),
+            AgentEventKind.EvalRunProgress => new EvalRunProgress(
+                surrogate.At,
+                context,
+                surrogate.EvalRunId ?? string.Empty,
+                surrogate.ProgressKind ?? string.Empty,
+                surrogate.EvalCaseId,
+                surrogate.EvalCaseStatus),
             _ => throw new NotSupportedException($"Unknown AgentEventKind: {surrogate.Kind}"),
         };
     }
@@ -379,6 +404,16 @@ internal static class AgentEventSurrogateHelpers
                 TurnIndex = rsb.TurnIndex,
                 SectionsJson = SerializeSections(rsb.Sections),
                 BudgetJson = SerializeBudget(rsb.Budget),
+            },
+            EvalRunProgress ep => new AgentEventSurrogate
+            {
+                Kind = AgentEventKind.EvalRunProgress,
+                At = ep.At,
+                Context = contextSurrogate,
+                EvalRunId = ep.EvalRunId,
+                ProgressKind = ep.ProgressKind,
+                EvalCaseId = ep.CaseId,
+                EvalCaseStatus = ep.CaseStatus,
             },
             _ => throw new NotSupportedException($"Unknown AgentEvent subtype: {value.GetType().Name}"),
         };
@@ -547,5 +582,18 @@ public sealed class RequestSectionsBuiltSurrogateConverter : IConverter<RequestS
 
     /// <inheritdoc />
     public AgentEventSurrogate ConvertToSurrogate(in RequestSectionsBuilt value)
+        => AgentEventSurrogateHelpers.ToSurrogate(value);
+}
+
+/// <summary>Converter for concrete <see cref="EvalRunProgress"/>.</summary>
+[RegisterConverter]
+public sealed class EvalRunProgressSurrogateConverter : IConverter<EvalRunProgress, AgentEventSurrogate>
+{
+    /// <inheritdoc />
+    public EvalRunProgress ConvertFromSurrogate(in AgentEventSurrogate surrogate)
+        => (EvalRunProgress)AgentEventSurrogateHelpers.FromSurrogate(surrogate);
+
+    /// <inheritdoc />
+    public AgentEventSurrogate ConvertToSurrogate(in EvalRunProgress value)
         => AgentEventSurrogateHelpers.ToSurrogate(value);
 }

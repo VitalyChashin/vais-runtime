@@ -3,11 +3,20 @@ Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetOrCreateForSession(string! ag
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
 Vais.Agents.Hosting.Orleans.AgentEventKind.CompletionDelta = 9 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventKind.RequestSectionsBuilt = 10 -> Vais.Agents.Hosting.Orleans.AgentEventKind
+Vais.Agents.Hosting.Orleans.AgentEventKind.EvalRunProgress = 11 -> Vais.Agents.Hosting.Orleans.AgentEventKind
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TextDelta -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ToolCallsJson -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.TurnIndex -> int?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.SectionsJson -> string?
 Vais.Agents.Hosting.Orleans.AgentEventSurrogate.BudgetJson -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.EvalRunId -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.ProgressKind -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.EvalCaseId -> string?
+Vais.Agents.Hosting.Orleans.AgentEventSurrogate.EvalCaseStatus -> int?
+Vais.Agents.Hosting.Orleans.EvalRunProgressSurrogateConverter
+Vais.Agents.Hosting.Orleans.EvalRunProgressSurrogateConverter.EvalRunProgressSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.EvalRunProgressSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.EvalRunProgress!
+Vais.Agents.Hosting.Orleans.EvalRunProgressSurrogateConverter.ConvertToSurrogate(in Vais.Agents.EvalRunProgress! value) -> Vais.Agents.Hosting.Orleans.AgentEventSurrogate
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.CompletionDeltaSurrogateConverter() -> void
 Vais.Agents.Hosting.Orleans.CompletionDeltaSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentEventSurrogate surrogate) -> Vais.Agents.CompletionDelta!
@@ -28,6 +37,7 @@ Vais.Agents.Hosting.Orleans.AgentContextSurrogate.PrivilegeLevel -> int?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AutonomyLevel -> int?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.AllowedTools -> System.Collections.Immutable.ImmutableHashSet<string!>?
 Vais.Agents.Hosting.Orleans.AgentContextSurrogate.MaxChainDepth -> int?
+Vais.Agents.Hosting.Orleans.AgentContextSurrogate.BaselineRunId -> string?
 const Vais.Agents.Hosting.Orleans.OrleansLlmGatewayConfigRegistry.DirectoryKey = "vais.agents.llm-gateway-config-registry.directory" -> string!
 const Vais.Agents.Hosting.Orleans.OrleansMcpGatewayConfigRegistry.DirectoryKey = "vais.agents.mcp-gateway-config-registry.directory" -> string!
 const Vais.Agents.Hosting.Orleans.OrleansMcpServerRegistry.DirectoryKey = "vais.agents.mcp-server-registry.directory" -> string!

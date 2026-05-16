@@ -3154,6 +3154,16 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithSummary("Request cancellation of a running eval run.")
             .Produces(StatusCodes.Status202Accepted);
 
+        group.MapGet("/eval-runs/{evalRunId}/stream", EvalRunStreamAsync)
+            .WithName("EvalRuns.Stream")
+            .WithSummary("SSE stream of eval run progress events.");
+
+        group.MapGet("/eval-runs/diff", EvalRunDiffAsync)
+            .WithName("EvalRuns.Diff")
+            .WithSummary("Side-by-side diff of two eval runs joined by case id.")
+            .Produces<EvalDiffResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return builder;
     }
 
@@ -3207,5 +3217,103 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         if (manager is null) return Results.Accepted();
         await manager.CancelRunAsync(evalRunId, ct).ConfigureAwait(false);
         return Results.Accepted();
+    }
+
+    private static async Task EvalRunStreamAsync(HttpContext http, string evalRunId, CancellationToken ct)
+    {
+        var bus = http.RequestServices.GetService<IAgentEventBus>();
+        http.Response.StatusCode = StatusCodes.Status200OK;
+        http.Response.ContentType = "text/event-stream";
+        http.Response.Headers["Cache-Control"] = "no-cache";
+        http.Response.Headers["X-Accel-Buffering"] = "no";
+        await http.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        if (bus is null)
+        {
+            // No event bus — emit a single run-completed so the client doesn't hang.
+            await WriteEventAsync(http, "run-completed", $"{{\"evalRunId\":\"{evalRunId}\",\"progressKind\":\"run-completed\"}}", ct).ConfigureAwait(false);
+            return;
+        }
+
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<string>(
+            new System.Threading.Channels.UnboundedChannelOptions { SingleReader = true });
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        IDisposable sub = bus.Subscribe(async (evt, innerCt) =>
+        {
+            if (evt is not EvalRunProgress prog || prog.EvalRunId != evalRunId) return;
+            var (eventName, json) = AgentEventSerializer.Serialize(prog);
+            await channel.Writer.WriteAsync($"event: {eventName}\ndata: {json}\n\n", innerCt).ConfigureAwait(false);
+            if (prog.ProgressKind == "run-completed") channel.Writer.TryComplete();
+        });
+
+        try
+        {
+            await foreach (var frame in channel.Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
+            {
+                await http.Response.WriteAsync(frame, cts.Token).ConfigureAwait(false);
+                await http.Response.Body.FlushAsync(cts.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { /* client disconnected */ }
+        finally
+        {
+            sub.Dispose();
+        }
+    }
+
+    private static Task WriteEventAsync(HttpContext http, string eventName, string json, CancellationToken ct)
+        => http.Response.WriteAsync($"event: {eventName}\ndata: {json}\n\n", ct);
+
+    private static async Task<IResult> EvalRunDiffAsync(
+        HttpContext http, string? a, string? b, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
+            return Results.Problem("Query params 'a' and 'b' (eval run ids) are required.",
+                statusCode: StatusCodes.Status400BadRequest);
+
+        var manager = http.RequestServices.GetService<Vais.Agents.Eval.IEvalRunLifecycleManager>();
+        if (manager is null)
+            return Results.Problem("IEvalRunLifecycleManager not registered.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var baseDetail = await manager.GetRunDetailAsync(a, ct).ConfigureAwait(false);
+        var candidateDetail = await manager.GetRunDetailAsync(b, ct).ConfigureAwait(false);
+
+        if (baseDetail is null)
+            return Results.NotFound(new { error = $"eval run '{a}' not found" });
+        if (candidateDetail is null)
+            return Results.NotFound(new { error = $"eval run '{b}' not found" });
+
+        var baseById = baseDetail.Cases.ToDictionary(c => c.CaseId, c => c);
+        var candidateById = candidateDetail.Cases.ToDictionary(c => c.CaseId, c => c);
+
+        var allCaseIds = baseById.Keys.Union(candidateById.Keys).OrderBy(x => x);
+
+        var caseDiffs = new List<EvalCaseDiff>();
+        foreach (var caseId in allCaseIds)
+        {
+            baseById.TryGetValue(caseId, out var baseCase);
+            candidateById.TryGetValue(caseId, out var candidateCase);
+
+            var assertionCount = Math.Max(
+                baseCase?.AssertionResults.Count ?? 0,
+                candidateCase?.AssertionResults.Count ?? 0);
+
+            var assertDiffs = new List<EvalAssertionDiff>(assertionCount);
+            for (var i = 0; i < assertionCount; i++)
+            {
+                var bA = baseCase?.AssertionResults.ElementAtOrDefault(i);
+                var cA = candidateCase?.AssertionResults.ElementAtOrDefault(i);
+                var kind = bA?.Kind ?? cA?.Kind ?? $"assertion-{i}";
+                var scoreDelta = (cA?.Score ?? 0.0) - (bA?.Score ?? 0.0);
+                assertDiffs.Add(new EvalAssertionDiff(i, kind, bA?.Status, bA?.Score, cA?.Status, cA?.Score, scoreDelta));
+            }
+
+            caseDiffs.Add(new EvalCaseDiff(caseId, baseCase?.Status, candidateCase?.Status, assertDiffs));
+        }
+
+        return Results.Ok(new EvalDiffResponse(a, b, caseDiffs));
     }
 }

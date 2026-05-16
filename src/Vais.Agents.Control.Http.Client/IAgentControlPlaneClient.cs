@@ -414,6 +414,20 @@ public interface IAgentControlPlaneClient
     Task CancelEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    /// <summary>GET /v1/eval-runs/diff — compare two eval runs case-by-case. Default: null (not found).</summary>
+    Task<EvalDiffResponse?> GetEvalDiffAsync(string baseRunId, string candidateRunId, CancellationToken cancellationToken = default)
+        => Task.FromResult((EvalDiffResponse?)null);
+
+    /// <summary>GET /v1/eval-runs/{evalRunId}/stream — SSE stream of eval run progress events; yields data payloads. Default: empty.</summary>
+    IAsyncEnumerable<string> StreamEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+        => EmptyStringAsyncEnumerable();
+
+    // Private helper: default interface methods can't be async iterators directly.
+#pragma warning disable CS1998
+    private static async IAsyncEnumerable<string> EmptyStringAsyncEnumerable()
+    { yield break; }
+#pragma warning restore CS1998
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

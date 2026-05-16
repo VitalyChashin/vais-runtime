@@ -31,6 +31,7 @@ internal static class AgentEventSerializer
             HandoffRequested hr    => ("handoff.requested",   JsonSerializer.Serialize(hr, JsonOptions)),
             CompletionDelta cd     => ("delta",               JsonSerializer.Serialize(cd, JsonOptions)),
             RequestSectionsBuilt r => ("request.sections.built", JsonSerializer.Serialize(r, JsonOptions)),
+            EvalRunProgress ep     => ("eval.progress",          JsonSerializer.Serialize(ep, JsonOptions)),
             _ => throw new ArgumentException(
                 $"Unsupported AgentEvent subtype '{evt.GetType().Name}'. AgentEvent is a closed hierarchy; " +
                 "add the new subtype to AgentEventSerializer when extending the taxonomy.",

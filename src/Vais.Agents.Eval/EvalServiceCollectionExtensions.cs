@@ -22,6 +22,12 @@ public static class EvalServiceCollectionExtensions
         services.AddSingleton<IEvalAssertionFactory, ResponseRegexAssertionFactory>();
         services.AddSingleton<IEvalAssertionFactory, ToolCallSequenceAssertionFactory>();
         services.AddSingleton<IEvalAssertionFactory, JudgeScoreAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, ResponseJsonSchemaAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, MetricThresholdAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, NoGuardrailDenyAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, GraphFinalStateAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, ExpectInterruptAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, CustomAssertionFactory>();
 
         services.AddSingleton<IEvalAssertionFactoryRegistry, EvalAssertionFactoryRegistry>();
         services.AddSingleton<IEvalResultStore, LoggingEvalResultStore>();
