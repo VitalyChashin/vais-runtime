@@ -1,6 +1,6 @@
 # Internal Gateway Protocol
 
-**Version:** 0.25  
+**Version:** 0.26  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3).
 
 ---
@@ -107,17 +107,22 @@ Field rules:
 
 ## `POST /v1/sections/build`
 
-Section pipeline callback (v0.25). Reuses the named agent's runtime-side section composition (history reducer → composer → `IContextProvider` chain → resolver) and returns the typed `Section[]` the plugin would otherwise have to derive from `InvokeRequest.messages`. The packer is **not** run — the plugin decides which sections to include in its own LLM call. Same `callToken` validation and required-headers regime as `/v1/llm/complete`.
+Section pipeline callback (v0.26). Reuses the named agent's runtime-side section composition (history reducer → composer → `IContextProvider` chain → resolver) and returns the typed `Section[]` the plugin would otherwise have to derive from `InvokeRequest.messages`. The packer is **not** run — the plugin decides which sections to include in its own LLM call. Same `callToken` validation and required-headers regime as `/v1/llm/complete`.
 
 This endpoint is purely additive — default plugin behaviour (consume `InvokeRequest.messages`) is unchanged. Plugins opt in by calling `/v1/sections/build` and then either flattening with a shipped adapter (`vais_plugin.adapters.openai`) or mapping sections into a framework-native layout (LangGraph state slots, LangChain `ChatPromptTemplate` parts, etc.).
 
 ### Request
 
 ```json
-{}
+{
+  "messages": [ "<Message>", "..." ]
+}
 ```
 
-Empty object. Reserved for a future `suppress: [...]` allowlist; for v0.25 the plugin always receives the full resolved section list and picks what to use.
+Field rules:
+- `messages` — the plugin's current view of the conversation (typically just `InvokeRequest.messages` echoed back, or whatever the plugin wants the providers to treat as the candidate). Uses the `Message` type from `plugin-protocol.md`. Empty is allowed and produces empty turn-shaped sections.
+
+The plugin owns the conversation state on this path; the runtime owns provider composition. A future `suppress: [...]` allowlist may be added without a breaking bump (additive optional field).
 
 ### Response
 
@@ -170,7 +175,8 @@ Field rules:
 ### Gateway behaviour
 
 - `callToken`, `X-Agent-Id`, `X-Run-Id` validated and used to reconstruct `AgentContext` for the per-turn `IContextProvider` invocation — providers see the same context they would in a runtime-hosted agent.
-- The pipeline runs `history-reducer → composer.ComposeSectionsAsync → IContextProvider.InvokeAsync (per registered provider) → ISectionResolver.ResolveAsync`. Packer + telemetry emitter are **not** run; section telemetry sinks (`vais_request_section_*` metrics, `RequestSectionsBuilt` events) for plugin-served sections come from the plugin's subsequent `/v1/llm/complete` call, not this endpoint.
+- The `messages` payload is converted to a candidate `CompletionRequest` (the same shape the runtime's `StatefulAiAgent` would assemble). Providers receive this candidate via `ContextInvocationContext.Candidate` — so retrieval producers can read the last user turn for their query, history-shaped sections reflect the plugin's view, etc.
+- The pipeline runs `composer.ComposeSectionsAsync → IContextProvider.InvokeAsync (per registered provider) → ISectionResolver.ResolveAsync`. Packer + telemetry emitter are **not** run; section telemetry sinks (`vais_request_section_*` metrics, `RequestSectionsBuilt` events) for plugin-served sections come from the plugin's subsequent `/v1/llm/complete` call, not this endpoint. The history reducer is also skipped — the plugin already owns history shape.
 - Producer exceptions propagate as HTTP 500 with a JSON `{ "error": "...", "producerId": "..." }` body. Plugins should treat this as a recoverable error and fall back to `InvokeRequest.messages`.
 
 ### Plugin-shaped sections (deferred)
@@ -178,6 +184,6 @@ Field rules:
 Some plugins build their own context (LangGraph state, persistent agent threads, framework-internal memory) and want to suppress runtime-emitted sections. Two future directions:
 
 1. **Manifest-declared override** — `spec.sections.suppress: [memory.*, history.window]` on the agent manifest, with the runtime skipping those producers for that agent.
-2. **Request-side filter** — `{ "suppress": ["memory.*"] }` on the `/v1/sections/build` request body.
+2. **Request-side filter** — adding an optional `"suppress": ["memory.*"]` field on the request body.
 
-For v0.25 the plugin always receives the full resolved section list and picks what to use; the suppress mechanism is deferred to a later contract bump driven by concrete adapter needs.
+For v0.26 the plugin always receives the full resolved section list and picks what to use; the suppress mechanism is deferred to a later additive contract change driven by concrete adapter needs.

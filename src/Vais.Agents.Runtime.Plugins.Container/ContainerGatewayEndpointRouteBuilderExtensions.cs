@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents;
@@ -49,6 +50,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         group.MapPost("chat/completions", HandleChatCompletionsAsync);
         group.MapPost("tools/invoke", HandleToolInvokeAsync);
         group.MapGet("tools/list", HandleToolsListAsync);
+        group.MapPost("sections/build", HandleSectionsBuildAsync);
 
         return builder;
     }
@@ -294,6 +296,250 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
 
         return Results.Ok(new GatewayToolListResponse { Tools = tools });
     }
+
+    private static async Task<IResult> HandleSectionsBuildAsync(
+        HttpContext ctx,
+        GatewaySectionsBuildRequest body,
+        [FromServices] IAgentManifestTranslator translator,
+        CancellationToken ct)
+    {
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        var runId = ctx.Request.Headers["X-Run-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
+        }
+
+        StatefulAgentOptions options;
+        try
+        {
+            options = await translator.TranslateAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found or not translatable.",
+                detail: ex.Message);
+        }
+
+        var candidateTurns = body.Messages
+            .Select(PluginMessageToChatTurn)
+            .ToArray();
+
+        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
+
+        var sections = new List<Section>(capacity: candidateTurns.Length + 4);
+
+        // 1. Composer (Section[]). The translator wires SystemPromptComposer from the manifest's
+        //    systemPrompt + contributor chain. Null means "no composer for this agent" — skip.
+        if (options.SystemPromptComposer is not null)
+        {
+            var composed = await options.SystemPromptComposer
+                .ComposeSectionsAsync(agentCtx, ct).ConfigureAwait(false);
+            sections.AddRange(composed);
+        }
+        else if (!string.IsNullOrEmpty(options.SystemPrompt))
+        {
+            sections.Add(new Section(
+                "system.base",
+                SectionKind.SystemSegment,
+                new TextPayload(options.SystemPrompt),
+                ProducerId: "Base"));
+        }
+
+        // 2. History/tools/format base sections — same shape StatefulAiAgent emits before the
+        //    provider chain runs. The candidate the providers see (below) carries these too.
+        foreach (var turn in candidateTurns)
+        {
+            var kind = turn.Role switch
+            {
+                AgentChatRole.User => SectionKind.UserMessage,
+                AgentChatRole.Assistant => SectionKind.AssistantMessage,
+                AgentChatRole.Tool => SectionKind.ToolMessage,
+                AgentChatRole.System => SectionKind.SystemSegment,
+                _ => SectionKind.UserMessage,
+            };
+            sections.Add(new Section(
+                $"history.window.{sections.Count}",
+                kind,
+                kind == SectionKind.SystemSegment
+                    ? (SectionPayload)new TextPayload(turn.Text ?? "")
+                    : new TurnPayload(turn),
+                ProducerId: "Base"));
+        }
+
+        var tools = options.ToolRegistry?.Tools;
+        var hasTools = tools is { Count: > 0 };
+        if (hasTools)
+        {
+            sections.Add(new Section(
+                "tools.base",
+                SectionKind.ToolDeclaration,
+                new ToolsPayload(tools!),
+                ProducerId: "Base"));
+        }
+        else if (options.ResponseFormat is not null)
+        {
+            sections.Add(new Section(
+                "format.base",
+                SectionKind.ResponseFormat,
+                new ResponseFormatPayload(options.ResponseFormat),
+                ProducerId: "Base"));
+        }
+
+        // 3. IContextProvider chain. Providers receive a snapshot of the candidate the plugin
+        //    posted — matching the runtime-side contract where providers see the request as it
+        //    stood before any provider contributed.
+        if (options.ContextProviders.Count > 0)
+        {
+            var templateSystemPrompt = JoinSystemSegmentText(sections);
+            var template = new CompletionRequest(
+                candidateTurns,
+                templateSystemPrompt,
+                Tools: hasTools ? tools : null,
+                ResponseFormat: hasTools ? null : options.ResponseFormat);
+
+            var session = new InMemoryAgentSession(agentId, runId, candidateTurns);
+            var invocation = new ContextInvocationContext(template, agentCtx, session);
+
+            foreach (var provider in options.ContextProviders)
+            {
+                try
+                {
+                    var contribution = await provider
+                        .InvokeAsync(invocation, ct).ConfigureAwait(false);
+                    if (contribution.Sections.Count > 0)
+                    {
+                        sections.AddRange(contribution.Sections);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    return Results.Problem(
+                        statusCode: StatusCodes.Status500InternalServerError,
+                        title: $"Context provider '{provider.GetType().Name}' failed.",
+                        detail: ex.Message,
+                        extensions: new Dictionary<string, object?>
+                        {
+                            ["producerId"] = provider.GetType().Name,
+                        });
+                }
+            }
+        }
+
+        // 4. Resolver (id uniqueness, kind+order canonicalisation). Packer is NOT run — plugin
+        //    picks its own subset.
+        var resolver = options.SectionResolver ?? DefaultSectionResolver.Instance;
+        IReadOnlyList<Section> resolved;
+        try
+        {
+            resolved = await resolver.ResolveAsync(sections, ct).ConfigureAwait(false);
+        }
+        catch (SectionCollisionException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Section id collision.",
+                detail: ex.Message);
+        }
+
+        var wire = resolved.Select(SectionToWire).ToArray();
+        var totalChars = wire.Sum(s => s.Payload.Value?.Length ?? s.Payload.Turn?.Content?.Length ?? 0);
+
+        return Results.Ok(new GatewaySectionsBuildResponse
+        {
+            Sections = wire,
+            TotalChars = totalChars,
+        });
+    }
+
+    private static string? JoinSystemSegmentText(IEnumerable<Section> sections)
+    {
+        var parts = sections
+            .Where(s => s.Kind == SectionKind.SystemSegment && s.Payload is TextPayload tp && tp.Value.Length > 0)
+            .Select(s => ((TextPayload)s.Payload).Value)
+            .ToArray();
+        return parts.Length == 0 ? null : string.Join("\n\n", parts);
+    }
+
+    private static GatewaySection SectionToWire(Section s)
+    {
+        var payload = new GatewaySectionPayload();
+        switch (s.Payload)
+        {
+            case TextPayload t:
+                payload = new GatewaySectionPayload { Value = t.Value };
+                break;
+            case TurnPayload tp:
+                payload = new GatewaySectionPayload { Turn = ChatTurnToPluginMessage(tp.Turn) };
+                break;
+            case ToolsPayload tools:
+                payload = new GatewaySectionPayload
+                {
+                    Tools = tools.Tools.Select(t => new GatewayToolInfo
+                    {
+                        Name = t.Name,
+                        Description = t.Description,
+                        ParametersSchema = t.ParametersSchema,
+                    }).ToArray(),
+                };
+                break;
+            case ResponseFormatPayload rf:
+                payload = new GatewaySectionPayload
+                {
+                    Spec = new GatewayResponseFormatSpec
+                    {
+                        Schema = rf.Spec.Schema,
+                        Name = rf.Spec.SchemaName,
+                        Strict = rf.Spec.Strict,
+                    },
+                };
+                break;
+            case MetadataPayload md:
+                // Round-trip arbitrary values through JSON so the wire shape is well-typed.
+                payload = new GatewaySectionPayload
+                {
+                    Values = md.Values.ToDictionary(
+                        kv => kv.Key,
+                        kv => JsonSerializer.SerializeToElement(kv.Value)),
+                };
+                break;
+        }
+
+        return new GatewaySection
+        {
+            Id = s.Id,
+            Kind = s.Kind.ToString(),
+            Payload = payload,
+            Order = s.Order,
+            ProducerId = s.ProducerId,
+            Budget = s.Budget is null ? null : new GatewaySectionBudget
+            {
+                Priority = s.Budget.Priority,
+                MaxChars = s.Budget.MaxChars,
+            },
+        };
+    }
+
+    private static PluginMessage ChatTurnToPluginMessage(ChatTurn turn) => new()
+    {
+        Role = turn.Role switch
+        {
+            AgentChatRole.System => "system",
+            AgentChatRole.Assistant => "assistant",
+            AgentChatRole.Tool => "tool",
+            _ => "user",
+        },
+        Content = turn.Text,
+        ToolCallId = turn.ToolCallId,
+        ToolCalls = turn.ToolCalls?
+            .Select(tc => new PluginToolCall { Id = tc.CallId, Name = tc.ToolName, Arguments = tc.Arguments })
+            .ToArray(),
+    };
 
     private static ChatTurn OpenAiMessageToChatTurn(OpenAiChatMessage msg)
     {

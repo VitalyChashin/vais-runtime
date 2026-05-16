@@ -118,6 +118,72 @@ internal sealed class GatewayToolListResponse
     public IReadOnlyList<GatewayToolInfo> Tools { get; init; } = [];
 }
 
+// Section pipeline callback (contract v0.26 — see contracts/plugin-container/gateway-internal.md).
+internal sealed class GatewaySectionsBuildRequest
+{
+    public IReadOnlyList<PluginMessage> Messages { get; init; } = [];
+}
+
+internal sealed class GatewaySectionsBuildResponse
+{
+    public IReadOnlyList<GatewaySection> Sections { get; init; } = [];
+    public int TotalChars { get; init; }
+}
+
+internal sealed class GatewaySection
+{
+    public string Id { get; init; } = "";
+    // Stringly typed on the wire so plugin SDKs in any language can dispatch on it without
+    // depending on a generated enum mapping.
+    public string Kind { get; init; } = "";
+    public GatewaySectionPayload Payload { get; init; } = new();
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Order { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ProducerId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GatewaySectionBudget? Budget { get; init; }
+}
+
+internal sealed class GatewaySectionPayload
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Value { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PluginMessage? Turn { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<GatewayToolInfo>? Tools { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GatewayResponseFormatSpec? Spec { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyDictionary<string, JsonElement>? Values { get; init; }
+}
+
+internal sealed class GatewaySectionBudget
+{
+    public int Priority { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxChars { get; init; }
+}
+
+internal sealed class GatewayResponseFormatSpec
+{
+    public JsonElement Schema { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Name { get; init; }
+
+    public bool Strict { get; init; }
+}
+
 // OpenAI-compat chat completions types for POST /v1/container-gateway/chat/completions
 internal sealed class OpenAiChatMessage
 {
