@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Vais.Agents.Control.Http.Server\Vais.Agents.Control.Http.Server.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Policy.Opa\Vais.Agents.Control.Policy.Opa.csproj" />
     <ProjectReference Include="..\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
     <ProjectReference Include="..\Vais.Agents.Persistence.Redis\Vais.Agents.Persistence.Redis.csproj" />
     <ProjectReference Include="..\Vais.Agents.Persistence.Postgres\Vais.Agents.Persistence.Postgres.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.OpenTelemetry\Vais.Agents.Observability.OpenTelemetry.csproj" />
