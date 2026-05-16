@@ -48,6 +48,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private IAiAgent? _agent;
     // Non-null only in plugin mode — signals that AskAsync should record tool calls from history delta.
     private ToolGatewayMiddleware[]? _pluginToolGatewayMiddleware;
+    private AgentInputMiddleware[]? _inputMiddleware;
 
     /// <summary>
     /// Grain constructor. Dependencies resolved from silo DI.
@@ -119,6 +120,9 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             _pluginToolGatewayMiddleware = supplied.ToolGatewayMiddleware.Count > 0
                 ? supplied.ToolGatewayMiddleware.ToArray()
                 : null;
+            _inputMiddleware = supplied.InputMiddleware.Count > 0
+                ? supplied.InputMiddleware.ToArray()
+                : null;
             if (_state.State.SystemPrompt is { } persistedPrompt)
             {
                 _agent.SystemPrompt = persistedPrompt;
@@ -144,6 +148,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                 "configure the manifest instantiator (v0.17 Pillar B) so the translator " +
                 "supplies a per-agent provider via StatefulAgentOptions.CompletionProvider.");
 
+        _inputMiddleware = supplied.InputMiddleware.Count > 0
+            ? supplied.InputMiddleware.ToArray()
+            : null;
+
         var seeded = new StatefulAgentOptions
         {
             AgentName = supplied.AgentName ?? _agentId,
@@ -159,6 +167,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             Budget = supplied.Budget,
             GatewayMiddleware = supplied.GatewayMiddleware,
             ToolGatewayMiddleware = supplied.ToolGatewayMiddleware,
+            InputMiddleware = supplied.InputMiddleware,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
         };
 
@@ -199,10 +208,25 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         _logger.LogDebug("Turn starting — agentId={AgentId} runId={RunId} messageLen={MessageLen}", _agentId, runId, userMessage.Length);
         var sw = Stopwatch.StartNew();
         var prevHistoryCount = _pluginToolGatewayMiddleware is not null ? agent.History.Count : 0;
+
+        // P12O-7: run input middleware chain over the inbound message before delegating to the agent.
+        var inputMessage = userMessage;
+        if (_inputMiddleware is { Length: > 0 })
+        {
+            var inputCtx = new AgentInputContext
+            {
+                AgentId = _agentId!,
+                RunId = runId,
+                Message = userMessage,
+            };
+            await RunInputMiddlewareAsync(inputCtx, _inputMiddleware, CancellationToken.None);
+            inputMessage = inputCtx.Message;
+        }
+
         string reply;
         try
         {
-            reply = await agent.AskAsync(userMessage);
+            reply = await agent.AskAsync(inputMessage);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -318,6 +342,21 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
     private IAiAgent EnsureAgent() =>
         _agent ?? throw new InvalidOperationException("Grain is not activated.");
+
+    private static Task RunInputMiddlewareAsync(
+        AgentInputContext ctx,
+        AgentInputMiddleware[] middleware,
+        CancellationToken cancellationToken)
+    {
+        Func<Task> chain = () => Task.CompletedTask;
+        for (var i = middleware.Length - 1; i >= 0; i--)
+        {
+            var mw = middleware[i];
+            var inner = chain;
+            chain = () => mw.InvokeAsync(ctx, inner, cancellationToken);
+        }
+        return chain();
+    }
 
     private void RecordPluginToolCalls(
         IReadOnlyList<ChatTurn> history,

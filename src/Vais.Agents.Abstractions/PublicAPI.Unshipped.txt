@@ -1015,3 +1015,33 @@ static Vais.Agents.SectionMeasurement.operator !=(Vais.Agents.SectionMeasurement
 static Vais.Agents.SectionMeasurement.operator ==(Vais.Agents.SectionMeasurement? left, Vais.Agents.SectionMeasurement? right) -> bool
 static Vais.Agents.SectionTelemetrySnapshot.operator !=(Vais.Agents.SectionTelemetrySnapshot? left, Vais.Agents.SectionTelemetrySnapshot? right) -> bool
 static Vais.Agents.SectionTelemetrySnapshot.operator ==(Vais.Agents.SectionTelemetrySnapshot? left, Vais.Agents.SectionTelemetrySnapshot? right) -> bool
+Vais.Agents.AgentInputContext
+Vais.Agents.AgentInputContext.AgentId.get -> string!
+Vais.Agents.AgentInputContext.AgentId.init -> void
+Vais.Agents.AgentInputContext.AgentInputContext() -> void
+Vais.Agents.AgentInputContext.Message.get -> string!
+Vais.Agents.AgentInputContext.Message.set -> void
+Vais.Agents.AgentInputContext.NodeId.get -> string?
+Vais.Agents.AgentInputContext.NodeId.init -> void
+Vais.Agents.AgentInputContext.Properties.get -> System.Collections.Generic.Dictionary<string!, object?>!
+Vais.Agents.AgentInputContext.RunId.get -> string?
+Vais.Agents.AgentInputContext.RunId.init -> void
+Vais.Agents.AgentInputMiddleware
+Vais.Agents.AgentInputMiddleware.AgentInputMiddleware() -> void
+virtual Vais.Agents.AgentInputMiddleware.InvokeAsync(Vais.Agents.AgentInputContext! context, System.Func<System.Threading.Tasks.Task!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.IAgentInputMiddlewareFactory
+Vais.Agents.IAgentInputMiddlewareFactory.Create(Vais.Agents.GatewayMiddlewareSpec! spec) -> Vais.Agents.AgentInputMiddleware!
+Vais.Agents.NamedAgentInputMiddlewareRegistration
+Vais.Agents.NamedAgentInputMiddlewareRegistration.<Clone>$() -> Vais.Agents.NamedAgentInputMiddlewareRegistration!
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Deconstruct(out string! Name, out System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.AgentInputMiddleware!>! Factory) -> void
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Equals(Vais.Agents.NamedAgentInputMiddlewareRegistration? other) -> bool
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Factory.get -> System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.AgentInputMiddleware!>!
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Factory.init -> void
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Name.get -> string!
+Vais.Agents.NamedAgentInputMiddlewareRegistration.Name.init -> void
+Vais.Agents.NamedAgentInputMiddlewareRegistration.NamedAgentInputMiddlewareRegistration(string! Name, System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.AgentInputMiddleware!>! Factory) -> void
+override Vais.Agents.NamedAgentInputMiddlewareRegistration.Equals(object? obj) -> bool
+override Vais.Agents.NamedAgentInputMiddlewareRegistration.GetHashCode() -> int
+override Vais.Agents.NamedAgentInputMiddlewareRegistration.ToString() -> string!
+static Vais.Agents.NamedAgentInputMiddlewareRegistration.operator !=(Vais.Agents.NamedAgentInputMiddlewareRegistration? left, Vais.Agents.NamedAgentInputMiddlewareRegistration? right) -> bool
+static Vais.Agents.NamedAgentInputMiddlewareRegistration.operator ==(Vais.Agents.NamedAgentInputMiddlewareRegistration? left, Vais.Agents.NamedAgentInputMiddlewareRegistration? right) -> bool

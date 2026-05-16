@@ -261,6 +261,39 @@ curl -X DELETE http://localhost:8080/v1/container-plugins/echo  # evict the plug
 
 The second command stops the plugin container and removes it from the registry. A `vais plugin-delete` CLI shorthand will be added in a future release.
 
+## Kubernetes NetworkPolicy (default-on)
+
+When you deploy with the `vais-plugin` Helm chart, a `NetworkPolicy` is created automatically (`networkPolicy.enabled: true` by default). It:
+
+- **Ingress**: allows traffic only from the runtime service pod (identified by namespace + pod label).
+- **Egress**: allows DNS on port 53 (kube-dns) and traffic to the runtime service port only.
+
+To opt out (e.g. for local development):
+
+```bash
+helm upgrade my-plugin /path/to/vais-plugin --set networkPolicy.enabled=false
+```
+
+To add extra egress rules (e.g. to reach an external database):
+
+```yaml
+# values-extra.yaml
+networkPolicy:
+  extraEgress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - port: 5432
+          protocol: TCP
+```
+
+```bash
+helm upgrade my-plugin /path/to/vais-plugin -f values-extra.yaml
+```
+
+The policy is a P12 convention, not a hard guarantee — actual network isolation depends on your CNI plugin supporting `NetworkPolicy`. Calico, Cilium, and Weave support it; the default `kindnet` in kind clusters does not.
+
 ## Going further
 
 The echo plugin doesn't call an LLM or tools. A production plugin would:

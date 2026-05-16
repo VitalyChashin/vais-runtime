@@ -8,6 +8,7 @@ The runtime exposes named seams for cross-cutting concerns. The two gateway midd
 
 1. **[Author an LLM gateway middleware](author-an-llm-gateway-middleware.md)** — `LlmGatewayMiddleware` base class, four hooks (non-streaming, streaming, per-delta, on-complete), worked example of a `PromptInjectionGuardMiddleware` short-circuit.
 2. **[Author an MCP gateway middleware](author-an-mcp-gateway-middleware.md)** — `ToolGatewayMiddleware` base class, single override, worked examples of a `ToolLatencyAlertMiddleware` (observation) and a `TenantToolDenyMiddleware` (short-circuit).
+3. **[Agent input middleware](agent-input-middleware.md)** — `AgentInputMiddleware` base class, the P12 mandatory-inbound seam; reshape the user message before the agent receives it; registration options (singleton, named, direct).
 
 ## Other extension seams (catalog)
 

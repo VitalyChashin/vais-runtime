@@ -223,9 +223,15 @@ If you accidentally include a `model:` block alongside the plugin handler, the a
 | `AssemblyLoadContext` locks DLL during bind-mount rebuild (Windows) | Plugin in non-collectible context holding the file | Kill + restart the container |
 | `TypeLoadException` on invoke | Plugin shipped a different version of a shared type | Confirm plugin's NuGet pin matches runtime's |
 
-## Security reminder
+## P12 sandbox convention (in-process plugins)
 
-C# plugins run inside the runtime container with full `IServiceProvider` access. They can read secrets, open outbound connections, mutate the registry. **Only load plugins from trusted sources.** Package via overlay images through your existing trust pipeline; don't scrape untrusted DLLs onto a shared volume. For untrusted code, use a [container plugin](author-a-container-plugin-in-go.md) — those run in their own sandboxed Docker container with `NetworkPolicy` and `securityContext` defaults.
+C# plugins run inside the runtime container with full `IServiceProvider` access. They can read secrets, open outbound connections, mutate the registry. The P12 contract for in-process plugins is **convention-based, not enforced by the OS**:
+
+- **LLM calls** must go through `ILlmGateway` (injected via DI), never directly via an OpenAI/Anthropic SDK.
+- **Tool calls** must go through the MCP gateway, never via a direct MCP client.
+- **Only load plugins from trusted sources.** Package via overlay images through your existing trust pipeline; don't scrape untrusted DLLs onto a shared volume.
+
+For untrusted code, use a [container plugin](author-a-container-plugin-in-go.md) — those run in their own sandboxed Docker container with `NetworkPolicy` and `securityContext` defaults, making egress/ingress enforcement a CNI-level guarantee rather than a convention.
 
 ## What you built
 

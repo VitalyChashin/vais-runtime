@@ -51,3 +51,17 @@ env: []
 
 ## Image pull secrets.
 imagePullSecrets: []
+
+## NetworkPolicy (P12 egress isolation — enabled by default).
+## Allows ingress only from the runtime service and egress only to the runtime + DNS.
+networkPolicy:
+  enabled: true
+  ## The runtime service that is allowed to call this plugin (ingress) and that the plugin
+  ## may call back (egress). Adjust namespace/name/port to match your runtime deployment.
+  runtimeService:
+    namespace: vais-system
+    name: vais-agents-runtime
+    port: 8080
+  ## Extra egress rules appended verbatim (e.g. to allow outbound to a database).
+  ## Each entry follows the Kubernetes NetworkPolicyEgressRule schema.
+  extraEgress: []

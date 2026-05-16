@@ -38,10 +38,11 @@ internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
         IA2AGraphNodeInvoker? a2aInvoker,
         string? bearerToken,
         IGraphCheckpointer? checkpointer,
-        int incomingBranchCount)
+        int incomingBranchCount,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
         : base(node, manifest, registry, lifecycle, predicateResolver, effectResolver,
                codeNodeResolver, reducerResolver, context, remoteInvoker, a2aInvoker,
-               bearerToken, checkpointer)
+               bearerToken, checkpointer, inputMiddleware: inputMiddleware)
     {
         _incomingBranchCount = incomingBranchCount;
         _joinManifest = manifest;
