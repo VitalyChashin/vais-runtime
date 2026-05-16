@@ -36,7 +36,7 @@ The three observability packages are independently opt-in — drop the Langfuse 
 
 ## Step 1 — what you'll build
 
-By the end you'll have an agent that, per turn, emits something like this in your structured log:
+By the end you'll have an agent that, per turn, emits a `SectionsBuilt` `Information` log entry. `LoggingSectionSink` writes the entry on one line — pretty-printed below for readability:
 
 ```
 SectionsBuilt agent=research-helper run=4b… turn=1
@@ -83,7 +83,7 @@ sealed class TenantPolicyContributor(string tenantId, string policy) : ISystemPr
 }
 ```
 
-Wire them — plus an existing `IKnowledgeRetriever` over your vector store — into the agent:
+Wire them — plus an existing `IKnowledgeRetriever` over your vector store. We'll build the composer + retrieval provider now and pass them into `StatefulAgentOptions` once at the end of this guide, after every observability sink is also registered. (`StatefulAgentOptions` is a class with `init` setters, so all fields are set in one object-initializer block — there's no `with`-style post-construction edit.)
 
 ```csharp
 var composer = new AggregatingSystemPromptComposer(new ISystemPromptContributor[]
@@ -95,16 +95,6 @@ var composer = new AggregatingSystemPromptComposer(new ISystemPromptContributor[
 var retrieval = new KnowledgeRetrievalContextProvider(
     retriever,                                               // your IKnowledgeRetriever
     new KnowledgeRetrievalOptions { TopK = 5 });
-
-var agent = new StatefulAiAgent(
-    completionProvider,
-    new StatefulAgentOptions
-    {
-        AgentName = "research-helper",
-        SystemPromptComposer = composer,
-        ContextProviders = new IContextProvider[] { retrieval },
-        // SectionResolver, SectionWindowPacker, SectionBudget all default — no setup needed.
-    });
 ```
 
 What's running per turn:
@@ -127,16 +117,9 @@ services.AddSingleton<ISectionTelemetrySink, LoggingSectionSink>();
 
 (`LoggingSectionSink` lives in `Vais.Agents.Core`. It pulls `ILogger<LoggingSectionSink>` from DI — anything that writes `Information`-level entries works: Serilog, NLog, the .NET console provider.)
 
-Wire the sink list into your `StatefulAgentOptions`:
+We'll resolve the sink list out of the service provider and hand it to `StatefulAgentOptions.SectionTelemetrySinks` at the end of step 6. For now, the sink is registered — every other sink in steps 4 and 5 piggybacks on the same `ISectionTelemetrySink` collection.
 
-```csharp
-options = options with
-{
-    SectionTelemetrySinks = serviceProvider.GetServices<ISectionTelemetrySink>().ToArray(),
-};
-```
-
-Run one turn and grep the log for `SectionsBuilt`. You should see a single `Information` entry per turn with the shape shown in step 1: top-level scalar fields (`agent`, `run`, `turn`, `sections.count`, `budget.used`, `budget.dropped`, `budget.truncated`) plus the per-section JSON blob. The JSON is one line — log shippers like Loki / Elasticsearch parse it as a nested structure.
+Run one turn (after step 6 wires the agent) and grep the log for `SectionsBuilt`. You should see a single `Information` entry per turn with the shape shown in step 1: top-level scalar fields (`agent`, `run`, `turn`, `sections.count`, `budget.used`, `budget.dropped`, `budget.truncated`) plus the per-section JSON blob. The JSON is one line — log shippers like Loki / Elasticsearch parse it as a nested structure.
 
 Quick check: the sum of `chars` across `included` sections equals `budget.used * target` (or just the total chars when no budget is set). If retrieval is the largest by ratio, you're looking at a RAG-dominated turn.
 
@@ -180,7 +163,7 @@ services.AddAgenticOpenTelemetrySectionSink();
 services.AddAgenticPrometheusSectionSink();
 ```
 
-The Prometheus sink writes six time series into the default `Metrics.DefaultRegistry`. If your app already exposes `/metrics` via `app.UseHttpMetrics()` and `app.MapMetrics()` (the standard prometheus-net middleware), Prometheus scrapes them automatically. Local-dev's `prometheus.yml` scrapes `vais-runtime:8080/metrics` every 15s — keep that target shape.
+The Prometheus sink writes six time series into the default `Metrics.DefaultRegistry`. Expose them by calling `app.MapPrometheusScrapingEndpoint()` on your `WebApplication` (the same call the local-dev runtime uses) — `app.UseHttpMetrics() + app.MapMetrics()` works too if you want HTTP request metrics alongside the section metrics. Local-dev's `prometheus.yml` scrapes `vais-runtime:8080/metrics` every 15s — keep that target shape.
 
 Metrics:
 
@@ -216,29 +199,37 @@ If the dashboard imports but panels show **No data**, give the agent a few more 
 
 ## Step 6 — trigger a packer drop
 
-Set a tight character budget so the next retrieval will overflow:
+Now construct the agent. Resolve the sink list from DI, set a tight character budget (`MaxChars: 256` — comfortably below the typical retrieval payload of 1 KB+ for `TopK = 5`), and pass everything to `StatefulAgentOptions` in one block:
 
 ```csharp
-options = options with
-{
-    SectionBudget = new SectionBudgetContext(MaxChars: 256),
-};
+var serviceProvider = services.BuildServiceProvider();
+
+var agent = new StatefulAiAgent(
+    completionProvider,
+    new StatefulAgentOptions
+    {
+        AgentName = "research-helper",
+        SystemPromptComposer = composer,
+        ContextProviders = new IContextProvider[] { retrieval },
+        SectionTelemetrySinks = serviceProvider
+            .GetServices<ISectionTelemetrySink>()
+            .ToArray(),
+        SectionBudget = new SectionBudgetContext(MaxChars: 256),
+        // SectionResolver, SectionWindowPacker all default — no setup needed.
+    });
 ```
 
-256 chars is comfortably below the typical retrieval payload (1 KB+ for `TopK = 5`). The packer's shedding rule:
-
-- Priority 0 sections (persona, policy) are critical and never dropped.
-- Priority 5 sections (retrieval, the default) get dropped first, largest first.
+The packer's shedding rule when the total exceeds the cap: drop by descending `Section.Budget.Priority` (priority 10 first, priority 0 critical and never dropped); within a priority tier, drop the largest section first; sections without a `Budget` are treated as priority 5. With the wiring above all three sections sit at priority 5 (`AggregatingSystemPromptComposer` doesn't currently set `Budget` on composer-emitted sections; `KnowledgeRetrievalContextProvider` sets it to `Priority: 5` explicitly), so the size tiebreak decides — and `retrieval.docs` (1 KB+) is by far the largest. It drops first.
 
 Run one more turn and check all three surfaces:
 
-- **Log** — the `retrieval.docs` measurement now reads `"outcome":"dropped"` with a non-zero `dropped_chars`; `budget.dropped=1`; `budget.used` ≤ 1.0.
-- **Langfuse** — the `section_breakdown` blob no longer lists `retrieval_docs`; the budget-used ratio rises to 1.0 or close.
-- **Grafana** — the **Drop / Truncate Events** panel spikes on `retrieval.docs (dropped)`; the **Budget Pressure** gauge climbs into red.
+- **Log** — the `retrieval.docs` measurement now reads `"outcome":"dropped"` with a non-zero `dropped_chars`; `budget.dropped=1`; `budget.used` settles around the persona+policy total over the cap (e.g. ~0.48 for 122 chars used out of a 256-char budget).
+- **Langfuse** — the `section_breakdown` blob no longer lists `retrieval_docs`; the budget-used ratio rises.
+- **Grafana** — the **Drop / Truncate Events** panel spikes on `retrieval.docs (dropped)`; the **Budget Pressure** gauge climbs.
 
 The packer made a decision the operator can see, attribute to a producer, and act on. That's the payoff: every section is named, every drop has a paper trail.
 
-Reset the budget to `SectionBudgetContext.Unlimited` (or simply drop the field — `Unlimited` is the default) once you're done.
+Reset the budget by removing the `SectionBudget` field (the default is `SectionBudgetContext.Unlimited`) once you're done.
 
 ## Optional — write a custom producer
 
