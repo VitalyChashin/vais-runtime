@@ -54,6 +54,9 @@ app.Configure(config =>
     config.AddCommand<GetMcpServersCommand>("get-mcp-servers")
         .WithDescription("List MCP server manifests, or fetch a single manifest by id.");
 
+    config.AddCommand<GetEvalSuitesCommand>("get-eval-suites")
+        .WithDescription("List eval suite manifests, or fetch a single manifest by id.");
+
     config.AddCommand<LlmGatewayValidateCommand>("llm-gateway-validate")
         .WithDescription("Validate an LLM gateway config manifest without registering it.");
 

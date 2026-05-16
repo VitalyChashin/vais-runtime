@@ -423,6 +423,166 @@ static Vais.Agents.McpServerToolProjection.operator !=(Vais.Agents.McpServerTool
 static Vais.Agents.McpServerToolProjection.operator ==(Vais.Agents.McpServerToolProjection? left, Vais.Agents.McpServerToolProjection? right) -> bool
 static Vais.Agents.McpWorkspacePolicySpec.operator !=(Vais.Agents.McpWorkspacePolicySpec? left, Vais.Agents.McpWorkspacePolicySpec? right) -> bool
 static Vais.Agents.McpWorkspacePolicySpec.operator ==(Vais.Agents.McpWorkspacePolicySpec? left, Vais.Agents.McpWorkspacePolicySpec? right) -> bool
+Vais.Agents.EvalAssertion
+Vais.Agents.EvalAssertion.<Clone>$() -> Vais.Agents.EvalAssertion!
+Vais.Agents.EvalAssertion.Deconstruct(out string! Kind, out System.Text.Json.JsonElement? Params) -> void
+Vais.Agents.EvalAssertion.Equals(Vais.Agents.EvalAssertion? other) -> bool
+Vais.Agents.EvalAssertion.EvalAssertion(string! Kind, System.Text.Json.JsonElement? Params = null) -> void
+Vais.Agents.EvalAssertion.Kind.get -> string!
+Vais.Agents.EvalAssertion.Kind.init -> void
+Vais.Agents.EvalAssertion.Params.get -> System.Text.Json.JsonElement?
+Vais.Agents.EvalAssertion.Params.init -> void
+override Vais.Agents.EvalAssertion.Equals(object? obj) -> bool
+override Vais.Agents.EvalAssertion.GetHashCode() -> int
+override Vais.Agents.EvalAssertion.ToString() -> string!
+static Vais.Agents.EvalAssertion.operator !=(Vais.Agents.EvalAssertion? left, Vais.Agents.EvalAssertion? right) -> bool
+static Vais.Agents.EvalAssertion.operator ==(Vais.Agents.EvalAssertion? left, Vais.Agents.EvalAssertion? right) -> bool
+Vais.Agents.EvalBaseline
+Vais.Agents.EvalBaseline.<Clone>$() -> Vais.Agents.EvalBaseline!
+Vais.Agents.EvalBaseline.Deconstruct(out string! RunId) -> void
+Vais.Agents.EvalBaseline.Equals(Vais.Agents.EvalBaseline? other) -> bool
+Vais.Agents.EvalBaseline.EvalBaseline(string! RunId) -> void
+Vais.Agents.EvalBaseline.RunId.get -> string!
+Vais.Agents.EvalBaseline.RunId.init -> void
+override Vais.Agents.EvalBaseline.Equals(object? obj) -> bool
+override Vais.Agents.EvalBaseline.GetHashCode() -> int
+override Vais.Agents.EvalBaseline.ToString() -> string!
+static Vais.Agents.EvalBaseline.operator !=(Vais.Agents.EvalBaseline? left, Vais.Agents.EvalBaseline? right) -> bool
+static Vais.Agents.EvalBaseline.operator ==(Vais.Agents.EvalBaseline? left, Vais.Agents.EvalBaseline? right) -> bool
+Vais.Agents.EvalCase
+Vais.Agents.EvalCase.<Clone>$() -> Vais.Agents.EvalCase!
+Vais.Agents.EvalCase.Assertions.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalAssertion!>!
+Vais.Agents.EvalCase.Assertions.init -> void
+Vais.Agents.EvalCase.Description.get -> string?
+Vais.Agents.EvalCase.Description.init -> void
+Vais.Agents.EvalCase.Equals(Vais.Agents.EvalCase? other) -> bool
+Vais.Agents.EvalCase.EvalCase() -> void
+Vais.Agents.EvalCase.ExpectedOutput.get -> string?
+Vais.Agents.EvalCase.ExpectedOutput.init -> void
+Vais.Agents.EvalCase.Id.get -> string!
+Vais.Agents.EvalCase.Id.init -> void
+Vais.Agents.EvalCase.InitialHistory.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalHistoryTurn!>?
+Vais.Agents.EvalCase.InitialHistory.init -> void
+Vais.Agents.EvalCase.Input.get -> string!
+Vais.Agents.EvalCase.Input.init -> void
+Vais.Agents.EvalCase.Name.get -> string?
+Vais.Agents.EvalCase.Name.init -> void
+Vais.Agents.EvalCase.Replay.get -> Vais.Agents.EvalReplayMode?
+Vais.Agents.EvalCase.Replay.init -> void
+Vais.Agents.EvalCase.Variables.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
+Vais.Agents.EvalCase.Variables.init -> void
+override Vais.Agents.EvalCase.Equals(object? obj) -> bool
+override Vais.Agents.EvalCase.GetHashCode() -> int
+override Vais.Agents.EvalCase.ToString() -> string!
+static Vais.Agents.EvalCase.operator !=(Vais.Agents.EvalCase? left, Vais.Agents.EvalCase? right) -> bool
+static Vais.Agents.EvalCase.operator ==(Vais.Agents.EvalCase? left, Vais.Agents.EvalCase? right) -> bool
+Vais.Agents.EvalDefaults
+Vais.Agents.EvalDefaults.<Clone>$() -> Vais.Agents.EvalDefaults!
+Vais.Agents.EvalDefaults.Equals(Vais.Agents.EvalDefaults? other) -> bool
+Vais.Agents.EvalDefaults.EvalDefaults() -> void
+Vais.Agents.EvalDefaults.JudgeModel.get -> string?
+Vais.Agents.EvalDefaults.JudgeModel.init -> void
+Vais.Agents.EvalDefaults.Timeout.get -> System.TimeSpan?
+Vais.Agents.EvalDefaults.Timeout.init -> void
+override Vais.Agents.EvalDefaults.Equals(object? obj) -> bool
+override Vais.Agents.EvalDefaults.GetHashCode() -> int
+override Vais.Agents.EvalDefaults.ToString() -> string!
+static Vais.Agents.EvalDefaults.operator !=(Vais.Agents.EvalDefaults? left, Vais.Agents.EvalDefaults? right) -> bool
+static Vais.Agents.EvalDefaults.operator ==(Vais.Agents.EvalDefaults? left, Vais.Agents.EvalDefaults? right) -> bool
+Vais.Agents.EvalHistoryTurn
+Vais.Agents.EvalHistoryTurn.<Clone>$() -> Vais.Agents.EvalHistoryTurn!
+Vais.Agents.EvalHistoryTurn.Content.get -> string!
+Vais.Agents.EvalHistoryTurn.Content.init -> void
+Vais.Agents.EvalHistoryTurn.Deconstruct(out string! Role, out string! Content) -> void
+Vais.Agents.EvalHistoryTurn.Equals(Vais.Agents.EvalHistoryTurn? other) -> bool
+Vais.Agents.EvalHistoryTurn.EvalHistoryTurn(string! Role, string! Content) -> void
+Vais.Agents.EvalHistoryTurn.Role.get -> string!
+Vais.Agents.EvalHistoryTurn.Role.init -> void
+override Vais.Agents.EvalHistoryTurn.Equals(object? obj) -> bool
+override Vais.Agents.EvalHistoryTurn.GetHashCode() -> int
+override Vais.Agents.EvalHistoryTurn.ToString() -> string!
+static Vais.Agents.EvalHistoryTurn.operator !=(Vais.Agents.EvalHistoryTurn? left, Vais.Agents.EvalHistoryTurn? right) -> bool
+static Vais.Agents.EvalHistoryTurn.operator ==(Vais.Agents.EvalHistoryTurn? left, Vais.Agents.EvalHistoryTurn? right) -> bool
+Vais.Agents.EvalReplayMode
+Vais.Agents.EvalReplayMode.Live = 0 -> Vais.Agents.EvalReplayMode
+Vais.Agents.EvalReplayMode.Cached = 1 -> Vais.Agents.EvalReplayMode
+Vais.Agents.EvalSuiteHandle
+Vais.Agents.EvalSuiteHandle.<Clone>$() -> Vais.Agents.EvalSuiteHandle!
+Vais.Agents.EvalSuiteHandle.Deconstruct(out string! Id, out string! Version) -> void
+Vais.Agents.EvalSuiteHandle.Equals(Vais.Agents.EvalSuiteHandle? other) -> bool
+Vais.Agents.EvalSuiteHandle.EvalSuiteHandle(string! Id, string! Version) -> void
+Vais.Agents.EvalSuiteHandle.Id.get -> string!
+Vais.Agents.EvalSuiteHandle.Id.init -> void
+Vais.Agents.EvalSuiteHandle.Version.get -> string!
+Vais.Agents.EvalSuiteHandle.Version.init -> void
+override Vais.Agents.EvalSuiteHandle.Equals(object? obj) -> bool
+override Vais.Agents.EvalSuiteHandle.GetHashCode() -> int
+override Vais.Agents.EvalSuiteHandle.ToString() -> string!
+static Vais.Agents.EvalSuiteHandle.operator !=(Vais.Agents.EvalSuiteHandle? left, Vais.Agents.EvalSuiteHandle? right) -> bool
+static Vais.Agents.EvalSuiteHandle.operator ==(Vais.Agents.EvalSuiteHandle? left, Vais.Agents.EvalSuiteHandle? right) -> bool
+Vais.Agents.EvalSuiteManifest
+Vais.Agents.EvalSuiteManifest.<Clone>$() -> Vais.Agents.EvalSuiteManifest!
+Vais.Agents.EvalSuiteManifest.Deconstruct(out string! Id, out string! Version, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.EvalSuiteManifest.Description.get -> string?
+Vais.Agents.EvalSuiteManifest.Description.init -> void
+Vais.Agents.EvalSuiteManifest.Equals(Vais.Agents.EvalSuiteManifest? other) -> bool
+Vais.Agents.EvalSuiteManifest.EvalSuiteManifest(string! Id, string! Version, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.EvalSuiteManifest.Id.get -> string!
+Vais.Agents.EvalSuiteManifest.Id.init -> void
+Vais.Agents.EvalSuiteManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.EvalSuiteManifest.Labels.init -> void
+Vais.Agents.EvalSuiteManifest.Spec.get -> Vais.Agents.EvalSuiteSpec!
+Vais.Agents.EvalSuiteManifest.Spec.init -> void
+Vais.Agents.EvalSuiteManifest.Version.get -> string!
+Vais.Agents.EvalSuiteManifest.Version.init -> void
+override Vais.Agents.EvalSuiteManifest.Equals(object? obj) -> bool
+override Vais.Agents.EvalSuiteManifest.GetHashCode() -> int
+override Vais.Agents.EvalSuiteManifest.ToString() -> string!
+static Vais.Agents.EvalSuiteManifest.operator !=(Vais.Agents.EvalSuiteManifest? left, Vais.Agents.EvalSuiteManifest? right) -> bool
+static Vais.Agents.EvalSuiteManifest.operator ==(Vais.Agents.EvalSuiteManifest? left, Vais.Agents.EvalSuiteManifest? right) -> bool
+Vais.Agents.EvalSuiteSpec
+Vais.Agents.EvalSuiteSpec.<Clone>$() -> Vais.Agents.EvalSuiteSpec!
+Vais.Agents.EvalSuiteSpec.AgentId.get -> string?
+Vais.Agents.EvalSuiteSpec.AgentId.init -> void
+Vais.Agents.EvalSuiteSpec.Baseline.get -> Vais.Agents.EvalBaseline?
+Vais.Agents.EvalSuiteSpec.Baseline.init -> void
+Vais.Agents.EvalSuiteSpec.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalCase!>!
+Vais.Agents.EvalSuiteSpec.Cases.init -> void
+Vais.Agents.EvalSuiteSpec.Defaults.get -> Vais.Agents.EvalDefaults?
+Vais.Agents.EvalSuiteSpec.Defaults.init -> void
+Vais.Agents.EvalSuiteSpec.Equals(Vais.Agents.EvalSuiteSpec? other) -> bool
+Vais.Agents.EvalSuiteSpec.EvalSuiteSpec() -> void
+Vais.Agents.EvalSuiteSpec.GraphId.get -> string?
+Vais.Agents.EvalSuiteSpec.GraphId.init -> void
+Vais.Agents.EvalSuiteSpec.ReplayMode.get -> Vais.Agents.EvalReplayMode
+Vais.Agents.EvalSuiteSpec.ReplayMode.init -> void
+Vais.Agents.EvalSuiteSpec.Target.get -> Vais.Agents.EvalTarget?
+Vais.Agents.EvalSuiteSpec.Target.init -> void
+override Vais.Agents.EvalSuiteSpec.Equals(object? obj) -> bool
+override Vais.Agents.EvalSuiteSpec.GetHashCode() -> int
+override Vais.Agents.EvalSuiteSpec.ToString() -> string!
+static Vais.Agents.EvalSuiteSpec.operator !=(Vais.Agents.EvalSuiteSpec? left, Vais.Agents.EvalSuiteSpec? right) -> bool
+static Vais.Agents.EvalSuiteSpec.operator ==(Vais.Agents.EvalSuiteSpec? left, Vais.Agents.EvalSuiteSpec? right) -> bool
+Vais.Agents.EvalTarget
+Vais.Agents.EvalTarget.<Clone>$() -> Vais.Agents.EvalTarget!
+Vais.Agents.EvalTarget.AgentRef.get -> string?
+Vais.Agents.EvalTarget.AgentRef.init -> void
+Vais.Agents.EvalTarget.AgentVersion.get -> string?
+Vais.Agents.EvalTarget.AgentVersion.init -> void
+Vais.Agents.EvalTarget.Equals(Vais.Agents.EvalTarget? other) -> bool
+Vais.Agents.EvalTarget.EvalTarget() -> void
+Vais.Agents.EvalTarget.GraphRef.get -> string?
+Vais.Agents.EvalTarget.GraphRef.init -> void
+override Vais.Agents.EvalTarget.Equals(object? obj) -> bool
+override Vais.Agents.EvalTarget.GetHashCode() -> int
+override Vais.Agents.EvalTarget.ToString() -> string!
+static Vais.Agents.EvalTarget.operator !=(Vais.Agents.EvalTarget? left, Vais.Agents.EvalTarget? right) -> bool
+static Vais.Agents.EvalTarget.operator ==(Vais.Agents.EvalTarget? left, Vais.Agents.EvalTarget? right) -> bool
+Vais.Agents.IEvalSuiteRegistry
+Vais.Agents.IEvalSuiteRegistry.GetAsync(string! id, string? version = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.EvalSuiteManifest?>
+Vais.Agents.IEvalSuiteRegistry.ListAsync(string? labelPrefix = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.EvalSuiteManifest!>!
+Vais.Agents.IEvalSuiteRegistry.RemoveAsync(string! id, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IEvalSuiteRegistry.UpsertAsync(Vais.Agents.EvalSuiteManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.NamedLlmGatewayMiddlewareRegistration
 Vais.Agents.NamedLlmGatewayMiddlewareRegistration.<Clone>$() -> Vais.Agents.NamedLlmGatewayMiddlewareRegistration!
 Vais.Agents.NamedLlmGatewayMiddlewareRegistration.Deconstruct(out string! Name, out System.Func<Vais.Agents.GatewayMiddlewareSpec!, System.IServiceProvider!, Vais.Agents.LlmGatewayMiddleware!>! Factory) -> void

@@ -33,6 +33,7 @@ internal sealed class BootManifestApplyService : IHostedService
     private readonly ILlmGatewayConfigLifecycleManager _llmConfigs;
     private readonly IMcpGatewayConfigLifecycleManager _mcpConfigs;
     private readonly IMcpServerLifecycleManager _mcpServers;
+    private readonly IEvalSuiteRegistry _evalSuites;
     private readonly ILogger<BootManifestApplyService> _logger;
 
     public BootManifestApplyService(
@@ -42,6 +43,7 @@ internal sealed class BootManifestApplyService : IHostedService
         ILlmGatewayConfigLifecycleManager llmConfigs,
         IMcpGatewayConfigLifecycleManager mcpConfigs,
         IMcpServerLifecycleManager mcpServers,
+        IEvalSuiteRegistry evalSuites,
         ILogger<BootManifestApplyService> logger)
     {
         _directory = directory;
@@ -50,6 +52,7 @@ internal sealed class BootManifestApplyService : IHostedService
         _llmConfigs = llmConfigs;
         _mcpConfigs = mcpConfigs;
         _mcpServers = mcpServers;
+        _evalSuites = evalSuites;
         _logger = logger;
     }
 
@@ -131,6 +134,12 @@ internal sealed class BootManifestApplyService : IHostedService
                         case ManifestResource.McpServerCase { Server: var s }:
                             await _mcpServers.CreateAsync(s, cancellationToken).ConfigureAwait(false);
                             _logger.LogInformation("Boot-apply: mcp-server '{Id}' v{Version} applied.", s.Id, s.Version);
+                            applied++;
+                            break;
+
+                        case ManifestResource.EvalSuiteCase { Suite: var es }:
+                            await _evalSuites.UpsertAsync(es, cancellationToken).ConfigureAwait(false);
+                            _logger.LogInformation("Boot-apply: eval-suite '{Id}' v{Version} applied.", es.Id, es.Version);
                             applied++;
                             break;
                     }

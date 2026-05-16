@@ -125,6 +125,9 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                                 settings.File, settings.NoBuild, cancellationToken))
                             anyError = true;
                         break;
+                    case ManifestResource.EvalSuiteCase evalSuiteCase:
+                        await ApplyEvalSuiteAsync(client, evalSuiteCase.Suite, cancellationToken);
+                        break;
                     default:
                         AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
                         break;
@@ -211,6 +214,12 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             var updated = await client.UpdateMcpServerAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
             AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (mcp-server, version {updated.Version})");
         }
+    }
+
+    private static async Task ApplyEvalSuiteAsync(IAgentControlPlaneClient client, EvalSuiteManifest manifest, CancellationToken ct)
+    {
+        var result = await client.UpsertEvalSuiteAsync(manifest, ct);
+        AnsiConsole.MarkupLine($"{result.Handle.Id} [green]applied[/] (eval-suite, version {result.Handle.Version})");
     }
 
     internal static async Task<bool> ApplyContainerPluginAsync(

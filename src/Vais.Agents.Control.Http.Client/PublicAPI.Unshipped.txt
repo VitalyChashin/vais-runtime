@@ -646,6 +646,56 @@ override Vais.Agents.Control.Http.ContainerPluginValidationResult.GetHashCode() 
 override Vais.Agents.Control.Http.ContainerPluginValidationResult.ToString() -> string!
 static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator !=(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool
 static Vais.Agents.Control.Http.ContainerPluginValidationResult.operator ==(Vais.Agents.Control.Http.ContainerPluginValidationResult? left, Vais.Agents.Control.Http.ContainerPluginValidationResult? right) -> bool
+Vais.Agents.Control.Http.EvalSuiteApplyResponse
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalSuiteApplyResponse!
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Deconstruct(out Vais.Agents.EvalSuiteHandle! Handle, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Equals(Vais.Agents.Control.Http.EvalSuiteApplyResponse? other) -> bool
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.EvalSuiteApplyResponse(Vais.Agents.EvalSuiteHandle! Handle, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>! Warnings) -> void
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Handle.get -> Vais.Agents.EvalSuiteHandle!
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Handle.init -> void
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Warnings.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ApplyDiagnostic!>!
+Vais.Agents.Control.Http.EvalSuiteApplyResponse.Warnings.init -> void
+override Vais.Agents.Control.Http.EvalSuiteApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalSuiteApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalSuiteApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalSuiteApplyResponse.operator !=(Vais.Agents.Control.Http.EvalSuiteApplyResponse? left, Vais.Agents.Control.Http.EvalSuiteApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalSuiteApplyResponse.operator ==(Vais.Agents.Control.Http.EvalSuiteApplyResponse? left, Vais.Agents.Control.Http.EvalSuiteApplyResponse? right) -> bool
+Vais.Agents.Control.Http.EvalSuiteListResponse
+Vais.Agents.Control.Http.EvalSuiteListResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalSuiteListResponse!
+Vais.Agents.Control.Http.EvalSuiteListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalSuiteManifest!>! Items, out string? NextCursor) -> void
+Vais.Agents.Control.Http.EvalSuiteListResponse.Equals(Vais.Agents.Control.Http.EvalSuiteListResponse? other) -> bool
+Vais.Agents.Control.Http.EvalSuiteListResponse.EvalSuiteListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalSuiteManifest!>! Items, string? NextCursor = null) -> void
+Vais.Agents.Control.Http.EvalSuiteListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalSuiteManifest!>!
+Vais.Agents.Control.Http.EvalSuiteListResponse.Items.init -> void
+Vais.Agents.Control.Http.EvalSuiteListResponse.NextCursor.get -> string?
+Vais.Agents.Control.Http.EvalSuiteListResponse.NextCursor.init -> void
+override Vais.Agents.Control.Http.EvalSuiteListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalSuiteListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalSuiteListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalSuiteListResponse.operator !=(Vais.Agents.Control.Http.EvalSuiteListResponse? left, Vais.Agents.Control.Http.EvalSuiteListResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalSuiteListResponse.operator ==(Vais.Agents.Control.Http.EvalSuiteListResponse? left, Vais.Agents.Control.Http.EvalSuiteListResponse? right) -> bool
+Vais.Agents.Control.Http.EvalSuiteQueryResponse
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalSuiteQueryResponse!
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Deconstruct(out Vais.Agents.EvalSuiteManifest! Manifest, out Vais.Agents.EvalSuiteHandle! Handle) -> void
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Equals(Vais.Agents.Control.Http.EvalSuiteQueryResponse? other) -> bool
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.EvalSuiteQueryResponse(Vais.Agents.EvalSuiteManifest! Manifest, Vais.Agents.EvalSuiteHandle! Handle) -> void
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Handle.get -> Vais.Agents.EvalSuiteHandle!
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Handle.init -> void
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Manifest.get -> Vais.Agents.EvalSuiteManifest!
+Vais.Agents.Control.Http.EvalSuiteQueryResponse.Manifest.init -> void
+override Vais.Agents.Control.Http.EvalSuiteQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalSuiteQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalSuiteQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalSuiteQueryResponse.operator !=(Vais.Agents.Control.Http.EvalSuiteQueryResponse? left, Vais.Agents.Control.Http.EvalSuiteQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalSuiteQueryResponse.operator ==(Vais.Agents.Control.Http.EvalSuiteQueryResponse? left, Vais.Agents.Control.Http.EvalSuiteQueryResponse? right) -> bool
+Vais.Agents.Control.Http.IAgentControlPlaneClient.UpsertEvalSuiteAsync(Vais.Agents.EvalSuiteManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteApplyResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListEvalSuitesAsync(string? labelPrefix = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.QueryEvalSuiteAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteQueryResponse?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.EvictEvalSuiteAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.UpsertEvalSuiteAsync(Vais.Agents.EvalSuiteManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteApplyResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListEvalSuitesAsync(string? labelPrefix = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.QueryEvalSuiteAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalSuiteQueryResponse?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.EvictEvalSuiteAsync(string! id, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 
 Vais.Agents.Control.Http.DiagSpanListResponse
 Vais.Agents.Control.Http.DiagSpanListResponse.DiagSpanListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.DiagSpanRecord!>! Items) -> void

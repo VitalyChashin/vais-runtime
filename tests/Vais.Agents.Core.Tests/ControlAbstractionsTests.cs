@@ -79,8 +79,8 @@ public sealed class ControlAbstractionsTests
     [Fact]
     public void PolicyOperation_Has_Expected_Values()
     {
-        // 7 agent verbs + 7 graph verbs (v0.19) + 12 gateway config verbs (v0.20) + 4 container plugin verbs (v0.24).
-        Enum.GetValues<PolicyOperation>().Length.Should().Be(30);
+        // 7 agent verbs + 7 graph verbs (v0.19) + 12 gateway config verbs (v0.20) + 4 container plugin verbs (v0.24) + 3 eval-suite verbs (E1).
+        Enum.GetValues<PolicyOperation>().Length.Should().Be(33);
     }
 }
 

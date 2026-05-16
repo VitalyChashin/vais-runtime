@@ -236,4 +236,17 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         services.TryAddSingleton<IContainerPluginRegistry>(sp => sp.GetRequiredService<OrleansContainerPluginRegistry>());
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="OrleansEvalSuiteRegistry"/> as the durable eval suite registry.
+    /// Suite registrations survive silo restart via the configured grain-storage provider.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddOrleansEvalSuiteRegistry(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton(sp => new OrleansEvalSuiteRegistry(sp.GetRequiredService<IGrainFactory>()));
+        services.TryAddSingleton<IEvalSuiteRegistry>(sp => sp.GetRequiredService<OrleansEvalSuiteRegistry>());
+        return services;
+    }
 }

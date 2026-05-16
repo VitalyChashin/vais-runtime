@@ -192,3 +192,21 @@ override Vais.Agents.Control.FilterCallEntry.GetHashCode() -> int
 override Vais.Agents.Control.FilterCallEntry.ToString() -> string!
 static Vais.Agents.Control.FilterCallEntry.operator !=(Vais.Agents.Control.FilterCallEntry? left, Vais.Agents.Control.FilterCallEntry? right) -> bool
 static Vais.Agents.Control.FilterCallEntry.operator ==(Vais.Agents.Control.FilterCallEntry? left, Vais.Agents.Control.FilterCallEntry? right) -> bool
+Vais.Agents.Control.PolicyOperation.EvalSuiteUpsert = 30 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.EvalSuiteQuery = 31 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.EvalSuiteEvict = 32 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.IEvalAssertionKindRegistry
+Vais.Agents.Control.IEvalAssertionKindRegistry.IsRegistered(string! kind) -> bool
+Vais.Agents.Control.ManifestResource.EvalSuiteCase
+Vais.Agents.Control.ManifestResource.EvalSuiteCase.Deconstruct(out Vais.Agents.EvalSuiteManifest! Suite) -> void
+Vais.Agents.Control.ManifestResource.EvalSuiteCase.Equals(Vais.Agents.Control.ManifestResource.EvalSuiteCase? other) -> bool
+Vais.Agents.Control.ManifestResource.EvalSuiteCase.EvalSuiteCase(Vais.Agents.EvalSuiteManifest! Suite) -> void
+Vais.Agents.Control.ManifestResource.EvalSuiteCase.Suite.get -> Vais.Agents.EvalSuiteManifest!
+Vais.Agents.Control.ManifestResource.EvalSuiteCase.Suite.init -> void
+override Vais.Agents.Control.ManifestResource.EvalSuiteCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.EvalSuiteCase!
+override Vais.Agents.Control.ManifestResource.EvalSuiteCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.EvalSuiteCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.EvalSuiteCase.ToString() -> string!
+override sealed Vais.Agents.Control.ManifestResource.EvalSuiteCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+static Vais.Agents.Control.ManifestResource.EvalSuiteCase.operator !=(Vais.Agents.Control.ManifestResource.EvalSuiteCase? left, Vais.Agents.Control.ManifestResource.EvalSuiteCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.EvalSuiteCase.operator ==(Vais.Agents.Control.ManifestResource.EvalSuiteCase? left, Vais.Agents.Control.ManifestResource.EvalSuiteCase? right) -> bool

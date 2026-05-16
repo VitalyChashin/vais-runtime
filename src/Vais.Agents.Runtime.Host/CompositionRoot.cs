@@ -194,6 +194,8 @@ internal static class CompositionRoot
         services.AddOrleansMcpGatewayConfigRegistry();
         services.AddOrleansMcpServerRegistry();
         services.AddOrleansContainerPluginRegistry();
+        services.AddOrleansEvalSuiteRegistry();
+        services.TryAddSingleton<IEvalAssertionKindRegistry>(new PassthroughEvalAssertionKindRegistry());
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
@@ -536,6 +538,7 @@ internal static class CompositionRoot
                 sp.GetRequiredService<ILlmGatewayConfigLifecycleManager>(),
                 sp.GetRequiredService<IMcpGatewayConfigLifecycleManager>(),
                 sp.GetRequiredService<IMcpServerLifecycleManager>(),
+                sp.GetRequiredService<IEvalSuiteRegistry>(),
                 sp.GetService<ILogger<BootManifestApplyService>>() ?? NullLogger<BootManifestApplyService>.Instance));
         }
 
@@ -681,5 +684,10 @@ internal static class CompositionRoot
             providers.Add(pool.GetAsync(modelSpec).AsTask().GetAwaiter().GetResult());
         }
         return [.. providers];
+    }
+
+    private sealed class PassthroughEvalAssertionKindRegistry : IEvalAssertionKindRegistry
+    {
+        public bool IsRegistered(string kind) => true;
     }
 }

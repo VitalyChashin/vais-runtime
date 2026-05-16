@@ -378,6 +378,24 @@ public interface IAgentControlPlaneClient
     Task<ContainerPluginValidationResult> ValidateContainerPluginAsync(ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
         => Task.FromResult(new ContainerPluginValidationResult(Valid: true, Array.Empty<string>()));
 
+    // ── Eval suite operations (E1) ────────────────────────────────────────────
+
+    /// <summary>POST /v1/eval-suites — register or overwrite an eval suite manifest (upsert). Default: throws NotSupportedException.</summary>
+    Task<EvalSuiteApplyResponse> UpsertEvalSuiteAsync(EvalSuiteManifest manifest, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval suite management. Use AgentControlPlaneClient.");
+
+    /// <summary>GET /v1/eval-suites — list registered eval suite manifests. Default: empty list.</summary>
+    Task<EvalSuiteListResponse> ListEvalSuitesAsync(string? labelPrefix = null, int? limit = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(new EvalSuiteListResponse(Array.Empty<EvalSuiteManifest>()));
+
+    /// <summary>GET /v1/eval-suites/{id} — fetch eval suite manifest. Default: null (not found).</summary>
+    Task<EvalSuiteQueryResponse?> QueryEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => Task.FromResult((EvalSuiteQueryResponse?)null);
+
+    /// <summary>DELETE /v1/eval-suites/{id} — remove an eval suite manifest. Default: throws NotSupportedException.</summary>
+    Task EvictEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval suite management. Use AgentControlPlaneClient.");
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

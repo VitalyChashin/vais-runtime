@@ -964,6 +964,54 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<EvalSuiteApplyResponse> UpsertEvalSuiteAsync(EvalSuiteManifest manifest, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/eval-suites")
+        {
+            Content = new StringContent(EnvelopeSerializer.Serialize(manifest), Encoding.UTF8, "application/json"),
+        };
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalSuiteApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Server returned empty body on UpsertEvalSuite.");
+    }
+
+    /// <inheritdoc />
+    public async Task<EvalSuiteListResponse> ListEvalSuitesAsync(string? labelPrefix = null, int? limit = null, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(labelPrefix)) qs.Add($"labels={Uri.EscapeDataString(labelPrefix)}");
+        if (limit is int l) qs.Add($"limit={l}");
+        var path = qs.Count > 0 ? $"/v1/eval-suites?{string.Join('&', qs)}" : "/v1/eval-suites";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalSuiteListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new EvalSuiteListResponse(Array.Empty<EvalSuiteManifest>());
+    }
+
+    /// <inheritdoc />
+    public async Task<EvalSuiteQueryResponse?> QueryEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/eval-suites/{Uri.EscapeDataString(id)}" : $"/v1/eval-suites/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalSuiteQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task EvictEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        var path = version is null ? $"/v1/eval-suites/{Uri.EscapeDataString(id)}" : $"/v1/eval-suites/{Uri.EscapeDataString(id)}?version={Uri.EscapeDataString(version)}";
+        using var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();

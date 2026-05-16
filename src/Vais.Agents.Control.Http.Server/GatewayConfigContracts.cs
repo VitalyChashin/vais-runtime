@@ -78,3 +78,18 @@ public sealed record ContainerPluginListResponse(
 
 /// <summary>Response body for <c>POST /v1/container-plugins/validate</c>.</summary>
 public sealed record ContainerPluginValidationResult(bool Valid, IReadOnlyList<string> Errors);
+
+/// <summary>Response body for <c>POST /v1/eval-suites</c> (upsert).</summary>
+public sealed record EvalSuiteApplyResponse(
+    EvalSuiteHandle Handle,
+    IReadOnlyList<ApplyDiagnostic> Warnings);
+
+/// <summary>Response body for <c>GET /v1/eval-suites/{id}</c>.</summary>
+public sealed record EvalSuiteQueryResponse(
+    EvalSuiteManifest Manifest,
+    EvalSuiteHandle Handle);
+
+/// <summary>Response body for <c>GET /v1/eval-suites</c>.</summary>
+public sealed record EvalSuiteListResponse(
+    IReadOnlyList<EvalSuiteManifest> Items,
+    string? NextCursor = null);

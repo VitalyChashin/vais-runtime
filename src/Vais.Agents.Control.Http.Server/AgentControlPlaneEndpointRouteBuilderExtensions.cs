@@ -197,6 +197,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapMcpGatewayControlPlane(builder, prefix);
         MapMcpServerControlPlane(builder, prefix);
         MapContainerPluginControlPlane(builder, prefix);
+        MapEvalSuiteControlPlane(builder, prefix);
         MapDiagnosticsControlPlane(builder, prefix);
 
         return builder;
@@ -2924,6 +2925,137 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             if (resolvedVersion is null)
                 return Results.NotFound(new { error = $"container-plugin '{id}' not found" });
             await manager.EvictAsync(new ContainerPluginHandle(id, resolvedVersion), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
+        }
+    }
+
+    // ── Eval suite endpoints (E1) ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Mount the eval suite control-plane endpoints (E1).
+    /// </summary>
+    public static IEndpointRouteBuilder MapEvalSuiteControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("EvalSuites");
+
+        group.MapPost("/eval-suites", EvalSuiteUpsertAsync)
+            .WithName("EvalSuites.Upsert")
+            .WithSummary("Register or overwrite an eval suite manifest.")
+            .Accepts<EvalSuiteManifest>("application/json", "application/yaml")
+            .Produces<EvalSuiteApplyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/eval-suites", EvalSuiteListAsync)
+            .WithName("EvalSuites.List")
+            .WithSummary("List registered eval suite manifests.")
+            .Produces<EvalSuiteListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/eval-suites/{id}", EvalSuiteQueryAsync)
+            .WithName("EvalSuites.Query")
+            .WithSummary("Fetch an eval suite manifest by id.")
+            .Produces<EvalSuiteQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapDelete("/eval-suites/{id}", EvalSuiteEvictAsync)
+            .WithName("EvalSuites.Evict")
+            .WithSummary("Remove an eval suite manifest.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> EvalSuiteUpsertAsync(HttpContext http, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IEvalSuiteRegistry>();
+        var loader = http.RequestServices.GetRequiredService<JsonAgentGraphManifestLoader>();
+        string body;
+        using (var reader = new StreamReader(http.Request.Body))
+            body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        EvalSuiteManifest manifest;
+        try
+        {
+            var resources = await loader.LoadAllResourcesFromStringAsync(body, ct).ConfigureAwait(false);
+            var suites = resources.OfType<ManifestResource.EvalSuiteCase>().ToList();
+            if (suites.Count != 1)
+                return Results.BadRequest(new { error = $"POST /eval-suites accepts exactly one EvalSuite manifest; got {suites.Count}." });
+            manifest = suites[0].Suite;
+        }
+        catch (Exception ex) when (ex is AgentManifestValidationException or System.Text.Json.JsonException)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.EvalSuiteUpsert);
+        }
+
+        try
+        {
+            await registry.UpsertAsync(manifest, ct).ConfigureAwait(false);
+            var handle = new EvalSuiteHandle(manifest.Id, manifest.Version);
+            return Results.Ok(new EvalSuiteApplyResponse(handle, Array.Empty<ApplyDiagnostic>()));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, manifest.Id, PolicyOperation.EvalSuiteUpsert);
+        }
+    }
+
+    private static async Task<IResult> EvalSuiteListAsync(HttpContext http, int? limit, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IEvalSuiteRegistry>();
+        try
+        {
+            var take = Math.Clamp(limit ?? 50, 1, 500);
+            var items = new List<EvalSuiteManifest>();
+            await foreach (var m in registry.ListAsync(ct: ct).ConfigureAwait(false))
+            {
+                items.Add(m);
+                if (items.Count >= take) break;
+            }
+            return Results.Ok(new EvalSuiteListResponse(items, NextCursor: null));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.EvalSuiteQuery);
+        }
+    }
+
+    private static async Task<IResult> EvalSuiteQueryAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IEvalSuiteRegistry>();
+        try
+        {
+            var manifest = await registry.GetAsync(id, version, ct).ConfigureAwait(false);
+            if (manifest is null)
+                return Results.NotFound(new { error = $"eval-suite '{id}' not found" });
+            var handle = new EvalSuiteHandle(id, manifest.Version);
+            return Results.Ok(new EvalSuiteQueryResponse(manifest, handle));
+        }
+        catch (Exception ex)
+        {
+            return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id, PolicyOperation.EvalSuiteQuery);
+        }
+    }
+
+    private static async Task<IResult> EvalSuiteEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetRequiredService<IEvalSuiteRegistry>();
+        try
+        {
+            var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
+            if (resolvedVersion is null)
+                return Results.NotFound(new { error = $"eval-suite '{id}' not found" });
+            await registry.RemoveAsync(id, resolvedVersion, ct).ConfigureAwait(false);
             return Results.NoContent();
         }
         catch (Exception ex)
