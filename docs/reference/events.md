@@ -66,6 +66,14 @@ Vais.Agents' built-in orchestrators don't automatically publish this — consume
 |---|---|---|
 | `CompletionDelta` | by `IStreamingAiAgent.StreamAsync` per streamed text chunk | `TextDelta`, `ModelId?`, `PromptTokens?`, `CompletionTokens?`, `ToolCalls?` |
 
+## Section pipeline
+
+| Event | Raised | Fields |
+|---|---|---|
+| `RequestSectionsBuilt` | once per turn by `SectionTelemetryEmitter` (via `EventBusSectionSink`) between the section packer and the flattener | `TurnIndex`, `Sections` (per-section `Id`, `Kind`, `ProducerId`, `Order`, `Priority`, `Chars`, `Tokens?`, `Ratio`, `Outcome`, `DroppedChars`), `Budget` (`TargetChars?`, `TargetTokens?`, `UsedChars`, `UsedTokens?`, `UsedRatio`, `DroppedCount`, `TruncatedCount`) |
+
+Fires before guardrails and the completion provider — even cancelled or guardrail-denied turns emit one. Wire `EventBusSectionSink` (in `Vais.Agents.Core`) via `StatefulAgentOptions.SectionTelemetrySinks` to surface the event; subscribe through `IAgentEventBus.Subscribe`. Useful for invariant assertions ("every successful run includes a `cognition.diee.goal_stack` section"), drift detectors, and audit pipelines. Subscribers must treat `Sections` and `Budget` as immutable snapshots.
+
 `TextDelta` is non-null (may be empty on a terminal update that carries only metadata or tool-calls). Consumers aggregating a run sum deltas; take the final non-null `ModelId` / `PromptTokens` / `CompletionTokens` as authoritative. `ToolCalls` populates on the terminal pre-dispatch update when the model requests tool invocations — actual dispatch events (`ToolCallStarted` / `ToolCallCompleted`) follow separately on the bus.
 
 `CompletionDelta` rides the SSE wire on the v0.12 `POST /v1/agents/{id}/invoke/stream` route — see [stream invocations over HTTP](../guides/stream-invocations-over-http.md).
@@ -93,6 +101,9 @@ new HandoffRequested(DateTimeOffset.UtcNow, context, handoff);
 
 // streaming (v0.12):
 new CompletionDelta(DateTimeOffset.UtcNow, context, textDelta, modelId, promptTokens, completionTokens, toolCalls);
+
+// section pipeline:
+new RequestSectionsBuilt(DateTimeOffset.UtcNow, context, turnIndex, sections, budget);
 ```
 
 ## SSE wire-event names (v0.12)
@@ -112,7 +123,9 @@ new CompletionDelta(DateTimeOffset.UtcNow, context, textDelta, modelId, promptTo
 | `HandoffRequested` | `handoff.requested` |
 | `CompletionDelta` | `delta` |
 
-Ten event names — one per closed-hierarchy subtype. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface.
+Ten event names — one per closed-hierarchy subtype with SSE coverage. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface.
+
+`RequestSectionsBuilt` (added with the Phase 2 section pipeline) is **not yet on the SSE wire** and **not yet mapped through the Orleans surrogate**. The event is published on in-process `IAgentEventBus` implementations (`NullAgentEventBus`, `InMemoryAgentEventBus`) and consumed by subscribers wired in the same silo; cross-silo Orleans fan-out and HTTP streaming consumption are deferred — track in a follow-on issue when needed.
 
 Heartbeat comments (`: heartbeat <utc>`) fire between events at `StreamingInvokeOptions.HeartbeatInterval` cadence (15s default). SSE parsers ignore comment lines — they keep proxies and load balancers from idling the connection.
 
