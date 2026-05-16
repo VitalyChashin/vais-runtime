@@ -80,10 +80,26 @@ internal sealed class PluginErrorResponse
 }
 
 // Gateway callback request/response types (S18/S19)
+//
+// Contract v0.27 (discriminated union):
+//   { messages: [...] }  → legacy pre-flattened path. Runtime treats Messages as the final
+//                          CompletionRequest.History; no resolver/packer/telemetry runs.
+//   { sections: [...] }  → canonical sectioned path. Runtime runs the full pipeline server-side
+//                          (resolver → packer → telemetry emitter → flattener → LLM gateway),
+//                          restoring per-section telemetry symmetry with runtime-hosted agents.
+// Both populated, or both null/empty → HTTP 400 (urn:vais-agents:llm-complete-input-conflict).
 internal sealed class GatewayLlmCompleteRequest
 {
-    public IReadOnlyList<PluginMessage> Messages { get; init; } = [];
+    public IReadOnlyList<PluginMessage>? Messages { get; init; }
+    public IReadOnlyList<GatewaySection>? Sections { get; init; }
     public string? ModelId { get; init; }
+    public GatewayLlmCompleteOptions? Options { get; init; }
+}
+
+internal sealed class GatewayLlmCompleteOptions
+{
+    public float? Temperature { get; init; }
+    public int? MaxTokens { get; init; }
 }
 
 internal sealed class GatewayLlmCompleteResponse

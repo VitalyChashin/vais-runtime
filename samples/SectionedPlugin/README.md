@@ -1,13 +1,13 @@
 # Sample: SectionedPlugin
 
-Reference container plugin that opts into the **typed `Section[]` view** of per-turn context (Phase 4 — SC-20–SC-24). Demonstrates the end-to-end flow shipped with the section pipeline:
+Reference container plugin that opts into the **typed `Section[]` view** of per-turn context (Phase 4 — SC-20–SC-24, contract v0.27). Demonstrates the canonical end-to-end flow:
 
 1. The runtime composes per-turn sections (persona, policy, retrieval, history) as it would for a declarative agent.
 2. The plugin calls **`POST /v1/container-gateway/sections/build`** to fetch the resolver-ordered `Section[]` instead of consuming the pre-flattened `InvokeRequest.messages`.
-3. The plugin logs a per-section breakdown for operator visibility, then flattens via `sections_to_openai_request()`.
-4. The flattened body is POSTed back through the runtime's gateway-proxied `/v1/container-gateway/chat/completions` so token accounting + Langfuse + the LLM gateway middleware chain all apply normally.
+3. The plugin logs a per-section breakdown for operator visibility (and could mutate the section list here — drop noisy producers, override budgets, suppress metadata).
+4. The plugin ships the section list **back** via **`POST /v1/container-gateway/llm/complete`** with the `{ sections: [...] }` body. The runtime runs the canonical pipeline server-side: `resolver → packer → telemetry emitter → flattener → LLM gateway`. Per-section OTel tags, Prometheus metrics, Langfuse enrichment, and the `RequestSectionsBuilt` event all fire — exactly the same as for a runtime-hosted agent.
 
-This is the **opt-in** path. The default plugin behaviour (consume `InvokeRequest.messages`) keeps working unchanged — anyone who doesn't want per-section attribution or RAG visibility can ignore this sample entirely.
+This is the **opt-in** path. The default plugin behaviour (consume `InvokeRequest.messages`) keeps working unchanged. Plugins that integrate with non-VAIS toolchains (OpenAI-compatible SDKs, frameworks that drive the LLM call themselves) can use the legacy plugin-side flatten path — see `_invoke_legacy_path` in `agent.py` for the contrast. The legacy path remains supported but doesn't get the per-section telemetry symmetry the canonical path provides.
 
 ## Layout
 
@@ -61,7 +61,7 @@ In the runtime logs you'll see the plugin emit a per-section breakdown line per 
 
 In Langfuse (`http://localhost:3000`) the per-turn span carries `langfuse.section.*` metadata aliases — same guide covers the observability surface end-to-end.
 
-## What the plugin does, in 6 lines
+## What the plugin does, in 8 lines
 
 ```python
 sections = await build_sections(
@@ -69,12 +69,29 @@ sections = await build_sections(
     run_id=req.run_id, agent_id=req.agent_id,
     messages=[{"role": "user", "content": req.user_message}],
 )
-body = sections_to_openai_request(sections)
-body["model"] = "gpt-4o-mini"
-# ... post body to /v1/container-gateway/chat/completions ...
+# (optional) inspect / mutate sections here
+
+result = await complete_from_sections(
+    gateway_base_url=req.llm_gateway_url, call_token=req.call_token,
+    run_id=req.run_id, agent_id=req.agent_id,
+    sections=sections, model_id="gpt-4o-mini",
+)
+return AgentResponse(assistantMessage=result.message["content"])
 ```
 
-The runtime is the source of truth for what producers ship sections; the plugin owns conversation state and decides which sections to use. The default OpenAI adapter reproduces the pre-flattened `InvokeRequest.messages` shape exactly — so the *minimum* opt-in cost is one extra HTTP round-trip and gives back per-producer attribution + the ability to swap in a custom adapter (LangGraph state slots, LangChain `ChatPromptTemplate` parts, SGR planner inputs — see follow-on SC-25 issues).
+The runtime is the source of truth for what producers ship sections **and** for how those sections flatten into the wire request. The plugin owns conversation state and decides which sections to keep. This split is what gives the plugin per-section telemetry symmetry with runtime-hosted agents — the flatten + LLM call run server-side, so all the runtime's observability sinks see the section breakdown.
+
+### Legacy path (kept for backwards compatibility)
+
+The pre-v0.27 shape — plugin flattens client-side via `sections_to_openai_request()` and POSTs to `/v1/container-gateway/chat/completions` — is preserved verbatim. Use it when:
+
+- You're driving an OpenAI-compatible SDK on the client side that expects the OpenAI chat-completions wire shape.
+- You're integrating with a non-VAIS framework that doesn't fit the canonical path.
+- You want to bypass the gateway for a specific call (talk to a hosted LLM directly).
+
+Trade-off: per-section telemetry doesn't fire on the LLM-call span on the legacy path — the runtime sees a `CompletionRequest` with no section info, so OTel section tags, Prometheus section metrics, Langfuse section enrichment, and the `RequestSectionsBuilt` event all stay silent for that call. The section-build call still fires its own observability surface; only the LLM-call side is silent. For new plugins, prefer the canonical path. See `_invoke_legacy_path` in `agent.py` for a worked example.
+
+Custom framework adapters (LangGraph state slots, LangChain `ChatPromptTemplate` parts, SGR planner inputs) are tracked as follow-on issues — see `epic:sectioned-context`.
 
 ## See also
 

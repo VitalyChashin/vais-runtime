@@ -4,13 +4,14 @@ Drives one ``invoke()`` call against an in-memory httpx.MockTransport that stand
 for the runtime gateway. Verifies that the plugin:
 
 1. Calls /v1/sections/build with the right URL + headers + plugin's messages view.
-2. Flattens the returned Section[] via sections_to_openai_request().
-3. POSTs the flattened body to /v1/container-gateway/chat/completions with the same
-   auth headers and model field set.
-4. Returns the assistant content + usage in an AgentResponse.
+2. Round-trips the returned Section[] back to /v1/container-gateway/llm/complete via
+   the canonical v0.27 ``complete_from_sections`` path — so the runtime runs flatten +
+   telemetry server-side, restoring per-section observability symmetry with runtime-hosted
+   agents (the regression the v0.27 contract bump fixed).
+3. Returns the assistant content + usage in an AgentResponse.
 
-No live runtime required — the test is the smoke check the SC-24 acceptance asks
-for, plus a deterministic regression guard against future plugin / SDK drift.
+No live runtime required — the test is the smoke check the SC-24 acceptance asks for,
+plus a deterministic regression guard against future plugin / SDK drift.
 """
 from __future__ import annotations
 
@@ -67,23 +68,17 @@ def _sections_response() -> dict[str, Any]:
     }
 
 
-def _completion_response() -> dict[str, Any]:
+def _llm_complete_response() -> dict[str, Any]:
     return {
-        "id": "chatcmpl-test",
-        "object": "chat.completion",
-        "created": 0,
-        "model": "gpt-4o-mini",
-        "choices": [{
-            "index": 0,
-            "message": {"role": "assistant",
-                        "content": "Returns are accepted within 30 days. Source 1."},
-            "finish_reason": "stop",
-        }],
-        "usage": {"prompt_tokens": 42, "completion_tokens": 13, "total_tokens": 55},
+        "message": {
+            "role": "assistant",
+            "content": "Returns are accepted within 30 days. Source 1.",
+        },
+        "usage": {"inputTokens": 42, "outputTokens": 13, "cachedTokens": 0},
     }
 
 
-async def test_invoke_end_to_end_routes_through_sections_build_and_chat_completions():
+async def test_invoke_end_to_end_routes_through_canonical_v0_27_path():
     captured: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -95,8 +90,8 @@ async def test_invoke_end_to_end_routes_through_sections_build_and_chat_completi
         })
         if request.url.path == "/v1/container-gateway/sections/build":
             return httpx.Response(200, json=_sections_response())
-        if request.url.path == "/v1/container-gateway/chat/completions":
-            return httpx.Response(200, json=_completion_response())
+        if request.url.path == "/v1/container-gateway/llm/complete":
+            return httpx.Response(200, json=_llm_complete_response())
         return httpx.Response(404, text=f"unhandled: {request.url}")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -105,10 +100,10 @@ async def test_invoke_end_to_end_routes_through_sections_build_and_chat_completi
     finally:
         await client.aclose()
 
-    # Two calls, in order: sections/build then chat/completions.
+    # Two calls, in order: sections/build then llm/complete (canonical v0.27 path).
     assert len(captured) == 2
     assert captured[0]["url"].endswith("/v1/container-gateway/sections/build")
-    assert captured[1]["url"].endswith("/v1/container-gateway/chat/completions")
+    assert captured[1]["url"].endswith("/v1/container-gateway/llm/complete")
 
     # Both calls carry the bearer + correlation headers.
     for call in captured:
@@ -121,18 +116,17 @@ async def test_invoke_end_to_end_routes_through_sections_build_and_chat_completi
         "messages": [{"role": "user", "content": "What's our return policy?"}],
     }
 
-    # chat/completions body shape — the OpenAI adapter renders persona+retrieval into a
-    # single concatenated system message, then the user turn.
-    completion_body = captured[1]["body"]
-    assert completion_body["model"] == "gpt-4o-mini"
-    assert completion_body["messages"] == [
-        {"role": "system",
-         "content": "You are a careful research assistant.\n\nSource 1: Returns within 30 days."},
-        {"role": "user", "content": "What's our return policy?"},
-    ]
-    # No tools / response_format sections in this fixture, so those keys are omitted.
-    assert "tools" not in completion_body
-    assert "response_format" not in completion_body
+    # llm/complete receives the SECTIONS variant — not the flattened messages array. This is
+    # the v0.27 fix: the plugin ships sections back so the runtime runs flatten + telemetry
+    # server-side, instead of the plugin reimplementing flatten and losing per-section
+    # observability on the LLM-call span.
+    llm_body = captured[1]["body"]
+    assert "sections" in llm_body
+    assert "messages" not in llm_body  # mutually exclusive per the discriminator rule
+    assert llm_body["modelId"] == "gpt-4o-mini"
+    assert len(llm_body["sections"]) == 3
+    section_ids = [s["id"] for s in llm_body["sections"]]
+    assert section_ids == ["system.persona", "retrieval.docs", "history.window.0"]
 
     # Response carries the assistant reply + usage round-trip.
     assert resp.assistant_message == "Returns are accepted within 30 days. Source 1."

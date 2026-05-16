@@ -1,23 +1,30 @@
-"""SectionedAgent — drives one turn through /v1/sections/build + the OpenAI adapter.
+"""SectionedAgent — opt-in to the runtime's section pipeline via the canonical path.
 
 End-to-end flow per call:
 1. Resolve the runtime gateway URL + auth from the inbound ``AgentRequest``.
-2. Build a one-shot ``messages`` view from the user message (plus optional carried-over
-   state, if the plugin chose to maintain it).
-3. POST to ``/v1/container-gateway/sections/build`` to fetch the resolver-ordered Section[]
-   the runtime would normally have flattened internally.
-4. (Demo touch) print a one-line per-section breakdown so an operator can see the
-   composition decision being made.
-5. Flatten via ``sections_to_openai_request()`` and POST to the runtime's
-   ``/v1/container-gateway/chat/completions`` to get the assistant reply.
-6. Return the reply as an ``AgentResponse``.
+2. Build the plugin's current ``messages`` view from the user message (and any carried-over
+   state if the plugin chose to maintain it).
+3. ``build_sections()`` — fetch the typed, resolver-ordered ``Section[]`` the runtime would
+   normally have flattened internally.
+4. (Optional, demonstration touch) print a one-line per-section breakdown so an operator can
+   see the composition decision live; in production a plugin might mutate sections here
+   (drop a noisy producer, override budgets, suppress metadata).
+5. ``complete_from_sections()`` — ship the (possibly mutated) section list **back** to the
+   runtime so it runs the canonical pipeline server-side: resolver re-validates, packer
+   applies the agent's budget, the telemetry emitter fires (so OTel / Langfuse / Prometheus /
+   ``RequestSectionsBuilt`` event all see the per-section breakdown), the flattener produces
+   the final ``CompletionRequest``, and the LLM gateway middleware chain runs. The plugin
+   receives the assistant reply + usage totals.
 
-The plugin holds no extra state beyond the conversation history that the runtime owns.
-A richer plugin would also serialise per-section telemetry into its own opaque state.
+This is the v0.27 path. It restores **telemetry symmetry** with runtime-hosted agents — the
+plugin gets per-section observability for free instead of having to reimplement it. The
+older flatten-in-the-plugin path (using :mod:`vais_agent_sdk.adapters.openai` + a direct call
+to ``/v1/container-gateway/chat/completions``) is still supported for backwards compatibility
+and for plugins integrating with non-VAIS toolchains — see :func:`_invoke_legacy_path` at the
+bottom of this file for the contrast.
 """
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -29,7 +36,7 @@ from vais_agent_sdk import (
     AgentUsage,
     RequestSections,
     build_sections,
-    sections_to_openai_request,
+    complete_from_sections,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,20 +48,7 @@ async def invoke(
     model: str = "gpt-4o-mini",
     client: httpx.AsyncClient | None = None,
 ) -> AgentResponse:
-    """Handle one ``vais/agent.invoke`` call end-to-end.
-
-    Parameters
-    ----------
-    request
-        The incoming JSON-RPC request, carrying the gateway URL + call token in its
-        context block.
-    model
-        OpenAI model identifier forwarded into the chat-completions body. Override
-        per agent if needed.
-    client
-        Optional pre-constructed ``httpx.AsyncClient`` (e.g. supplied by a test). When
-        None, a fresh client is built for the duration of the call.
-    """
+    """Handle one ``vais/agent.invoke`` call end-to-end via the canonical v0.27 path."""
     if client is None:
         async with httpx.AsyncClient(timeout=60.0) as fresh:
             return await _invoke_inner(request, model=model, client=fresh)
@@ -70,8 +64,8 @@ async def _invoke_inner(
     gateway_url = request.llm_gateway_url
     call_token = request.call_token
 
-    # 1+2. Plugin's view of the conversation. The runtime would also have this from its
-    # session store, but the plugin's view is authoritative on this path (contract v0.26).
+    # 1+2. Plugin's view of the conversation. The plugin owns this on the v0.27 path; the
+    # runtime treats it as the candidate the providers see.
     plugin_messages = [{"role": "user", "content": request.user_message}]
 
     # 3. Fetch the resolver-ordered Section[].
@@ -84,28 +78,28 @@ async def _invoke_inner(
         client=client,
     )
 
-    # 4. One-line per-section breakdown — operator visibility into composition.
+    # 4. One-line per-section breakdown — operator visibility into composition. A production
+    # plugin could also mutate sections here before sending them back.
     _log_breakdown(sections)
 
-    # 5. Flatten + call back through the gateway. response_format is included automatically
-    # if the runtime emitted a ResponseFormat section.
-    request_body = sections_to_openai_request(sections)
-    request_body["model"] = model
-
-    completion = await _chat_completions(
-        client=client,
+    # 5. Ship the sections back. Runtime runs the canonical flatten + telemetry + LLM call.
+    result = await complete_from_sections(
         gateway_base_url=gateway_url,
         call_token=call_token,
         run_id=request.run_id,
         agent_id=request.agent_id,
-        body=request_body,
+        sections=sections,
+        model_id=model,
+        client=client,
     )
 
-    reply, usage = _extract_reply(completion)
-
     return AgentResponse(
-        assistantMessage=reply,
-        usage=[AgentUsage(model=model, inputTokens=usage[0], outputTokens=usage[1])] if usage else None,
+        assistantMessage=result.message.get("content", ""),
+        usage=[AgentUsage(
+            model=model,
+            inputTokens=result.usage.input_tokens,
+            outputTokens=result.usage.output_tokens,
+        )] if result.usage is not None else None,
     )
 
 
@@ -123,36 +117,49 @@ def _log_breakdown(sections: RequestSections) -> None:
         )
 
 
-async def _chat_completions(
+# ── Legacy / escape-hatch path (kept for reference, not used by invoke()) ───
+#
+# The older flatten-in-the-plugin shape, retained for plugins that integrate with non-VAIS
+# toolchains (OpenAI-compatible SDKs, frameworks that expect to drive the LLM call directly).
+# The trade-off is that per-section telemetry doesn't fire on this path — the runtime sees
+# a CompletionRequest with no section info, so OTel section tags / Prometheus section metrics /
+# Langfuse enrichment / RequestSectionsBuilt all stay silent for the LLM-call span.
+#
+# Prefer the canonical path above for new plugins. Use this only when you need the OpenAI-
+# compatible wire shape on the client side or are bridging a framework that can't be retrofit.
+
+
+async def _invoke_legacy_path(
+    request: AgentRequest,
     *,
+    model: str,
     client: httpx.AsyncClient,
-    gateway_base_url: str,
-    call_token: str,
-    run_id: str,
-    agent_id: str,
-    body: dict[str, Any],
-) -> dict[str, Any]:
-    url = f"{gateway_base_url.rstrip('/')}/v1/container-gateway/chat/completions"
+) -> AgentResponse:
+    """The pre-v0.27 plugin-side flatten path, for reference."""
+    from vais_agent_sdk import sections_to_openai_request
+
+    sections = await build_sections(
+        gateway_base_url=request.llm_gateway_url,
+        call_token=request.call_token,
+        run_id=request.run_id,
+        agent_id=request.agent_id,
+        messages=[{"role": "user", "content": request.user_message}],
+        client=client,
+    )
+
+    body = sections_to_openai_request(sections)
+    body["model"] = model
+
+    url = f"{request.llm_gateway_url.rstrip('/')}/v1/container-gateway/chat/completions"
     headers = {
-        "Authorization": f"Bearer {call_token}",
-        "X-Run-Id": run_id,
-        "X-Agent-Id": agent_id,
+        "Authorization": f"Bearer {request.call_token}",
+        "X-Run-Id": request.run_id,
+        "X-Agent-Id": request.agent_id,
     }
     resp = await client.post(url, headers=headers, json=body)
     resp.raise_for_status()
-    return resp.json()
+    completion: dict[str, Any] = resp.json()
 
-
-def _extract_reply(completion: dict[str, Any]) -> tuple[str, tuple[int, int] | None]:
-    choices = completion.get("choices") or []
-    if not choices:
-        return "", None
-    message = choices[0].get("message") or {}
-    content = message.get("content") or ""
-
-    usage_dict = completion.get("usage") or {}
-    pt = usage_dict.get("prompt_tokens")
-    ct = usage_dict.get("completion_tokens")
-    usage = (int(pt), int(ct)) if pt is not None and ct is not None else None
-
-    return content, usage
+    choices = completion.get("choices") or [{}]
+    content = (choices[0].get("message") or {}).get("content") or ""
+    return AgentResponse(assistantMessage=content)

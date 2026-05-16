@@ -1,6 +1,6 @@
 # Internal Gateway Protocol
 
-**Version:** 0.26  
+**Version:** 0.27  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3).
 
 ---
@@ -30,6 +30,10 @@ LLM completion callback. Routes through the full `ILlmGateway` middleware chain 
 
 ### Request
 
+The body is a **discriminated union**: exactly one of `messages` or `sections` must be present. Both populated, or both null/empty, → HTTP 400 with `urn:vais-agents:llm-complete-input-conflict`.
+
+**Messages variant** — the original path. Plugin sends pre-flattened conversation history.
+
 ```json
 {
   "messages": [ "<Message>", "..." ],
@@ -41,12 +45,29 @@ LLM completion callback. Routes through the full `ILlmGateway` middleware chain 
 }
 ```
 
+**Sections variant** (v0.27) — plugin sends typed `Section[]` (typically obtained from `POST /v1/sections/build` and optionally mutated client-side). Runtime runs the canonical `CompletionRequestFlattener` server-side, so the `ILlmGateway` sees a `CompletionRequest` byte-equal to what a runtime-hosted agent would have produced.
+
+```json
+{
+  "sections": [ "<GatewaySection>", "..." ],
+  "modelId": "gpt-4o-mini",
+  "options": {
+    "temperature": 0.7,
+    "maxTokens": 4096
+  }
+}
+```
+
+`<GatewaySection>` is the exact shape `POST /v1/sections/build` returns — see that endpoint for the schema. Plugins typically round-trip the response array verbatim; mutate (drop, reorder, edit payload text) when they want to override runtime composition decisions.
+
 Field rules:
-- `messages` — full conversation history including system prompt. Uses the `Message` type from `plugin-protocol.md`.
+- `messages` / `sections` — mutually exclusive; one required. See discriminator note above.
 - `modelId` — optional; null means "use the gateway's configured default for this agent."
 - `options` — optional; null means "use defaults." Full parameter set is specified in the `ILlmGateway` contract, not here.
 
 ### Response (non-streaming)
+
+Same shape regardless of input variant:
 
 ```json
 {
@@ -61,13 +82,40 @@ Field rules:
 
 ### Streaming
 
-`Accept: text/event-stream` → SSE with `delta` / `done` events (same taxonomy as `/v1/stream` in `plugin-protocol.md`). The container SDK client pipes these deltas through its own `/v1/stream` SSE response to the caller.
+`Accept: text/event-stream` → SSE with `delta` / `done` events. The wire shape is VAIS-native (not OpenAI-chunk):
+
+```
+event: delta
+data: {"textDelta": "...", "modelId": "..."}
+
+event: delta
+data: {"textDelta": "..."}
+
+event: done
+data: {"usage": {"inputTokens": 1200, "outputTokens": 450}}
+```
+
+Streaming works on both the `messages` and `sections` variants. The container SDK client pipes these deltas through its own `/v1/stream` SSE response to the caller.
+
+Plugins that want the OpenAI-chunk wire shape (for an OpenAI-compatible SDK on the client side) should use `POST /v1/container-gateway/chat/completions` instead — that endpoint is purely OpenAI-shaped and accepts `messages` only (no `sections` variant; OpenAI clients don't know about VAIS sections).
 
 ### Gateway behaviour
 
 - `callToken` is validated; `X-Agent-Id` and `X-Run-Id` are used to reconstruct `AgentContext` for `GatewayEventMiddleware`.
-- A completion call from inside the container produces a `vais_gateway_events` row with the correct `agent_id` and `run_id`.
+- **Messages variant:** the runtime treats the body as the final `CompletionRequest.History`; no resolver / packer / telemetry runs.
+- **Sections variant** (v0.27): the runtime runs the same pipeline a runtime-hosted agent does — `ISectionResolver.ResolveAsync` (re-validate ids + ordering) → `ISectionWindowPacker.PackAsync` (apply the agent's `SectionBudget`) → `SectionTelemetryEmitter.EmitAsync` (fire all configured `ISectionTelemetrySink`s: OTel tags, Prometheus metrics, Langfuse enrichment, `RequestSectionsBuilt` event, structured logs) → `CompletionRequestFlattener.Flatten` → `ILlmGateway` middleware chain → `ICompletionProvider.CompleteAsync`. This restores **telemetry symmetry**: a plugin agent that opts into sections gets the same per-section observability surface a declarative agent does, without having to reimplement flatten in the plugin.
+- A completion call from inside the container produces a `vais_gateway_events` row with the correct `agent_id` and `run_id` regardless of input variant.
 - `callToken` security algorithm and validation are specified in IP-3.
+
+### When to use which variant
+
+| Use | Choose |
+|---|---|
+| Plugin already has the assembled `messages` array (legacy default; OpenAI-compatible plugins; plugins integrating non-VAIS frameworks) | `messages` |
+| Plugin wants per-section attribution, runtime-side packer enforcement, and per-section telemetry symmetry with declarative agents | `sections` |
+| Plugin wants to integrate with an OpenAI-compatible SDK / IDE (continues to work with that SDK's expected wire shape) | use `/v1/container-gateway/chat/completions` (unchanged, OpenAI-shaped) |
+
+The `messages` variant is the default for backwards compatibility — existing plugins (incl. those using `vais_agent_sdk.adapters.openai` to flatten client-side, or external OpenAI-compatible toolchains) keep working unchanged. The `sections` variant is purely additive opt-in.
 
 ---
 

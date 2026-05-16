@@ -62,43 +62,212 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
         CancellationToken ct)
     {
-        if (ctx.Request.Headers.Accept.Any(
-                h => h?.Contains("text/event-stream", StringComparison.OrdinalIgnoreCase) == true))
-            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        // Discriminator: exactly one of Messages or Sections must be present (contract v0.27).
+        var hasMessages = body.Messages is { Count: > 0 };
+        var hasSections = body.Sections is { Count: > 0 };
+        if (hasMessages == hasSections)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Exactly one of 'messages' or 'sections' must be present.",
+                detail: hasMessages
+                    ? "Both 'messages' and 'sections' were populated; pick one."
+                    : "Neither 'messages' nor 'sections' is populated; supply one.",
+                extensions: new Dictionary<string, object?>
+                {
+                    ["urn"] = "urn:vais-agents:llm-complete-input-conflict",
+                });
+        }
+
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         var modelId = string.IsNullOrEmpty(body.ModelId) ? "gpt-4o-mini" : body.ModelId;
         var provider = await pool.GetAsync(
             new ModelSpec("openai", modelId, ApiKeyRef: "secret://env/OPENAI_API_KEY"), ct)
             .ConfigureAwait(false);
 
-        var history = body.Messages
-            .Select(PluginMessageToChatTurn)
-            .ToArray();
+        var streaming = ctx.Request.Headers.Accept.Any(
+            h => h?.Contains("text/event-stream", StringComparison.OrdinalIgnoreCase) == true);
 
-        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
-        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
-        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
-            ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
+        // Build the CompletionRequest. For the messages variant the body is treated as the final
+        // history (pre-flattened path; preserves the v0.26-and-earlier behaviour). For the sections
+        // variant we run the full pipeline server-side — resolver → packer → telemetry emitter →
+        // flattener — so per-section observability fires the same way it does for a runtime-hosted
+        // agent (the regression that motivated v0.27).
+        CompletionRequest request;
+        if (hasMessages)
+        {
+            request = new CompletionRequest(
+                body.Messages!.Select(PluginMessageToChatTurn).ToArray(),
+                Temperature: body.Options?.Temperature,
+                MaxTokens: body.Options?.MaxTokens);
+        }
+        else
+        {
+            var translator = ctx.RequestServices.GetService<IAgentManifestTranslator>();
+            if (translator is null)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status501NotImplemented,
+                    title: "Sections variant requires IAgentManifestTranslator registration.",
+                    detail: "Register IAgentManifestTranslator in DI (the runtime host does so automatically). " +
+                            "Hosts that don't register a translator support only the 'messages' variant.");
+            }
+            var pipelineResult = await BuildFromSectionsAsync(
+                body.Sections!, body.Options, translator, agentId, agentCtx, ct).ConfigureAwait(false);
+            if (pipelineResult.Error is not null)
+            {
+                return pipelineResult.Error;
+            }
+            request = pipelineResult.Request!;
+        }
 
-        var request = new CompletionRequest(history);
+        if (streaming)
+        {
+            if (provider is not IStreamingCompletionProvider streamingProvider)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status422UnprocessableEntity,
+                    title: "Provider does not support streaming.");
+            }
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            await ContainerGatewayVaisSseWriter.WriteAsync(ctx.Response, stream, ct).ConfigureAwait(false);
+            return Results.Empty;
+        }
+
         var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
             .ConfigureAwait(false);
 
-        var replyMessage = new PluginMessage
-        {
-            Role = "assistant",
-            Content = response.Text,
-        };
-
         return Results.Ok(new GatewayLlmCompleteResponse
         {
-            Message = replyMessage,
+            Message = new PluginMessage { Role = "assistant", Content = response.Text },
             Usage = new PluginUsageCounts
             {
                 InputTokens = response.PromptTokens ?? 0,
                 OutputTokens = response.CompletionTokens ?? 0,
-            }
+            },
         });
+    }
+
+    private readonly record struct SectionsBuildPipelineResult(CompletionRequest? Request, IResult? Error);
+
+    private static async Task<SectionsBuildPipelineResult> BuildFromSectionsAsync(
+        IReadOnlyList<GatewaySection> wireSections,
+        GatewayLlmCompleteOptions? options,
+        IAgentManifestTranslator translator,
+        string agentId,
+        AgentContext agentCtx,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return new SectionsBuildPipelineResult(null, Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header — required for the sections variant."));
+        }
+
+        StatefulAgentOptions agentOptions;
+        try
+        {
+            agentOptions = await translator.TranslateAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return new SectionsBuildPipelineResult(null, Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found or not translatable.",
+                detail: ex.Message));
+        }
+
+        // Wire → internal Section[]. Producer-id and budget round-trip.
+        var sections = new List<Section>(wireSections.Count);
+        foreach (var w in wireSections)
+        {
+            try
+            {
+                sections.Add(WireToSection(w));
+            }
+            catch (ArgumentException ex)
+            {
+                return new SectionsBuildPipelineResult(null, Results.Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: $"Malformed section '{w.Id}'.",
+                    detail: ex.Message));
+            }
+        }
+
+        // Resolve → pack → telemetry → flatten. Same pipeline StatefulAiAgent runs internally.
+        var resolver = agentOptions.SectionResolver ?? DefaultSectionResolver.Instance;
+        IReadOnlyList<Section> resolved;
+        try
+        {
+            resolved = await resolver.ResolveAsync(sections, ct).ConfigureAwait(false);
+        }
+        catch (SectionCollisionException ex)
+        {
+            return new SectionsBuildPipelineResult(null, Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Section id collision.",
+                detail: ex.Message));
+        }
+
+        var packer = agentOptions.SectionWindowPacker
+            ?? (agentOptions.ContextWindowPacker is not null
+                ? new LegacyPackerAdapter(agentOptions.ContextWindowPacker)
+                : DefaultSectionWindowPacker.Instance);
+        var budget = agentOptions.SectionBudget ?? SectionBudgetContext.Unlimited;
+        var packed = await packer.PackAsync(resolved, budget, ct).ConfigureAwait(false);
+
+        var emitter = agentOptions.SectionTelemetrySinks.Count == 0
+            ? SectionTelemetryEmitter.NoOp
+            : new SectionTelemetryEmitter(agentOptions.SectionTelemetrySinks);
+        if (!emitter.IsNoOp)
+        {
+            await emitter.EmitAsync(
+                resolved, packed, budget, agentCtx, turnIndex: 1, ct).ConfigureAwait(false);
+        }
+
+        var template = new CompletionRequest(
+            History: Array.Empty<ChatTurn>(),
+            Temperature: options?.Temperature,
+            MaxTokens: options?.MaxTokens);
+        var flattened = CompletionRequestFlattener.Flatten(packed.Sections, template);
+        return new SectionsBuildPipelineResult(flattened, null);
+    }
+
+    private static Section WireToSection(GatewaySection w)
+    {
+        if (!Enum.TryParse<SectionKind>(w.Kind, ignoreCase: false, out var kind))
+        {
+            throw new ArgumentException($"Unknown section kind '{w.Kind}'.");
+        }
+
+        SectionPayload payload = kind switch
+        {
+            SectionKind.SystemSegment => new TextPayload(w.Payload.Value ?? ""),
+            SectionKind.UserMessage or SectionKind.AssistantMessage or SectionKind.ToolMessage =>
+                new TurnPayload(PluginMessageToChatTurn(w.Payload.Turn
+                    ?? throw new ArgumentException("turn payload required for turn-kind sections"))),
+            SectionKind.ToolDeclaration => throw new ArgumentException(
+                "ToolDeclaration sections cannot round-trip from the wire — tools are runtime registry-bound."),
+            SectionKind.ResponseFormat => new ResponseFormatPayload(new ResponseFormatSpec(
+                Schema: w.Payload.Spec?.Schema ?? throw new ArgumentException("response_format spec required"),
+                SchemaName: w.Payload.Spec.Name,
+                Strict: w.Payload.Spec.Strict)),
+            SectionKind.Metadata => new MetadataPayload(
+                (w.Payload.Values ?? new Dictionary<string, JsonElement>())
+                .ToDictionary(kv => kv.Key, kv => (object?)kv.Value)),
+            _ => throw new ArgumentException($"Unsupported section kind '{kind}'."),
+        };
+
+        return new Section(
+            w.Id, kind, payload,
+            Order: w.Order,
+            ProducerId: w.ProducerId,
+            Budget: w.Budget is null ? null : new SectionBudget(w.Budget.Priority, w.Budget.MaxChars));
     }
 
     private static async Task<IResult> HandleChatCompletionsAsync(
