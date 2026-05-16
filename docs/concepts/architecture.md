@@ -134,7 +134,7 @@ Core contract families:
 | Tools | `ITool`, `IToolRegistry`, `IToolSource` |
 | Orchestration | `IAgentOrchestrator`, `AgentParticipant`, `OrchestrationStep`, `Handoff`, `ITerminationCondition` |
 | Graph orchestration (v0.9) | `IAgentGraph<TState>` / `IAgentGraph`, `IResumableAgentGraph<TState>`, `AgentGraphManifest`, `GraphNode`, `GraphEdge`, `GraphEdgePredicate`, `GraphPredicateOperator`, `GraphEdgeEffect`, `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` / `IGraphCheckpointer` |
-| Events | `AgentEvent` (10 subclasses — adds `RequestSectionsBuilt` to the v0.12 set; in-process bus only — see [events reference](../reference/events.md)), `AgentGraphEvent` (9 subclasses, v0.9), `IAgentEventBus` |
+| Events | `AgentEvent` (10 subclasses — adds `RequestSectionsBuilt` to the v0.12 set), `AgentGraphEvent` (9 subclasses, v0.9), `IAgentEventBus` |
 | Control plane (contract) | `AgentManifest` (+ sub-records — `Model`, `SystemPromptSpec`, `Guardrails`, `Budget`, `OutputSchema`, `SecretRefs`, …) |
 | Observability | `UsageRecord`, `IUsageSink`, `AgentContext`, `IAgentContextAccessor`, `IAgentFilter` |
 | RAG | `IKnowledgeRetriever`, `KnowledgeChunk` |

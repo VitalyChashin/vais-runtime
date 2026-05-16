@@ -30,6 +30,7 @@ internal static class AgentSseParser
             "interrupt.raised"     => JsonSerializer.Deserialize<InterruptRaised>(data, JsonOptions),
             "handoff.requested"    => JsonSerializer.Deserialize<HandoffRequested>(data, JsonOptions),
             "delta"                => JsonSerializer.Deserialize<CompletionDelta>(data, JsonOptions),
+            "request.sections.built" => JsonSerializer.Deserialize<RequestSectionsBuilt>(data, JsonOptions),
             _                      => null,
         };
 }
