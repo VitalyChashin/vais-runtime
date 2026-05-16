@@ -1,6 +1,6 @@
 # Internal Gateway Protocol
 
-**Version:** 0.24  
+**Version:** 0.25  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3).
 
 ---
@@ -102,3 +102,82 @@ Field rules:
 Field rules:
 - `content` — string result. Structured results from MCP are serialised to a string at the gateway boundary.
 - `isError` — if `true`, `content` carries the error description. The container should add this as a `role: tool` message and continue the LLM loop, allowing the LLM to react to the tool error.
+
+---
+
+## `POST /v1/sections/build`
+
+Section pipeline callback (v0.25). Reuses the named agent's runtime-side section composition (history reducer → composer → `IContextProvider` chain → resolver) and returns the typed `Section[]` the plugin would otherwise have to derive from `InvokeRequest.messages`. The packer is **not** run — the plugin decides which sections to include in its own LLM call. Same `callToken` validation and required-headers regime as `/v1/llm/complete`.
+
+This endpoint is purely additive — default plugin behaviour (consume `InvokeRequest.messages`) is unchanged. Plugins opt in by calling `/v1/sections/build` and then either flattening with a shipped adapter (`vais_plugin.adapters.openai`) or mapping sections into a framework-native layout (LangGraph state slots, LangChain `ChatPromptTemplate` parts, etc.).
+
+### Request
+
+```json
+{}
+```
+
+Empty object. Reserved for a future `suppress: [...]` allowlist; for v0.25 the plugin always receives the full resolved section list and picks what to use.
+
+### Response
+
+```json
+{
+  "sections": [
+    {
+      "id": "system.persona",
+      "kind": "SystemSegment",
+      "payload": { "value": "You are a research assistant…" },
+      "order": 0,
+      "producerId": "PersonaContributor",
+      "budget": { "priority": 5 }
+    },
+    {
+      "id": "retrieval.docs",
+      "kind": "SystemSegment",
+      "payload": { "value": "Source 1: …\nSource 2: …" },
+      "producerId": "KnowledgeRetrievalContextProvider",
+      "budget": { "priority": 5 }
+    },
+    {
+      "id": "history.window.0",
+      "kind": "UserMessage",
+      "payload": { "turn": { "role": "user", "content": "What's our return policy?" } },
+      "producerId": "SessionHistory"
+    }
+  ],
+  "totalChars": 482
+}
+```
+
+Field rules:
+- `sections` — resolver-ordered list. Empty when the agent has no producers wired.
+- `sections[].id` — hierarchical, validated against `[a-zA-Z0-9._-]`, dots permitted as namespace separators. See `Vais.Agents.SectionId.Validate`.
+- `sections[].kind` — one of `SystemSegment`, `UserMessage`, `AssistantMessage`, `ToolMessage`, `ToolDeclaration`, `ResponseFormat`, `Metadata`. The kind dictates the `payload` shape (see table below).
+- `sections[].payload` — typed per kind:
+  | Kind | Payload shape |
+  |---|---|
+  | `SystemSegment` | `{ "value": "<text>" }` |
+  | `UserMessage` / `AssistantMessage` / `ToolMessage` | `{ "turn": <Message> }` (Message type from `plugin-protocol.md`) |
+  | `ToolDeclaration` | `{ "tools": [ { "name": "...", "description": "...", "parametersSchema": { ... } }, ... ] }` |
+  | `ResponseFormat` | `{ "spec": { "schema": { ... }, "name": "...", "strict": true } }` |
+  | `Metadata` | `{ "values": { "<key>": <value>, ... } }` — never flattens to the wire; observability only |
+- `sections[].order` — optional integer. Explicit-order sections sort first within their kind (ascending); null-order sections cluster at the end in registration order.
+- `sections[].producerId` — optional. Conventionally the producer's type name (e.g. `PersonaContributor`, `KnowledgeRetrievalContextProvider`). Required for per-section observability attribution.
+- `sections[].budget` — optional `{ "priority": int, "maxChars": int? }`. Priority 0 = critical, 10 = drop first; default is 5 when omitted. Plugins that build their own request typically ignore `budget` — it's informative, not enforced on this path (the packer doesn't run).
+- `totalChars` — sum of character lengths across all sections that carry text (`SystemSegment`, turn-shaped, `ToolDeclaration` summaries, `ResponseFormat` schema raw text). `Metadata` sections contribute 0. The plugin uses this for budget-aware adapter rendering.
+
+### Gateway behaviour
+
+- `callToken`, `X-Agent-Id`, `X-Run-Id` validated and used to reconstruct `AgentContext` for the per-turn `IContextProvider` invocation — providers see the same context they would in a runtime-hosted agent.
+- The pipeline runs `history-reducer → composer.ComposeSectionsAsync → IContextProvider.InvokeAsync (per registered provider) → ISectionResolver.ResolveAsync`. Packer + telemetry emitter are **not** run; section telemetry sinks (`vais_request_section_*` metrics, `RequestSectionsBuilt` events) for plugin-served sections come from the plugin's subsequent `/v1/llm/complete` call, not this endpoint.
+- Producer exceptions propagate as HTTP 500 with a JSON `{ "error": "...", "producerId": "..." }` body. Plugins should treat this as a recoverable error and fall back to `InvokeRequest.messages`.
+
+### Plugin-shaped sections (deferred)
+
+Some plugins build their own context (LangGraph state, persistent agent threads, framework-internal memory) and want to suppress runtime-emitted sections. Two future directions:
+
+1. **Manifest-declared override** — `spec.sections.suppress: [memory.*, history.window]` on the agent manifest, with the runtime skipping those producers for that agent.
+2. **Request-side filter** — `{ "suppress": ["memory.*"] }` on the `/v1/sections/build` request body.
+
+For v0.25 the plugin always receives the full resolved section list and picks what to use; the suppress mechanism is deferred to a later contract bump driven by concrete adapter needs.
