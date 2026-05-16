@@ -800,3 +800,61 @@ override Vais.Agents.Control.Http.EvalRunListResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.EvalRunListResponse.ToString() -> string!
 static Vais.Agents.Control.Http.EvalRunListResponse.operator !=(Vais.Agents.Control.Http.EvalRunListResponse? left, Vais.Agents.Control.Http.EvalRunListResponse? right) -> bool
 static Vais.Agents.Control.Http.EvalRunListResponse.operator ==(Vais.Agents.Control.Http.EvalRunListResponse? left, Vais.Agents.Control.Http.EvalRunListResponse? right) -> bool
+Vais.Agents.Control.Http.EvalCaseDiff
+Vais.Agents.Control.Http.EvalCaseDiff.<Clone>$() -> Vais.Agents.Control.Http.EvalCaseDiff!
+Vais.Agents.Control.Http.EvalCaseDiff.Assertions.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalAssertionDiff!>!
+Vais.Agents.Control.Http.EvalCaseDiff.Assertions.init -> void
+Vais.Agents.Control.Http.EvalCaseDiff.BaseStatus.get -> Vais.Agents.Eval.EvalCaseStatus?
+Vais.Agents.Control.Http.EvalCaseDiff.BaseStatus.init -> void
+Vais.Agents.Control.Http.EvalCaseDiff.CandidateStatus.get -> Vais.Agents.Eval.EvalCaseStatus?
+Vais.Agents.Control.Http.EvalCaseDiff.CandidateStatus.init -> void
+Vais.Agents.Control.Http.EvalCaseDiff.CaseId.get -> string!
+Vais.Agents.Control.Http.EvalCaseDiff.CaseId.init -> void
+Vais.Agents.Control.Http.EvalCaseDiff.Deconstruct(out string! CaseId, out Vais.Agents.Eval.EvalCaseStatus? BaseStatus, out Vais.Agents.Eval.EvalCaseStatus? CandidateStatus, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalAssertionDiff!>! Assertions) -> void
+Vais.Agents.Control.Http.EvalCaseDiff.Equals(Vais.Agents.Control.Http.EvalCaseDiff? other) -> bool
+Vais.Agents.Control.Http.EvalCaseDiff.EvalCaseDiff(string! CaseId, Vais.Agents.Eval.EvalCaseStatus? BaseStatus, Vais.Agents.Eval.EvalCaseStatus? CandidateStatus, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalAssertionDiff!>! Assertions) -> void
+override Vais.Agents.Control.Http.EvalCaseDiff.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalCaseDiff.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalCaseDiff.ToString() -> string!
+static Vais.Agents.Control.Http.EvalCaseDiff.operator !=(Vais.Agents.Control.Http.EvalCaseDiff? left, Vais.Agents.Control.Http.EvalCaseDiff? right) -> bool
+static Vais.Agents.Control.Http.EvalCaseDiff.operator ==(Vais.Agents.Control.Http.EvalCaseDiff? left, Vais.Agents.Control.Http.EvalCaseDiff? right) -> bool
+Vais.Agents.Control.Http.EvalAssertionDiff
+Vais.Agents.Control.Http.EvalAssertionDiff.<Clone>$() -> Vais.Agents.Control.Http.EvalAssertionDiff!
+Vais.Agents.Control.Http.EvalAssertionDiff.BaseScore.get -> double?
+Vais.Agents.Control.Http.EvalAssertionDiff.BaseScore.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.BaseStatus.get -> Vais.Agents.Eval.EvalAssertionStatus?
+Vais.Agents.Control.Http.EvalAssertionDiff.BaseStatus.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.CandidateScore.get -> double?
+Vais.Agents.Control.Http.EvalAssertionDiff.CandidateScore.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.CandidateStatus.get -> Vais.Agents.Eval.EvalAssertionStatus?
+Vais.Agents.Control.Http.EvalAssertionDiff.CandidateStatus.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.Deconstruct(out int Index, out string! Kind, out Vais.Agents.Eval.EvalAssertionStatus? BaseStatus, out double? BaseScore, out Vais.Agents.Eval.EvalAssertionStatus? CandidateStatus, out double? CandidateScore, out double? ScoreDelta) -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.Equals(Vais.Agents.Control.Http.EvalAssertionDiff? other) -> bool
+Vais.Agents.Control.Http.EvalAssertionDiff.EvalAssertionDiff(int Index, string! Kind, Vais.Agents.Eval.EvalAssertionStatus? BaseStatus, double? BaseScore, Vais.Agents.Eval.EvalAssertionStatus? CandidateStatus, double? CandidateScore, double? ScoreDelta) -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.Index.get -> int
+Vais.Agents.Control.Http.EvalAssertionDiff.Index.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.Kind.get -> string!
+Vais.Agents.Control.Http.EvalAssertionDiff.Kind.init -> void
+Vais.Agents.Control.Http.EvalAssertionDiff.ScoreDelta.get -> double?
+Vais.Agents.Control.Http.EvalAssertionDiff.ScoreDelta.init -> void
+override Vais.Agents.Control.Http.EvalAssertionDiff.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalAssertionDiff.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalAssertionDiff.ToString() -> string!
+static Vais.Agents.Control.Http.EvalAssertionDiff.operator !=(Vais.Agents.Control.Http.EvalAssertionDiff? left, Vais.Agents.Control.Http.EvalAssertionDiff? right) -> bool
+static Vais.Agents.Control.Http.EvalAssertionDiff.operator ==(Vais.Agents.Control.Http.EvalAssertionDiff? left, Vais.Agents.Control.Http.EvalAssertionDiff? right) -> bool
+Vais.Agents.Control.Http.EvalDiffResponse
+Vais.Agents.Control.Http.EvalDiffResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalDiffResponse!
+Vais.Agents.Control.Http.EvalDiffResponse.BaseRunId.get -> string!
+Vais.Agents.Control.Http.EvalDiffResponse.BaseRunId.init -> void
+Vais.Agents.Control.Http.EvalDiffResponse.CandidateRunId.get -> string!
+Vais.Agents.Control.Http.EvalDiffResponse.CandidateRunId.init -> void
+Vais.Agents.Control.Http.EvalDiffResponse.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalCaseDiff!>!
+Vais.Agents.Control.Http.EvalDiffResponse.Cases.init -> void
+Vais.Agents.Control.Http.EvalDiffResponse.Deconstruct(out string! BaseRunId, out string! CandidateRunId, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalCaseDiff!>! Cases) -> void
+Vais.Agents.Control.Http.EvalDiffResponse.Equals(Vais.Agents.Control.Http.EvalDiffResponse? other) -> bool
+Vais.Agents.Control.Http.EvalDiffResponse.EvalDiffResponse(string! BaseRunId, string! CandidateRunId, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.EvalCaseDiff!>! Cases) -> void
+override Vais.Agents.Control.Http.EvalDiffResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalDiffResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalDiffResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalDiffResponse.operator !=(Vais.Agents.Control.Http.EvalDiffResponse? left, Vais.Agents.Control.Http.EvalDiffResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalDiffResponse.operator ==(Vais.Agents.Control.Http.EvalDiffResponse? left, Vais.Agents.Control.Http.EvalDiffResponse? right) -> bool

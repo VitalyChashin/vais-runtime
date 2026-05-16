@@ -16,6 +16,7 @@ internal enum OutputFormat
     Table = 0,
     Yaml = 1,
     Json = 2,
+    JUnit = 3,
 }
 
 /// <summary>
@@ -52,6 +53,7 @@ internal static class OutputFormatter
             "json" => OutputFormat.Json,
             "yaml" or "yml" => OutputFormat.Yaml,
             "table" => OutputFormat.Table,
+            "junit" => OutputFormat.JUnit,
             _ => fallback,
         };
     }

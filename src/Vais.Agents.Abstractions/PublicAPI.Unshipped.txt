@@ -35,6 +35,8 @@ Vais.Agents.AgentContext.AllowedTools.get -> System.Collections.Generic.IReadOnl
 Vais.Agents.AgentContext.AllowedTools.init -> void
 Vais.Agents.AgentContext.MaxChainDepth.get -> int?
 Vais.Agents.AgentContext.MaxChainDepth.init -> void
+Vais.Agents.AgentContext.BaselineRunId.get -> string?
+Vais.Agents.AgentContext.BaselineRunId.init -> void
 Vais.Agents.IInboundIdentityResolver
 Vais.Agents.IInboundIdentityResolver.ResolveAsync(string! bearerToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.AgentContext!>
 Vais.Agents.IAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
@@ -1205,3 +1207,22 @@ override Vais.Agents.NamedAgentInputMiddlewareRegistration.GetHashCode() -> int
 override Vais.Agents.NamedAgentInputMiddlewareRegistration.ToString() -> string!
 static Vais.Agents.NamedAgentInputMiddlewareRegistration.operator !=(Vais.Agents.NamedAgentInputMiddlewareRegistration? left, Vais.Agents.NamedAgentInputMiddlewareRegistration? right) -> bool
 static Vais.Agents.NamedAgentInputMiddlewareRegistration.operator ==(Vais.Agents.NamedAgentInputMiddlewareRegistration? left, Vais.Agents.NamedAgentInputMiddlewareRegistration? right) -> bool
+Vais.Agents.EvalRunProgress
+override Vais.Agents.EvalRunProgress.<Clone>$() -> Vais.Agents.EvalRunProgress!
+Vais.Agents.EvalRunProgress.CaseId.get -> string?
+Vais.Agents.EvalRunProgress.CaseId.init -> void
+Vais.Agents.EvalRunProgress.CaseStatus.get -> int?
+Vais.Agents.EvalRunProgress.CaseStatus.init -> void
+Vais.Agents.EvalRunProgress.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! EvalRunId, out string! ProgressKind, out string? CaseId, out int? CaseStatus) -> void
+Vais.Agents.EvalRunProgress.Equals(Vais.Agents.EvalRunProgress? other) -> bool
+Vais.Agents.EvalRunProgress.EvalRunId.get -> string!
+Vais.Agents.EvalRunProgress.EvalRunId.init -> void
+Vais.Agents.EvalRunProgress.EvalRunProgress(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! EvalRunId, string! ProgressKind, string? CaseId = null, int? CaseStatus = null) -> void
+Vais.Agents.EvalRunProgress.ProgressKind.get -> string!
+Vais.Agents.EvalRunProgress.ProgressKind.init -> void
+override Vais.Agents.EvalRunProgress.Equals(object? obj) -> bool
+override Vais.Agents.EvalRunProgress.GetHashCode() -> int
+override Vais.Agents.EvalRunProgress.ToString() -> string!
+override sealed Vais.Agents.EvalRunProgress.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.EvalRunProgress.operator !=(Vais.Agents.EvalRunProgress? left, Vais.Agents.EvalRunProgress? right) -> bool
+static Vais.Agents.EvalRunProgress.operator ==(Vais.Agents.EvalRunProgress? left, Vais.Agents.EvalRunProgress? right) -> bool

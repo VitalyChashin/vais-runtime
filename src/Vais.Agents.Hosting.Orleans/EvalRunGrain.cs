@@ -89,6 +89,8 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         await store.AppendRunAsync(BuildSummary(evalRunId), ct);
         await _state.WriteStateAsync();
 
+        PublishProgress(evalRunId, "case-completed", @case.Id, (int)caseResult.Status);
+
         if (_state.State.CurrentCaseIndex >= suite.Spec.Cases.Count)
             await CompleteRunAsync(evalRunId, ct);
         else
@@ -145,9 +147,25 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
                 if (@case.InitialHistory is { Count: > 0 })
                     history = @case.InitialHistory.Select(t => (t.Role, t.Content)).ToList();
 
+                var effectiveReplay = @case.Replay ?? suite.Spec.ReplayMode;
+                var baselineRunId = effectiveReplay == EvalReplayMode.Cached
+                    ? suite.Spec.Baseline?.RunId
+                    : null;
+
                 var request = new AgentInvocationRequest(@case.Input, InitialHistory: history);
-                var result = await lifecycle.InvokeAsync(handle, request, ct);
-                responseText = result.Text;
+
+                if (baselineRunId is not null)
+                {
+                    var contextSetter = ServiceProvider.GetService<IAgentContextSetter>();
+                    using var _ = contextSetter?.Push(AgentContext.Empty with { BaselineRunId = baselineRunId });
+                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    responseText = result.Text;
+                }
+                else
+                {
+                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    responseText = result.Text;
+                }
             }
             finally
             {
@@ -247,6 +265,20 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         await _state.WriteStateAsync();
         var store = ServiceProvider.GetRequiredService<IEvalResultStore>();
         await store.AppendRunAsync(BuildSummary(evalRunId), ct);
+        PublishProgress(evalRunId, "run-completed", caseId: null, caseStatus: null);
+    }
+
+    private void PublishProgress(string evalRunId, string progressKind, string? caseId, int? caseStatus)
+    {
+        var bus = ServiceProvider.GetService<IAgentEventBus>();
+        if (bus is null) return;
+        var evt = new EvalRunProgress(DateTimeOffset.UtcNow, AgentContext.Empty, evalRunId, progressKind, caseId, caseStatus);
+        // Fire-and-forget — progress delivery is best-effort.
+        _ = bus.PublishAsync(evt, CancellationToken.None).AsTask().ContinueWith(
+            t => _logger.LogWarning(t.Exception, "Failed to publish EvalRunProgress"),
+            default,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Current);
     }
 
     private EvalRunSummary BuildSummary(string evalRunId) => new(

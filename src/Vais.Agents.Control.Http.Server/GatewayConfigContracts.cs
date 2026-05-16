@@ -99,3 +99,26 @@ public sealed record EvalRunStartResponse(string EvalRunId);
 
 /// <summary>Response body for <c>GET /v1/eval-runs</c>.</summary>
 public sealed record EvalRunListResponse(IReadOnlyList<Vais.Agents.Eval.EvalRunSummary> Items);
+
+/// <summary>Per-case diff entry in <see cref="EvalDiffResponse"/>.</summary>
+public sealed record EvalCaseDiff(
+    string CaseId,
+    Vais.Agents.Eval.EvalCaseStatus? BaseStatus,
+    Vais.Agents.Eval.EvalCaseStatus? CandidateStatus,
+    IReadOnlyList<EvalAssertionDiff> Assertions);
+
+/// <summary>Per-assertion score delta within a <see cref="EvalCaseDiff"/>.</summary>
+public sealed record EvalAssertionDiff(
+    int Index,
+    string Kind,
+    Vais.Agents.Eval.EvalAssertionStatus? BaseStatus,
+    double? BaseScore,
+    Vais.Agents.Eval.EvalAssertionStatus? CandidateStatus,
+    double? CandidateScore,
+    double? ScoreDelta);
+
+/// <summary>Response body for <c>GET /v1/eval-runs/diff</c>.</summary>
+public sealed record EvalDiffResponse(
+    string BaseRunId,
+    string CandidateRunId,
+    IReadOnlyList<EvalCaseDiff> Cases);

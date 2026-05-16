@@ -53,6 +53,10 @@ public struct AgentContextSurrogate
     /// <summary>Maximum agent-as-tool chain depth.</summary>
     [Id(9)]
     public int? MaxChainDepth;
+
+    /// <summary>Optional baseline run id for eval cached-replay mode.</summary>
+    [Id(10)]
+    public string? BaselineRunId;
 }
 
 /// <summary>
@@ -75,6 +79,7 @@ public sealed class AgentContextSurrogateConverter : IConverter<AgentContext, Ag
             AutonomyLevel  = surrogate.AutonomyLevel  is int a ? (Vais.Agents.AutonomyLevel)a  : null,
             AllowedTools  = surrogate.AllowedTools,
             MaxChainDepth = surrogate.MaxChainDepth,
+            BaselineRunId = surrogate.BaselineRunId,
         };
 
     /// <inheritdoc />
@@ -93,5 +98,6 @@ public sealed class AgentContextSurrogateConverter : IConverter<AgentContext, Ag
                 ? hs
                 : value.AllowedTools?.ToImmutableHashSet(),
             MaxChainDepth  = value.MaxChainDepth,
+            BaselineRunId  = value.BaselineRunId,
         };
 }

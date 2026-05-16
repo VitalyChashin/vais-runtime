@@ -88,6 +88,25 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             }
         }
 
+        // Eval baseline replay: match by (ToolName, Arguments) in the baseline run's journal.
+        // On miss, fall through to live invocation (partial cache is allowed).
+        if (context.BaselineRunId is { } baselineRunId && !ReferenceEquals(_journal, NullAgentJournal.Instance))
+        {
+            var argsText = request.Arguments.ToString();
+            await foreach (var entry in _journal.ReadAsync(baselineRunId, cancellationToken).ConfigureAwait(false))
+            {
+                if (entry is ToolCallRecorded recorded
+                    && recorded.ToolName == request.ToolName
+                    && recorded.Arguments.ToString() == argsText)
+                {
+                    await _eventBus.PublishAsync(
+                        new ToolCallReplayed(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName),
+                        cancellationToken).ConfigureAwait(false);
+                    return recorded.Outcome;
+                }
+            }
+        }
+
         // Fast path: no gateway middleware registered — avoid context allocation.
         if (_gatewayMiddleware.Length == 0)
             return await InnerDispatchAsync(request, context, cancellationToken).ConfigureAwait(false);
