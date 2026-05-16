@@ -46,6 +46,10 @@ spec:
       ports:
         - port: {{ .Values.networkPolicy.runtimeService.port }}
           protocol: TCP
+        {{- if .Values.otlp.enabled }}
+        - port: {{ .Values.networkPolicy.runtimeService.internalPort }}
+          protocol: TCP
+        {{- end }}
   {{- if .Values.networkPolicy.extraEgress }}
     {{- toYaml .Values.networkPolicy.extraEgress | nindent 4 }}
   {{- end }}

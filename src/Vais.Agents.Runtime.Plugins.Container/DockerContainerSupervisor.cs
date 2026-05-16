@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Core;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
@@ -18,6 +19,8 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
     private readonly IDockerClient _docker;
     private readonly HttpClient _healthClient;
     private readonly ILogger _logger;
+    private readonly ICallTokenService? _callTokenService;
+    private readonly string? _otlpEndpointUrl;
 
     private ContainerPluginStatus _status = ContainerPluginStatus.Created;
     private string? _containerId;
@@ -38,12 +41,16 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
     internal DockerContainerSupervisor(
         ContainerPluginDescriptor descriptor,
         IDockerClient docker,
-        ILogger logger)
+        ILogger logger,
+        ICallTokenService? callTokenService = null,
+        string? otlpEndpointUrl = null)
     {
         _descriptor = descriptor;
         _docker = docker;
         _healthClient = new HttpClient { BaseAddress = new Uri(descriptor.InvokeBaseUrl) };
         _logger = logger;
+        _callTokenService = callTokenService;
+        _otlpEndpointUrl = otlpEndpointUrl;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -58,6 +65,18 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         };
         foreach (var kv in _descriptor.SecretRefs)
             envVars.Add($"{kv.Key}={kv.Value}");
+
+        if (_otlpEndpointUrl is not null && _callTokenService is not null)
+        {
+            // Token uses the plugin name in both slots — the OTLP receiver validates via TryExtract
+            // (it doesn't need to match a specific runId/agentId pair, just be a valid signed token).
+            var otlpToken = _callTokenService.Generate(
+                runId: _descriptor.Name, agentId: _descriptor.Name, timeoutSeconds: 86_400);
+            envVars.Add($"OTEL_EXPORTER_OTLP_ENDPOINT={_otlpEndpointUrl}");
+            envVars.Add("OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf");
+            envVars.Add($"OTEL_EXPORTER_OTLP_HEADERS=Authorization=vais-plugin-token {otlpToken}");
+            envVars.Add($"OTEL_RESOURCE_ATTRIBUTES=vais.agent_id={_descriptor.Name}");
+        }
 
         var exposedPorts = new Dictionary<string, EmptyStruct>
         {

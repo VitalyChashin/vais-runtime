@@ -4,6 +4,7 @@ import os
 import warnings
 
 from . import _import_guard
+from . import _telemetry
 
 if os.environ.get("VAIS_PLUGIN_DISABLE_IMPORT_GUARD", "").strip() == "1":
     warnings.warn(
@@ -13,6 +14,8 @@ if os.environ.get("VAIS_PLUGIN_DISABLE_IMPORT_GUARD", "").strip() == "1":
     )
 else:
     _import_guard.install()
+
+_telemetry._configure_otlp()
 
 from .agent import DeltaPayload, PluginAgent, SseEvent, ToolCompletedPayload, ToolStartedPayload, vais_plugin
 from .gateway import AsyncLlmClient, AsyncToolClient, LlmResponse, ToolResult

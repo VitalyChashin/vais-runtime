@@ -37,8 +37,12 @@ internal sealed class HmacCallTokenService : ICallTokenService
         return $"{Base64UrlEncode(payloadBytes)}.{Base64UrlEncode(hmac)}";
     }
 
-    public bool Validate(string token, string runId, string agentId)
+    public bool Validate(string token, string runId, string agentId) =>
+        TryExtract(token, out var r, out var a) && r == runId && a == agentId;
+
+    public bool TryExtract(string token, out string runId, out string agentId)
     {
+        runId = agentId = string.Empty;
         try
         {
             var dot = token.IndexOf('.');
@@ -53,10 +57,11 @@ internal sealed class HmacCallTokenService : ICallTokenService
             var payload = Encoding.UTF8.GetString(payloadBytes);
             var parts = payload.Split(':');
             if (parts.Length != 3) return false;
-            if (parts[0] != runId || parts[1] != agentId) return false;
             if (!long.TryParse(parts[2], out var expiresAt)) return false;
             if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expiresAt) return false;
 
+            runId = parts[0];
+            agentId = parts[1];
             return true;
         }
         catch

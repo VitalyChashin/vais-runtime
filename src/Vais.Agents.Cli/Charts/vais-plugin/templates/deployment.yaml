@@ -36,6 +36,21 @@ spec:
           env:
             - name: VAIS_PLUGIN_PORT
               value: "{{ .Values.pluginPort }}"
+            {{- if .Values.otlp.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otlp.endpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "vais.agent_id={{ .Values.pluginName }}"
+            {{- if .Values.otlp.headersSecretRef }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.otlp.headersSecretRef.name | quote }}
+                  key: {{ .Values.otlp.headersSecretRef.key | quote }}
+            {{- end }}
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

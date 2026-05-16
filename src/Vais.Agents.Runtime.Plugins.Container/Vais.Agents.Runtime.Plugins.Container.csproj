@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="Docker.DotNet" />
+    <PackageReference Include="Google.Protobuf" />
     <PackageReference Include="KubernetesClient" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
