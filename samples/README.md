@@ -33,6 +33,7 @@ Start the runtime, declare agents, ship plugins. Each sample below pairs with on
 | [SectionedPluginLegacy](SectionedPluginLegacy) | side-by-side companion sample: plugin-side flatten via `sections_to_openai_request()` + `/chat/completions`. Right choice when bridging OpenAI-compatible SDKs / non-VAIS frameworks; trade-off is loss of per-section telemetry on the LLM-call span. Read alongside SectionedPlugin to decide which shape fits | — (Python + YAML) | ~140 | `OPENAI_API_KEY` (runtime env) | [Wire context sections](../docs/guides/wire-context-sections.md) |
 | [KubernetesOperatorQuickstart](KubernetesOperatorQuickstart) | `helm install` operator + apply `sample-agent.yaml` CR; watch reconcile → Ready; update spec; finalizer-based delete | — (YAML only) | 0 | — + K8s + Helm | [Deploy on Kubernetes](../docs/devops/deploy-runtime-on-kubernetes.md) |
 | [CliCookbook](CliCookbook) | shell recipes: CI/CD apply with exit-code branching, rollback-on-failure, `vais logs` tailing + filtering, multi-context staging→prod promotion | — (scripts only) | 0 | — | [CLI](../docs/concepts/cli.md) |
+| [EvalRegression](EvalRegression) | `kind: EvalSuite` regression suite against a declarative agent: `tool-call-sequence`, `judge-score`, `response-regex`, `metric-threshold`; `vais eval run --wait`; JUnit XML export; baseline + diff | — (YAML only) | 0 | `OPENAI_API_KEY` | [Evaluate an agent](../docs/agent-developer/evaluate-an-agent.md) |
 
 ### Runtime-first learning path
 
@@ -42,6 +43,7 @@ Start the runtime, declare agents, ship plugins. Each sample below pairs with on
 4. **PluginAgentLangGraphResearcher** — drop into Python when YAML isn't enough.
 5. **graph-yaml-authored** — compose multiple agents into a multi-agent graph.
 6. **KubernetesOperatorQuickstart** — production deploy via Helm + `vais.io/v1alpha1` CRD.
+7. **EvalRegression** — regression suite + JUnit XML CI gate.
 
 For library mode (embed primitives in a .NET app instead), see the path below.
 

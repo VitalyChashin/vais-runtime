@@ -1,0 +1,35 @@
+apiVersion: vais.agents/v1
+kind: McpGatewayConfig
+metadata:
+  id: eval-mcp-gateway
+  version: "1.0"
+spec:
+  servers:
+    - id: kb-server
+      transport: streamableHttp
+      url: http://localhost:3001
+  middleware:
+    - name: ToolLogging
+---
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: support-bot
+  version: "1.0"
+  description: Customer support agent that searches the knowledge base.
+spec:
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
+  systemPrompt:
+    inline: |
+      You are a helpful customer support assistant.
+      Call search_kb before answering any question about policies or accounts.
+      Acknowledge the customer's issue, then propose a concrete next step.
+      Keep replies under 80 words.
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  mcpGatewayRef: eval-mcp-gateway

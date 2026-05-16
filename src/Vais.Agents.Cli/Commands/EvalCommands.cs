@@ -428,14 +428,31 @@ internal sealed class EvalDiffCommand : AsyncCommand<EvalDiffCommand.Settings>
             .AddColumn("CASE")
             .AddColumn("BASE")
             .AddColumn("CANDIDATE")
-            .AddColumn("CHANGED");
+            .AddColumn("DELTA");
 
         foreach (var c in diff.Cases)
         {
             var baseLabel = StatusLabel(c.BaseStatus);
             var candidateLabel = StatusLabel(c.CandidateStatus);
-            var changed = c.BaseStatus != c.CandidateStatus ? "[yellow]yes[/]" : "[grey]no[/]";
-            table.AddRow(Markup.Escape(c.CaseId), baseLabel, candidateLabel, changed);
+
+            var deltaItems = c.Assertions
+                .Where(a => a.ScoreDelta.HasValue && Math.Abs(a.ScoreDelta.Value) > 0.0005
+                            || a.BaseStatus != a.CandidateStatus)
+                .Select(a =>
+                {
+                    if (a.ScoreDelta.HasValue)
+                    {
+                        var sign = a.ScoreDelta >= 0 ? "+" : "";
+                        return $"{Markup.Escape(a.Kind)}: {a.BaseScore:F2} → {a.CandidateScore:F2} ({sign}{a.ScoreDelta:F2})";
+                    }
+                    return $"{Markup.Escape(a.Kind)}: {StatusLabel(a.BaseStatus)} → {StatusLabel(a.CandidateStatus)}";
+                });
+
+            var delta = string.Join("  ", deltaItems);
+            if (string.IsNullOrEmpty(delta))
+                delta = "[grey]—[/]";
+
+            table.AddRow(Markup.Escape(c.CaseId), baseLabel, candidateLabel, delta);
         }
 
         AnsiConsole.Write(table);
@@ -446,6 +463,16 @@ internal sealed class EvalDiffCommand : AsyncCommand<EvalDiffCommand.Settings>
         EvalCaseStatus.Pass => "[green]pass[/]",
         EvalCaseStatus.Fail => "[yellow]fail[/]",
         EvalCaseStatus.Error => "[red]error[/]",
+        null => "[grey]-[/]",
+        _ => s.ToString()!,
+    };
+
+    private static string StatusLabel(EvalAssertionStatus? s) => s switch
+    {
+        EvalAssertionStatus.Pass => "[green]pass[/]",
+        EvalAssertionStatus.Fail => "[yellow]fail[/]",
+        EvalAssertionStatus.Skipped => "[grey]skipped[/]",
+        EvalAssertionStatus.Error => "[red]error[/]",
         null => "[grey]-[/]",
         _ => s.ToString()!,
     };
