@@ -728,3 +728,35 @@ Vais.Agents.Control.Http.FilterStatusResponse.<Clone>$() -> Vais.Agents.Control.
 Vais.Agents.Control.Http.FilterStatusResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FilterCallEntry!>! Calls, out long TotalCalls) -> void
 Vais.Agents.Control.Http.AgentControlPlaneClient.GetDiagSpansAsync(string? source = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.DiagSpanListResponse!>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.GetFilterStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.FilterStatusResponse!>!
+Vais.Agents.Control.Http.EvalRunStartResponse
+Vais.Agents.Control.Http.EvalRunStartResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalRunStartResponse!
+Vais.Agents.Control.Http.EvalRunStartResponse.Deconstruct(out string! EvalRunId) -> void
+Vais.Agents.Control.Http.EvalRunStartResponse.Equals(Vais.Agents.Control.Http.EvalRunStartResponse? other) -> bool
+Vais.Agents.Control.Http.EvalRunStartResponse.EvalRunId.get -> string!
+Vais.Agents.Control.Http.EvalRunStartResponse.EvalRunId.init -> void
+Vais.Agents.Control.Http.EvalRunStartResponse.EvalRunStartResponse(string! EvalRunId) -> void
+override Vais.Agents.Control.Http.EvalRunStartResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalRunStartResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalRunStartResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalRunStartResponse.operator !=(Vais.Agents.Control.Http.EvalRunStartResponse? left, Vais.Agents.Control.Http.EvalRunStartResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalRunStartResponse.operator ==(Vais.Agents.Control.Http.EvalRunStartResponse? left, Vais.Agents.Control.Http.EvalRunStartResponse? right) -> bool
+Vais.Agents.Control.Http.EvalRunListResponse
+Vais.Agents.Control.Http.EvalRunListResponse.<Clone>$() -> Vais.Agents.Control.Http.EvalRunListResponse!
+Vais.Agents.Control.Http.EvalRunListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>! Items) -> void
+Vais.Agents.Control.Http.EvalRunListResponse.Equals(Vais.Agents.Control.Http.EvalRunListResponse? other) -> bool
+Vais.Agents.Control.Http.EvalRunListResponse.EvalRunListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>! Items) -> void
+Vais.Agents.Control.Http.EvalRunListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!
+Vais.Agents.Control.Http.EvalRunListResponse.Items.init -> void
+override Vais.Agents.Control.Http.EvalRunListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.EvalRunListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.EvalRunListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.EvalRunListResponse.operator !=(Vais.Agents.Control.Http.EvalRunListResponse? left, Vais.Agents.Control.Http.EvalRunListResponse? right) -> bool
+static Vais.Agents.Control.Http.EvalRunListResponse.operator ==(Vais.Agents.Control.Http.EvalRunListResponse? left, Vais.Agents.Control.Http.EvalRunListResponse? right) -> bool
+Vais.Agents.Control.Http.IAgentControlPlaneClient.StartEvalRunAsync(string! suiteName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalRunStartResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListEvalRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalRunListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetEvalRunAsync(string! evalRunId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Eval.EvalRunDetail?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.CancelEvalRunAsync(string! evalRunId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.StartEvalRunAsync(string! suiteName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalRunStartResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListEvalRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.EvalRunListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetEvalRunAsync(string! evalRunId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Eval.EvalRunDetail?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.CancelEvalRunAsync(string! evalRunId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

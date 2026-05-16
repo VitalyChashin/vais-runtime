@@ -93,3 +93,9 @@ public sealed record EvalSuiteQueryResponse(
 public sealed record EvalSuiteListResponse(
     IReadOnlyList<EvalSuiteManifest> Items,
     string? NextCursor = null);
+
+/// <summary>Response body for <c>POST /v1/eval-suites/{name}/runs</c>.</summary>
+public sealed record EvalRunStartResponse(string EvalRunId);
+
+/// <summary>Response body for <c>GET /v1/eval-runs</c>.</summary>
+public sealed record EvalRunListResponse(IReadOnlyList<Vais.Agents.Eval.EvalRunSummary> Items);

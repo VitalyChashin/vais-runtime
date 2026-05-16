@@ -396,6 +396,24 @@ public interface IAgentControlPlaneClient
     Task EvictEvalSuiteAsync(string id, string? version = null, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval suite management. Use AgentControlPlaneClient.");
 
+    // ── Eval run operations (EH-13) ───────────────────────────────────────────
+
+    /// <summary>POST /v1/eval-suites/{name}/runs — start an eval run and get its ID. Default: throws NotSupportedException.</summary>
+    Task<EvalRunStartResponse> StartEvalRunAsync(string suiteName, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval run management. Use AgentControlPlaneClient.");
+
+    /// <summary>GET /v1/eval-runs — list eval runs, optionally filtered by suite. Default: empty list.</summary>
+    Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(new EvalRunListResponse(Array.Empty<Vais.Agents.Eval.EvalRunSummary>()));
+
+    /// <summary>GET /v1/eval-runs/{evalRunId} — get detail for a single eval run. Default: null (not found).</summary>
+    Task<Vais.Agents.Eval.EvalRunDetail?> GetEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+        => Task.FromResult((Vais.Agents.Eval.EvalRunDetail?)null);
+
+    /// <summary>POST /v1/eval-runs/{evalRunId}/cancel — request cancellation of a running eval run. Default: no-op.</summary>
+    Task CancelEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

@@ -87,3 +87,9 @@ public sealed record EvalSuiteQueryResponse(EvalSuiteManifest Manifest, EvalSuit
 
 /// <summary>Client-side wire type for <c>GET /v1/eval-suites</c>.</summary>
 public sealed record EvalSuiteListResponse(IReadOnlyList<EvalSuiteManifest> Items, string? NextCursor = null);
+
+/// <summary>Client-side wire type for <c>POST /v1/eval-suites/{name}/runs</c>.</summary>
+public sealed record EvalRunStartResponse(string EvalRunId);
+
+/// <summary>Client-side wire type for <c>GET /v1/eval-runs</c>.</summary>
+public sealed record EvalRunListResponse(IReadOnlyList<Vais.Agents.Eval.EvalRunSummary> Items);

@@ -1012,6 +1012,47 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<EvalRunStartResponse> StartEvalRunAsync(string suiteName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(suiteName);
+        using var response = await _http.PostAsync($"/v1/eval-suites/{Uri.EscapeDataString(suiteName)}/runs", null, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalRunStartResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Server returned empty body on StartEvalRun.");
+    }
+
+    /// <inheritdoc />
+    public async Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(suiteName)) qs.Add($"suite={Uri.EscapeDataString(suiteName)}");
+        if (limit != 50) qs.Add($"limit={limit}");
+        var path = qs.Count > 0 ? $"/v1/eval-runs?{string.Join('&', qs)}" : "/v1/eval-runs";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<EvalRunListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new EvalRunListResponse(Array.Empty<Vais.Agents.Eval.EvalRunSummary>());
+    }
+
+    /// <inheritdoc />
+    public async Task<Vais.Agents.Eval.EvalRunDetail?> GetEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(evalRunId);
+        using var response = await _http.GetAsync($"/v1/eval-runs/{Uri.EscapeDataString(evalRunId)}", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<Vais.Agents.Eval.EvalRunDetail>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task CancelEvalRunAsync(string evalRunId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(evalRunId);
+        using var response = await _http.PostAsync($"/v1/eval-runs/{Uri.EscapeDataString(evalRunId)}/cancel", null, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();
