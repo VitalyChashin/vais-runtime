@@ -1,0 +1,60 @@
+apiVersion: vais.agents/v1
+kind: EvalSuite
+metadata:
+  id: support-bot-regression
+  version: "1.0"
+  description: Regression suite for the customer support agent.
+spec:
+  agentId: support-bot
+  defaults:
+    judgeModel: gpt-4o-mini
+    timeout: "00:00:30"
+  cases:
+
+    - id: refund-policy
+      name: Refund policy query
+      input: "How do I request a refund for an overcharge?"
+      assertions:
+        - kind: no-turn-failed
+        - kind: tool-call-sequence
+          params:
+            expected:
+              - name: search_kb
+                argsContains:
+                  query: refund
+            scoring: contains
+        - kind: response-regex
+          params:
+            pattern: "refund|policy|30.?day"
+            flags: ignoreCase
+
+    - id: billing-duplicate
+      name: Duplicate charge complaint
+      input: "I was charged twice for plan Pro last Tuesday."
+      assertions:
+        - kind: no-turn-failed
+        - kind: judge-score
+          params:
+            prompt: |
+              The customer reported a duplicate charge on plan Pro.
+              The agent should acknowledge the issue and offer a concrete next step.
+              Score 0..1: 1 = helpful and actionable, 0 = irrelevant or dismissive.
+            minScore: 0.6
+        - kind: metric-threshold
+          params:
+            metric: duration
+            max: 20000
+
+    - id: account-access
+      name: Cannot log in
+      input: "I can't log in to my account. I've tried resetting my password twice."
+      assertions:
+        - kind: no-turn-failed
+        - kind: response-regex
+          params:
+            pattern: "password|reset|account|access|login"
+            flags: ignoreCase
+        - kind: metric-threshold
+          params:
+            metric: totalTokens
+            max: 1000

@@ -185,6 +185,7 @@ By default both `agent:*` and `graph:*` models are enabled. Disable either via e
 
 ## Next
 
+- **[Evaluate an agent](evaluate-an-agent.md)** — author a regression suite, score responses with built-in assertions, and gate CI with JUnit XML output.
 - **[Deep agent development](../deep-development/index.md)** — author plugin code when declarative YAML isn't enough.
 - **[Wire the LLM gateway](wire-the-llm-gateway.md)** — add logging, OTel, and rate limiting to every model call.
 - [Reference → Runtime configuration](../reference/runtime-configuration.md) — full env-var reference including OpenAI-compat routing flags.
