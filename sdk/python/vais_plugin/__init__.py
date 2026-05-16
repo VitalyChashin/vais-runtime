@@ -1,5 +1,19 @@
 """vais-plugin — Python SDK for building Vais.Agents container plugins."""
 
+import os
+import warnings
+
+from . import _import_guard
+
+if os.environ.get("VAIS_PLUGIN_DISABLE_IMPORT_GUARD", "").strip() == "1":
+    warnings.warn(
+        "VAIS_PLUGIN_DISABLE_IMPORT_GUARD=1: P12 import guard is disabled. "
+        "Direct imports of LLM provider SDKs are allowed. Do not use in production.",
+        stacklevel=1,
+    )
+else:
+    _import_guard.install()
+
 from .agent import DeltaPayload, PluginAgent, SseEvent, ToolCompletedPayload, ToolStartedPayload, vais_plugin
 from .gateway import AsyncLlmClient, AsyncToolClient, LlmResponse, ToolResult
 from .models import (

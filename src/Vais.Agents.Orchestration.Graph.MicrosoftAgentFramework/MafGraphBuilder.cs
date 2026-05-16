@@ -47,6 +47,7 @@ public static class MafGraphBuilder
     /// Checkpointer wired into each <see cref="GraphNodeExecutor"/>. Null skips all checkpoint
     /// saves (identical to v0.9 behaviour). Required for <see cref="IResumableAgentGraph{TState}"/>.
     /// </param>
+    /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
     public static Workflow Build(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -61,7 +62,8 @@ public static class MafGraphBuilder
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
         string? startNodeId = null,
-        IGraphCheckpointer? checkpointer = null)
+        IGraphCheckpointer? checkpointer = null,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -77,7 +79,8 @@ public static class MafGraphBuilder
                 predicateResolver, effectResolver, codeNodeResolver,
                 reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                 expressionEvaluator: expressionEvaluator,
-                isForkSource: IsForkSource(node.Id, manifest));
+                isForkSource: IsForkSource(node.Id, manifest),
+                inputMiddleware: inputMiddleware);
         }
 
         // FO-3c: replace join-node entries with GraphJoinNodeExecutor so the accumulator
@@ -94,7 +97,8 @@ public static class MafGraphBuilder
                 joinNode, manifest, registry, lifecycle,
                 predicateResolver, effectResolver, codeNodeResolver,
                 reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
-                incomingBranchCount: group.Count());
+                incomingBranchCount: group.Count(),
+                inputMiddleware: inputMiddleware);
         }
 
         var effectiveStart = startNodeId ?? manifest.Entry;
@@ -187,6 +191,20 @@ public static class MafGraphBuilder
     /// A <see cref="MafGraphBuildResult"/> with the built workflow and a map from port id to interrupt-node id,
     /// used by <c>MafGraphOrchestrator.StreamWithHitlAsync</c> to resolve <see cref="RequestInfoEvent"/> sources.
     /// </returns>
+    /// <param name="manifest">Graph manifest to project.</param>
+    /// <param name="registry">Agent registry for resolving <c>Agent</c>-kind nodes.</param>
+    /// <param name="lifecycle">Lifecycle manager for invoking resolved agents.</param>
+    /// <param name="predicateResolver">Resolver for handler-ref predicates. Null means handler-ref predicates throw.</param>
+    /// <param name="effectResolver">Resolver for handler-ref edge effects.</param>
+    /// <param name="codeNodeResolver">Resolver for Code-kind nodes.</param>
+    /// <param name="reducerResolver">Resolver for handler-ref reducer declarations.</param>
+    /// <param name="context">Ambient agent context. Uses a default empty context when null.</param>
+    /// <param name="remoteInvoker">Invoker for cross-runtime agent nodes.</param>
+    /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes.</param>
+    /// <param name="bearerToken">Bearer token forwarded to remote runtimes.</param>
+    /// <param name="expressionEvaluator">Evaluator for expression predicates. Null means expression predicates throw.</param>
+    /// <param name="checkpointer">Checkpointer wired into each executor. Null skips checkpoint saves.</param>
+    /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
     public static MafGraphBuildResult BuildForHitl(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -200,7 +218,8 @@ public static class MafGraphBuilder
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
-        IGraphCheckpointer? checkpointer = null)
+        IGraphCheckpointer? checkpointer = null,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -225,7 +244,8 @@ public static class MafGraphBuilder
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                     expressionEvaluator: expressionEvaluator,
-                    hitlPortId: portId);
+                    hitlPortId: portId,
+                    inputMiddleware: inputMiddleware);
 
                 var port = RequestPort.Create<GraphMessage, GraphMessage>(portId);
                 hitlPorts[node.Id] = port;
@@ -236,7 +256,8 @@ public static class MafGraphBuilder
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                     expressionEvaluator: expressionEvaluator,
-                    executorId: resumeId);
+                    executorId: resumeId,
+                    inputMiddleware: inputMiddleware);
             }
             else
             {
@@ -244,7 +265,8 @@ public static class MafGraphBuilder
                     node, manifest, registry, lifecycle,
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
-                    expressionEvaluator: expressionEvaluator);
+                    expressionEvaluator: expressionEvaluator,
+                    inputMiddleware: inputMiddleware);
             }
         }
 

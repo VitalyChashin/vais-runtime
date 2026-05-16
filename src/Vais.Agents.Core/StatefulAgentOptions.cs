@@ -282,6 +282,16 @@ public sealed class StatefulAgentOptions
         = Array.Empty<ToolGatewayMiddleware>();
 
     /// <summary>
+    /// Ordered input middleware chain (P12 inbound zone). Each <see cref="AgentInputMiddleware"/>
+    /// runs over the inbound message before the agent receives it. First-registered = outermost.
+    /// Phase-2 cognitive primitives (HCM, S-MMU, DIEE, PAS) register here without modifying
+    /// plugin code. Register via <c>services.AddAgentInputMiddleware&lt;T&gt;()</c> for
+    /// DI-driven injection, or set directly for manual construction. Default: empty.
+    /// </summary>
+    public IReadOnlyList<AgentInputMiddleware> InputMiddleware { get; init; }
+        = Array.Empty<AgentInputMiddleware>();
+
+    /// <summary>
     /// Dispatcher for tool calls surfaced by the provider. When null, <c>StatefulAiAgent</c>
     /// constructs a <see cref="DefaultToolCallDispatcher"/> from <see cref="ToolRegistry"/> +
     /// <see cref="ToolGuardrails"/> automatically. Supply your own to override — e.g., a

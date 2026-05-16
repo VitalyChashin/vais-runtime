@@ -47,6 +47,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
     private readonly string? _hitlPortId;
     private readonly bool _isForkSource;
     private readonly ActivityContext _graphContext;
+    private readonly AgentInputMiddleware[]? _inputMiddleware;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -67,7 +68,8 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         IGraphExpressionEvaluator? expressionEvaluator = null,
         string? executorId = null,
         string? hitlPortId = null,
-        bool isForkSource = false)
+        bool isForkSource = false,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
         : base(id: executorId ?? node.Id)
     {
         _node = node;
@@ -87,6 +89,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         _hitlPortId = hitlPortId;
         _isForkSource = isForkSource;
         _graphContext = Activity.Current?.Context ?? default;
+        _inputMiddleware = inputMiddleware is { Count: > 0 } ? inputMiddleware.ToArray() : null;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -179,9 +182,25 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             IReadOnlyDictionary<string, JsonElement> nodeOutput;
             if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
             {
-                var prompt = BuildAgentInputText(FilterByInputBinding(state, _node.StateBindings), _node.StateBindings);
+                var filteredInput = FilterByInputBinding(state, _node.StateBindings);
+                var prompt = BuildAgentInputText(filteredInput, _node.StateBindings);
+
+                // P12O-8: run input middleware chain (P12 inbound zone) before the agent body.
+                if (_inputMiddleware is { Length: > 0 })
+                {
+                    var inputCtx = new AgentInputContext
+                    {
+                        AgentId = _node.Ref?.Id ?? _node.Id,
+                        RunId = message.RunId,
+                        NodeId = _node.Id,
+                        Message = prompt,
+                    };
+                    await RunInputMiddlewareAsync(inputCtx, _inputMiddleware, cancellationToken).ConfigureAwait(false);
+                    prompt = inputCtx.Message;
+                }
+
                 nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
-                nodeOutput = await ExecuteAgentNodeAsync(state, message.RunId, context, cancellationToken).ConfigureAwait(false);
+                nodeOutput = await ExecuteAgentNodeAsync(filteredInput, prompt, message.RunId, context, cancellationToken).ConfigureAwait(false);
                 if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
                     nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
             }
@@ -300,7 +319,8 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
     }
 
     private async ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAgentNodeAsync(
-        IDictionary<string, JsonElement> state,
+        IReadOnlyDictionary<string, JsonElement> filteredInput,
+        string text,
         string runId,
         IWorkflowContext context,
         CancellationToken cancellationToken)
@@ -310,8 +330,6 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             throw new InvalidOperationException($"Agent-kind node '{_node.Id}' has no Ref.");
         }
 
-        var filteredInput = FilterByInputBinding(state, _node.StateBindings);
-        var text = BuildAgentInputText(filteredInput, _node.StateBindings);
         var metadata = BuildMetadata(filteredInput, _node.StateBindings);
         AgentInvocationResult result;
 
@@ -511,6 +529,21 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
 
     private static IReadOnlyDictionary<string, JsonElement> AsReadOnly(IDictionary<string, JsonElement> state)
         => state as IReadOnlyDictionary<string, JsonElement> ?? new Dictionary<string, JsonElement>(state, StringComparer.Ordinal);
+
+    private static Task RunInputMiddlewareAsync(
+        AgentInputContext ctx,
+        AgentInputMiddleware[] middleware,
+        CancellationToken cancellationToken)
+    {
+        Func<Task> chain = () => Task.CompletedTask;
+        for (var i = middleware.Length - 1; i >= 0; i--)
+        {
+            var mw = middleware[i];
+            var inner = chain;
+            chain = () => mw.InvokeAsync(ctx, inner, cancellationToken);
+        }
+        return chain();
+    }
 
     private static string TruncateText(string s, int maxChars = 8192) =>
         s.Length <= maxChars ? s : string.Concat(s.AsSpan(0, maxChars), "…");

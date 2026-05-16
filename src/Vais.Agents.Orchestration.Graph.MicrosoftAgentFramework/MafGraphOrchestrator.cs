@@ -71,6 +71,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly IA2AGraphNodeInvoker? _a2aInvoker;
     private readonly string? _bearerToken;
     private readonly IGraphExpressionEvaluator? _expressionEvaluator;
+    private readonly IReadOnlyList<AgentInputMiddleware>? _inputMiddleware;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -96,6 +97,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="a2aInvoker">Invoker for A2A protocol agent nodes (<see cref="GraphAgentRef.A2AUrl"/>). Null means A2A-url nodes throw at runtime.</param>
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
+    /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -110,7 +112,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
-        IGraphExpressionEvaluator? expressionEvaluator = null)
+        IGraphExpressionEvaluator? expressionEvaluator = null,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -129,6 +132,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _a2aInvoker = a2aInvoker;
         _bearerToken = bearerToken;
         _expressionEvaluator = expressionEvaluator;
+        _inputMiddleware = inputMiddleware;
     }
 
     /// <inheritdoc />
@@ -267,7 +271,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             a2aInvoker: _a2aInvoker,
             bearerToken: _bearerToken,
             expressionEvaluator: _expressionEvaluator,
-            checkpointer: _checkpointer);
+            checkpointer: _checkpointer,
+            inputMiddleware: _inputMiddleware);
         var workflow = buildResult.Workflow;
         var portIdToNodeId = buildResult.PortIdToNodeId;
 
@@ -428,7 +433,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             bearerToken: _bearerToken,
             expressionEvaluator: _expressionEvaluator,
             startNodeId: resumeFromNodeId,
-            checkpointer: _checkpointer);
+            checkpointer: _checkpointer,
+            inputMiddleware: _inputMiddleware);
 
         var watch = Stopwatch.StartNew();
 
@@ -620,8 +626,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         IAgentRemoteInvoker? remoteInvoker = null,
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
-        IGraphExpressionEvaluator? expressionEvaluator = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator)
+        IGraphExpressionEvaluator? expressionEvaluator = null,
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware)
     {
     }
 }
