@@ -58,8 +58,8 @@ using Vais.Agents.Core;
 
 var retriever = new VectorStoreKnowledgeRetriever<string, DocRecord>(
     collection: collection,
-    embedder: embedder,
-    project: r => new KnowledgeChunk(r.Text, Id: r.Id));
+    embeddings: embedder,
+    toChunk: r => new KnowledgeChunk(r.Text, Id: r.Id));
 
 var provider = new KnowledgeRetrievalContextProvider(
     retriever,

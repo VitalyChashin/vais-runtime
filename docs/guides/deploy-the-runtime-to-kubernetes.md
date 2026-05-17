@@ -2,7 +2,7 @@
 
 End-to-end walkthrough from an empty kind cluster to a 3-replica `vais-agents-runtime` Deployment serving the v0.11 OpenAPI spec through a ClusterIP service. Built on the Helm chart that ships under [`deploy/helm/vais-agents-runtime/`](../../deploy/helm/vais-agents-runtime/README.md).
 
-Prereqs: `kubectl`, Helm 3.13+, Docker (for the image build). [`kind`](https://kind.sigs.k8s.io/) for the dev-cluster path, or any 1.28+ cluster with a container registry and a Redis you can reach.
+Prereqs: `kubectl`, Helm 3.12+, Docker (for the image build). [`kind`](https://kind.sigs.k8s.io/) for the dev-cluster path, or any 1.28+ cluster with a container registry and a Redis you can reach.
 
 ## What we'll end up with
 

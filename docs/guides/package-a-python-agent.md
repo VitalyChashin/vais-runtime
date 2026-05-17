@@ -60,17 +60,23 @@ name = "langgraph-researcher"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "vais-agent-sdk >=0.24",
   "langgraph >=0.2",
   "langchain-anthropic >=0.3",
   "pydantic >=2.8,<3",
+  # vais-agent-sdk is consumed from the local monorepo path until the
+  # package is published to PyPI; the shipped sample uses the same shape.
 ]
+
+[tool.uv.sources]
+vais-agent-sdk = { path = "../../python-agent-sdk", editable = true }
 
 [tool.vais.plugin]
 targetApiVersion = "0.24"
 kind = "agent-handler"
 handlerTypeName = "langgraph_researcher.agent.ResearcherAgent"
 ```
+
+> **PyPI status.** `vais-agent-sdk` is **not yet on PyPI**. Until it ships, point at the in-repo SDK via `[tool.uv.sources]` as above (the shipped `samples/PluginAgentLangGraphResearcher/langgraph-researcher/pyproject.toml` does the same). Once published, replace the `[tool.uv.sources]` block with `"vais-agent-sdk >=0.24"` in `[project.dependencies]`.
 
 `targetApiVersion` must be `"0.24"`. The runtime verifies this at handshake time.
 

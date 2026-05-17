@@ -123,7 +123,12 @@ v0.17 semantic: update evicts the grain's cached options + invalidates the trans
 
 ## 6. Add tools
 
-Tools in v0.17 come from three sources — `static:` (consumer-registered `ITool`s in DI), `mcp:` (MCP servers declared in `McpServers`), and `a2a:` (remote A2A agents declared in `A2ARemoteAgents`).
+Tools come from four sources:
+
+- **`static:<name>`** — consumer-registered `ITool` impls in DI (via `IStaticToolRegistry`).
+- **`mcp:<server>`** — MCP servers declared in `McpServers[]`. Fully materialised by the translator: `McpToolSource` resolves at activation and the tools land in the registry.
+- **`a2a:<name>`** — remote A2A agents declared in `A2ARemoteAgents[]`. Translator validates the declaration today; full `A2ARemoteAgentTool` instantiation is preview (see [delegate-to-a2a-remote-agent](delegate-to-a2a-remote-agent.md)).
+- **`agent:<name>`** — local same-runtime agent delegation declared in `LocalAgents[]` (v0.18, agent-as-tool). Blocking or background modes; see [delegate-to-a-local-agent](delegate-to-a-local-agent.md).
 
 For a YAML-only example, MCP is easiest: declare a public weather-MCP server and reference it:
 
@@ -139,9 +144,7 @@ spec:
       url: https://mcp.example.org/weather
 ```
 
-⚠️ **v0.17 limitation:** the translator validates that `mcp:open-meteo` references a declared `McpServers[].Name`, but does **not** yet materialize the `McpToolSource`. Lazy MCP materialization lands post-v0.17. Same for `a2a:` — validation today, instantiation later.
-
-Until then, tool use comes via `static:*` (register your own `ITool` impls in the host composition). See [ship-a-guardrail](ship-a-guardrail.md) for the registration pattern — guardrails and static tools follow the same DI-by-factory shape.
+For `static:*` tool registration, see [wire-a-custom-tool](wire-a-custom-tool.md) — host-side `IStaticToolRegistry` builder.
 
 ## 7. Add guardrails
 

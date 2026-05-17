@@ -7,8 +7,8 @@ For the K8s sidecar deployment pattern see [wire a sidecar OPA against the opera
 ## Packages
 
 ```xml
-<PackageReference Include="Vais.Agents.Control.Http.Server" Version="0.15.0-preview" />
-<PackageReference Include="Vais.Agents.Control.Policy.Opa" Version="0.15.0-preview" />
+<PackageReference Include="Vais.Agents.Control.Http.Server" />
+<PackageReference Include="Vais.Agents.Control.Policy.Opa" />
 ```
 
 ## 1. Run OPA locally

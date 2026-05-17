@@ -27,7 +27,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Install vais CLI
-        run: dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
+        run: dotnet tool install -g Vais.Agents.Cli --prerelease
 
       - name: Configure context
         run: |

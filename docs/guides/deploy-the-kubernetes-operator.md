@@ -29,7 +29,7 @@ Prereqs: Docker Desktop with Kubernetes enabled, Helm 3.12+, kubectl, and a v0.6
 The in-repo `Vais.Agents.Control.KubernetesOperator.Host` project packages as a multi-stage Docker build:
 
 ```bash
-cd G:/work/VAIS2_Platform/Vais2Platform/oss/agentic
+cd path/to/agentic
 
 docker build \
   -t vais-agents-operator:0.13.0-preview \
@@ -46,9 +46,9 @@ docker images | grep vais-agents-operator
 
 Docker Desktop's Kubernetes uses the local Docker daemon as its image registry — no push step needed. For a remote cluster, `docker push` to your registry after tagging.
 
-## 2. Start the v0.6 HTTP control plane
+## 2. Start the HTTP control plane
 
-The operator talks to whatever HTTP control-plane host you've already built on top of `Vais.Agents.Control.Http.Server`. For local dev, the simplest thing is a minimal AspNet host:
+The operator talks to whatever HTTP control-plane host you've already built on top of `Vais.Agents.Control.Http.Server`. The idempotency middleware (v0.11+) is required for safe reconcile replays — the operator retries `apply` on transient failures and the middleware deduplicates by `Idempotency-Key`. For local dev, the simplest thing is a minimal AspNet host:
 
 ```csharp
 using Vais.Agents.Control.Http;

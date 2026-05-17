@@ -11,10 +11,10 @@ MyAgentHost.csproj
 References:
 
 ```xml
-<PackageReference Include="Vais.Agents.Abstractions" Version="0.4.0-preview" />
-<PackageReference Include="Vais.Agents.Core" Version="0.4.0-preview" />
-<PackageReference Include="Vais.Agents.Ai.SemanticKernel" Version="0.4.0-preview" />
-<PackageReference Include="Vais.Agents.Hosting.Orleans" Version="0.4.0-preview" />
+<PackageReference Include="Vais.Agents.Abstractions" />
+<PackageReference Include="Vais.Agents.Core" />
+<PackageReference Include="Vais.Agents.Ai.SemanticKernel" />
+<PackageReference Include="Vais.Agents.Hosting.Orleans" />
 <PackageReference Include="Microsoft.Orleans.Server" Version="10.1.0" />
 <PackageReference Include="Microsoft.Orleans.Client" Version="10.1.0" />
 ```
