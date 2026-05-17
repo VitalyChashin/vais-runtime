@@ -85,13 +85,13 @@ The conversation continues across the restart. This is the difference between lo
 
 ## What goes into Redis
 
-| Concern | Redis key prefix | Purpose |
+| Concern | Wired by | Purpose |
 |---|---|---|
-| Orleans clustering | `vais-agents/Cluster/...` | Silo-to-silo membership; how silos find each other |
-| Grain storage | `vais.agents/*` | Per-agent / per-session / per-graph state |
-| Event-bus streams | `vais.agents.events/*` | Cross-silo event fan-out (`AgentGraphEvent`, etc.) |
+| Orleans clustering | `UseAgenticRedisClustering()` | Silo-to-silo membership; how silos find each other |
+| Grain storage | `AddAgenticRedisGrainStorage()` (storage name `vais.agents`) | Per-agent / per-session / per-graph state |
+| Event-bus streams | `UseAgenticRedisStreaming()` (stream provider `vais.agents.events`) | Cross-silo event fan-out (`AgentEvent`, `AgentGraphEvent`) |
 
-`redis-cli FLUSHDB` wipes all three — useful in dev, catastrophic in production.
+Exact Redis key layout is determined by the upstream Orleans Redis provider (`Microsoft.Orleans.Persistence.Redis` + `Microsoft.Orleans.Clustering.Redis` + `Microsoft.Orleans.Streaming.Redis`); the names listed above are the .NET-level registration handles, not Redis key prefixes. `redis-cli FLUSHDB` wipes everything — useful in dev, catastrophic in production.
 
 ## Things that catch people
 

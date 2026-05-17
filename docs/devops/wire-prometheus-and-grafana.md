@@ -6,6 +6,8 @@ You'll configure Prometheus to scrape the runtime's `/metrics` endpoint, drop a 
 
 When the `Prometheus` LLM gateway middleware is enabled (see **[Wire the LLM gateway](../agent-developer/wire-the-llm-gateway.md)**), the runtime exposes Prometheus-format metrics at `GET /metrics` on port 8080.
 
+> The `/metrics` endpoint is gated on observability being on — `app.MapPrometheusScrapingEndpoint()` is only called when `VAIS_OTEL_ENDPOINT` or `VAIS_OTEL_CONSOLE=true` is set. A runtime started without any OTel config returns `404` on `/metrics` regardless of the gateway middleware chain.
+
 The metrics that matter for an agent fleet:
 
 | Metric | Type | Labels | What it tells you |
