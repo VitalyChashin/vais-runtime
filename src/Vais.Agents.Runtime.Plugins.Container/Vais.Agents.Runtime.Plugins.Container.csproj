@@ -15,7 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Mcp\Vais.Agents.Control.Mcp.csproj" />
     <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Protocols.Mcp\Vais.Agents.Protocols.Mcp.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
   </ItemGroup>
@@ -28,6 +30,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="ModelContextProtocol.Core" />
     <PackageReference Include="System.Net.ServerSentEvents" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>

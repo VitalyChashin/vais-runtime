@@ -22,7 +22,13 @@ public sealed record McpServerManifest(
 {
     // ── Physical server fields (mirror McpServerRef) ──────────────────────────
 
-    /// <summary>Transport: "streamableHttp" | "sse" | "stdio". Required for physical servers.</summary>
+    /// <summary>Transport: "streamableHttp" | "sse" | "stdio" | "containerStdio". Required for physical servers.</summary>
+    /// <remarks>
+    /// <c>containerStdio</c> wraps a stdio-only MCP server in a runtime-supervised container behind a thin
+    /// streamableHttp bridge. The runtime owns the container lifecycle; the manifest carries the image (or
+    /// build context) and the stdio command via <see cref="Container"/>. See plan
+    /// <c>plans/mcp-stdio-native-impl-2026-05-17.md</c>.
+    /// </remarks>
     public string? Transport { get; init; }
 
     /// <summary>Server URL for <c>streamableHttp</c> / <c>sse</c> transports.</summary>
@@ -42,6 +48,12 @@ public sealed record McpServerManifest(
 
     /// <summary>Optional tool allowlist. Null = expose all tools the server lists.</summary>
     public IReadOnlyList<string>? Tools { get; init; }
+
+    /// <summary>
+    /// Container spec for <c>containerStdio</c> transport. Required when
+    /// <see cref="Transport"/> is <c>containerStdio</c>; must be null for other transports.
+    /// </summary>
+    public ContainerMcpSpec? Container { get; init; }
 
     // ── Virtual server fields ─────────────────────────────────────────────────
 
@@ -84,3 +96,93 @@ public sealed record McpServerHandle(string Id, string Version);
 
 /// <summary>Runtime status snapshot returned by <c>IMcpServerLifecycleManager.QueryAsync</c>.</summary>
 public sealed record McpServerStatus(McpServerHandle Handle, bool Virtual, DateTimeOffset RegisteredAt);
+
+/// <summary>
+/// Container spec for an MCP server published via <c>transport: containerStdio</c>.
+/// The runtime supervises one container per server; the container is expected to expose
+/// MCP over streamableHttp at <see cref="Path"/> on <see cref="Port"/>. See
+/// <c>samples/mcp-stdio-template/</c> for the canonical bridge pattern.
+/// </summary>
+public sealed record ContainerMcpSpec
+{
+    /// <summary>Container image reference. Mutually exclusive with <see cref="Build"/>.</summary>
+    public string? Image { get; init; }
+
+    /// <summary>Build-on-apply spec. The CLI builds the image and tags it before the manifest is sent. Mutually exclusive with <see cref="Image"/> only when neither is null.</summary>
+    public ContainerMcpBuildSpec? Build { get; init; }
+
+    /// <summary>Bridge HTTP port the container exposes. Default 7000 (chosen to dodge common dev ports — runtime 8080, plugin 8090, langfuse 3000, openwebui 5000).</summary>
+    public int Port { get; init; } = 7000;
+
+    /// <summary>Bridge MCP URL path. Default <c>/mcp</c>.</summary>
+    public string Path { get; init; } = "/mcp";
+
+    /// <summary>Bridge health endpoint path. Default <c>/health</c>; the runtime polls until it returns 2xx.</summary>
+    public string HealthPath { get; init; } = "/health";
+
+    /// <summary>Optional override of the image's default CMD (i.e. the bridge entrypoint).</summary>
+    public IReadOnlyList<string>? Command { get; init; }
+
+    /// <summary>Optional args appended to <see cref="Command"/> (or image CMD).</summary>
+    public IReadOnlyList<string>? Args { get; init; }
+
+    /// <summary>Environment variables passed to the container. The bridge reads its stdio child command from <c>MCP_STDIO_CMD</c> by convention.</summary>
+    public IReadOnlyDictionary<string, string>? Env { get; init; }
+
+    /// <summary>Secret references injected as env vars at container start. Key = env-var name; value = <c>secret://</c> URI.</summary>
+    public IReadOnlyDictionary<string, string>? Secrets { get; init; }
+
+    /// <summary>Resource limits — memory / cpu / pids. Defaults apply when null.</summary>
+    public ContainerMcpResources? Resources { get; init; }
+
+    /// <summary>Seconds to wait for the bridge <see cref="HealthPath"/> to return 2xx during initial start. Default 30.</summary>
+    public int StartupTimeoutSeconds { get; init; } = 30;
+
+    /// <summary>Docker image pull policy: <c>Always</c> | <c>IfNotPresent</c> | <c>Never</c>. Default IfNotPresent.</summary>
+    public string ImagePullPolicy { get; init; } = "IfNotPresent";
+
+    /// <summary>Kubernetes-specific config (required when the runtime supervisor is the K8s one).</summary>
+    public ContainerMcpKubernetesConfig? Kubernetes { get; init; }
+}
+
+/// <summary>Build-on-apply specification for a container MCP server.</summary>
+public sealed record ContainerMcpBuildSpec
+{
+    /// <summary>Docker build context path. Relative paths resolve against the manifest file's directory at CLI time.</summary>
+    public required string Context { get; init; }
+
+    /// <summary>Dockerfile path relative to <see cref="Context"/>. Default <c>Dockerfile</c>.</summary>
+    public string Dockerfile { get; init; } = "Dockerfile";
+
+    /// <summary>Optional <c>--build-arg</c> key=value pairs.</summary>
+    public IReadOnlyDictionary<string, string>? Args { get; init; }
+
+    /// <summary>Run <c>docker push</c> after a successful build. Default false.</summary>
+    public bool Push { get; init; }
+}
+
+/// <summary>Resource limits applied to a container MCP server. Format mirrors Kubernetes resource quantities.</summary>
+public sealed record ContainerMcpResources
+{
+    /// <summary>Memory limit (e.g. <c>128Mi</c>, <c>1Gi</c>). Null = supervisor default.</summary>
+    public string? Memory { get; init; }
+
+    /// <summary>CPU limit in cores (e.g. <c>0.25</c>, <c>1</c>, <c>2</c>). Null = supervisor default.</summary>
+    public string? Cpu { get; init; }
+
+    /// <summary>Max process IDs the container may spawn. Null = supervisor default.</summary>
+    public long? PidsLimit { get; init; }
+}
+
+/// <summary>Kubernetes deployment coordinates for a container MCP server.</summary>
+public sealed record ContainerMcpKubernetesConfig
+{
+    /// <summary>URL of the K8s Service the runtime should probe (e.g. <c>http://my-mcp.default.svc.cluster.local:7000</c>).</summary>
+    public required string ServiceUrl { get; init; }
+
+    /// <summary>K8s Deployment name (used for image patching).</summary>
+    public string DeploymentName { get; init; } = "";
+
+    /// <summary>K8s namespace. Default <c>default</c>.</summary>
+    public string Namespace { get; init; } = "default";
+}

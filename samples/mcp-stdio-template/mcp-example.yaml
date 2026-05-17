@@ -1,0 +1,29 @@
+# Minimal McpServer manifest that uses this template.
+#
+# Replace `mcp-example` with your server's id, point spec.container.build.context
+# at the directory holding your customized Dockerfile, and set MCP_STDIO_CMD to the
+# command that starts your stdio MCP server.
+#
+# Apply with: vais apply -f mcp-example.yaml
+
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: mcp-example
+  version: "1.0"
+  description: Replace this with your server's description.
+spec:
+  transport: containerStdio
+  # mcpGatewayRef: my-mcp-gateway          # uncomment to apply tool-gateway middleware
+  container:
+    build:
+      context: .                           # path to the directory with your Dockerfile
+      dockerfile: Dockerfile
+    env:
+      MCP_STDIO_CMD: "python -m my_stdio_mcp_module"
+    # port: 7000                           # override if 7000 collides with something else
+    # resources:                           # supervisor defaults: 256 MiB / 0.5 CPU / 128 pids
+    #   memory: 128Mi
+    #   cpu: "0.25"
+    # secrets:                             # secret://env/VAR or secret://file/path
+    #   API_TOKEN: secret://env/MY_API_TOKEN

@@ -255,6 +255,24 @@ internal static class EnvelopeSerializer
         if (manifest.Sources is { Count: > 0 }) spec["sources"] = JsonSerializer.SerializeToNode(manifest.Sources, JsonOptions);
         if (manifest.ToolProjection is { Count: > 0 }) spec["toolProjection"] = JsonSerializer.SerializeToNode(manifest.ToolProjection, JsonOptions);
         AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
+        if (manifest.Container is { } container)
+        {
+            var c = new JsonObject();
+            AddIfSet(c, "image", container.Image);
+            if (container.Build is { } build) c["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
+            if (container.Port != 7000) c["port"] = container.Port;
+            if (!string.Equals(container.Path, "/mcp", StringComparison.Ordinal)) c["path"] = container.Path;
+            if (!string.Equals(container.HealthPath, "/health", StringComparison.Ordinal)) c["healthPath"] = container.HealthPath;
+            if (container.Command is { Count: > 0 }) c["command"] = JsonSerializer.SerializeToNode(container.Command, JsonOptions);
+            if (container.Args is { Count: > 0 }) c["args"] = JsonSerializer.SerializeToNode(container.Args, JsonOptions);
+            if (container.Env is { Count: > 0 }) c["env"] = JsonSerializer.SerializeToNode(container.Env, JsonOptions);
+            if (container.Secrets is { Count: > 0 }) c["secrets"] = JsonSerializer.SerializeToNode(container.Secrets, JsonOptions);
+            if (container.StartupTimeoutSeconds != 30) c["startupTimeoutSeconds"] = container.StartupTimeoutSeconds;
+            if (!string.Equals(container.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) c["imagePullPolicy"] = container.ImagePullPolicy;
+            if (container.Resources is { } r) c["resources"] = JsonSerializer.SerializeToNode(r, JsonOptions);
+            if (container.Kubernetes is { } k8s) c["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
+            spec["container"] = c;
+        }
         return WrapEnvelope("McpServer", metadata, spec).ToJsonString(JsonOptions);
     }
 

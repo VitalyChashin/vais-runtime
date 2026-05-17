@@ -56,16 +56,15 @@ cd <repo>/agentic
 
 ---
 
-## 1. Start the runtime and the MCP fetch sidecar (3 min)
+## 1. Start the runtime (2 min)
 
-Build the runtime image and the toy MCP fetch image (first time ~2 min; cached ~20 s).
+Build the runtime image (first time ~2 min; cached ~20 s).
 
 ```bash
 docker build -f src/Vais.Agents.Runtime.Host/Dockerfile -t vais-agents-runtime:local .
-docker build -t vais-quickstart-fetch:local samples/quickstart-mcp-fetch
 ```
 
-> **Why a separate fetch image?** The runtime's MCP transport is **streamableHttp**, so it needs an MCP server reachable at an HTTP URL. The official `mcp/fetch` image (and the reference `mcp-server-fetch` package it wraps) only speak the MCP **stdio** transport. `samples/quickstart-mcp-fetch/` is a ~15-line FastMCP server with a single `fetch(url)` tool, packaged as a Docker image — small enough to read end-to-end, no third-party bridges. Swap it out for a production MCP fetch implementation when you are ready.
+> **Where does the MCP fetch server come from?** The runtime supervises it in step 3 — you don't need to build or run it yourself. `samples/mcp-fetch-container/` ships a thin Dockerfile + bridge that wraps the official `mcp-server-fetch` PyPI package (which only speaks stdio) behind an HTTP MCP bridge; the runtime builds the image on `vais apply` and manages the container lifecycle. See [§3 below](#3-apply-the-gateway-configs-and-register-the-mcp-server-2-min).
 
 Create a working directory.
 
@@ -83,7 +82,7 @@ Set-Location "$HOME/quickstart"
 
 </details>
 
-Save this as `docker-compose.yaml` in `~/quickstart/` — it bundles the runtime, the MCP fetch server, and the wiring needed for **container-plugin supervision** (step 6).
+Save this as `docker-compose.yaml` in `~/quickstart/` — runtime only, with the wiring needed so the runtime can supervise both step-3 container MCP servers and step-6 container plugins.
 
 ```yaml
 networks:
@@ -99,38 +98,21 @@ services:
       VAIS_HOSTING_MODE: localhost
       ASPNETCORE_URLS: http://0.0.0.0:8080
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      VAIS_CONTAINER_PLUGINS_DIRECTORY: /var/lib/vais/plugins # enables container plugins (step 6)
-      VAIS_DOCKER_PLUGIN_NETWORK: vais-quickstart             # plugin containers join this network; runtime reaches them by container DNS
+      VAIS_CONTAINER_PLUGINS_DIRECTORY: /var/lib/vais/plugins # enables container plugins (step 6) AND container MCP servers (step 3)
+      VAIS_DOCKER_PLUGIN_NETWORK: vais-quickstart             # supervised containers join this network; runtime reaches them by container DNS
       Vais__ContainerPlugin__CallTokenSecret: ${VAIS_CALL_TOKEN_SECRET}  # required when container plugins are enabled (≥32 chars)
     ports:
       - "8080:8080"
     networks:
       - vais
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock             # lets the runtime spawn plugin containers
-    depends_on:
-      mcp-fetch:
-        condition: service_healthy
+      - /var/run/docker.sock:/var/run/docker.sock             # lets the runtime spawn supervised containers
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 15s
-
-  mcp-fetch:
-    image: vais-quickstart-fetch:local
-    container_name: mcp-fetch
-    ports:
-      - "3000:3000"
-    networks:
-      - vais
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3000/mcp', timeout=2).status in (200,400,406) else 1)\" || exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 ```
 
 Set a call-token secret (any ≥32-char string — used only inside the local stack):
@@ -147,30 +129,26 @@ $env:VAIS_CALL_TOKEN_SECRET = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-
 
 </details>
 
-> **Why mount `docker.sock` and run as `root`?** Step 6 deploys a Python agent as its own Docker container managed by the runtime's `DockerContainerSupervisor`. The supervisor uses the Docker API via the mounted socket to start, stop, and replace plugin containers — no runtime image rebuild, no silo restart. The runtime image's default non-root user (uid 65532) cannot read the socket (it is owned `root:root 0660` on Docker Desktop and most Linux hosts), so we override `user: root` for the local stack. In production you would instead `group_add` the host's docker GID. If you have no intention of running container plugins, drop the `docker.sock` mount, `user: root`, `VAIS_CONTAINER_PLUGINS_DIRECTORY`, `VAIS_DOCKER_PLUGIN_NETWORK`, and `Vais__ContainerPlugin__CallTokenSecret`.
+> **Why mount `docker.sock` and run as `root`?** The runtime supervises step-3 container MCP servers and step-6 container plugins via the Docker API. The runtime image's default non-root user (uid 65532) cannot read the socket (it is owned `root:root 0660` on Docker Desktop and most Linux hosts), so we override `user: root` for the local stack. In production you would instead `group_add` the host's docker GID. If you have no intention of using container MCP servers or container plugins, drop the `docker.sock` mount, `user: root`, `VAIS_CONTAINER_PLUGINS_DIRECTORY`, `VAIS_DOCKER_PLUGIN_NETWORK`, and `Vais__ContainerPlugin__CallTokenSecret`.
 
-> **Why the explicit `vais-quickstart` network?** When `VAIS_DOCKER_PLUGIN_NETWORK` is set, the supervisor attaches plugin containers to that network and the runtime reaches them via Docker's embedded DNS (`http://<container-name>:<port>`). Both the `runtime` and `mcp-fetch` services join the same network so the runtime can also resolve the MCP fetch container by name. Without this, `localhost:<port>` from inside the runtime container can't reach plugin or sidecar containers.
+> **Why the explicit `vais-quickstart` network?** When `VAIS_DOCKER_PLUGIN_NETWORK` is set, the supervisor attaches every supervised container to that network and the runtime reaches them via Docker's embedded DNS (`http://<container-name>:<port>`). Without this, `localhost:<port>` from inside the runtime container can't reach supervised containers.
 
-Start both containers.
+Start the runtime.
 
 ```bash
 docker compose up -d
 ```
 
-Verify both are healthy.
+Verify it is healthy.
 
 ```bash
 curl -s http://localhost:8080/healthz   # → Healthy
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/mcp   # → 406 (MCP endpoint up — see note)
 ```
-
-> The MCP server has no `/healthz` endpoint, but a `GET /mcp` returning `406 Not Acceptable` (or `400 Bad Request`) means it is up; MCP only accepts `POST` with a JSON-RPC body.
 
 <details><summary>PowerShell</summary>
 
 ```powershell
 curl.exe -s http://localhost:8080/healthz
-curl.exe -s -o NUL -w "%{http_code}`n" http://localhost:3000/mcp
 ```
 
 The PowerShell `curl` alias points at `Invoke-WebRequest`; `curl.exe` is the real client and ships with Windows 10+.
@@ -243,7 +221,7 @@ spec:
         maxCharacters: 8192
 ```
 
-**`mcp-fetch-server.yaml`** — register the public fetch server as a reusable tool source.
+**`mcp-fetch-server.yaml`** — point at the reference container MCP server. `transport: containerStdio` tells the runtime to supervise the container itself; `spec.container.build` triggers a local `docker build` on `vais apply`.
 
 ```yaml
 apiVersion: vais.agents/v1
@@ -251,21 +229,25 @@ kind: McpServer
 metadata:
   id: mcp-fetch
   version: "1.0"
-  description: HTTP fetch tool via MCP (streamableHttp transport).
+  description: HTTP fetch tool via MCP — runtime-supervised container.
 spec:
-  transport: streamableHttp
-  url: http://mcp-fetch:3000/mcp/
+  transport: containerStdio
   mcpGatewayRef: demo-mcp-governance
+  container:
+    build:
+      context: <repo>/agentic/samples/mcp-fetch-container   # absolute path; CLI builds the image
+    env:
+      MCP_STDIO_CMD: "python -m mcp_server_fetch"
 ```
 
-> **Note.** `mcp-fetch` is the compose service name and is resolved by Docker's embedded DNS because both containers are attached to the `vais-quickstart` network defined in step 1. If you run the MCP fetch server outside compose, use `http://host.docker.internal:3000/mcp/` instead (Docker Desktop only) or the container's IP on a shared user-defined bridge.
+> **What this does.** The CLI builds the image (tag derived: `vais-mcp-mcp-fetch:1.0`), POSTs the manifest. The runtime's container supervisor starts a hardened container attached to the `vais-quickstart` network; an in-container bridge wraps the stdio `mcp-server-fetch` child and exposes it over streamableHttp at `/mcp`. The runtime opens an MCP client to it within ~30 s of apply. See [`samples/mcp-fetch-container/`](samples/mcp-fetch-container/) for the bridge details and [`samples/mcp-stdio-template/`](samples/mcp-stdio-template/) for the generic pattern.
 
 Apply in dependency order.
 
 ```bash
 vais apply -f llm-gateway.yaml
 vais apply -f mcp-gateway.yaml
-vais apply -f mcp-fetch-server.yaml
+vais apply -f mcp-fetch-server.yaml      # builds the image (~30s first time), registers the server
 ```
 
 Each command prints `<id> created (<kind>, version <version>)` (or `updated` on subsequent applies).
@@ -463,6 +445,8 @@ vais invoke-graph research-pipeline `
 ```
 
 </details>
+
+> **First run only — give the mcp-fetch container ~30 s to start.** After `vais apply -f mcp-fetch-server.yaml`, the container supervisor needs up to ~30 s to spin up the bridge container and complete the MCP handshake. If `node.started research` fires before then, the run fails with `McpServerUnavailable`; just re-invoke. (Tightening this loop is a Phase-1.5 follow-up.)
 
 Expected event stream (timestamps and run IDs vary; prefix glyphs flag event type).
 
@@ -740,8 +724,8 @@ vais delete mcp-gateways/demo-mcp-governance --force
 vais delete llm-gateways/demo-llm-gateway --force
 
 docker compose down
-docker rm -f vais-plugin-quickstart-python-planner 2>/dev/null || true
-docker rmi vais-quickstart-planner:1.0 vais-quickstart-fetch:local vais-agents-runtime:local 2>/dev/null || true
+docker rm -f vais-plugin-mcp-fetch vais-plugin-quickstart-python-planner 2>/dev/null || true
+docker rmi vais-quickstart-planner:1.0 vais-mcp-mcp-fetch:1.0 vais-agents-runtime:local 2>/dev/null || true
 ```
 
 ---
