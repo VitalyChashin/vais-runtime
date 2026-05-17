@@ -21,7 +21,7 @@ By the end you will have:
                                   └──────────────┘
 ```
 
-> **Status.** Targets v0.16 of the runtime and v0.15 of the CLI. API is pre-alpha — surfaces may move.
+> **Status.** Pre-alpha. The runtime and CLI are built from source out of this repo — neither is published to a public registry yet. APIs may move between commits.
 
 ---
 
@@ -58,11 +58,14 @@ cd <repo>/agentic
 
 ## 1. Start the runtime and the MCP fetch sidecar (3 min)
 
-Build the runtime image (first time ~2 min; cached ~20 s).
+Build the runtime image and the toy MCP fetch image (first time ~2 min; cached ~20 s).
 
 ```bash
 docker build -f src/Vais.Agents.Runtime.Host/Dockerfile -t vais-agents-runtime:local .
+docker build -t vais-quickstart-fetch:local samples/quickstart-mcp-fetch
 ```
+
+> **Why a separate fetch image?** The runtime's MCP transport is **streamableHttp**, so it needs an MCP server reachable at an HTTP URL. The official `mcp/fetch` image (and the reference `mcp-server-fetch` package it wraps) only speak the MCP **stdio** transport. `samples/quickstart-mcp-fetch/` is a ~15-line FastMCP server with a single `fetch(url)` tool, packaged as a Docker image — small enough to read end-to-end, no third-party bridges. Swap it out for a production MCP fetch implementation when you are ready.
 
 Create a working directory.
 
@@ -83,16 +86,26 @@ Set-Location "$HOME/quickstart"
 Save this as `docker-compose.yaml` in `~/quickstart/` — it bundles the runtime, the MCP fetch server, and the wiring needed for **container-plugin supervision** (step 6).
 
 ```yaml
+networks:
+  vais:
+    name: vais-quickstart            # named so the runtime can spawn plugin containers onto the same network
+
 services:
   runtime:
     image: vais-agents-runtime:local
     container_name: vais-runtime
+    user: root                                                # required so the runtime can read /var/run/docker.sock (see below)
     environment:
       VAIS_HOSTING_MODE: localhost
       ASPNETCORE_URLS: http://0.0.0.0:8080
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      VAIS_CONTAINER_PLUGINS_DIRECTORY: /var/lib/vais/plugins # enables container plugins (step 6)
+      VAIS_DOCKER_PLUGIN_NETWORK: vais-quickstart             # plugin containers join this network; runtime reaches them by container DNS
+      Vais__ContainerPlugin__CallTokenSecret: ${VAIS_CALL_TOKEN_SECRET}  # required when container plugins are enabled (≥32 chars)
     ports:
       - "8080:8080"
+    networks:
+      - vais
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock             # lets the runtime spawn plugin containers
     depends_on:
@@ -106,21 +119,37 @@ services:
       start_period: 15s
 
   mcp-fetch:
-    image: ghcr.io/modelcontextprotocol/servers/fetch:latest
+    image: vais-quickstart-fetch:local
     container_name: mcp-fetch
-    environment:
-      PORT: "3000"
     ports:
       - "3000:3000"
+    networks:
+      - vais
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3000/mcp', timeout=2).status in (200,400,406) else 1)\" || exit 0"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 5
       start_period: 10s
 ```
 
-> **Why mount `docker.sock`?** Step 6 deploys a Python agent as its own Docker container managed by the runtime's `DockerContainerSupervisor`. The supervisor uses the Docker API via the mounted socket to start, stop, and replace plugin containers — no runtime image rebuild, no silo restart. If you have no intention of running container plugins, the socket mount can be removed.
+Set a call-token secret (any ≥32-char string — used only inside the local stack):
+
+```bash
+export VAIS_CALL_TOKEN_SECRET=$(openssl rand -hex 32)
+```
+
+<details><summary>PowerShell</summary>
+
+```powershell
+$env:VAIS_CALL_TOKEN_SECRET = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
+```
+
+</details>
+
+> **Why mount `docker.sock` and run as `root`?** Step 6 deploys a Python agent as its own Docker container managed by the runtime's `DockerContainerSupervisor`. The supervisor uses the Docker API via the mounted socket to start, stop, and replace plugin containers — no runtime image rebuild, no silo restart. The runtime image's default non-root user (uid 65532) cannot read the socket (it is owned `root:root 0660` on Docker Desktop and most Linux hosts), so we override `user: root` for the local stack. In production you would instead `group_add` the host's docker GID. If you have no intention of running container plugins, drop the `docker.sock` mount, `user: root`, `VAIS_CONTAINER_PLUGINS_DIRECTORY`, `VAIS_DOCKER_PLUGIN_NETWORK`, and `Vais__ContainerPlugin__CallTokenSecret`.
+
+> **Why the explicit `vais-quickstart` network?** When `VAIS_DOCKER_PLUGIN_NETWORK` is set, the supervisor attaches plugin containers to that network and the runtime reaches them via Docker's embedded DNS (`http://<container-name>:<port>`). Both the `runtime` and `mcp-fetch` services join the same network so the runtime can also resolve the MCP fetch container by name. Without this, `localhost:<port>` from inside the runtime container can't reach plugin or sidecar containers.
 
 Start both containers.
 
@@ -131,15 +160,17 @@ docker compose up -d
 Verify both are healthy.
 
 ```bash
-curl -s http://localhost:8080/healthz   # → ok
-curl -s http://localhost:3000/health    # → ok
+curl -s http://localhost:8080/healthz   # → Healthy
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/mcp   # → 406 (MCP endpoint up — see note)
 ```
+
+> The MCP server has no `/healthz` endpoint, but a `GET /mcp` returning `406 Not Acceptable` (or `400 Bad Request`) means it is up; MCP only accepts `POST` with a JSON-RPC body.
 
 <details><summary>PowerShell</summary>
 
 ```powershell
 curl.exe -s http://localhost:8080/healthz
-curl.exe -s http://localhost:3000/health
+curl.exe -s -o NUL -w "%{http_code}`n" http://localhost:3000/mcp
 ```
 
 The PowerShell `curl` alias points at `Invoke-WebRequest`; `curl.exe` is the real client and ships with Windows 10+.
@@ -150,13 +181,20 @@ The PowerShell `curl` alias points at `Invoke-WebRequest`; `curl.exe` is the rea
 
 ## 2. Install and point the CLI (1 min)
 
-```bash
-dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
-vais version                                            # → 0.15.0-preview
+The CLI is not yet published to nuget.org. Build it from source out of this repo (you are already in `<repo>/agentic`):
 
+```bash
+dotnet pack src/Vais.Agents.Cli/Vais.Agents.Cli.csproj -c Release -o ./nupkgs
+dotnet tool install -g --add-source ./nupkgs Vais.Agents.Cli
+vais version                                            # → vais v0.0.1
+```
+
+Point the CLI at the running runtime and list agents.
+
+```bash
 vais config set-context local --server http://localhost:8080
 vais config use-context local
-vais get agents                                         # → No agents registered.
+vais get                                                # → (no agents)
 ```
 
 If `vais` is not on PATH, add `~/.dotnet/tools` to your shell profile (Linux/macOS) or `%USERPROFILE%\.dotnet\tools` to the user PATH (Windows).
@@ -216,11 +254,11 @@ metadata:
   description: HTTP fetch tool via MCP (streamableHttp transport).
 spec:
   transport: streamableHttp
-  url: http://host.docker.internal:3000/mcp
+  url: http://mcp-fetch:3000/mcp/
   mcpGatewayRef: demo-mcp-governance
 ```
 
-> **Note.** `host.docker.internal` resolves to the host from inside the runtime container on Docker Desktop. On Linux without Docker Desktop, use the container's host-network address or join the fetch container to a shared user-defined bridge and address it by name.
+> **Note.** `mcp-fetch` is the compose service name and is resolved by Docker's embedded DNS because both containers are attached to the `vais-quickstart` network defined in step 1. If you run the MCP fetch server outside compose, use `http://host.docker.internal:3000/mcp/` instead (Docker Desktop only) or the container's IP on a shared user-defined bridge.
 
 Apply in dependency order.
 
@@ -230,7 +268,7 @@ vais apply -f mcp-gateway.yaml
 vais apply -f mcp-fetch-server.yaml
 ```
 
-Each command prints `applied <Kind> <id>@<version>`.
+Each command prints `<id> created (<kind>, version <version>)` (or `updated` on subsequent applies).
 
 ---
 
@@ -250,7 +288,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You decompose a user research query into exactly three sub-questions
@@ -278,7 +317,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       For each sub-question you receive, call the `fetch` tool exactly once
@@ -312,7 +352,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       You receive the original query, a research plan, and raw findings.
@@ -335,12 +376,14 @@ vais apply -f planner.yaml
 vais apply -f researcher.yaml
 vais apply -f reporter.yaml
 
-vais get agents
-# NAME         VERSION   STATUS   AGE
-# planner      1.0       Active   …
-# researcher   1.0       Active   …
-# reporter     1.0       Active   …
+vais get
+# ID           VERSION   DESCRIPTION                                              LABELS
+# planner      1.0       Decomposes a query into 3 focused sub-questions.         -
+# researcher   1.0       Fetches web content for each sub-question and …          -
+# reporter     1.0       Composes the final report from the assembled findings.   -
 ```
+
+> **Why `apiKeyRef: secret://env/OPENAI_API_KEY`?** The runtime resolves secrets via `secret://<scheme>/<path>` URIs. The built-in `env` resolver reads from environment variables — your `$OPENAI_API_KEY` (forwarded into the runtime container by the compose file) is what each agent's OpenAI provider picks up. File-backed secrets (`secret://file/...`) and KeyVault-style backends are pluggable.
 
 Smoke-test each agent individually before wiring them up.
 
@@ -399,8 +442,8 @@ spec:
 ```bash
 vais apply -f research-pipeline.yaml
 vais get-graphs
-# NAME                 VERSION   STATUS   AGE
-# research-pipeline    1.0       Active   …
+# ID                  VERSION   ENTRY   NODES   DESCRIPTION                       LABELS
+# research-pipeline   1.0       plan    4       planner → researcher → reporter.  -
 ```
 
 Invoke it. The streaming form prints every graph and node event.
@@ -421,21 +464,22 @@ vais invoke-graph research-pipeline `
 
 </details>
 
-Expected event stream.
+Expected event stream (timestamps and run IDs vary; prefix glyphs flag event type).
 
 ```
-graph.started     research-pipeline
-node.started      plan
-node.completed    plan
-edge.traversed    plan → research
-node.started      research
-tool.called       fetch
-tool.completed    fetch
-node.completed    research
-edge.traversed    research → report
-node.started      report
-node.completed    report
-graph.completed   research-pipeline
+? graph.started   16:01:09.148 research-pipeline v1.0 run=10c7cbdd…
+? node.started    16:01:09.192 step=0 plan (plan)
+~ state.updated   16:01:10.907 step=0 [research_plan, …]
+  edge.traversed  16:01:10.915 step=0 plan → research
+? node.completed  16:01:10.919 step=0 plan
+? node.started    16:01:10.922 step=1 research (research)
+  tool.called     16:01:12.501 fetch
+  tool.completed  16:01:13.882 fetch
+? node.completed  16:01:14.001 step=1 research
+  edge.traversed  16:01:14.010 step=1 research → report
+? node.started    16:01:14.020 step=2 report (report)
+? node.completed  16:01:15.500 step=2 report
+? graph.completed 16:01:15.510 research-pipeline
 ```
 
 The final report lands in `state.final_report` on `graph.completed`.
@@ -478,25 +522,28 @@ vais apply -f "<repo>/agentic/samples/quickstart-python-planner/plugin.yaml"
 
 ```bash
 vais plugin-status
-# NAME                       KIND        TOPOLOGY    STATE   IMAGE
-# quickstart-python-planner  Container   standalone  Ready   vais-quickstart-planner:1.0
+# NAME                       KIND       IMAGE                          TOPOLOGY    STATE   API VER   HANDLER/TOOLS
+# quickstart-python-planner  container  vais-quickstart-planner:1.0    standalone  ready   0.24      __main__.QuickstartPlanner
 ```
+
+> **Port choice.** `samples/quickstart-python-planner/plugin.yaml` sets `spec.port: 8090` rather than the default 8080. The `DockerContainerSupervisor` binds the plugin's port to `127.0.0.1:<port>` on the host (P12 hardening); since the runtime is already publishing host `:8080`, the plugin must pick a different port. The SDK reads `VAIS_PLUGIN_PORT` (injected by the supervisor), so no Python code change is needed.
 
 ### 6b. Repoint the `planner` agent at the Python handler
 
-Edit `planner.yaml` — change `handler.typeName` to match the plugin's `/v1/metadata` (`quickstart_planner.QuickstartPlanner`) and drop the now-irrelevant `model` and `systemPrompt` blocks. The Python plugin owns its own prompt and LLM client.
+Edit `planner.yaml` — change `handler.typeName` to match the plugin's `/v1/metadata` (`__main__.QuickstartPlanner` — `__main__` because the toy server is invoked directly as `python server.py`) and drop the now-irrelevant `model`, `systemPrompt`, `llmGatewayRef`, and `budget` blocks. The Python plugin owns its own prompt and LLM client.
 
 ```diff
  spec:
 -  model:
 -    provider: openai
--    name: gpt-4o-mini
+-    id: gpt-4o-mini
+-    apiKeyRef: secret://env/OPENAI_API_KEY
 -  systemPrompt:
 -    inline: |
 -      You decompose ...
    handler:
 -    typeName: declarative
-+    typeName: quickstart_planner.QuickstartPlanner
++    typeName: __main__.QuickstartPlanner
    protocols:
      - kind: Http
 -  llmGatewayRef: demo-llm-gateway
@@ -685,13 +732,16 @@ To export OTel spans to a collector, set `VAIS_OTEL_ENDPOINT=<otlp-url>` on the 
 
 ```bash
 vais delete-graph research-pipeline
-vais delete planner researcher reporter
-vais delete mcp-servers/mcp-fetch
-vais delete mcp-gateways/demo-mcp-governance
-vais delete llm-gateways/demo-llm-gateway
+vais delete planner --force
+vais delete researcher --force
+vais delete reporter --force
+vais delete mcp-servers/mcp-fetch --force
+vais delete mcp-gateways/demo-mcp-governance --force
+vais delete llm-gateways/demo-llm-gateway --force
 
 docker compose down
 docker rm -f vais-plugin-quickstart-python-planner 2>/dev/null || true
+docker rmi vais-quickstart-planner:1.0 vais-quickstart-fetch:local vais-agents-runtime:local 2>/dev/null || true
 ```
 
 ---
