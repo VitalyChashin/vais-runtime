@@ -73,7 +73,7 @@ If a provider returns `ContextContribution.Empty` (an empty section list), it's 
 
 ### Legacy three-slot mode
 
-The pre-v0.5 `ContextContribution(string? SystemPromptAddendum, IReadOnlyList<ChatTurn>? InjectedHistory, IReadOnlyList<ITool>? AdditionalTools)` constructor still works. It emits Guid-suffixed sections (`system.legacy_addendum.<guid>`, `history.legacy_injected.<guid>.<i>`, `tools.legacy_additional.<guid>`) so multiple legacy providers in the same turn never collide. The three legacy view properties are auto-derived from the section list so existing readers (filters that read `Candidate.SystemPrompt`) see the v0.4-shape string. The legacy ctor is slated for `[Obsolete(DiagnosticId="VAIS0010")]` once in-repo consumers migrate; removal planned for v0.6.
+The pre-v0.5 `ContextContribution(string? SystemPromptAddendum, IReadOnlyList<ChatTurn>? InjectedHistory, IReadOnlyList<ITool>? AdditionalTools)` constructor still works. It emits Guid-suffixed sections (`system.legacy_addendum.<guid>`, `history.legacy_injected.<guid>.<i>`, `tools.legacy_additional.<guid>`) so multiple legacy providers in the same turn never collide. The three legacy view properties are auto-derived from the section list so existing readers (filters that read `Candidate.SystemPrompt`) see the v0.4-shape string. The legacy ctor is slated for `[Obsolete(DiagnosticId="VAIS0010")]` once all in-repo consumers migrate (SC-7); the attribute application is deferred and no removal date is set today.
 
 ## Section window packer
 

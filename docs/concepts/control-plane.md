@@ -12,58 +12,87 @@ Shipping the contracts before any implementation locks the *shape* in place: con
 namespace Vais.Agents;
 
 public sealed record AgentManifest(
-    string Name,
+    string Id,
     string Version,
     AgentHandlerRef Handler,
-    IReadOnlyList<ProtocolBinding>? Bindings = null,
-    IReadOnlyList<ToolRef>? Tools = null,
+    IReadOnlyList<ProtocolBinding> Protocols,
+    IReadOnlyList<ToolRef> Tools,
     MemoryRef? Memory = null,
     IdentityRef? Identity = null,
     AutoscalingSpec? Autoscaling = null,
-    IReadOnlyDictionary<string, string>? Labels = null);
+    string? Description = null,
+    IReadOnlyDictionary<string, string>? Labels = null)
+{
+    // Init-only v0.6+ overlays (Model, SystemPrompt, McpServers, A2ARemoteAgents,
+    // LocalAgents, Guardrails, Handoffs, Budget, ContextProviders, OutputSchema,
+    // AgentMode, Reasoning, Observability, Annotations, LlmGatewayRef, McpGatewayRef)
+    // — see the manifest-schema reference for the full field table.
+}
 
-public sealed record AgentHandlerRef(string Type, string Assembly);
-public sealed record ProtocolBinding(string Protocol, IReadOnlyDictionary<string, string>? Config = null);
-public sealed record ToolRef(string Name, string Source);
-public sealed record MemoryRef(string Backend, IReadOnlyDictionary<string, string>? Config = null);
-public sealed record IdentityRef(string Provider, string? Audience = null);
-public sealed record AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, int? TargetConcurrencyPerReplica = null);
+public sealed record AgentHandlerRef(string TypeName, string? AssemblyName = null);
+public sealed record ProtocolBinding(string Kind, string? Endpoint = null);
+public sealed record ToolRef(string Name, string? Source = null);
+public sealed record MemoryRef(string Provider, string? ConnectionName = null)
+{
+    public string? Scope { get; init; }            // "session" | "agent"
+    public string? HistoryReducer { get; init; }   // DI-keyed name
+}
+public sealed record IdentityRef(string? InboundAuth = null, string? OutboundCredentials = null)
+{
+    public IReadOnlyList<OutboundCredentialRef>? Credentials { get; init; }
+    public IReadOnlyDictionary<string, string>? InboundClaims { get; init; }
+}
+public sealed record AutoscalingSpec(int MinReplicas = 0, int? MaxReplicas = null, string? Target = null)
+{
+    public double? TargetValue { get; init; }
+    public TimeSpan? IdleTtl { get; init; }
+}
 
-public sealed record AgentHandle(string AgentId, string? Version = null);
-public sealed record AgentInvocationRequest(AgentHandle Target, string Input, IReadOnlyDictionary<string, string>? Headers = null);
-public sealed record AgentInvocationResult(string Output, AgentStatus Status, string? Error = null);
-public sealed record AgentSignal(AgentHandle Target, string Kind, string? Payload = null);
+public sealed record AgentHandle(string AgentId, string Version, string? InstanceId = null);
+public sealed record AgentInvocationRequest(
+    string Text,
+    string? SessionId = null,
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    IReadOnlyList<(string Role, string Content)>? InitialHistory = null);
+public sealed record AgentInvocationResult(
+    string Text,
+    string? SessionId = null,
+    IReadOnlyDictionary<string, string>? Metadata = null);
+public sealed record AgentSignal(string Kind, JsonElement Payload);
 
-public sealed record AgentPrincipal(string Subject, IReadOnlyList<string>? Roles = null, IReadOnlyDictionary<string, string>? Claims = null);
-public sealed record OutboundCredential(string Scheme, string Token, DateTimeOffset? ExpiresAt = null);
+public sealed record AgentPrincipal(string Id, string? TenantId = null, IReadOnlyList<string>? Scopes = null);
+public sealed record OutboundCredential(string Kind, string Value, DateTimeOffset? ExpiresAt = null);
 
-public enum AgentStatus { Unknown, Pending, Active, Failed, Terminated, Evicted }
+public enum AgentStatus { Unknown, Active, Idle, Paused, Terminated }
 
 public interface IAgentRegistry
 {
-    Task RegisterAsync(AgentManifest manifest, CancellationToken cancellationToken = default);
-    Task<AgentManifest?> GetAsync(string name, string? version = null, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<AgentManifest>> ListAsync(string? labelPrefix = null, CancellationToken cancellationToken = default);
-    Task RemoveAsync(string name, string version, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<AgentManifest> ListAsync(string? labelPrefix = null, CancellationToken cancellationToken = default);
+    ValueTask<AgentManifest?> GetAsync(string id, string? version = null, CancellationToken cancellationToken = default);
 }
 
 public interface IAgentLifecycleManager
 {
-    Task<AgentHandle> CreateAsync(AgentManifest manifest, CancellationToken cancellationToken = default);
-    Task<AgentInvocationResult> InvokeAsync(AgentInvocationRequest request, CancellationToken cancellationToken = default);
-    Task SignalAsync(AgentSignal signal, CancellationToken cancellationToken = default);
-    Task<AgentStatus> QueryAsync(AgentHandle target, CancellationToken cancellationToken = default);
-    Task CancelAsync(AgentHandle target, CancellationToken cancellationToken = default);
-    Task UpdateAsync(AgentManifest manifest, CancellationToken cancellationToken = default);
-    Task EvictAsync(AgentHandle target, CancellationToken cancellationToken = default);
+    ValueTask<AgentHandle> CreateAsync(AgentManifest manifest, CancellationToken cancellationToken = default);
+    ValueTask<AgentInvocationResult> InvokeAsync(AgentHandle handle, AgentInvocationRequest request, CancellationToken cancellationToken = default);
+    ValueTask SignalAsync(AgentHandle handle, AgentSignal signal, CancellationToken cancellationToken = default);
+    ValueTask<AgentStatus> QueryAsync(AgentHandle handle, CancellationToken cancellationToken = default);
+    ValueTask CancelAsync(AgentHandle handle, CancellationToken cancellationToken = default);
+    ValueTask<AgentHandle> UpdateAsync(AgentHandle handle, AgentManifest newManifest, CancellationToken cancellationToken = default);
+    ValueTask EvictAsync(AgentHandle handle, CancellationToken cancellationToken = default);
+    // virtual default — no-op: release per-run session grain (graph-orchestrator hook)
+    virtual ValueTask EvictSessionAsync(string agentId, string sessionId, CancellationToken cancellationToken = default)
+        => ValueTask.CompletedTask;
 }
 
 public interface IAgentIdentityProvider
 {
-    Task<AgentPrincipal?> GetPrincipalAsync(AgentHandle target, CancellationToken cancellationToken = default);
-    Task<OutboundCredential> AcquireCredentialAsync(AgentHandle target, string audience, CancellationToken cancellationToken = default);
+    ValueTask<AgentPrincipal> AuthenticateInboundAsync(AgentInvocationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<OutboundCredential> AcquireOutboundAsync(string agentId, string credentialRef, CancellationToken cancellationToken = default);
 }
 ```
+
+`IAgentRegistry` is read-only on purpose — write helpers (`Register`, `Remove`) live on the concrete implementations (e.g. `InMemoryAgentRegistry`), so a consumer can wire a git-backed or config-driven registry that exposes no mutation surface at all.
 
 ## What ships in v0.4
 
@@ -74,40 +103,48 @@ No `IAgentLifecycleManager` impl. No `IAgentIdentityProvider` impl. Those are ru
 ## Using the registry
 
 ```csharp
+using Vais.Agents;
 using Vais.Agents.Core;
 
 var registry = new InMemoryAgentRegistry();
 
 var manifest = new AgentManifest(
-    Name: "support-agent",
+    Id: "support-agent",
     Version: "1.0.0",
-    Handler: new AgentHandlerRef(Type: "MyApp.SupportAgent", Assembly: "MyApp"),
+    Handler: new AgentHandlerRef(TypeName: "MyApp.SupportAgent", AssemblyName: "MyApp"),
+    Protocols: new[]
+    {
+        new ProtocolBinding(Kind: "Http"),
+    },
     Tools: new[]
     {
-        new ToolRef(Name: "lookup_order", Source: "static"),
-        new ToolRef(Name: "send_email", Source: "mcp:email-server"),
+        new ToolRef(Name: "lookup_order", Source: "static:lookup_order"),
+        new ToolRef(Name: "send_email",   Source: "mcp:email-server"),
     },
-    Memory: new MemoryRef(Backend: "redis"),
-    Identity: new IdentityRef(Provider: "keycloak", Audience: "support-api"),
-    Autoscaling: new AutoscalingSpec(MinReplicas: 1, MaxReplicas: 10, TargetConcurrencyPerReplica: 20),
+    Memory: new MemoryRef(Provider: "Redis", ConnectionName: "primary"),
+    Identity: new IdentityRef(InboundAuth: "keycloak"),
+    Autoscaling: new AutoscalingSpec(MinReplicas: 1, MaxReplicas: 10, Target: "concurrent-requests") { TargetValue = 20 },
     Labels: new Dictionary<string, string>
     {
         ["env"] = "staging",
         ["tier"] = "customer-facing",
     });
 
-await registry.RegisterAsync(manifest);
+registry.Register(manifest);   // sync helper on InMemoryAgentRegistry; the IAgentRegistry interface is read-only
 
 var fetched = await registry.GetAsync("support-agent");          // returns latest version
-var staging = await registry.ListAsync(labelPrefix: "env:staging");
+await foreach (var s in registry.ListAsync(labelPrefix: "env:staging"))
+{
+    Console.WriteLine($"{s.Id} {s.Version}");
+}
 ```
 
 ## Manifest design notes
 
 - **`AgentManifest` is a pure data record** — no behaviour, no validation callbacks, no DI fixtures. Consumers validate via their own layer; the registry stores whatever you give it.
-- **`Name` + `Version` together uniquely identify** a manifest. Registry supports multiple versions side-by-side; `GetAsync(name, null)` returns the lexicographic-latest version.
-- **`Tools` reference tools by `Source` string** — `"static"` for in-process, `"mcp:<server-name>"` for MCP discovery, `"a2a:<agent-name>"` for A2A delegation. The runtime resolves these at instantiation; consumers defining their own host also resolve via the `Source` string convention.
-- **`Bindings` list protocols** — `"http"`, `"a2a"`, `"mcp"` — with per-binding config blobs. The cloud runtime reads these to wire ingress.
+- **`Id` + `Version` together uniquely identify** a manifest. Registry supports multiple versions side-by-side; `GetAsync(id, null)` returns the lexicographic-latest version.
+- **`Tools` reference tools by `Source` string** — `"static:<name>"` for in-process, `"mcp:<server-name>"` for MCP discovery, `"a2a:<agent-name>"` for A2A delegation, `"agent:<name>"` for local agent-as-tool (v0.18). The runtime resolves these at instantiation; consumers defining their own host also resolve via the `Source` string convention.
+- **`Protocols` lists protocol bindings** — `ProtocolBinding(Kind, Endpoint?)` — `"Http"`, `"A2A"`, `"Mcp"`, etc. The cloud runtime reads these to wire ingress.
 - **`Labels`** are free-form; used for filtering + routing.
 
 ## Verb semantics
