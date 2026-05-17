@@ -6,7 +6,7 @@ metadata:
   description: Python planner agent — decomposes queries into sub-questions.
 spec:
   image: vais-quickstart-planner:1.0
-  port: 8080
+  port: 8090   # not 8080 — the runtime container already binds host:8080
   build:
     context: ../../
     dockerfile: samples/quickstart-python-planner/Dockerfile
