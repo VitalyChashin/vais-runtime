@@ -153,21 +153,26 @@ opa:
   enabled: true
   bundle:
     enabled: true
-    url: "https://bundles.internal/vais-agents.tar.gz"
+    url: "https://bundles.internal"           # bundle server base URL (no path)
+    resource: /vais-agents.tar.gz             # path on the bundle server to the archive
     polling:
       minDelaySeconds: 60
       maxDelaySeconds: 120
+    # Optional bearer-token auth for the bundle server. Injected as BUNDLE_SERVER_TOKEN.
+    serviceAuthTokenSecret: opa-bundle-auth-token   # existing K8s Secret name
+    serviceAuthTokenSecretKey: token                # key inside that Secret
     signing:
-      algorithm: RS256       # RS256 | ES256 | HS256
-      keyId: vais-bundle-key
-      keySecretRef: opa-bundle-signing-key   # K8s Secret name
-    authToken:
-      secretRef: opa-bundle-auth-token       # K8s Secret name, key "token"
+      enabled: true
+      algorithm: RS256                              # RS256 | ES256 | HS256
+      keyId: vais-bundle-key                        # must match `opa sign --signing-key-id`
+      existingSecret: opa-bundle-signing-key        # existing K8s Secret name
+      existingSecretKey: key.pem                    # key inside that Secret
 ```
 
 When `opa.bundle.enabled: true`:
 - The OPA sidecar is started with `--config-file /etc/opa/config.yaml` instead of individual `--policy` flags.
-- `configmap-opa-config.yaml` injects `OPA_BUNDLE_TOKEN` and `OPA_BUNDLE_SIGNING_KEY` from the referenced K8s Secrets as environment variables; OPA's native `${ENV_VAR}` substitution resolves them at runtime — the values never appear in any ConfigMap.
+- `configmap-opa-config.yaml` injects `BUNDLE_SERVER_TOKEN` and `OPA_BUNDLE_SIGNING_KEY` from the referenced K8s Secrets as environment variables; OPA's native `${ENV_VAR}` substitution resolves them at runtime — the values never appear in any ConfigMap.
+- Signature verification is gated on `opa.bundle.signing.enabled: true`; without it OPA loads the bundle but does not verify the signature.
 - Policy hot-reloads flow through OPA's bundle polling interval without a runtime restart.
 
 For a working end-to-end example (nginx bundle server + `sign-bundle.sh` + `docker-compose.yaml`), see `samples/opa-bundle-server/`.

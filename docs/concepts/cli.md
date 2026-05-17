@@ -1,35 +1,100 @@
 # CLI
 
-`Vais.Agents.Cli` — a `dotnet tool` that wraps the v0.6 HTTP control plane in a kubectl-shape command-line surface. Nine top-level verbs + a `config` branch with four sub-verbs. Thirteen total commands. POSIX exit codes. Kubeconfig-style `~/.vais/config.yaml` for context switching. Shipped in v0.15 as a preview.
+`Vais.Agents.Cli` — a `dotnet tool` that wraps the HTTP control plane in a kubectl-shape command-line surface. Shipped in v0.15 as a preview; subsequent pillars (v0.18 plugins, v0.19 graphs, v0.20 cross-runtime refs, eval harness, gateway config) layered commands onto the same shape. Today: ~29 top-level commands plus three branches (`eval`, `diagnose`, `config`). POSIX exit codes. Kubeconfig-style `~/.vais/config.yaml` for context switching.
 
 Install: `dotnet tool install -g Vais.Agents.Cli` → `vais` on PATH. See [install the CLI](../devops/install-the-cli.md) for the bootstrap walkthrough.
 
 ## Subcommand map
 
-Nine root-level verbs, one `config` branch. Every verb targets the v0.6 `IAgentLifecycleManager` + `IAgentRegistry` surface exposed over HTTP.
+Grouped by functional area. Every command targets the HTTP control plane unless flagged `— (local)`. Run `vais --help` for the live, version-correct verb list.
 
-| Command | Shape | HTTP verb |
-|---|---|---|
-| `vais version` | `vais version` | — (local) |
-| `vais init` | `vais init <name> [-o <path>]` | — (local) |
-| `vais get` | `vais get [name] [--version] [--label-prefix] [--limit]` | `GET /v1/agents` or `GET /v1/agents/{id}` |
-| `vais apply` | `vais apply -f <file> [--idempotency-key]` | `POST /v1/agents` (fall back to `PUT` on 409) |
-| `vais delete` | `vais delete <id> [--version] [--force]` | `DELETE /v1/agents/{id}` |
-| `vais cancel` | `vais cancel <id> [--version]` | `POST /v1/agents/{id}/cancel` |
-| `vais invoke` | `vais invoke <id> --text <payload> [--stream]` | `POST /v1/agents/{id}/invoke` (or `…/invoke/stream`) |
-| `vais logs` | `vais logs <id> [--session] [--only] [--since]` | `POST /v1/agents/{id}/invoke/stream` (attach mode) |
-| `vais signal` | `vais signal <id> --kind <kind> --payload <json>` | `POST /v1/agents/{id}/signal` |
+### Local / scaffolding
 
-`config` branch — local only, no HTTP:
+| Command | Purpose |
+|---|---|
+| `vais version` | Print the CLI version. *(local)* |
+| `vais init <name>` | Scaffold a starter agent-manifest YAML. *(local)* |
+| `vais plugin-init` | Scaffold a `plugin.yaml` (and `Dockerfile` for dotnet) in the current directory. *(local)* |
+| `vais plugin-build` | Build a container plugin image via `docker build`. `--push` to publish. *(local)* |
 
-| Command | Shape | Purpose |
-|---|---|---|
-| `vais config get-contexts` | `vais config get-contexts` | Table of all contexts. |
-| `vais config current-context` | `vais config current-context` | Print active context name. |
-| `vais config use-context <name>` | `vais config use-context <name>` | Switch active context. |
-| `vais config set-context <name>` | `vais config set-context <name> [--server] [--token] [--token-file] [--insecure-skip-tls-verify]` | Create or update a context + implicit cluster/user records. |
+### Agents
 
-Every verb (except `version`, `init`, and the `config` branch) accepts `--context <name>` to override the active context for that call, and `--token <value>` to override auth.
+| Command | HTTP target |
+|---|---|
+| `vais apply -f <file> [--idempotency-key]` | `POST /v1/apply` — mixed-kind YAML (Agents, Graphs, LlmGateway, McpGateway, McpServer, ContainerPlugin, EvalSuite) applied in dependency order. |
+| `vais get [name] [--version] [--label-prefix] [--limit]` *(alias `list`)* | `GET /v1/agents` or `GET /v1/agents/{id}` |
+| `vais delete <id> [--version] [--force]` | `DELETE /v1/agents/{id}` |
+| `vais cancel <id> [--version]` | `POST /v1/agents/{id}/cancel` |
+| `vais invoke <id> --text <payload> [--stream]` | `POST /v1/agents/{id}/invoke` (or `…/invoke/stream`) |
+| `vais logs <id> [--session] [--only] [--since]` | SSE attach to `/v1/agents/{id}/invoke/stream` |
+| `vais signal <id> --kind <kind> --payload <json>` | `POST /v1/agents/{id}/signal` |
+
+### Graphs
+
+| Command | HTTP target |
+|---|---|
+| `vais get-graphs [id]` | `GET /v1/graphs` or `GET /v1/graphs/{id}` |
+| `vais delete-graph <id> [--force]` | `DELETE /v1/graphs/{id}` |
+| `vais graph-validate -f <file>` | Validate a graph manifest without registering it. |
+| `vais invoke-graph <id> [--stream] [--resume-from <runId>]` | `POST /v1/graphs/{id}/invoke` (or `…/invoke/stream`). `--resume-from` resumes an interrupted run. |
+| `vais graph-logs <id> [--from-run-id <runId>]` | SSE tail of `AgentGraphEvent`s. `--from-run-id` replays stored history. |
+| `vais get-runs [--graph <id>] [--run <runId>]` | List historical graph runs or inspect one run's node executions. |
+
+### Gateways + MCP servers
+
+| Command | Purpose |
+|---|---|
+| `vais get-llm-gateways [id]` | List LLM gateway configs, or fetch one. |
+| `vais get-mcp-gateways [id]` | List MCP gateway configs, or fetch one. |
+| `vais get-mcp-servers [id]` | List MCP server manifests, or fetch one. |
+| `vais llm-gateway-validate -f <file>` | Validate an LLM gateway config manifest. |
+| `vais mcp-gateway-validate -f <file>` | Validate an MCP gateway config manifest. |
+| `vais mcp-server-validate -f <file>` | Validate an MCP server manifest. |
+
+### Plugins (v0.18 + container plugin CLI)
+
+| Command | Purpose |
+|---|---|
+| `vais plugin-status` | List loaded plugins (assembly, Python, container) with lifecycle state, image, handlers, PID. |
+| `vais plugin-push` | Push a plugin to the runtime. Source mode packs `./src` and hot-reloads; image mode `docker push` + `POST /v1/plugins/{name}/image`. |
+| `vais plugin-deploy` | Deploy a container plugin to Kubernetes via the built-in Helm chart (`helm upgrade --install`). |
+| `vais plugin-watch` | Watch a Python plugin's source directory and hot-reload on every change. |
+
+### Eval harness (`eval` branch)
+
+| Command | Purpose |
+|---|---|
+| `vais get-eval-suites [id]` | List `EvalSuite` manifests, or fetch one. |
+| `vais eval run <suite>` | Start a new eval run. Prints `evalRunId`. |
+| `vais eval results <evalRunId>` | Fetch per-case assertion results. |
+| `vais eval list [--suite <name>]` | List recent eval runs. |
+| `vais eval cancel <evalRunId>` | Request cancellation of an in-progress run. |
+| `vais eval diff <runA> <runB>` | Compare two runs case-by-case with assertion deltas. |
+
+### Topology
+
+| Command | Purpose |
+|---|---|
+| `vais get-remote-runtimes` | List remote runtimes configured on the target host (v0.20 cross-runtime refs). |
+
+### Diagnostics (`diagnose` branch)
+
+| Command | Purpose |
+|---|---|
+| `vais diagnose spans [--since]` | Fetch recent OTel spans from the in-process buffer as NDJSON. Requires `VAIS_DIAG_SPAN_BUFFER=true`. |
+| `vais diagnose trace <traceId>` | Pretty-print a span tree for a trace id. |
+| `vais diagnose filter-status` | Show per-interface outgoing Orleans grain call counters. |
+
+### Local config (`config` branch — no HTTP)
+
+| Command | Purpose |
+|---|---|
+| `vais config get-contexts` | Table of all contexts. |
+| `vais config current-context` | Print active context name. |
+| `vais config use-context <name>` | Switch active context. |
+| `vais config set-context <name> [--server] [--token] [--token-file] [--insecure-skip-tls-verify]` | Create or update a context + implicit cluster/user records. |
+
+Every HTTP-bound command accepts `--context <name>` to override the active context for that call and `--token <value>` to override auth. Local commands (`version`, `init`, `plugin-init`, `plugin-build`, the `config` branch) ignore both.
 
 See [CLI subcommands reference](../reference/cli-subcommands.md) for the full per-command flag table.
 
@@ -169,12 +234,12 @@ See [tail live runs with `vais logs`](../guides/tail-live-runs-with-vais-logs.md
 
 The CLI is a thin shell over the library; anything the CLI does, `AgentControlPlaneClient` can do too.
 
-## Limitations (v0.15)
+## Limitations
 
 - **No `dry-run` mode on `apply`.** Preview / diff against a hypothetical create-or-update lands in a later pillar. Today the flow is "apply + inspect status."
-- **No paging on `get agents`.** `--limit` caps a single call at `N` entries; there's no continuation token. Large registries return the first `N`.
-- **No shell completion.** Tab-completion scripts for bash/zsh/pwsh are deferred. Spectre.Console has a path forward; not shipped in v0.15.
-- **No diff view on apply.** The 409 → update fallback prints a terse `applied (updated)`; seeing the before/after shape diff takes a separate `vais get <id> -o yaml` call.
+- **No paging on `get` / `get-graphs`.** `--limit` caps a single call at `N` entries; there's no continuation token. Large registries return the first `N`.
+- **No shell completion.** Tab-completion scripts for bash/zsh/pwsh are deferred. Spectre.Console has a path forward; not shipped today.
+- **No diff view on apply.** The update fallback prints a terse `applied (updated)`; seeing the before/after shape diff takes a separate `vais get <id> -o yaml` call.
 
 ## See also
 
