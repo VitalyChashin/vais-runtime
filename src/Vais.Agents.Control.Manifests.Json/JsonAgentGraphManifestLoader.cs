@@ -851,6 +851,13 @@ public sealed class JsonAgentGraphManifestLoader
             if (list.Count > 0) toolProjection = list;
         }
 
+        // Parse containerStdio spec
+        ContainerMcpSpec? container = null;
+        if (spec.TryGetProperty("container", out var containerEl) && containerEl.ValueKind == JsonValueKind.Object)
+        {
+            container = ParseContainerMcpSpec(containerEl, errors, $"{prefix}spec.container.");
+        }
+
         // Structural validation: virtual vs physical field consistency
         if (isVirtual)
         {
@@ -858,11 +865,24 @@ public sealed class JsonAgentGraphManifestLoader
                 errors.Add($"{prefix}virtual server must have at least one entry in spec.sources");
             if (transport != null)
                 errors.Add($"{prefix}spec.transport must be absent for virtual servers");
+            if (container is not null)
+                errors.Add($"{prefix}spec.container must be absent for virtual servers");
         }
         else
         {
             if (string.IsNullOrEmpty(transport))
                 errors.Add($"{prefix}spec.transport is required for physical servers");
+        }
+
+        // Transport-specific validation
+        if (string.Equals(transport, "containerStdio", StringComparison.Ordinal))
+        {
+            if (container is null)
+                errors.Add($"{prefix}spec.container is required when transport is 'containerStdio'");
+        }
+        else if (transport is not null && container is not null)
+        {
+            errors.Add($"{prefix}spec.container is only valid when transport is 'containerStdio' (got '{transport}')");
         }
 
         return new McpServerManifest(id!, version!, description, labels)
@@ -874,11 +894,98 @@ public sealed class JsonAgentGraphManifestLoader
             Env = env,
             AuthRef = authRef,
             Tools = tools,
+            Container = container,
             Virtual = isVirtual,
             Sources = sources,
             ToolProjection = toolProjection,
             McpGatewayRef = mcpGatewayRef,
             Annotations = annotations,
+        };
+    }
+
+    private static ContainerMcpSpec? ParseContainerMcpSpec(JsonElement el, List<string> errors, string prefix)
+    {
+        string? image = el.TryGetProperty("image", out var imgEl) ? imgEl.GetString() : null;
+
+        ContainerMcpBuildSpec? build = null;
+        if (el.TryGetProperty("build", out var buildEl) && buildEl.ValueKind == JsonValueKind.Object)
+        {
+            var context = buildEl.TryGetProperty("context", out var ctxEl) ? ctxEl.GetString() : null;
+            if (string.IsNullOrEmpty(context))
+            {
+                errors.Add($"{prefix}build.context is required when build block is present");
+            }
+            else
+            {
+                var dockerfile = buildEl.TryGetProperty("dockerfile", out var dfEl) ? dfEl.GetString() ?? "Dockerfile" : "Dockerfile";
+                var buildArgs = ParseStringMap(buildEl, "args");
+                var push = buildEl.TryGetProperty("push", out var pushEl) && pushEl.ValueKind == JsonValueKind.True;
+                build = new ContainerMcpBuildSpec { Context = context!, Dockerfile = dockerfile, Args = buildArgs, Push = push };
+            }
+        }
+
+        if (string.IsNullOrEmpty(image) && build is null)
+            errors.Add($"{prefix}exactly one of image or build is required");
+        else if (!string.IsNullOrEmpty(image) && build is not null)
+            errors.Add($"{prefix}image and build are mutually exclusive");
+
+        var port = el.TryGetProperty("port", out var pEl) && pEl.ValueKind == JsonValueKind.Number ? pEl.GetInt32() : 7000;
+        if (port < 1024 || port > 65535)
+            errors.Add($"{prefix}port must be in [1024, 65535] (got {port})");
+
+        var path = el.TryGetProperty("path", out var pathEl) ? pathEl.GetString() ?? "/mcp" : "/mcp";
+        var healthPath = el.TryGetProperty("healthPath", out var hpEl) ? hpEl.GetString() ?? "/health" : "/health";
+
+        var command = ParseStringArray(el, "command");
+        var args = ParseStringArray(el, "args");
+        var env = ParseStringMap(el, "env");
+        var secrets = ParseStringMap(el, "secrets");
+
+        var startupTimeout = el.TryGetProperty("startupTimeoutSeconds", out var stEl) && stEl.ValueKind == JsonValueKind.Number
+            ? stEl.GetInt32() : 30;
+        if (startupTimeout < 1 || startupTimeout > 600)
+            errors.Add($"{prefix}startupTimeoutSeconds must be in [1, 600] (got {startupTimeout})");
+
+        var imagePullPolicy = el.TryGetProperty("imagePullPolicy", out var ippEl) ? ippEl.GetString() ?? "IfNotPresent" : "IfNotPresent";
+
+        ContainerMcpResources? resources = null;
+        if (el.TryGetProperty("resources", out var resEl) && resEl.ValueKind == JsonValueKind.Object)
+        {
+            resources = new ContainerMcpResources
+            {
+                Memory = resEl.TryGetProperty("memory", out var mEl) ? mEl.GetString() : null,
+                Cpu = resEl.TryGetProperty("cpu", out var cEl) ? cEl.GetString() : null,
+                PidsLimit = resEl.TryGetProperty("pidsLimit", out var pidsEl) && pidsEl.ValueKind == JsonValueKind.Number ? pidsEl.GetInt64() : null,
+            };
+        }
+
+        ContainerMcpKubernetesConfig? k8s = null;
+        if (el.TryGetProperty("kubernetes", out var k8sEl) && k8sEl.ValueKind == JsonValueKind.Object)
+        {
+            var serviceUrl = k8sEl.TryGetProperty("serviceUrl", out var suEl) ? suEl.GetString() : null;
+            if (string.IsNullOrEmpty(serviceUrl))
+                errors.Add($"{prefix}kubernetes.serviceUrl is required when kubernetes block is present");
+            var deploymentName = k8sEl.TryGetProperty("deploymentName", out var dnEl) ? dnEl.GetString() ?? "" : "";
+            var ns = k8sEl.TryGetProperty("namespace", out var nsEl) ? nsEl.GetString() ?? "default" : "default";
+            if (!string.IsNullOrEmpty(serviceUrl))
+                k8s = new ContainerMcpKubernetesConfig { ServiceUrl = serviceUrl!, DeploymentName = deploymentName, Namespace = ns };
+        }
+
+        return new ContainerMcpSpec
+        {
+            Image = image,
+            Build = build,
+            Port = port,
+            Path = path,
+            HealthPath = healthPath,
+            Command = command,
+            Args = args,
+            Env = env,
+            Secrets = secrets,
+            StartupTimeoutSeconds = startupTimeout,
+            ImagePullPolicy = imagePullPolicy,
+            Resources = resources,
+            Kubernetes = k8s,
         };
     }
 

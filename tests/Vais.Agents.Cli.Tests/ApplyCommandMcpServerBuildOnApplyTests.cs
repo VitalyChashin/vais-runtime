@@ -9,11 +9,12 @@ using Xunit;
 namespace Vais.Agents.Cli.Tests;
 
 /// <summary>
-/// Unit tests for the build-on-apply logic in <see cref="ApplyCommand.ApplyContainerPluginAsync"/>.
-/// Uses injectable static hooks (DockerRun, DockerImageExists) so no real Docker daemon is needed.
+/// CMS-5: build-on-apply for <c>kind: McpServer</c> with <c>transport: containerStdio</c>
+/// and <c>spec.container.build</c>. Mirror of <see cref="ApplyCommandBuildOnApplyTests"/>
+/// (ContainerPlugin) for the MCP server variant.
 /// </summary>
 [Collection(ApplyCommandStaticsCollection.Name)]
-public sealed class ApplyCommandBuildOnApplyTests : IDisposable
+public sealed class ApplyCommandMcpServerBuildOnApplyTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly string _manifestPath;
@@ -23,14 +24,14 @@ public sealed class ApplyCommandBuildOnApplyTests : IDisposable
     private readonly List<string> _dockerCalls = new();
     private bool _imageExists;
 
-    public ApplyCommandBuildOnApplyTests()
+    public ApplyCommandMcpServerBuildOnApplyTests()
     {
         _savedDockerRun = ApplyCommand.DockerRun;
         _savedDockerImageExists = ApplyCommand.DockerImageExists;
 
         _tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_tempDir);
-        _manifestPath = Path.Combine(_tempDir, "plugin.yaml");
+        _manifestPath = Path.Combine(_tempDir, "mcp-fetch.yaml");
 
         ApplyCommand.DockerRun = (args, _) => { _dockerCalls.Add(args); return Task.FromResult(0); };
         ApplyCommand.DockerImageExists = (_, _) => Task.FromResult(_imageExists);
@@ -43,204 +44,181 @@ public sealed class ApplyCommandBuildOnApplyTests : IDisposable
         if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, recursive: true);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static ContainerPluginManifest ManifestWithBuild(bool push = false, IReadOnlyDictionary<string, string>? args = null)
-        => new("my-plugin", "1.0")
+    private static McpServerManifest ManifestWithBuild(string? image = null, bool push = false)
+        => new("mcp-fetch", "1.0")
         {
-            Spec = new ContainerPluginSpec
+            Transport = "containerStdio",
+            Container = new ContainerMcpSpec
             {
-                Image = "my-registry/my-plugin:1.0",
-                Build = new ContainerPluginBuildSpec { Context = "./", Push = push, Args = args },
+                Image = image,
+                Build = new ContainerMcpBuildSpec { Context = "./", Push = push },
             },
         };
 
-    private static ContainerPluginManifest ManifestNoBuild()
-        => new("my-plugin", "1.0")
+    private static McpServerManifest ManifestNoBuild()
+        => new("mcp-fetch", "1.0")
         {
-            Spec = new ContainerPluginSpec { Image = "my-registry/my-plugin:1.0" },
+            Transport = "containerStdio",
+            Container = new ContainerMcpSpec { Image = "my-registry/mcp-fetch:1.0" },
         };
 
-    // ── Tests ─────────────────────────────────────────────────────────────────
+    private static McpServerManifest ManifestStreamableHttp()
+        => new("mcp-http", "1.0") { Transport = "streamableHttp", Url = "http://localhost:9000/mcp" };
 
     [Fact]
-    public async Task ImageNotCached_BuildRunsThenManifestPosted()
+    public async Task BuildWithExplicitImage_RunsBuild_PostsManifest()
     {
         _imageExists = false;
-        var client = new FakeClient();
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("my-registry/mcp-fetch:1.0"), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeTrue();
+        ok.Should().BeTrue();
         _dockerCalls.Should().HaveCount(1);
-        _dockerCalls[0].Should().StartWith("build -t my-registry/my-plugin:1.0");
+        _dockerCalls[0].Should().StartWith("build -t my-registry/mcp-fetch:1.0");
         client.CreateCalls.Should().HaveCount(1);
-        client.UpdateCalls.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ImageCached_BuildSkipped_ManifestPosted()
+    public async Task BuildWithoutExplicitImage_DerivesTagFromIdAndVersion()
+    {
+        _imageExists = false;
+        var client = new FakeMcpServerClient();
+
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild(image: null), "key", _manifestPath, noBuild: false, CancellationToken.None);
+
+        ok.Should().BeTrue();
+        _dockerCalls.Should().HaveCount(1);
+        _dockerCalls[0].Should().StartWith("build -t vais-mcp-mcp-fetch:1.0");
+        client.CreateCalls.Should().HaveCount(1);
+        // Patched manifest carries the resolved image
+        client.CreateCalls[0].Container!.Image.Should().Be("vais-mcp-mcp-fetch:1.0");
+    }
+
+    [Fact]
+    public async Task ImageCached_BuildSkipped()
     {
         _imageExists = true;
-        var client = new FakeClient();
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("foo:1.0"), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeTrue();
+        ok.Should().BeTrue();
         _dockerCalls.Should().BeEmpty();
         client.CreateCalls.Should().HaveCount(1);
     }
 
     [Fact]
-    public async Task NoBuildFlag_BuildSkippedRegardlessOfCache()
+    public async Task NoBuildFlag_BuildSkipped()
     {
         _imageExists = false;
-        var client = new FakeClient();
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", _manifestPath, noBuild: true, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("foo:1.0"), "key", _manifestPath, noBuild: true, CancellationToken.None);
 
-        result.Should().BeTrue();
+        ok.Should().BeTrue();
         _dockerCalls.Should().BeEmpty();
         client.CreateCalls.Should().HaveCount(1);
     }
 
     [Fact]
-    public async Task PushTrue_BuildThenPushThenPost()
+    public async Task PushTrue_BuildThenPush()
     {
         _imageExists = false;
-        var client = new FakeClient();
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(push: true), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("foo:1.0", push: true), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeTrue();
+        ok.Should().BeTrue();
         _dockerCalls.Should().HaveCount(2);
         _dockerCalls[0].Should().StartWith("build ");
-        _dockerCalls[1].Should().Be("push my-registry/my-plugin:1.0");
-        client.CreateCalls.Should().HaveCount(1);
+        _dockerCalls[1].Should().Be("push foo:1.0");
     }
 
     [Fact]
-    public async Task NoBuildSpec_NoDockerCalls_ManifestPosted()
-    {
-        var client = new FakeClient();
-
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestNoBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
-
-        result.Should().BeTrue();
-        _dockerCalls.Should().BeEmpty();
-        client.CreateCalls.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task DockerBuildFails_ReturnsFalse_ManifestNotPosted()
+    public async Task BuildFailure_ReturnsFalse_ManifestNotPosted()
     {
         _imageExists = false;
         ApplyCommand.DockerRun = (args, _) => { _dockerCalls.Add(args); return Task.FromResult(1); };
-        var client = new FakeClient();
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("foo:1.0"), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeFalse();
+        ok.Should().BeFalse();
         client.CreateCalls.Should().BeEmpty();
-        client.UpdateCalls.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task DockerPushFails_ReturnsFalse_ManifestNotPosted()
+    public async Task NoContainerBlock_NoBuild_StreamableHttp_PostsAsIs()
     {
-        _imageExists = false;
-        var callCount = 0;
-        ApplyCommand.DockerRun = (args, _) =>
-        {
-            _dockerCalls.Add(args);
-            callCount++;
-            return Task.FromResult(callCount == 1 ? 0 : 1); // build OK, push fails
-        };
-        var client = new FakeClient();
+        // Regression: existing transports never trigger build logic.
+        var client = new FakeMcpServerClient();
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(push: true), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestStreamableHttp(), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeFalse();
-        _dockerCalls.Should().HaveCount(2);
-        client.CreateCalls.Should().BeEmpty();
+        ok.Should().BeTrue();
+        _dockerCalls.Should().BeEmpty();
+        client.CreateCalls.Should().HaveCount(1);
     }
 
     [Fact]
-    public async Task Conflict_CreateThrows409_FallsBackToUpdate()
+    public async Task ContainerWithoutBuild_PostsAsIs()
+    {
+        var client = new FakeMcpServerClient();
+
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestNoBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
+
+        ok.Should().BeTrue();
+        _dockerCalls.Should().BeEmpty();
+        client.CreateCalls.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Conflict_FallsBackToUpdate()
     {
         _imageExists = true;
-        var client = new FakeClient { ThrowConflictOnCreate = true };
+        var client = new FakeMcpServerClient { ThrowConflictOnCreate = true };
 
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", _manifestPath, noBuild: false, CancellationToken.None);
+        var ok = await ApplyCommand.ApplyMcpServerAsync(
+            client, ManifestWithBuild("foo:1.0"), "key", _manifestPath, noBuild: false, CancellationToken.None);
 
-        result.Should().BeTrue();
+        ok.Should().BeTrue();
         client.CreateCalls.Should().HaveCount(1);
         client.UpdateCalls.Should().HaveCount(1);
     }
 
-    [Fact]
-    public async Task BuildArgs_PassedToDockerBuildCommand()
-    {
-        _imageExists = false;
-        var client = new FakeClient();
-        var manifest = ManifestWithBuild(args: new Dictionary<string, string> { ["API_KEY"] = "secret" });
+    // ── Fake client (minimal McpServer-only surface; default-method overloads handle the rest) ────────
 
-        await ApplyCommand.ApplyContainerPluginAsync(
-            client, manifest, "key", _manifestPath, noBuild: false, CancellationToken.None);
-
-        _dockerCalls.Should().HaveCount(1);
-        _dockerCalls[0].Should().Contain("--build-arg API_KEY=secret");
-    }
-
-    [Fact]
-    public async Task StdinManifest_RelativeContext_UsesCurrentDirectory()
-    {
-        _imageExists = false;
-        var client = new FakeClient();
-
-        var result = await ApplyCommand.ApplyContainerPluginAsync(
-            client, ManifestWithBuild(), "key", manifestFilePath: "-", noBuild: false, CancellationToken.None);
-
-        result.Should().BeTrue();
-        _dockerCalls.Should().HaveCount(1);
-        // Context should resolve to CWD — just confirm a build call ran without crashing
-        _dockerCalls[0].Should().StartWith("build -t");
-    }
-
-    // ── Fake control plane client ─────────────────────────────────────────────
-
-    private sealed class FakeClient : IAgentControlPlaneClient
+    private sealed class FakeMcpServerClient : IAgentControlPlaneClient
     {
         public bool ThrowConflictOnCreate { get; set; }
-        public List<ContainerPluginManifest> CreateCalls { get; } = new();
+        public List<McpServerManifest> CreateCalls { get; } = new();
         public List<(string Id, string? Version)> UpdateCalls { get; } = new();
 
-        // Container plugin overrides (DIM defaults throw NotSupportedException).
-        public Task<ContainerPluginHandle> CreateContainerPluginAsync(
-            ContainerPluginManifest manifest, CancellationToken cancellationToken = default)
+        public Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest m, CancellationToken ct = default)
         {
-            CreateCalls.Add(manifest);
+            CreateCalls.Add(m);
             if (ThrowConflictOnCreate)
                 throw new AgentControlPlaneException(409, null, "Conflict", null);
-            return Task.FromResult(new ContainerPluginHandle(manifest.Id, manifest.Version));
+            return Task.FromResult(new McpServerHandle(m.Id, m.Version));
         }
 
-        public Task<ContainerPluginHandle> UpdateContainerPluginAsync(
-            string id, ContainerPluginManifest manifest, string? version = null, CancellationToken cancellationToken = default)
+        public Task<McpServerHandle> UpdateMcpServerAsync(
+            string id, McpServerManifest m, string? v = null, CancellationToken ct = default)
         {
-            UpdateCalls.Add((id, version));
-            return Task.FromResult(new ContainerPluginHandle(id, version ?? manifest.Version));
+            UpdateCalls.Add((id, v));
+            return Task.FromResult(new McpServerHandle(id, v ?? m.Version));
         }
 
-        // Required abstract members — stubs (not exercised by these tests).
+        // The rest of the interface — stubs that aren't exercised by these tests.
         public Task<AgentHandle> CreateAsync(AgentManifest m, CancellationToken ct = default)
             => Task.FromResult(new AgentHandle(m.Id, m.Version));
         public Task<IReadOnlyList<AgentManifest>> ListAsync(string? l = null, int? lim = null, CancellationToken ct = default)
@@ -290,14 +268,14 @@ public sealed class ApplyCommandBuildOnApplyTests : IDisposable
         public Task<McpGatewayConfigQueryResponse?> QueryMcpGatewayConfigAsync(string id, string? v = null, CancellationToken ct = default)
             => Task.FromResult<McpGatewayConfigQueryResponse?>(null);
         public Task EvictMcpGatewayConfigAsync(string id, string? v = null, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<McpServerHandle> CreateMcpServerAsync(McpServerManifest m, CancellationToken ct = default)
-            => Task.FromResult(new McpServerHandle(m.Id, m.Version));
-        public Task<McpServerHandle> UpdateMcpServerAsync(string id, McpServerManifest m, string? v = null, CancellationToken ct = default)
-            => Task.FromResult(new McpServerHandle(id, m.Version));
         public Task<McpServerListResponse> ListMcpServersAsync(string? l = null, int? lim = null, string? cursor = null, CancellationToken ct = default)
             => Task.FromResult(new McpServerListResponse([]));
         public Task<McpServerQueryResponse?> QueryMcpServerAsync(string id, string? v = null, CancellationToken ct = default)
             => Task.FromResult<McpServerQueryResponse?>(null);
         public Task EvictMcpServerAsync(string id, string? v = null, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<ContainerPluginHandle> CreateContainerPluginAsync(ContainerPluginManifest m, CancellationToken ct = default)
+            => Task.FromResult(new ContainerPluginHandle(m.Id, m.Version));
+        public Task<ContainerPluginHandle> UpdateContainerPluginAsync(string id, ContainerPluginManifest m, string? v = null, CancellationToken ct = default)
+            => Task.FromResult(new ContainerPluginHandle(id, m.Version));
     }
 }

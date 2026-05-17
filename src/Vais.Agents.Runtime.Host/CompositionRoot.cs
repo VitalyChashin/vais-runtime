@@ -233,6 +233,8 @@ internal static class CompositionRoot
         }
 
         // Container-plugins pillar — opt-in via VAIS_CONTAINER_PLUGINS_DIRECTORY.
+        // Container-MCP servers (transport: containerStdio) share the same gate because
+        // they reuse the same Docker socket + ContainerPluginLoaderOptions (network, resource bounds).
         if (!string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
         {
             services.AddContainerPlugins(o =>
@@ -240,6 +242,7 @@ internal static class CompositionRoot
                 o.PluginsDirectory = options.ContainerPluginsDirectory;
                 o.PluginNetwork    = options.DockerPluginNetwork;
             });
+            services.AddContainerMcpServers();
         }
 
         // GCF-20/21 — named middleware registrations + composite factories.

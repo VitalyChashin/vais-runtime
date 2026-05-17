@@ -118,7 +118,9 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                         await ApplyMcpGatewayConfigAsync(client, mcpGwCase.Config, idempotencyKey, cancellationToken);
                         break;
                     case ManifestResource.McpServerCase mcpServerCase:
-                        await ApplyMcpServerAsync(client, mcpServerCase.Server, idempotencyKey, cancellationToken);
+                        if (!await ApplyMcpServerAsync(client, mcpServerCase.Server, idempotencyKey,
+                                settings.File, settings.NoBuild, cancellationToken))
+                            anyError = true;
                         break;
                     case ManifestResource.ContainerPluginCase containerPluginCase:
                         if (!await ApplyContainerPluginAsync(client, containerPluginCase.Manifest, idempotencyKey,
@@ -202,8 +204,64 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         }
     }
 
-    private static async Task ApplyMcpServerAsync(IAgentControlPlaneClient client, McpServerManifest manifest, string idempotencyKey, CancellationToken ct)
+    internal static async Task<bool> ApplyMcpServerAsync(
+        IAgentControlPlaneClient client,
+        McpServerManifest manifest,
+        string idempotencyKey,
+        string manifestFilePath,
+        bool noBuild,
+        CancellationToken ct)
     {
+        // CMS-5: build-on-apply for transport: containerStdio with spec.container.build.
+        if (manifest.Container is { Build: { } build, Image: var imageOpt } && !noBuild)
+        {
+            var manifestDir = manifestFilePath == "-"
+                ? Directory.GetCurrentDirectory()
+                : Path.GetDirectoryName(Path.GetFullPath(manifestFilePath)) ?? Directory.GetCurrentDirectory();
+
+            var contextPath = Path.GetFullPath(Path.Combine(manifestDir, build.Context));
+            var dockerfilePath = Path.GetFullPath(Path.Combine(contextPath, build.Dockerfile));
+
+            // Image tag derived from manifest id+version when spec.container.image is not set.
+            var imageTag = imageOpt ?? $"vais-mcp-{manifest.Id}:{manifest.Version}";
+
+            if (!await DockerImageExists(imageTag, ct))
+            {
+                AnsiConsole.MarkupLine($"Building [bold]{Markup.Escape(imageTag)}[/] from [grey]{Markup.Escape(contextPath)}[/]");
+
+                var buildArgsStr = build.Args is { Count: > 0 }
+                    ? string.Join(" ", build.Args.Select(kv => $"--build-arg {kv.Key}={kv.Value}"))
+                    : "";
+                var buildDockerArgs = string.IsNullOrEmpty(buildArgsStr)
+                    ? $"build -t {imageTag} -f {dockerfilePath} {contextPath}"
+                    : $"build -t {imageTag} -f {dockerfilePath} {buildArgsStr} {contextPath}";
+
+                var buildExit = await DockerRun(buildDockerArgs, ct);
+                if (buildExit != 0)
+                {
+                    AnsiConsole.MarkupLine($"[red]✗[/] docker build failed (exit {buildExit})");
+                    return false;
+                }
+                AnsiConsole.MarkupLine($"[green]✓[/] built {Markup.Escape(imageTag)}");
+
+                if (build.Push)
+                {
+                    AnsiConsole.MarkupLine($"Pushing [bold]{Markup.Escape(imageTag)}[/]");
+                    var pushExit = await DockerRun($"push {imageTag}", ct);
+                    if (pushExit != 0)
+                    {
+                        AnsiConsole.MarkupLine($"[red]✗[/] docker push failed (exit {pushExit})");
+                        return false;
+                    }
+                    AnsiConsole.MarkupLine($"[green]✓[/] pushed {Markup.Escape(imageTag)}");
+                }
+            }
+
+            // Patch the manifest in-flight so the server-side record carries the resolved image.
+            if (imageOpt is null)
+                manifest = manifest with { Container = manifest.Container with { Image = imageTag } };
+        }
+
         try
         {
             var handle = await client.CreateMcpServerAsync(manifest, idempotencyKey, ct);
@@ -214,6 +272,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             var updated = await client.UpdateMcpServerAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
             AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (mcp-server, version {updated.Version})");
         }
+        return true;
     }
 
     private static async Task ApplyEvalSuiteAsync(IAgentControlPlaneClient client, EvalSuiteManifest manifest, CancellationToken ct)

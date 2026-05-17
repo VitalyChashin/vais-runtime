@@ -287,6 +287,8 @@ Vais.Agents.McpServerManifest.AuthRef.get -> string?
 Vais.Agents.McpServerManifest.AuthRef.init -> void
 Vais.Agents.McpServerManifest.Command.get -> string?
 Vais.Agents.McpServerManifest.Command.init -> void
+Vais.Agents.McpServerManifest.Container.get -> Vais.Agents.ContainerMcpSpec?
+Vais.Agents.McpServerManifest.Container.init -> void
 Vais.Agents.McpServerManifest.Deconstruct(out string! Id, out string! Version, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
 Vais.Agents.McpServerManifest.Description.get -> string?
 Vais.Agents.McpServerManifest.Description.init -> void
@@ -827,6 +829,88 @@ override Vais.Agents.ContainerPluginKubernetesConfig.GetHashCode() -> int
 override Vais.Agents.ContainerPluginKubernetesConfig.ToString() -> string!
 static Vais.Agents.ContainerPluginKubernetesConfig.operator !=(Vais.Agents.ContainerPluginKubernetesConfig? left, Vais.Agents.ContainerPluginKubernetesConfig? right) -> bool
 static Vais.Agents.ContainerPluginKubernetesConfig.operator ==(Vais.Agents.ContainerPluginKubernetesConfig? left, Vais.Agents.ContainerPluginKubernetesConfig? right) -> bool
+Vais.Agents.ContainerMcpSpec
+Vais.Agents.ContainerMcpSpec.<Clone>$() -> Vais.Agents.ContainerMcpSpec!
+Vais.Agents.ContainerMcpSpec.ContainerMcpSpec() -> void
+Vais.Agents.ContainerMcpSpec.Args.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.ContainerMcpSpec.Args.init -> void
+Vais.Agents.ContainerMcpSpec.Build.get -> Vais.Agents.ContainerMcpBuildSpec?
+Vais.Agents.ContainerMcpSpec.Build.init -> void
+Vais.Agents.ContainerMcpSpec.Command.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.ContainerMcpSpec.Command.init -> void
+Vais.Agents.ContainerMcpSpec.Env.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerMcpSpec.Env.init -> void
+Vais.Agents.ContainerMcpSpec.Equals(Vais.Agents.ContainerMcpSpec? other) -> bool
+Vais.Agents.ContainerMcpSpec.HealthPath.get -> string!
+Vais.Agents.ContainerMcpSpec.HealthPath.init -> void
+Vais.Agents.ContainerMcpSpec.Image.get -> string?
+Vais.Agents.ContainerMcpSpec.Image.init -> void
+Vais.Agents.ContainerMcpSpec.ImagePullPolicy.get -> string!
+Vais.Agents.ContainerMcpSpec.ImagePullPolicy.init -> void
+Vais.Agents.ContainerMcpSpec.Kubernetes.get -> Vais.Agents.ContainerMcpKubernetesConfig?
+Vais.Agents.ContainerMcpSpec.Kubernetes.init -> void
+Vais.Agents.ContainerMcpSpec.Path.get -> string!
+Vais.Agents.ContainerMcpSpec.Path.init -> void
+Vais.Agents.ContainerMcpSpec.Port.get -> int
+Vais.Agents.ContainerMcpSpec.Port.init -> void
+Vais.Agents.ContainerMcpSpec.Resources.get -> Vais.Agents.ContainerMcpResources?
+Vais.Agents.ContainerMcpSpec.Resources.init -> void
+Vais.Agents.ContainerMcpSpec.Secrets.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerMcpSpec.Secrets.init -> void
+Vais.Agents.ContainerMcpSpec.StartupTimeoutSeconds.get -> int
+Vais.Agents.ContainerMcpSpec.StartupTimeoutSeconds.init -> void
+override Vais.Agents.ContainerMcpSpec.Equals(object? obj) -> bool
+override Vais.Agents.ContainerMcpSpec.GetHashCode() -> int
+override Vais.Agents.ContainerMcpSpec.ToString() -> string!
+static Vais.Agents.ContainerMcpSpec.operator !=(Vais.Agents.ContainerMcpSpec? left, Vais.Agents.ContainerMcpSpec? right) -> bool
+static Vais.Agents.ContainerMcpSpec.operator ==(Vais.Agents.ContainerMcpSpec? left, Vais.Agents.ContainerMcpSpec? right) -> bool
+Vais.Agents.ContainerMcpBuildSpec
+Vais.Agents.ContainerMcpBuildSpec.<Clone>$() -> Vais.Agents.ContainerMcpBuildSpec!
+Vais.Agents.ContainerMcpBuildSpec.ContainerMcpBuildSpec() -> void
+Vais.Agents.ContainerMcpBuildSpec.Args.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ContainerMcpBuildSpec.Args.init -> void
+Vais.Agents.ContainerMcpBuildSpec.Context.get -> string!
+Vais.Agents.ContainerMcpBuildSpec.Context.init -> void
+Vais.Agents.ContainerMcpBuildSpec.Dockerfile.get -> string!
+Vais.Agents.ContainerMcpBuildSpec.Dockerfile.init -> void
+Vais.Agents.ContainerMcpBuildSpec.Equals(Vais.Agents.ContainerMcpBuildSpec? other) -> bool
+Vais.Agents.ContainerMcpBuildSpec.Push.get -> bool
+Vais.Agents.ContainerMcpBuildSpec.Push.init -> void
+override Vais.Agents.ContainerMcpBuildSpec.Equals(object? obj) -> bool
+override Vais.Agents.ContainerMcpBuildSpec.GetHashCode() -> int
+override Vais.Agents.ContainerMcpBuildSpec.ToString() -> string!
+static Vais.Agents.ContainerMcpBuildSpec.operator !=(Vais.Agents.ContainerMcpBuildSpec? left, Vais.Agents.ContainerMcpBuildSpec? right) -> bool
+static Vais.Agents.ContainerMcpBuildSpec.operator ==(Vais.Agents.ContainerMcpBuildSpec? left, Vais.Agents.ContainerMcpBuildSpec? right) -> bool
+Vais.Agents.ContainerMcpResources
+Vais.Agents.ContainerMcpResources.<Clone>$() -> Vais.Agents.ContainerMcpResources!
+Vais.Agents.ContainerMcpResources.ContainerMcpResources() -> void
+Vais.Agents.ContainerMcpResources.Cpu.get -> string?
+Vais.Agents.ContainerMcpResources.Cpu.init -> void
+Vais.Agents.ContainerMcpResources.Equals(Vais.Agents.ContainerMcpResources? other) -> bool
+Vais.Agents.ContainerMcpResources.Memory.get -> string?
+Vais.Agents.ContainerMcpResources.Memory.init -> void
+Vais.Agents.ContainerMcpResources.PidsLimit.get -> long?
+Vais.Agents.ContainerMcpResources.PidsLimit.init -> void
+override Vais.Agents.ContainerMcpResources.Equals(object? obj) -> bool
+override Vais.Agents.ContainerMcpResources.GetHashCode() -> int
+override Vais.Agents.ContainerMcpResources.ToString() -> string!
+static Vais.Agents.ContainerMcpResources.operator !=(Vais.Agents.ContainerMcpResources? left, Vais.Agents.ContainerMcpResources? right) -> bool
+static Vais.Agents.ContainerMcpResources.operator ==(Vais.Agents.ContainerMcpResources? left, Vais.Agents.ContainerMcpResources? right) -> bool
+Vais.Agents.ContainerMcpKubernetesConfig
+Vais.Agents.ContainerMcpKubernetesConfig.<Clone>$() -> Vais.Agents.ContainerMcpKubernetesConfig!
+Vais.Agents.ContainerMcpKubernetesConfig.ContainerMcpKubernetesConfig() -> void
+Vais.Agents.ContainerMcpKubernetesConfig.DeploymentName.get -> string!
+Vais.Agents.ContainerMcpKubernetesConfig.DeploymentName.init -> void
+Vais.Agents.ContainerMcpKubernetesConfig.Equals(Vais.Agents.ContainerMcpKubernetesConfig? other) -> bool
+Vais.Agents.ContainerMcpKubernetesConfig.Namespace.get -> string!
+Vais.Agents.ContainerMcpKubernetesConfig.Namespace.init -> void
+Vais.Agents.ContainerMcpKubernetesConfig.ServiceUrl.get -> string!
+Vais.Agents.ContainerMcpKubernetesConfig.ServiceUrl.init -> void
+override Vais.Agents.ContainerMcpKubernetesConfig.Equals(object? obj) -> bool
+override Vais.Agents.ContainerMcpKubernetesConfig.GetHashCode() -> int
+override Vais.Agents.ContainerMcpKubernetesConfig.ToString() -> string!
+static Vais.Agents.ContainerMcpKubernetesConfig.operator !=(Vais.Agents.ContainerMcpKubernetesConfig? left, Vais.Agents.ContainerMcpKubernetesConfig? right) -> bool
+static Vais.Agents.ContainerMcpKubernetesConfig.operator ==(Vais.Agents.ContainerMcpKubernetesConfig? left, Vais.Agents.ContainerMcpKubernetesConfig? right) -> bool
 Vais.Agents.ContainerPluginHandle
 Vais.Agents.ContainerPluginHandle.<Clone>$() -> Vais.Agents.ContainerPluginHandle!
 Vais.Agents.ContainerPluginHandle.ContainerPluginHandle(string! Id, string! Version) -> void
