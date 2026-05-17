@@ -64,8 +64,8 @@ Returns plugin identity and capability declaration. Called once at startup by `C
 
 Field rules:
 - `handlerTypeName` — must match the `vais.plugin.handlerTypeName` image label exactly. Mismatch is a startup error.
-- `targetApiVersion` — `major.minor` string. `ContainerPluginHostService` validates against the runtime's supported range; rejects plugins outside it with a logged error.
-- `capabilities` — `"invoke"` is required. `"stream"` is optional; if absent, `ContainerAgentShim` falls back to non-streaming invoke.
+- `targetApiVersion` — `major.minor` string. `ContainerPluginHostService` validates against the runtime's supported range with a lexicographic string comparison (no strict semver parsing today; `"0.24"` / `"1.0"` / `"99.99"` all work as long as they sort within range). Rejects plugins outside the range with `urn:vais:container:abi-failed`.
+- `capabilities` — `"invoke"` is required. `"stream"` is optional; if absent, `ContainerAgentShim` falls back to non-streaming invoke. Capability enforcement on `/v1/stream` is currently advisory — see `/v1/stream` below.
 - `sdkVersion` — informational; logged at startup.
 
 ---
@@ -95,11 +95,11 @@ Synchronous invocation. Returns the complete response after all LLM and tool cal
 ```
 
 Field rules:
-- `messages` — assembled by the preprocessing pipeline; complete context including system prompt and history. The container passes this list directly to its LLM call.
+- `messages` — assembled by the preprocessing pipeline (IP-4: `IAgentPreprocessor` chain — `HistoryAssembler` at order 0, `SystemPromptInjector` at order 10, plus any consumer-registered preprocessors). Complete context including system prompt and history. The container passes this list directly to its LLM call.
 - `llmGatewayUrl` / `toolGatewayUrl` — the container **must** use these URLs for all LLM and tool calls. Hard-coded LLM calls not using `llmGatewayUrl` violate architectural principle P4. The SDK provides clients pre-configured with these URLs; plugin authors use `request.llm` and `request.tools`, not raw HTTP clients.
-- `opaqueState` — JSON object or `null`. Null on first invocation or after a fresh-start (see error types). The container must not assume this field is present.
+- `opaqueState` — JSON object or `null`. Null on first invocation or after a fresh-start (see error types). The container must not assume this field is present. **Size cap:** not currently enforced on the container plugin path (the 1 MiB cap on `PythonPluginLoaderOptions.MaxAgentStateSizeBytes` applies to Python subprocess plugins, not container plugins). Plan defensively for ≤1 MiB until enforcement is added.
 - `timeoutSeconds` — applies to the entire invocation including nested LLM and tool calls. The container is responsible for respecting this budget.
-- `context.callToken` — must be included as `Authorization: Bearer <callToken>` on every callback to `llmGatewayUrl` and `toolGatewayUrl`. Token validity window: `timeoutSeconds + 30s` to allow for clock skew. Algorithm and key rotation are specified in IP-3.
+- `context.callToken` — must be included as `Authorization: Bearer <callToken>` on every callback to `llmGatewayUrl` and `toolGatewayUrl`. Token validity window: `timeoutSeconds + 30s` to allow for clock skew. Algorithm and key rotation are specified in IP-3. (Separate from the OTLP-receiver token, which uses a 24 h TTL.)
 
 ### Response
 
@@ -148,7 +148,7 @@ SSE event taxonomy (aligns with ADR 0004 conventions):
 
 Rules:
 - `done` is always emitted, even on error. On error, `done` carries `null` for `assistantMessage`; the error shape is signalled by a preceding `error` event.
-- If the container does not declare `"stream"` in `/v1/metadata` capabilities, this endpoint must return `404`. `ContainerAgentShim` falls back to `/v1/invoke`.
+- If the container does not declare `"stream"` in `/v1/metadata` capabilities, this endpoint **should** return `404` so `ContainerAgentShim` falls back to `/v1/invoke`. Today this is advisory — both shipped SDKs (.NET, Python) implement the endpoint unconditionally, and the runtime tolerates any non-2xx as "stream unavailable, fall back". Tightening to a hard MUST is tracked alongside the broader SDK-level capability enforcement work.
 
 ---
 
@@ -159,7 +159,7 @@ Rules:
 ```
 
 - HTTP 200 when the plugin server has completed initialisation and is ready to accept `/v1/invoke` calls.
-- HTTP 503 at any other time.
+- HTTP 503 (recommended) at any other time. The shipped .NET and Python SDKs only implement the 200 path today, leaving the 503 contract for plugin authors to implement manually if their plugin has a startup window worth signalling distinctly. `ContainerPluginHostService` tolerates any non-2xx response as "not ready yet" — it polls with retry until `startupTimeoutSeconds` elapses.
 
 `ContainerPluginHostService` polls this endpoint at startup and after container restart. Configurable timeout via `spec.startupTimeoutSeconds` (default 30).
 
@@ -171,21 +171,34 @@ Any HTTP 4xx/5xx from `/v1/invoke` or `/v1/stream` must carry:
 
 ```json
 {
-  "errorType": "OpaqueStateDeserializationError | LlmGatewayError | ToolError | Timeout | InternalError",
+  "errorType": "OpaqueStateDeserializationError | InternalError | <reserved>",
   "errorMessage": "Full exception message with stack trace if available.",
-  "diagnosticTail": "Last 20 lines of container stderr or internal log, newline-separated."
+  "diagnosticTail": "Trailing portion of container stderr / internal log."
 }
 ```
 
-HTTP status → `errorType` mapping:
+`diagnosticTail` is a free-form string. The runtime truncates whatever the container returns to ~500 chars before logging — earlier drafts said "last 20 lines" but the actual cap is byte-based; the runtime does not parse line counts. Containers should emit the most recent ~20 log lines and stay under ~500 chars per line where possible.
+
+### Shipping HTTP status → `errorType` mapping
 
 | HTTP status | `errorType` | Grain behaviour |
 |---|---|---|
 | 422 | `OpaqueStateDeserializationError` | Clear `OpaqueState`; retry with `opaqueState: null` (fresh-start) |
+| 500 | `InternalError` | Propagate; fail the graph node |
+
+Any other 4xx / 5xx returned by the container is treated as `InternalError` by `ContainerAgentShim` today.
+
+### Reserved for future use — not yet wired
+
+| HTTP status | `errorType` (planned) | Planned grain behaviour |
+|---|---|---|
 | 502 | `LlmGatewayError` | Propagate; fail the graph node |
 | 503 | `ToolError` | Propagate; fail the graph node |
 | 504 | `Timeout` | Propagate; fail the graph node (retry governed by `retryPolicy`) |
-| 500 | `InternalError` | Propagate; fail the graph node |
+
+These three status codes are reserved for the planned LLM-gateway / tool / timeout error distinctions. Neither the shipped .NET SDK (`Vais.Plugin.Sdk`) nor the Python SDK (`vais-plugin`) exposes a mechanism to emit them today, and `ContainerAgentShim` does not currently branch on them — it folds anything other than 422 into `InternalError`. Plugins **should not** rely on the runtime distinguishing 502 / 503 / 504 from 500 until the SDKs and shim are updated. Follow-up tracked at `research/plugin-container-error-codes-followup.md`.
+
+### Shim error-handling contract
 
 `ContainerAgentShim.InvokeAsync` must:
 

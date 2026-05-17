@@ -16,7 +16,7 @@ schema consume `input.*` fields via the standard OPA evaluation model.
 ```json
 {
   "schemaVersion": "1",
-  "operation": "Create|Invoke|Signal|Query|Cancel|Update|Evict",
+  "operation": "<one of the values in the table below>",
   "principal": { /* nullable — see below */ },
   "agent":     { /* nullable — see below */ }
 }
@@ -37,9 +37,28 @@ allow := { ... } if {
 
 ### `operation` (string, required)
 
-One of: `Create`, `Invoke`, `Signal`, `Query`, `Cancel`, `Update`,
-`Evict`. Mirrors the shipped `PolicyOperation` enum; the 7-verb
-universal set routed through `IAgentLifecycleManager`.
+Stringified `PolicyOperation` enum value. The enum has been extended past
+the original 7 agent verbs as new resource kinds joined the control
+plane. The current shipping set, grouped by the resource the operation
+acts on:
+
+| Resource | Operations |
+|---|---|
+| Agent (v0.6) | `Create`, `Invoke`, `Signal`, `Query`, `Cancel`, `Update`, `Evict` |
+| Graph (v0.19) | `GraphCreate`, `GraphInvoke`, `GraphResume`, `GraphQuery`, `GraphCancel`, `GraphUpdate`, `GraphEvict` |
+| LLM gateway config (v0.20) | `LlmGatewayConfigCreate`, `LlmGatewayConfigUpdate`, `LlmGatewayConfigQuery`, `LlmGatewayConfigEvict` |
+| MCP gateway config (v0.20) | `McpGatewayConfigCreate`, `McpGatewayConfigUpdate`, `McpGatewayConfigQuery`, `McpGatewayConfigEvict` |
+| MCP server (v0.20) | `McpServerCreate`, `McpServerUpdate`, `McpServerQuery`, `McpServerEvict` |
+| Container plugin (v0.24) | `ContainerPluginCreate`, `ContainerPluginUpdate`, `ContainerPluginQuery`, `ContainerPluginEvict` |
+| Eval suite (E1) | `EvalSuiteUpsert`, `EvalSuiteQuery`, `EvalSuiteEvict` |
+
+The shape of `input.agent` depends on the resource: for agent operations
+it carries an `AgentManifest`; for graph operations a graph manifest;
+for gateway-config / MCP-server / container-plugin / eval-suite
+operations the corresponding manifest type. Rego policies that gate by
+operation should branch on the operation name first, then dereference
+the manifest-specific fields. Policies that don't care about a resource
+kind can rely on the default-deny fall-through (no rule matched).
 
 ### `principal` (object | null)
 
@@ -83,29 +102,35 @@ Minimum required fields (mirror the manifest's positional ctor):
 }
 ```
 
-Optional fields (null or omitted when not set):
+Optional fields. Note: STJ is configured with
+`JsonIgnoreCondition.WhenWritingNull`, so unset fields are **omitted**
+from the wire payload, never emitted as `null`. Rego policies should
+prefer `not input.agent.memory` over `input.agent.memory == null`.
 
-- `memory` (object | null) — pluggable memory backing.
-- `identity` (object | null) — inbound/outbound auth.
-- `autoscaling` (object | null) — replica hints.
-- `description` (string | null).
-- `labels` (object | null) — registry-scope key/value pairs. **Common
-  gating target** — tenant-scope samples use
-  `input.agent.labels.tenant`.
-- `model` (object | null) — LLM binding
+- `memory` (object) — pluggable memory backing.
+- `identity` (object) — inbound/outbound auth.
+- `autoscaling` (object) — replica hints.
+- `description` (string).
+- `labels` (object) — registry-scope key/value pairs. **Common gating
+  target** — tenant-scope samples use `input.agent.labels.tenant`.
+- `model` (object) — LLM binding
   `{ provider, id, apiKeyRef, baseUrlRef, temperature, topP, maxTokens, responseFormat }`.
-- `systemPrompt` (object | null).
-- `mcpServers` (array | null).
-- `guardrails` (object | null).
-- `handoffs` (array | null).
-- `budget` (object | null)
+- `systemPrompt` (object).
+- `mcpServers` (array).
+- `a2aRemoteAgents` (array) — `a2a:<name>` tool-source targets (v0.17).
+- `localAgents` (array) — `agent:<name>` tool-source targets (v0.18; agent-as-tool).
+- `guardrails` (object).
+- `handoffs` (array).
+- `budget` (object)
   `{ maxTurns, maxToolCalls, maxPromptTokens, maxCompletionTokens, maxDuration }`.
-- `contextProviders` (array | null).
-- `outputSchema` (arbitrary JSON | null).
+- `contextProviders` (array).
+- `outputSchema` (arbitrary JSON).
 - `agentMode` (string) — `"ToolCalling"` default.
-- `reasoning` (object | null).
-- `observability` (object | null).
-- `annotations` (object | null).
+- `reasoning` (object).
+- `observability` (object).
+- `annotations` (object) — operator-visible metadata; not indexed.
+- `llmGatewayRef` (string) — id of a deployed `LlmGatewayConfigManifest` (v0.6+).
+- `mcpGatewayRef` (string) — id of a deployed `McpGatewayConfigManifest` (v0.6+).
 
 ---
 
@@ -180,18 +205,21 @@ sub-rule results.
 ## Schema evolution protocol
 
 - **Additive changes** (new optional fields on `principal` or
-  `agent`) stay at `schemaVersion: "1"`. Consumers who don't care
-  ignore the new fields; consumers who do gate on them via existence
-  checks (`input.principal.newField`).
+  `agent`, new operation values) stay at `schemaVersion: "1"`.
+  Consumers who don't care ignore the new fields and the default-deny
+  fall-through handles unknown operation names; consumers who do
+  gate on them via existence checks (`input.principal.newField`).
 - **Breaking changes** (renamed fields, removed fields, changed
-  shapes) bump `schemaVersion` to `"2"`. The adapter dual-ships both
-  versions for **one minor version** (v0.15.0 emits v1 by default,
-  v2 opt-in; v0.16.0 flips the default; v0.17.0 removes v1). Rego
-  policies gate on `input.schemaVersion == "1"` to stay pinned.
-- **New `operation` values** don't bump the schema version — the
-  `PolicyOperation` enum is closed at 7 verbs shipped in v0.6 and
-  extending it is a v0.x breaking change at the Abstractions level
-  (not just the OPA schema).
+  shapes, or a different envelope) bump `schemaVersion` to `"2"`.
+  A dual-ship transition window has not been implemented yet — the
+  current `OpaInputBuilder.SchemaVersion` constant is a single value
+  and rolls forward atomically when bumped. Rego policies should
+  always gate on `input.schemaVersion == "1"` to fail closed when
+  the bump lands.
+- **`PolicyOperation` enum extensions** are additive (per the table
+  above the enum already grew from 7 to 33 values across v0.6 →
+  E1 without a schema-version bump). New resource kinds are expected
+  to keep extending it.
 - **Schema doc lives here** (`contracts/opa-input-schema.md`) and is
   the authoritative reference. Integration tests in
   `Vais.Agents.Control.Policy.Opa.Tests/OpaInputBuilderTests.cs` are

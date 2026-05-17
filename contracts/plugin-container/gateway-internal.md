@@ -11,20 +11,29 @@ Endpoints the runtime exposes for container → runtime callbacks. Called by plu
 
 **Network binding:** Internal port (default 5001), separate from the Kubernetes Service's external-facing port. Network policy restricts access to plugin container CIDRs only.
 
-**Authentication:** Every request must carry `Authorization: Bearer <callToken>`, where `callToken` is the value from `InvokeRequest.context.callToken`. Token generation algorithm and key rotation are specified in IP-3. Token validity window: `timeoutSeconds + 30s` to allow for clock skew.
+**Path prefix:** All gateway endpoints mount under `/v1/container-gateway/*` on the internal port. Older drafts of this contract referenced unprefixed paths (`/v1/llm/complete` etc.); those never shipped — the prefix has been in place since IP-3.
 
-**Required headers on all requests:**
+**Authentication:** Every request must carry `Authorization: Bearer <callToken>`, where `callToken` is the value from `InvokeRequest.context.callToken`. Token generation algorithm and key rotation are specified in IP-3. Token validity window: `invokeTimeoutSeconds + 30s` to allow for clock skew (separate from the OTLP-receiver token, which uses a 24 h TTL — see [plugin-protocol §OTLP receiver]).
+
+**Required headers on every gateway request:**
 
 ```
 Authorization: Bearer <callToken>
 X-Agent-Id: <agentId>
 X-Run-Id: <runId>
+```
+
+**Recommended:**
+
+```
 traceparent: <traceparent from InvokeRequest.context>
 ```
 
+`traceparent` is W3C-standard for trace propagation and the runtime forwards it onto the outbound LLM / tool call when present. It is **not** validated by the endpoint filter today, so plugins that omit it still succeed — the only consequence is a broken trace tree in Langfuse / Tempo. SDKs should always emit it.
+
 ---
 
-## `POST /v1/llm/complete`
+## `POST /v1/container-gateway/llm/complete`
 
 LLM completion callback. Routes through the full `ILlmGateway` middleware chain — token accounting, Langfuse tracing, and rate limiting apply exactly as for direct agent invocations.
 
@@ -45,7 +54,7 @@ The body is a **discriminated union**: exactly one of `messages` or `sections` m
 }
 ```
 
-**Sections variant** (v0.27) — plugin sends typed `Section[]` (typically obtained from `POST /v1/sections/build` and optionally mutated client-side). Runtime runs the canonical `CompletionRequestFlattener` server-side, so the `ILlmGateway` sees a `CompletionRequest` byte-equal to what a runtime-hosted agent would have produced.
+**Sections variant** (v0.27) — plugin sends typed `Section[]` (typically obtained from `POST /v1/container-gateway/sections/build` and optionally mutated client-side). Runtime runs the canonical `CompletionRequestFlattener` server-side, so the `ILlmGateway` sees a `CompletionRequest` byte-equal to what a runtime-hosted agent would have produced.
 
 ```json
 {
@@ -58,11 +67,11 @@ The body is a **discriminated union**: exactly one of `messages` or `sections` m
 }
 ```
 
-`<GatewaySection>` is the exact shape `POST /v1/sections/build` returns — see that endpoint for the schema. Plugins typically round-trip the response array verbatim; mutate (drop, reorder, edit payload text) when they want to override runtime composition decisions.
+`<GatewaySection>` is the exact shape `POST /v1/container-gateway/sections/build` returns — see that endpoint for the schema. Plugins typically round-trip the response array verbatim; mutate (drop, reorder, edit payload text) when they want to override runtime composition decisions.
 
 Field rules:
 - `messages` / `sections` — mutually exclusive; one required. See discriminator note above.
-- `modelId` — optional; null means "use the gateway's configured default for this agent."
+- `modelId` — optional. When omitted, the gateway falls back to a hardcoded default (`gpt-4o-mini` as of v0.27). Per-agent model defaults are tracked as a follow-up; until they land, plugins that need a specific model should always supply `modelId`.
 - `options` — optional; null means "use defaults." Full parameter set is specified in the `ILlmGateway` contract, not here.
 
 ### Response (non-streaming)
@@ -119,9 +128,42 @@ The `messages` variant is the default for backwards compatibility — existing p
 
 ---
 
-## `POST /v1/tools/invoke`
+## `POST /v1/container-gateway/chat/completions`
 
-Tool invocation callback. Routes through the `IToolGateway` middleware chain. Same `callToken` validation as `/v1/llm/complete`.
+OpenAI-compatible chat completions variant of `/llm/complete`. Accepts the OpenAI request envelope (`messages`, `model`, `temperature`, `tools`, etc.) so that plugins built on the OpenAI Python / JS SDK or any OpenAI-compatible toolchain (LiteLLM, OpenRouter, Continue, Cline, …) can target the runtime without a custom client. Routes through the same `ILlmGateway` middleware chain as `/llm/complete`; the only difference is the wire shape on the request side and the chunk shape on the streaming response side (OpenAI `data: {...}` chunks rather than the VAIS-native `event: delta` / `event: done`).
+
+Accepts `messages` only — no `sections` variant. OpenAI clients don't know about VAIS sections, and a plugin that wants section-pipeline semantics should use `/llm/complete` instead.
+
+Auth + headers are identical to `/llm/complete` (`Authorization: Bearer <callToken>` + `X-Agent-Id` + `X-Run-Id`).
+
+---
+
+## `GET /v1/container-gateway/tools/list`
+
+Enumerate the agent's tool registry as seen by the runtime. Returns the post-filter, post-merge view that the LLM would see if the runtime were calling it directly. Auth + headers identical to the POST endpoints.
+
+### Response
+
+```json
+{
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "Search the public web for relevant pages.",
+      "parametersSchema": { "type": "object", "properties": { "query": { "type": "string" } }, "required": ["query"] }
+    },
+    ...
+  ]
+}
+```
+
+Useful for plugins whose LLM prompt format requires the tool catalogue inline (some LangGraph node patterns, OpenAI Assistants migration scenarios). For plugins relying on the section pipeline, `/sections/build` already returns a `ToolDeclaration` section with this payload.
+
+---
+
+## `POST /v1/container-gateway/tools/invoke`
+
+Tool invocation callback. Routes through the `IToolGateway` middleware chain. Same `callToken` validation as `/llm/complete`.
 
 ### Request
 
@@ -153,11 +195,11 @@ Field rules:
 
 ---
 
-## `POST /v1/sections/build`
+## `POST /v1/container-gateway/sections/build`
 
-Section pipeline callback (v0.26). Reuses the named agent's runtime-side section composition (history reducer → composer → `IContextProvider` chain → resolver) and returns the typed `Section[]` the plugin would otherwise have to derive from `InvokeRequest.messages`. The packer is **not** run — the plugin decides which sections to include in its own LLM call. Same `callToken` validation and required-headers regime as `/v1/llm/complete`.
+Section pipeline callback (v0.26). Reuses the named agent's runtime-side section composition (history reducer → composer → `IContextProvider` chain → resolver) and returns the typed `Section[]` the plugin would otherwise have to derive from `InvokeRequest.messages`. The packer is **not** run — the plugin decides which sections to include in its own LLM call. Same `callToken` validation and required-headers regime as `/llm/complete`.
 
-This endpoint is purely additive — default plugin behaviour (consume `InvokeRequest.messages`) is unchanged. Plugins opt in by calling `/v1/sections/build` and then either flattening with a shipped adapter (`vais_plugin.adapters.openai`) or mapping sections into a framework-native layout (LangGraph state slots, LangChain `ChatPromptTemplate` parts, etc.).
+This endpoint is purely additive — default plugin behaviour (consume `InvokeRequest.messages`) is unchanged. Plugins opt in by calling `/v1/container-gateway/sections/build` and then either flattening with a shipped adapter (`vais_plugin.adapters.openai`) or mapping sections into a framework-native layout (LangGraph state slots, LangChain `ChatPromptTemplate` parts, etc.).
 
 ### Request
 
@@ -212,7 +254,7 @@ Field rules:
   |---|---|
   | `SystemSegment` | `{ "value": "<text>" }` |
   | `UserMessage` / `AssistantMessage` / `ToolMessage` | `{ "turn": <Message> }` (Message type from `plugin-protocol.md`) |
-  | `ToolDeclaration` | `{ "tools": [ { "name": "...", "description": "...", "parametersSchema": { ... } }, ... ] }` |
+  | `ToolDeclaration` | `{ "tools": [ { "name": "...", "description": "...", "parametersSchema": { ... } }, ... ] }`. **Read-only from the plugin's perspective.** The runtime emits these as part of the resolved section list, but sending a `ToolDeclaration` section back in the `sections` array on `/llm/complete` is rejected with `400` — tool catalogues are registry-bound, and round-tripping a mutated copy would silently lose the registry's view. Plugins that need a different tool surface should drop the section before relaying. |
   | `ResponseFormat` | `{ "spec": { "schema": { ... }, "name": "...", "strict": true } }` |
   | `Metadata` | `{ "values": { "<key>": <value>, ... } }` — never flattens to the wire; observability only |
 - `sections[].order` — optional integer. Explicit-order sections sort first within their kind (ascending); null-order sections cluster at the end in registration order.
@@ -224,7 +266,7 @@ Field rules:
 
 - `callToken`, `X-Agent-Id`, `X-Run-Id` validated and used to reconstruct `AgentContext` for the per-turn `IContextProvider` invocation — providers see the same context they would in a runtime-hosted agent.
 - The `messages` payload is converted to a candidate `CompletionRequest` (the same shape the runtime's `StatefulAiAgent` would assemble). Providers receive this candidate via `ContextInvocationContext.Candidate` — so retrieval producers can read the last user turn for their query, history-shaped sections reflect the plugin's view, etc.
-- The pipeline runs `composer.ComposeSectionsAsync → IContextProvider.InvokeAsync (per registered provider) → ISectionResolver.ResolveAsync`. Packer + telemetry emitter are **not** run; section telemetry sinks (`vais_request_section_*` metrics, `RequestSectionsBuilt` events) for plugin-served sections come from the plugin's subsequent `/v1/llm/complete` call, not this endpoint. The history reducer is also skipped — the plugin already owns history shape.
+- The pipeline runs `composer.ComposeSectionsAsync → IContextProvider.InvokeAsync (per registered provider) → ISectionResolver.ResolveAsync`. Packer + telemetry emitter are **not** run; section telemetry sinks (`vais_request_section_*` metrics, `RequestSectionsBuilt` events) for plugin-served sections come from the plugin's subsequent `/v1/container-gateway/llm/complete` call, not this endpoint. The history reducer is also skipped — the plugin already owns history shape.
 - Producer exceptions propagate as HTTP 500 with a JSON `{ "error": "...", "producerId": "..." }` body. Plugins should treat this as a recoverable error and fall back to `InvokeRequest.messages`.
 
 ### Plugin-shaped sections (deferred)
