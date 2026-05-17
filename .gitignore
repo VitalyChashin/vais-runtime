@@ -51,3 +51,6 @@ samples/**/logs/
 plans/
 research/
 modules/
+
+# Local CLI re-pack output (used during dogfood testing of CLI changes)
+nupkgs/
