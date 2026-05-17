@@ -40,9 +40,9 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
     private sealed class Entry : IAsyncDisposable
     {
         public required IContainerSupervisor Supervisor { get; init; }
-        public required McpClient Client { get; init; }
+        public required IAsyncDisposable Client { get; init; }
         public required IAsyncDisposable Transport { get; init; }
-        public required McpToolSource Source { get; init; }
+        public required IToolSource Source { get; init; }
 
         public async ValueTask DisposeAsync()
         {
@@ -58,13 +58,13 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ContainerMcpServerHostService> _logger;
     private readonly Func<IEnumerable<IMcpServerConnectionChangedHook>> _hooksFactory;
-    private readonly Func<IDockerClient> _dockerFactory;
-    private readonly Func<IKubernetes> _kubernetesFactory;
+    private readonly Func<ContainerPluginDescriptor, IContainerSupervisor> _supervisorFactory;
+    private readonly Func<Uri, IAsyncDisposable, Task<(IAsyncDisposable Client, IToolSource Source)>> _toolSourceFactory;
 
     // null value = tracked but not yet connected / reconnecting
     private readonly ConcurrentDictionary<string, Entry?> _entries = new(StringComparer.Ordinal);
 
-    /// <summary>DI ctor.</summary>
+    /// <summary>DI ctor — uses the default Docker / Kubernetes supervisor.</summary>
     public ContainerMcpServerHostService(
         IMcpServerRegistry registry,
         ContainerPluginLoaderOptions options,
@@ -72,28 +72,53 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
         ILoggerFactory loggerFactory)
         : this(registry, options,
               () => serviceProvider.GetServices<IMcpServerConnectionChangedHook>(),
-              () => new DockerClientConfiguration().CreateClient(),
-              () => new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()),
+              DefaultSupervisorFactory(loggerFactory),
+              DefaultToolSourceFactory,
               loggerFactory)
     {
     }
 
-    /// <summary>Test ctor — explicit factories.</summary>
+    /// <summary>Test ctor — injectable supervisor + tool-source factories.</summary>
     internal ContainerMcpServerHostService(
         IMcpServerRegistry registry,
         ContainerPluginLoaderOptions options,
         Func<IEnumerable<IMcpServerConnectionChangedHook>> hooksFactory,
-        Func<IDockerClient> dockerFactory,
-        Func<IKubernetes> kubernetesFactory,
+        Func<ContainerPluginDescriptor, IContainerSupervisor> supervisorFactory,
+        Func<Uri, IAsyncDisposable, Task<(IAsyncDisposable Client, IToolSource Source)>> toolSourceFactory,
         ILoggerFactory? loggerFactory = null)
     {
         _registry = registry;
         _options = options;
         _hooksFactory = hooksFactory;
-        _dockerFactory = dockerFactory;
-        _kubernetesFactory = kubernetesFactory;
+        _supervisorFactory = supervisorFactory;
+        _toolSourceFactory = toolSourceFactory;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<ContainerMcpServerHostService>();
+    }
+
+    private static Func<ContainerPluginDescriptor, IContainerSupervisor> DefaultSupervisorFactory(ILoggerFactory lf) =>
+        descriptor =>
+        {
+            if (descriptor.KubernetesConfig is not null)
+            {
+                var k8s = new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
+                return new KubernetesContainerSupervisor(
+                    descriptor, k8s, lf.CreateLogger<KubernetesContainerSupervisor>());
+            }
+            var docker = new DockerClientConfiguration().CreateClient();
+            // OTLP wiring deferred for container MCP servers (see plan §10.4 option b) —
+            // pass callTokenService=null and otlpEndpointUrl=null so the supervisor skips OTLP env injection.
+            return new DockerContainerSupervisor(
+                descriptor, docker, lf.CreateLogger<DockerContainerSupervisor>(),
+                callTokenService: null, otlpEndpointUrl: null);
+        };
+
+    private static async Task<(IAsyncDisposable Client, IToolSource Source)> DefaultToolSourceFactory(
+        Uri _, IAsyncDisposable transport)
+    {
+        // `transport` is already constructed by the caller; we just hand it to the client.
+        var client = await McpClient.CreateAsync((HttpClientTransport)transport).ConfigureAwait(false);
+        return (client, new McpToolSource(client));
     }
 
     /// <inheritdoc />
@@ -186,7 +211,7 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
         try
         {
             var descriptor = ManifestToDescriptor(srv);
-            var supervisor = CreateSupervisor(descriptor);
+            var supervisor = _supervisorFactory(descriptor);
 
             try
             {
@@ -208,10 +233,11 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
                     TransportMode = HttpTransportMode.StreamableHttp,
                 });
 
-            McpClient client;
+            IAsyncDisposable client;
+            IToolSource source;
             try
             {
-                client = await McpClient.CreateAsync(transport, cancellationToken: ct).ConfigureAwait(false);
+                (client, source) = await _toolSourceFactory(endpoint, transport).ConfigureAwait(false);
             }
             catch
             {
@@ -226,7 +252,7 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
                 Supervisor = supervisor,
                 Client = client,
                 Transport = transport,
-                Source = new McpToolSource(client),
+                Source = source,
             };
             _entries[srv.Id] = entry;
 
@@ -247,22 +273,6 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
                 srv.Id, srv.Container?.Image ?? "(build)");
             // Leave entry null so the reconnect loop retries.
         }
-    }
-
-    private IContainerSupervisor CreateSupervisor(ContainerPluginDescriptor descriptor)
-    {
-        if (descriptor.KubernetesConfig is not null)
-        {
-            var k8s = _kubernetesFactory();
-            return new KubernetesContainerSupervisor(
-                descriptor, k8s, _loggerFactory.CreateLogger<KubernetesContainerSupervisor>());
-        }
-        var docker = _dockerFactory();
-        // OTLP wiring deferred for container MCP servers (see plan §10.4 option b) —
-        // pass callTokenService=null and otlpEndpointUrl=null so the supervisor skips OTLP env injection.
-        return new DockerContainerSupervisor(
-            descriptor, docker, _loggerFactory.CreateLogger<DockerContainerSupervisor>(),
-            callTokenService: null, otlpEndpointUrl: null);
     }
 
     private ContainerPluginDescriptor ManifestToDescriptor(McpServerManifest srv)
