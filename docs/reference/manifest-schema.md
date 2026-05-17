@@ -28,11 +28,21 @@ See also: [Declarative agents concept](../concepts/declarative-agents.md) ·
 | `spec.systemPrompt` | object | no | Prompt source. Exactly one of `inline`, `templateRef`, `fileRef`. |
 | `spec.budget` | object | no | Run budget. All sub-fields optional. See [budget reference](budget.md). |
 | `spec.mcpServers` | array | no | MCP server declarations consumed by `mcp:<name>` tool sources. |
+| `spec.a2aRemoteAgents` | array | no | Remote A2A agent declarations consumed by `a2a:<name>` tool sources. Translator validates declarations today; lazy `A2ARemoteAgentTool` instantiation is preview (see [delegate-to-a2a-remote-agent](../guides/delegate-to-a2a-remote-agent.md)). |
 | `spec.localAgents` | array | no | Local (same-runtime) agent bindings consumed by `agent:<name>` tool sources. v0.18. |
 | `spec.guardrails` | object | no | `{input?, output?, tool?}` guardrail bindings. |
-| `spec.memory` | object | no | `{backend, config?}` pluggable memory store. Null = ephemeral. |
-| `spec.identity` | object | no | `{provider, audience?}` inbound/outbound auth. |
+| `spec.handoffs` | array | no | Declarative handoff targets — other agents this manifest can delegate control to by id. |
+| `spec.contextProviders` | array | no | DI-keyed `IContextProvider` references bound to this agent. |
+| `spec.outputSchema` | object | no | Inline JSON Schema for the final assistant turn. Mapped to provider `response_format` when the provider's `SupportsResponseFormat` DIM is true. |
+| `spec.agentMode` | string | no | Execution-loop flavour. Default `toolCalling`. Other values (`sgr`) are contract-only at the wire layer. |
+| `spec.reasoning` | object | no | Schema-Guided Reasoning configuration. Contract-only — engine still treats as tool-calling. |
+| `spec.memory` | object | no | Pluggable memory store. `{provider, connectionName?, scope?, historyReducer?}`. Null = ephemeral. |
+| `spec.identity` | object | no | Inbound/outbound auth. `{inboundAuth?, outboundCredentials?, credentials?, inboundClaims?}`. Null = unauthenticated dev / single-tenant. |
+| `spec.autoscaling` | object | no | Replica/concurrency hints. `{minReplicas, maxReplicas?, target?, targetValue?, idleTtl?}`. Consumer-defined target metric string. |
 | `spec.observability` | object | no | `{langfuseProject?, sampling?, tags?}` trace-emission overlay. |
+| `spec.annotations` | map | no | Free-form operator-visible metadata. Parallel to K8s annotations. Not indexed by the registry. |
+| `spec.llmGatewayRef` | string | no | Reference to a deployed `LlmGatewayConfigManifest` id. When set, the translator builds a per-agent `LlmGatewayPipeline` from that config (replaces — not appends to — the DI-global chain). |
+| `spec.mcpGatewayRef` | string | no | Reference to a deployed `McpGatewayConfigManifest` id. When set, a per-agent `ToolGatewayMiddleware` chain is built from that config. |
 
 ---
 
@@ -135,15 +145,24 @@ reserve `a2a:` for cross-runtime or cross-org delegation. See the
 
 ### Tool source syntax
 
+All four prefixes:
+
 ```yaml
 spec:
-  localAgents:
-    - name: summarizer
-      agentId: summarizer-agent
   tools:
-    - name: call_summarizer
-      source: agent:summarizer
+    - { name: local_weather,    source: static:weather }        # IStaticToolRegistry-backed in-process tool
+    - { name: search_web,       source: mcp:open-meteo }        # references mcpServers[].name (materialised)
+    - { name: ask_translator,   source: a2a:translator }        # references a2aRemoteAgents[].name (validation-only today)
+    - { name: call_summarizer,  source: agent:summarizer }      # references localAgents[].name (materialised)
+  mcpServers:
+    - { name: open-meteo, transport: streamableHttp, url: https://mcp.example.org/weather }
+  a2aRemoteAgents:
+    - { name: translator, agentUrl: https://a2a.partner.example/agents/translator }
+  localAgents:
+    - { name: summarizer, agentId: summarizer-agent }
 ```
+
+Unknown prefix ⇒ `urn:vais-agents:tool-source-unknown`. Undeclared name ⇒ `urn:vais-agents:{mcp-server,a2a-agent,local-agent}-not-declared`. See [declarative-agents concept](../concepts/declarative-agents.md) for the full URN table.
 
 ---
 

@@ -8,7 +8,6 @@ Generated OpenAPI clients branch on URN via the `x-vais-type-urns` extension —
 
 | URN | Pairs with | Meaning | Ships in | Typical caller response |
 |---|---|---|---|---|
-| `urn:vais-agents:bad-request` | `400` | Malformed request — body parse error, header validation failure, `Idempotency-Key` too long. | v0.6 | Fix the payload; retry. |
 | `urn:vais-agents:manifest-invalid` | `400` | Agent manifest failed validation — invalid shape, missing required fields, circular handoff, cycle without `maxSteps`. | v0.6 | Fix the manifest per `detail`; retry. |
 | `urn:vais-agents:policy-denied` | `403` | `IAgentPolicyEngine` returned `Deny`. | v0.6 (contract) / v0.14 (OPA impl) | Obtain authorisation out-of-band; retry is pointless otherwise. |
 | `urn:vais-agents:agent-not-found` | `404` | No agent with the given `{id}` (and optional `{version}`) in the registry. | v0.11 | Check spelling; list agents via `GET /v1/agents`. |
@@ -31,11 +30,15 @@ Emitted by `AgentManifestTranslator` during grain activation — surfacing as HT
 | `urn:vais-agents:prompt-template-not-registered` | `400` | `templateRef` doesn't resolve in the `IPromptTemplateRegistry`. | v0.17 | Register the template at host startup or fix the ref name. |
 | `urn:vais-agents:prompt-file-unreadable` | `400` | `fileRef` missing / permissioned / outside the configured root. | v0.17 | Mount the file + adjust the root path. |
 | `urn:vais-agents:tool-not-registered` | `400` | `static:<name>` has no matching `IStaticToolRegistry` entry. | v0.17 | Register the tool at host startup or fix the ref name. |
-| `urn:vais-agents:tool-source-unknown` | `400` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. | v0.17 | Use a supported prefix. |
+| `urn:vais-agents:tool-source-unknown` | `400` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:` / `agent:`. | v0.17 | Use a supported prefix. Also raised when `agent:` background-mode is used without `IBackgroundAgentTracker` registered. |
 | `urn:vais-agents:mcp-server-not-declared` | `400` | `mcp:<name>` references an undeclared `McpServers[].Name`. | v0.17 | Add the server declaration to the manifest. |
-| `urn:vais-agents:mcp-server-unavailable` | `503` | `transport: plugin` server has no live `IToolSource` under that name — plugin not loaded or still starting. | v0.23 | Confirm the plugin is listed as Ready (`vais plugins list`); retry after startup. |
+| `urn:vais-agents:mcp-server-unavailable` | `503` | `transport: plugin` server has no live `IToolSource` under that name — plugin not loaded or still starting. | v0.23 | Confirm the plugin is listed as Ready (`vais plugin-status`); retry after startup. |
 | `urn:vais-agents:mcp-tool-not-found` | `400` | A tool declared with `source: mcp:<name>` was not found in the server's `tools/list` response. | v0.23 | Verify the tool name matches `[tool.vais.plugin].tools` and the server's `@mcp.tool()` decorator. |
+| `urn:vais-agents:mcp-tool-name-collision` | `400` | Two `mcp:`-imported servers expose the same tool name in import-all mode. | v0.27 | Add explicit `tools[]` entries to disambiguate, or use `McpGatewayRef` rewriting. |
+| `urn:vais-agents:mcp-gateway-ref-ambiguous` | `400` | The manifest's `mcpGatewayRef` resolves to a config that already supplies a server already imported via `mcp:` — overlapping scopes. | v0.27 | Drop one of the references. |
 | `urn:vais-agents:a2a-agent-not-declared` | `400` | `a2a:<name>` references an undeclared `A2ARemoteAgents[].Name`. | v0.17 | Add the remote-agent declaration to the manifest. |
+| `urn:vais-agents:local-agent-not-declared` | `400` | `agent:<name>` references an undeclared `LocalAgents[].Name`. | v0.18 | Add the local-agent declaration to the manifest. |
+| `urn:vais-agents:local-agent-target-not-found` | `400` | `agent:<name>` resolved a declared `LocalAgentRef`, but the target `agentId` (and `agentVersion` if pinned) is not in the registry at translate time. | v0.18 | Apply the target agent's manifest first, or fix `agentId` / `agentVersion`. |
 | `urn:vais-agents:guardrail-not-registered` | `400` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. | v0.17 | Register a factory or pick a built-in (`LengthCap` / `RegexAllowlist` / `RegexDenylist` / `LlmAsJudge`). |
 | `urn:vais-agents:guardrail-params-invalid` | `400` | Factory rejected the supplied `params` (missing key, wrong type, bad value). | v0.17 | Fix the params per the factory's documented schema. |
 
@@ -75,9 +78,85 @@ Emitted by `PythonSubprocessSupervisor` and `PythonAgentShim` during agent invoc
 |---|---|---|---|---|
 | `urn:vais-agents:python-agent-invoke-failed` | `500` | The Python `invoke` coroutine threw an unhandled exception, or the subprocess returned a JSON-RPC error response. State is unchanged. | v0.24 | Check Python subprocess stderr in runtime container logs; fix user code. |
 | `urn:vais-agents:python-agent-invoke-timeout` | `504` | `vais/agent.invoke` did not complete within `invokeTimeoutSeconds`. The subprocess is **not** killed; it remains Ready for the next call. State is unchanged. | v0.24 | Increase `invokeTimeoutSeconds` in `plugin.yaml`; optimise the agent loop. |
-| `urn:vais-agents:python-agent-state-too-large` | `500` | The `newState` blob returned by the subprocess exceeds `MaxAgentStateSizeBytes` (default 1 MiB). The previous state is preserved; this turn's state is discarded. | v0.24 | Trim the state payload; raise `VAIS_PYTHON_AGENT_MAX_STATE_BYTES`; or cap LangGraph history on the Python side. |
+| `urn:vais-agents:python-agent-state-too-large` | `500` | The `newState` blob returned by the subprocess exceeds `MaxAgentStateSizeBytes` (default 1 MiB). The previous state is preserved; this turn's state is discarded. | v0.24 | Trim the state payload; or cap history on the Python side. |
 | `urn:vais-agents:python-agent-protocol-error` | `500` | The subprocess returned a response that could not be deserialised as `AgentInvokeResponse` (malformed JSON, missing required fields). State is unchanged. | v0.24 | Ensure the server correctly serialises `assistantMessage`; check `vais-agent-sdk` version matches `targetApiVersion = "0.24"`. |
 | `urn:vais-agents:python-agent-handler-collision` | — | **Startup log only.** A Python `handler.typeName` conflicts with an already-registered .NET or Python plugin handler. Both are refused; neither loads. | v0.24 | Ensure `handler.typeName` is globally unique across all plugins in the plugins directory. |
+| `urn:vais-agents:python-plugin-bootstrap-failed` | — | **Startup log only.** Bootstrap step (venv creation, `uv pip install`) failed before the subprocess could start. | v0.25 | Check the bootstrap script's stderr; rerun `vais plugin-push` with a clean source tree. |
+| `urn:vais-agents:python-plugin-secret-resolution-failed` | — | **Startup log only.** A `secret://` ref declared in `plugin.yaml`'s `secrets:` block could not be resolved at activation. | v0.31 | Verify the env var / file exists; check `ISecretResolver` registrations on the host. |
+
+### Python plugin hot reload (v0.25)
+
+Emitted by `PythonPluginWatcherService` during a `vais plugin-push` source-mode reload.
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:python-reload-handler-type-name-changed` | `409` | The new plugin source declares a different `handler.typeName` than the running version. The reload is refused; the previous subprocess keeps serving. | v0.25 | Keep `handler.typeName` stable across reloads, or restart the runtime to pick up the new name. |
+| `urn:vais-agents:python-reload-handshake-failed` | `502` | The fresh subprocess started but failed the MCP handshake before the reload could promote it. | v0.25 | Inspect the subprocess stderr; verify the new code still satisfies the protocol. |
+| `urn:vais-agents:python-reload-no-supervisor` | `404` | The plugin name is not currently loaded — no supervisor to drain. | v0.25 | Use `vais plugin-push` from a clean state (full registration, not a reload). |
+| `urn:vais-agents:python-reload-scan-failed` | `400` | Pre-flight scan of the uploaded source failed (missing `plugin.yaml`, malformed `pyproject.toml`, etc.). | v0.25 | Fix the source tree; retry. |
+
+### Graph control plane (v0.19)
+
+Emitted by `AgentGraphLifecycleManager` / `JsonAgentGraphManifestLoader` and the corresponding HTTP endpoints.
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:graph-handle-not-found` | `404` | No graph with the given `{id}` (and optional `{version}`). | v0.19 | Apply the graph first; verify spelling. |
+| `urn:vais-agents:graph-validation-failed` | `400` | Graph manifest fails the loader's validator. `detail` carries the diagnostic list. | v0.19 | Fix the manifest per `detail`; re-apply. |
+| `urn:vais-agents:graph-run-not-found` | `404` | No run with the given id under the requested graph. | v0.19 | Verify the `runId`; the run may have been evicted. |
+| `urn:vais-agents:graph-run-conflict` | `409` | Two writers attempted to mutate the same graph run concurrently. | v0.19 | Retry — the loser's command should still be safe. |
+| `urn:vais-agents:graph-already-complete` | `409` | Attempted to resume / signal a run that already reached `Completed` or `Failed`. | v0.19 | Inspect the final state via `vais get-runs --run`; start a new run if needed. |
+| `urn:vais-agents:graph-interrupt-mismatch` | `409` | Resume call referenced an `interruptId` that does not match the run's currently-pending interrupt. | v0.19 | Fetch the live state; resume with the correct `interruptId`. |
+| `urn:vais-agents:graph-recursion-limit` | `400` | Run hit `MaxSteps` (manifest cap, default 1000). | v0.19 | Either raise `maxSteps` or fix the loop. |
+| `urn:vais-agents:graph:output-schema-mismatch` | — | **Apply-time diagnostic** on graph apply: an agent-kind node's bound output keys are not present in the target agent's `outputSchema`. Surfaced via `ApplyDiagnostic`, not a `ProblemDetails` body. | v0.19 | Align `stateBindings.output` with the target agent's `outputSchema`. |
+
+### Gateway / MCP server registry
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:llm-gateway-config-handle-not-found` | `404` | No LLM gateway config with the given id. | v0.27 | Apply the config first. |
+| `urn:vais-agents:llm-gateway-config-conflict` | `409` | Concurrent writers on the same LLM gateway config. | v0.27 | Retry. |
+| `urn:vais-agents:mcp-gateway-config-handle-not-found` | `404` | No MCP gateway config with the given id. | v0.27 | Apply the config first. |
+| `urn:vais-agents:mcp-gateway-config-conflict` | `409` | Concurrent writers on the same MCP gateway config. | v0.27 | Retry. |
+| `urn:vais-agents:mcp-server-handle-not-found` | `404` | No MCP server manifest with the given id. | v0.27 | Apply the server manifest first. |
+| `urn:vais-agents:mcp-server-conflict` | `409` | Concurrent writers on the same MCP server manifest. | v0.27 | Retry. |
+
+### Container plugin registry
+
+| URN | Pairs with | Meaning | Ships in | Typical caller response |
+|---|---|---|---|---|
+| `urn:vais-agents:container-plugin-handle-not-found` | `404` | No container plugin with the given id. | v0.27 | Apply the plugin manifest first. |
+| `urn:vais-agents:container-plugin-conflict` | `409` | Concurrent writers on the same container plugin manifest. | v0.27 | Retry. |
+
+### Container plugin runtime (`urn:vais:container:*`)
+
+Distinct prefix — these come from `ContainerPluginUrns` (`urn:vais:container:*` rather than `urn:vais-agents:*`) and surface from the container supervisor / shim during plugin invocation. The shorter prefix mirrors the smaller scope (no need to disambiguate against other `urn:vais-*` namespaces, the plugin runtime owns this URN family entirely).
+
+| URN | Meaning |
+|---|---|
+| `urn:vais:container:startup-timeout` | Container didn't reach `Ready` within `startupTimeoutSeconds`. |
+| `urn:vais:container:health-check-failed` | `/health` returned non-2xx after startup. |
+| `urn:vais:container:abi-failed` | Handler type name / metadata mismatch at handshake. |
+| `urn:vais:container:handler-type-name-changed` | New image's handler type differs from the running one — silo restart required to pick up. |
+| `urn:vais:container:invoke-network-error` | HTTP transport error reaching the plugin. |
+| `urn:vais:container:invoke-failed` | Plugin returned non-2xx to `/invoke`. |
+| `urn:vais:container:opaque-state-deserialization-error` | State blob the plugin returned could not be parsed. |
+| `urn:vais:container:system-prompt-resolution-failed` | Template lookup failed during preprocessing. |
+| `urn:vais:container:no-supervisor` | No `IContainerSupervisor` registered for the plugin's topology. |
+| `urn:vais:container:start-failed` | Docker or Kubernetes start API returned an error. |
+
+### Runtime configuration gaps
+
+Emitted directly by HTTP endpoints when a runtime-wide capability is requested but not configured.
+
+| URN | Pairs with | Meaning | Typical operator response |
+|---|---|---|---|
+| `urn:vais-agents:agent-log-sink-not-configured` | `501` | `vais logs` requested but `IAgentLogSink` is not registered. | Register `OrleansAgentLogSink` (or another sink) in the runtime composition root. |
+| `urn:vais-agents:gateway-event-store-not-configured` | `501` | Per-run gateway events requested but `IGatewayEventStore` is not registered. | Register `Vais.Agents.Observability.GatewayEventStore`. |
+| `urn:vais-agents:mcp-gateway-event-store-not-configured` | `501` | Per-run MCP gateway events requested but `IMcpGatewayEventStore` is not registered. | Register `Vais.Agents.Observability.McpGatewayEventStore`. |
+| `urn:vais-agents:mcp-event-store-not-configured` | `501` | Per-run MCP server connection events requested but `IMcpEventStore` is not registered. | Register `Vais.Agents.Observability.McpEventStore`. |
+| `urn:vais-agents:diag-span-buffer-not-configured` | `501` | `vais diagnose spans` / `trace` requested but the in-process span buffer is off. | Start the runtime with `VAIS_DIAG_SPAN_BUFFER=true`. |
+| `urn:vais-agents:eval-run-manager-not-configured` | `501` | `vais eval *` requested but the eval harness (`Vais.Agents.Eval`) is not registered. | Add `AddAgenticEval()` to the composition root. |
 
 ## Usage from a typed client
 

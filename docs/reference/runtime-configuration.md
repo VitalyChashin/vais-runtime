@@ -63,7 +63,7 @@ Off-by-default. Zero overhead when nothing below is set.
 | Env var | Default | Values | Notes |
 |---|---|---|---|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | (unset) | URL (gRPC) | When set, wires the OTLP exporter into both `TracerProviderBuilder` and `MeterProviderBuilder`. Pairs with `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` (the default for the runtime). |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | `grpc` \| `http/protobuf` | Standard OTel SDK env var. |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | `grpc` \| `http/protobuf` | Standard OpenTelemetry SDK env var. The runtime does not read or override this — it is consumed directly by the OTel SDK when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Listed here for convenience. |
 | `OTEL_SERVICE_NAME` | (unset) | string | Overrides the OTel resource `service.name`. When unset, the runtime advertises the assembly name. |
 | `VAIS_OTEL_CONSOLE` | `false` | `true` \| `false` | Additionally emit traces + metrics to the console. Noisy — debug only. |
 | `VAIS_LANGFUSE_PROJECT` | (unset) | string | When set, registers `LangfuseEnrichmentFilter` with a static `project` metadata tag. Writes the project label; deeper Langfuse ingestion is on the roadmap. |
@@ -128,13 +128,21 @@ Opt-in — disabled by default because Python is an optional runtime dependency.
 
 `appsettings.json` key: `PythonPlugins:Directory`.
 
-### Python agent settings (v0.24)
+## Container plugin loader
 
-Additional env vars that apply when a plugin with `kind: agent-handler` is loaded:
+Opt-in — disabled by default. Manages OCI-image plugins as Docker containers (local-dev) or Kubernetes Deployments (`vais plugin-deploy`). See [container-plugins concept](../concepts/container-plugins.md) and [harden-docker-container-plugins guide](../guides/harden-docker-container-plugins.md).
 
 | Env var | Default | Values | Notes |
 |---|---|---|---|
-| `VAIS_PYTHON_AGENT_MAX_STATE_BYTES` | `1048576` (1 MiB) | Positive integer, or `0` to disable | Maximum byte length (UTF-8) of the `newState` blob returned by `vais/agent.invoke`. Blobs that exceed this are rejected with `urn:vais-agents:python-agent-state-too-large`; the previous state is preserved. Set to `0` to disable the check (not recommended in production). |
+| `VAIS_CONTAINER_PLUGINS_DIRECTORY` | (unset) | Absolute path, or unset to disable | When set, registers `ContainerPluginHostService` as a hosted service. Filesystem-discovered plugins are loaded at startup; manifest-driven plugins flow through `vais apply -f` regardless of this setting. |
+| `VAIS_DOCKER_PLUGIN_NETWORK` | (unset; legacy mode) | Docker network name (e.g. `vais-internal`) | When set, `DockerContainerSupervisor` attaches plugins to this network rather than publishing ports to `127.0.0.1`. Pair with `docker network create --internal vais-internal` to create the bridge once. P12 Phase 2 egress isolation; opt-in. |
+| `VAIS_INTERNAL_GATEWAY_URL` | `http://localhost:8080` | URL | Base URL of this runtime host as seen by plugin subprocesses / containers. Plugins call back to `{InternalGatewayBaseUrl}/v1/container-gateway/...` (LLM + tool gateway) and `{InternalGatewayBaseUrl}/v1/otlp/v1/traces` (OTLP receiver). Must match the port the runtime binds. |
+
+### Python agent settings (v0.24)
+
+`PythonPluginLoaderOptions.MaxAgentStateSizeBytes` (default `1048576` / 1 MiB) caps the `newState` blob returned by `vais/agent.invoke`. Oversized blobs raise `urn:vais-agents:python-agent-state-too-large` and the previous state is preserved.
+
+This setting is read from the `PythonPluginLoaderOptions` DI binding, not from an env var. To override, register a custom binding in the runtime composition root (`services.Configure<PythonPluginLoaderOptions>(o => o.MaxAgentStateSizeBytes = ...)`) or bind it from `appsettings.json` under `PythonPlugins:LoaderOptions:MaxAgentStateSizeBytes`. A dedicated `VAIS_PYTHON_AGENT_MAX_STATE_BYTES` env-var binding has not been wired through `RuntimeOptions.FromEnvironment()`.
 
 `invokeTimeoutSeconds` is set per-plugin in `plugin.yaml` (`spec.health.invokeTimeoutSeconds`, default `60`) rather than as a global env var — different agent plugins may have different latency profiles.
 

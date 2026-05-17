@@ -2,8 +2,8 @@
 
 Two closed event hierarchies ship:
 
-- **`AgentEvent`** — per-agent-run taxonomy. Eight sealed record subclasses deriving from `AgentEvent(At, Context)`. Published via `IAgentEventBus`.
-- **`AgentGraphEvent`** — graph-scoped taxonomy shipped in v0.9. Nine sealed record subclasses deriving from `AgentGraphEvent(At, Context, RunId, SuperStep)`. Yielded by `IAgentGraph<TState>.StreamAsync` / `ResumeStreamAsync`. See [graph orchestration concept](../concepts/graph-orchestration.md).
+- **`AgentEvent`** — per-agent-run taxonomy. **Twelve** sealed record subclasses deriving from `AgentEvent(At, Context)`. Published via `IAgentEventBus`.
+- **`AgentGraphEvent`** — graph-scoped taxonomy shipped in v0.9. **Ten** sealed record subclasses deriving from `AgentGraphEvent(At, Context, RunId, SuperStep)`. Yielded by `IAgentGraph<TState>.StreamAsync` / `ResumeStreamAsync`. See [graph orchestration concept](../concepts/graph-orchestration.md).
 
 ## `AgentEvent`
 
@@ -65,6 +65,13 @@ Vais.Agents' built-in orchestrators don't automatically publish this — consume
 | Event | Raised | Fields |
 |---|---|---|
 | `CompletionDelta` | by `IStreamingAiAgent.StreamAsync` per streamed text chunk | `TextDelta`, `ModelId?`, `PromptTokens?`, `CompletionTokens?`, `ToolCalls?` |
+| `ToolCallReplayed` | by the streaming pipeline when a tool result is replayed from the journal during a retry/resume | `CallId`, `ToolName`, `Succeeded`, `Error?` |
+
+## Eval harness
+
+| Event | Raised | Fields |
+|---|---|---|
+| `EvalRunProgress` | by `EvalRunGrain` between case executions during a `vais eval run` | `EvalRunId`, `SuiteName`, `Completed`, `Total`, `LastCaseName?`, `LastPassed?` |
 
 ## Section pipeline
 
@@ -123,8 +130,9 @@ new RequestSectionsBuilt(DateTimeOffset.UtcNow, context, turnIndex, sections, bu
 | `HandoffRequested` | `handoff.requested` |
 | `CompletionDelta` | `delta` |
 | `RequestSectionsBuilt` | `request.sections.built` |
+| `EvalRunProgress` | `eval.progress` |
 
-Eleven event names — one per closed-hierarchy subtype. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface.
+Twelve event names — one per closed-hierarchy subtype. Wire-name strings are stable contract; renaming is a breaking change requiring a major-version bump on the HTTP surface.
 
 Heartbeat comments (`: heartbeat <utc>`) fire between events at `StreamingInvokeOptions.HeartbeatInterval` cadence (15s default). SSE parsers ignore comment lines — they keep proxies and load balancers from idling the connection.
 
@@ -171,10 +179,11 @@ public abstract record AgentGraphEvent(
 | Event | Raised | Fields (beyond base) | Wire name (SSE) |
 |---|---|---|---|
 | `GraphStarted` | once, before the entry node runs | `GraphId`, `GraphVersion`, `EntryNodeId` | `graph.started` |
-| `NodeStarted` | before each node executes | `NodeId`, `NodeKind` | `graph.node.started` |
-| `NodeCompleted` | after each node succeeds, before outgoing edges evaluate | `NodeId`, `NodeKind`, `Duration` | `graph.node.completed` |
-| `EdgeTraversed` | after predicate match + `OnTraverse` effect applied, before target node runs | `From`, `To` | `graph.edge.traversed` |
-| `StateUpdated` | after a state-mutating effect (node binding or edge effect) | `ChangedKeys` | `graph.state.updated` |
+| `NodeStarted` | before each node executes | `NodeId`, `NodeKind` | `node.started` |
+| `NodeAgentInvoked` | between `NodeStarted` and `NodeCompleted` for every `Agent`-kind node, after the agent invocation returns | `NodeId`, `AgentId`, `InputText`, `OutputText`, `PromptTokens?`, `CompletionTokens?` | `node.agent_invoked` |
+| `NodeCompleted` | after each node succeeds, before outgoing edges evaluate | `NodeId`, `NodeKind`, `Duration` | `node.completed` |
+| `EdgeTraversed` | after predicate match + `OnTraverse` effect applied, before target node runs | `From`, `To` | `edge.traversed` |
+| `StateUpdated` | after a state-mutating effect (node binding or edge effect) | `ChangedKeys` | `state.updated` |
 | `GraphInterrupted` | when the graph hits an `Interrupt`-kind node (a checkpoint has been persisted) | `NodeId`, `InterruptId`, `Reason?` | `graph.interrupted` |
 | `GraphResumed` | when a previously-interrupted run resumes from checkpoint | `ResumedFromNodeId`, `InterruptId` | `graph.resumed` |
 | `GraphCompleted` | on `End`-node arrival or natural termination | `FinalNodeId`, `Duration` | `graph.completed` |
@@ -187,6 +196,7 @@ Same pattern as `AgentEvent` — `At` + `Context` + `RunId` + `SuperStep` first,
 ```csharp
 new GraphStarted(DateTimeOffset.UtcNow, context, runId, superStep: 0, graphId, graphVersion, entryNodeId);
 new NodeStarted(DateTimeOffset.UtcNow, context, runId, superStep, nodeId, nodeKind);
+new NodeAgentInvoked(DateTimeOffset.UtcNow, context, runId, superStep, nodeId, agentId, inputText, outputText, promptTokens, completionTokens);
 new NodeCompleted(DateTimeOffset.UtcNow, context, runId, superStep, nodeId, nodeKind, duration);
 new EdgeTraversed(DateTimeOffset.UtcNow, context, runId, superStep, from, to);
 new StateUpdated(DateTimeOffset.UtcNow, context, runId, superStep, changedKeys);

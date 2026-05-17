@@ -16,7 +16,7 @@ Missing file → empty in-memory config (no contexts, no current context). The f
 ## Top-level schema
 
 ```yaml
-apiVersion: vais.io/v1      # required — locked at "vais.io/v1" for v0.15
+apiVersion: vais.io/v1      # required — always "vais.io/v1" (the only shipped schema today)
 kind: Config                # required — locked at "Config"
 currentContext: <name>      # required when any commands need an active context
 clusters:                   # list of VaisCluster records
