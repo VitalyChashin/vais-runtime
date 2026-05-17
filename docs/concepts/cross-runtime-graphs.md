@@ -7,19 +7,19 @@ Shipped in v0.20. A graph node can reference an agent deployed on a **different 
 | Pattern | Choose when |
 |---|---|
 | **Cross-runtime `runtimeUrl`** | The remote agent is deployed on another vais-agents runtime. You want the graph's normal node lifecycle events (`node.started`, `node.completed`) and you control both runtimes. |
-| **A2A-as-tool** | The remote agent exposes an A2A endpoint (may be a non-vais runtime). The calling agent uses it as a tool call, not as a first-class graph node. |
+| **Cross-runtime `a2aUrl`** | The remote agent exposes a standard A2A endpoint (may be a non-vais runtime). Same first-class graph-node treatment as `runtimeUrl`, but invoked via `IA2AGraphNodeInvoker` over the A2A protocol. |
+| **A2A-as-tool** | You want the remote A2A agent to be a tool call inside a single LLM turn rather than its own graph node. |
 
-A2A references on `GraphAgentRef` (`a2a:` scheme) are deferred to v0.21. Use the A2A-as-tool pattern for cross-protocol scenarios today.
+## The `runtimeUrl` / `a2aUrl` fields
 
-## The `runtimeUrl` field
-
-`GraphAgentRef` is the record that appears on `kind: Agent` graph nodes. It has three optional fields:
+`GraphAgentRef` is the record that appears on `kind: Agent` graph nodes. It has four optional fields:
 
 ```csharp
 public sealed record GraphAgentRef(
     string Id,
     string? Version = null,
-    string? RuntimeUrl = null);
+    string? RuntimeUrl = null,
+    string? A2AUrl = null);
 ```
 
 In YAML manifests:
@@ -33,11 +33,19 @@ spec:
         id: enricher-agent
         version: "1.0"
         runtimeUrl: "https://runtime-b.internal"
+    - id: translate
+      kind: Agent
+      ref:
+        id: translator-agent
+        a2aUrl: "https://a2a.partner.example/agents/translator"
 ```
 
-- **`RuntimeUrl = null`** (default) — the agent is local. The orchestrator resolves it via `IAgentRegistry` on the calling runtime.
-- **`RuntimeUrl = "https://…"`** — the agent is remote. The orchestrator calls `IAgentRemoteInvoker.InvokeAsync` with the absolute URL. The URL must be a valid absolute http or https URI; manifest loading rejects other schemes at parse time.
+- **`RuntimeUrl = null` AND `A2AUrl = null`** (default) — the agent is local. The orchestrator resolves it via `IAgentRegistry` on the calling runtime.
+- **`RuntimeUrl = "https://…"`** — the agent is on another vais-agents runtime. The orchestrator calls `IAgentRemoteInvoker.InvokeAsync` with the absolute URL.
+- **`A2AUrl = "https://…"`** — the agent is a remote A2A endpoint. The orchestrator calls `IA2AGraphNodeInvoker.InvokeAsync` with the absolute URL; the default impl ships in `Vais.Agents.Protocols.A2A` as `A2AGraphNodeInvoker`. Manifest loading rejects non-absolute http/https URIs and rejects manifests that set both `runtimeUrl` and `a2aUrl` on the same ref ("mutually exclusive — specify exactly one remote endpoint").
 - **`Version = null` on a remote ref** — the remote runtime resolves the latest registered version of the agent. No extra round-trip; the remote runtime applies the same "latest" semantics it would for any `GET /v1/agents/{id}/invoke` call without an explicit version query parameter.
+
+> **Round-trip gap.** `AgentGraphManifestEnvelope.Serialize` does not currently write the `a2aUrl` field back out — only `id`, `version`, and `runtimeUrl` are emitted. Manifests with `a2aUrl` load and execute correctly, but a load → serialize → load cycle drops the field. Track via the manifest+DI coverage plan; mirrors the same shape as other recurring envelope-vs-loader gaps.
 
 ## How the orchestrator routes
 
@@ -49,12 +57,15 @@ ExecuteNodeAsync(node, ...)
     → IAgentRemoteInvoker.InvokeAsync(runtimeUrl, handle, request, bearerToken)   // unary
     → IAgentRemoteInvoker.StreamAsync(runtimeUrl, handle, request, bearerToken)    // streaming (v0.33)
     → merge result into state["lastAssistantText"]
+  else if node.Ref?.A2AUrl != null
+    → IA2AGraphNodeInvoker.InvokeAsync(a2aUrl, handle, request)
+    → merge result into state["lastAssistantText"]
   else
     → IAgentRegistry.GetAsync(node.Ref.Id)
     → IAgentLifecycleManager.InvokeAsync(...)
 ```
 
-The `IAgentRemoteInvoker` is injected as an optional dependency. If a remote node is reached and no invoker is registered, the orchestrator throws `InvalidOperationException` with a hint to call `services.AddAgentRemoteInvoker()`. The runtime host wires this automatically; in-process test harnesses that don't need remote routing leave the invoker null — local-only graphs keep working.
+The `IAgentRemoteInvoker` and `IA2AGraphNodeInvoker` are both injected as optional dependencies. If a remote node is reached and the matching invoker is not registered, the orchestrator / executor throws `InvalidOperationException` with a hint at the missing DI registration. The runtime host wires `IAgentRemoteInvoker` automatically; wire `IA2AGraphNodeInvoker` by registering `Vais.Agents.Protocols.A2A.A2AGraphNodeInvoker`. In-process test harnesses that don't need remote routing leave both null — local-only graphs keep working.
 
 ## Bearer token forwarding
 
@@ -96,7 +107,7 @@ Bearer token and identity-provider forwarding behaviour is identical to `InvokeA
 
 ## Limitations
 
-- **No A2A `runtimeUrl`.** Cross-protocol invocation via A2A is not yet wired on `GraphAgentRef`. Use the A2A-as-tool pattern.
+- **`a2aUrl` round-trip gap.** `JsonAgentGraphManifestLoader` reads + validates `a2aUrl`, and the orchestrators / executors route on it correctly, but `AgentGraphManifestEnvelope.Serialize` does not emit the field. Manifests fetched via the HTTP API and re-applied locally lose the `a2aUrl` value.
 - **No per-remote Polly config.** Retry + circuit-breaker options apply globally, not per `runtimeUrl`. Per-remote configuration is deferred to a future release.
 
 ## See also

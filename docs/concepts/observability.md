@@ -19,7 +19,7 @@ public static class AgenticDiagnostics
 {
     public const string ActivitySourceName = "Vais.Agents";
     public const string MeterName = "Vais.Agents";
-    public static readonly ActivitySource ActivitySource = new(ActivitySourceName, "1.0.0");
+    public static readonly ActivitySource ActivitySource = new(ActivitySourceName);
 }
 ```
 
@@ -159,7 +159,7 @@ services.AddLangfuseEnrichment(new LangfuseEnrichmentOptions
 Tags emitted on every enriched span:
 
 - `langfuse.user.id` ← `vais.user.id`
-- `langfuse.session.id` ← `vais.correlation.id` (configurable)
+- `langfuse.session.id` ← `vais.correlation.id` (mapping is hard-coded; not currently exposed as a Langfuse-enrichment option)
 - `langfuse.trace.name` ← agent name
 - `langfuse.tags` ← `DefaultTags` + per-run additions
 
@@ -191,8 +191,8 @@ On failure: `Activity.SetStatus(ActivityStatusCode.Error)`, `error.type` tag, `T
 ## Extension points
 
 - **Multiple `IUsageSink`s** — wrap them manually or ship your own composite.
-- **`IAgentContextAccessor`** — default `AsyncLocalAgentContextAccessor` uses an `AsyncLocal`; inject your own if you have ambient request context via a different mechanism.
-- **`IAgentFilter`** — the ordered `CompletionRequest → CompletionResponse` chain is the natural place for per-turn enrichment (add headers, inject tenant policy, redact). Filters don't apply to `StreamAsync` in v0.4.1.
+- **`IAgentContextAccessor`** — `AsyncLocalAgentContextAccessor` (in `Vais.Agents.Core`) uses an `AsyncLocal` and is the standard impl for in-process hosts; Orleans hosts use `OrleansAgentContextAccessor`. Inject your own if you have ambient request context via a different mechanism.
+- **`IAgentFilter`** — the ordered `CompletionRequest → CompletionResponse` chain is the natural place for per-turn unary enrichment (add headers, inject tenant policy, redact). For streaming, register an `IStreamingAgentFilter` (added in v0.10) — the streaming pipeline runs its own filter chain on the `IAsyncEnumerable<CompletionUpdate>` rather than re-using `IAgentFilter`.
 
 ## Observability of the observability
 
