@@ -69,13 +69,14 @@ All three pass through the same `{{variable}}` substitution if `variables` is pr
 
 ### `Tools[].Source` prefixes
 
-Three prefixes supported in v0.17:
+Four prefixes supported:
 
 - **`static:<name>`** — resolves through `IStaticToolRegistry`. Register at host startup via `services.AddStaticToolRegistry(b => b.Add("weather", sp => new WeatherTool(sp.GetRequiredService<IHttpClientFactory>())))`.
 - **`mcp:<server>`** — references a `McpServerRef` declared in `McpServers`. v0.17 validates declaration only; lazy `McpToolSource` materialization lands post-v0.17.
-- **`a2a:<agent>`** — references an `A2ARemoteAgentRef` declared in the new `A2ARemoteAgents` manifest section. Validates declaration only in v0.17.
+- **`a2a:<agent>`** — references an `A2ARemoteAgentRef` declared in the `A2ARemoteAgents` manifest section. Validates declaration only in v0.17.
+- **`agent:<name>`** — references a `LocalAgentRef` declared in the `LocalAgents` manifest section (v0.18, closes P7 agent-as-tool). Resolves to a `LocalAgentTool` (Blocking mode, default) or `BackgroundLocalAgentTool` (Background mode); background mode additionally registers `list_background_agents` / `get_background_agent_result` / `cancel_background_agent` management tools. See [delegate-to-an-agent guide](../guides/delegate-to-an-agent.md).
 
-Unknown prefix ⇒ `urn:vais-agents:tool-source-unknown`. Undeclared `mcp:` / `a2a:` name ⇒ `urn:vais-agents:{mcp-server,a2a-agent}-not-declared`.
+Unknown prefix ⇒ `urn:vais-agents:tool-source-unknown`. Undeclared `mcp:` / `a2a:` / `agent:` name ⇒ `urn:vais-agents:{mcp-server,a2a-agent,local-agent}-not-declared`. Background-mode `agent:` without `IBackgroundAgentTracker` registered in DI also raises `tool-source-unknown` with a remediation message.
 
 ### `GuardrailsSpec`
 
@@ -145,10 +146,12 @@ Consumers add their own factories alongside. The translator dispatches by name (
 | `plugin-factory-throw` | A v0.18 plugin factory threw inside `CreateAsync` during grain activation. Inner exception surfaces via Problem Details. |
 | `handler-and-declarative-fields-both-set` | Apply-time WARN (not error) — manifest has both a plugin-matching `Handler.TypeName` AND declarative `Model` fields. Plugin wins; declarative fields are silently ignored. |
 | `model-provider-unsupported` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`. |
-| `tool-source-unknown` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:`. |
+| `tool-source-unknown` | `ToolRef.Source` prefix is not `static:` / `mcp:` / `a2a:` / `agent:` (also raised for background-mode `agent:` when `IBackgroundAgentTracker` is not registered). |
 | `tool-not-registered` | `static:<name>` has no matching `IStaticToolRegistry` entry. |
 | `mcp-server-not-declared` | `mcp:<name>` references an undeclared `McpServers[].Name`. |
 | `a2a-agent-not-declared` | `a2a:<name>` references an undeclared `A2ARemoteAgents[].Name`. |
+| `local-agent-not-declared` | `agent:<name>` references an undeclared `LocalAgents[].Name`. |
+| `local-agent-target-not-found` | `agent:<name>` resolved a declared `LocalAgentRef`, but the target `agentId` (`/version`) is not in the registry at translate time. |
 | `guardrail-not-registered` | `GuardrailRef.Name` has no matching `IGuardrailFactory` for the layer. |
 | `guardrail-params-invalid` | Factory rejected the supplied params (missing key, wrong type, bad value). |
 | `prompt-template-not-registered` | `SystemPromptSpec.TemplateRef` doesn't resolve. |

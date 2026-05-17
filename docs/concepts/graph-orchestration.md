@@ -22,9 +22,9 @@ Both share the same runtime — `InProcessGraphOrchestrator<TState>` implements 
 | `IAgentGraph<TState>` | Orchestrator interface. `InvokeAsync` runs to completion; `StreamAsync` yields the event taxonomy. |
 | `IAgentGraph` | Specialisation over the shared-bag state shape. |
 | `IResumableAgentGraph<TState>` | Capability interface — adds `ResumeAsync(runId, resumeInput, context)` for interrupt → resume. |
-| `AgentGraphManifest` | Declarative shape. `Id`, `Version`, `Entry` node id, `Nodes[]`, `Edges[]`, optional `StateSchema`, `MaxSuperSteps`. |
+| `AgentGraphManifest` | Declarative shape. `Id`, `Version`, `Entry` node id, `Nodes[]`, `Edges[]`, optional `StateSchema`, `MaxSteps`. |
 | `GraphNode` | `{Id, Kind, Ref?, HandlerRef?, StateBindings?, InterruptReason?}`. Four kinds: `Agent`, `Code`, `Interrupt`, `End`. |
-| `GraphEdge` | `{From, To, When?: GraphEdgePredicate, OnTraverse?: GraphEdgeEffect}`. |
+| `GraphEdge` | `{From, To, When?: GraphEdgePredicate, OnTraverse?: GraphEdgeEffect, Concurrent: bool}`. `Concurrent=true` opts an edge into fan-out / fan-in under `MafGraphOrchestrator` (ignored by `InProcessGraphOrchestrator`). |
 | `GraphEdgePredicate` | Closed hierarchy: `Always`, `PropertyMatcher`, `AllOf`, `AnyOf`, `Not`, `HandlerRef`. |
 | `GraphPredicateOperator` | Ten operators (`Eq`, `NotEq`, `Gt`, `Gte`, `Lt`, `Lte`, `Contains`, `NotContains`, `Exists`, `NotExists`). See [reference](../reference/graph-predicate-operators.md). |
 | `GraphEdgeEffect` | `{Kind, Property, Value?, HandlerRef?}`. Effects: `Set`, `Increment`, `Append`, `HandlerRef`. |
@@ -53,7 +53,7 @@ Resolvers (`predicateResolver`, `effectResolver`, `codeNodeResolver`) let you pl
 
 ### `MafGraphOrchestrator<TState>` (in `Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework`)
 
-Translates the manifest into an MAF `Workflow` and executes via `InProcessExecution`. Useful when the host already runs MAF Workflows and wants a single executor surface.
+Translates the manifest into an MAF `Workflow` and executes via `InProcessExecution`. Useful when the host already runs MAF Workflows and wants a single executor surface. Implements `IAgentGraph<TState>` + `IResumableAgentGraph<TState>` + `IHitlAgentGraph<TState>` — same surface area as `InProcessGraphOrchestrator`.
 
 ```csharp
 using Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
@@ -65,9 +65,9 @@ var orchestrator = new MafGraphOrchestrator<MyState>(
 var final = await orchestrator.InvokeAsync(initialState, context, ct);
 ```
 
-Does **not** implement `IResumableAgentGraph<TState>` in v0.9 — MAF's native checkpointing lands in v0.10. Use `InProcessGraphOrchestrator` + `OrleansCheckpointer` for durable-resume today.
+Adds native fan-out / fan-in via `GraphEdge.Concurrent = true` (all concurrent edges from the same source node fire in parallel; all concurrent edges pointing to the same target form a barrier join). Pair with `kind: Code` or a dedicated `GraphJoinNodeExecutor` for the join body. `InProcessGraphOrchestrator` ignores the flag and runs sequentially.
 
-Call `MafGraphBuilder.Build(manifest, …)` directly if you want raw access to the `Workflow` for richer MAF features (fan-out/fan-in, sub-workflows, native conditional edges). The orchestrator is deliberately thin.
+Call `MafGraphBuilder.Build(manifest, …)` directly when you want raw access to the underlying `Workflow` for richer MAF features (sub-workflows, native conditional edges, custom executors). The orchestrator is deliberately thin.
 
 ## Node kinds
 
@@ -190,10 +190,10 @@ All four are resolved from DI at invocation time by the orchestrator's construct
 | `Handoff` | One agent decides to pass control to another; the receiving agent replaces the sender. |
 | `IAgentGraph` | State-threaded multi-step flow with conditional branching, cycles, or HITL interrupts. |
 
-## v0.9 limitations
+## Current limitations
 
 - **Predicate values are scalar only.** `Gt` / `Gte` / `Lt` / `Lte` require numeric `Value`; `Contains` / `NotContains` operate on strings or arrays of scalars. Complex structural predicates go through `HandlerRef`.
-- **No branching nodes yet.** `Kind` is a fixed set of four; `Fork` / `Join` for fan-out/fan-in aren't declarative in v0.9. Use `MafGraphBuilder.Build` + raw MAF for native fan-out.
+- **No dedicated `Fork` / `Join` node kinds.** `Kind` is a fixed set of four; fan-out / fan-in is expressed on the edge (`GraphEdge.Concurrent = true`) under `MafGraphOrchestrator`. A dedicated `GraphJoinNodeExecutor` ships for join-body work, but there is no `Fork` / `Join` kind in the manifest grammar.
 - **No sub-graphs** (`GraphInGraph` kind). Compose manually by invoking one graph from a `Code` node in another.
 - **State merge is shallow.** Node outputs overwrite keys rather than deep-merging. Hand-write an `IGraphEdgeEffect` for merge semantics.
 

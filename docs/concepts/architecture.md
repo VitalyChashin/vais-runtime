@@ -130,7 +130,7 @@ Core contract families:
 | Context | `IContextProvider`, `ISectionResolver`, `ISectionWindowPacker`, `ISectionTelemetrySink`, `ITokenCounter`, `ContextContribution`, `Section`, `SectionKind`, `SectionPayload` (+ `TextPayload`/`TurnPayload`/`ToolsPayload`/`ResponseFormatPayload`/`MetadataPayload`), `SectionBudget`, `SectionBudgetContext`, `SectionPackResult`, `PackerOutcome`, `PackerOutcomes`, `SectionTelemetrySnapshot`, `SectionMeasurement`, `SectionBudgetSummary`, `ContextInvocationContext`. Legacy `IContextWindowPacker` still works via `LegacyPackerAdapter`. |
 | Prompt | `IPromptTemplate`, `ISystemPromptComposer` (+ `ComposeSectionsAsync`), `ISystemPromptContributor` (+ `SectionId`) |
 | Guardrails | `IInputGuardrail`, `IOutputGuardrail`, `IToolGuardrail`, `GuardrailOutcome`, `GuardrailDecision`, `GuardrailLayer`, `AgentGuardrailDeniedException` |
-| Execution | `IToolCallDispatcher`, `RunBudget`, `AgentBudgetExceededException`, `AgentInterrupt`, `ResumeInput`, `AgentInterruptedException`, `IStreamingAgentFilter` |
+| Execution | `IToolCallDispatcher`, `RunBudget`, `AgentBudgetExceededException`, `AgentInterrupt`, `ResumeInput`, `AgentInterruptedException`, `IStreamingAgentFilter`, `AgentInputMiddleware`, `AgentInputContext`, `IAgentInputMiddlewareFactory` |
 | Tools | `ITool`, `IToolRegistry`, `IToolSource` |
 | Orchestration | `IAgentOrchestrator`, `AgentParticipant`, `OrchestrationStep`, `Handoff`, `ITerminationCondition` |
 | Graph orchestration (v0.9) | `IAgentGraph<TState>` / `IAgentGraph`, `IResumableAgentGraph<TState>`, `AgentGraphManifest`, `GraphNode`, `GraphEdge`, `GraphEdgePredicate`, `GraphPredicateOperator`, `GraphEdgeEffect`, `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` / `IGraphCheckpointer` |
@@ -387,6 +387,45 @@ Key additions:
 - **Graph schema projection.** `AgentGraphSpecProjector` projects graph manifests into the Kubernetes CRD schema via `Control.KubernetesOperator`.
 
 See [graph as a first-class deployable concept](graph-as-deployable.md) and [deploy a graph to the runtime guide](../guides/deploy-a-graph-to-the-runtime.md).
+
+## Agent input middleware seam
+
+A composable interception chain that runs **before** the agent receives an inbound message — before input guardrails, before the provider call, before the plugin shim. The seam is the mandatory inbound side of the [P12 plugin sandbox contract](runtime-plugins.md) and the prerequisite for the P10 Phase-2 cognitive primitives (HCM, S-MMU, DIEE, PAS): each primitive registers as a named middleware via DI rather than modifying plugin code.
+
+```
+┌─ inbound message ──────────────────────────────────────────────┐
+│                                                                │
+│  AiAgentGrain.AskAsync   /   GraphNodeExecutor.ExecuteAsync    │
+│  (Hosting.Orleans)           (Orchestration.Graph.MAF)         │
+│                                                                │
+│         │ resolves IReadOnlyList<AgentInputMiddleware>         │
+│         ▼                                                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  AgentInputMiddleware chain                              │  │
+│  │   • each Invoke(context, next, ct)                       │  │
+│  │   • mutate context.Message to reshape input              │  │
+│  │   • don't call next → short-circuit (suppress / cannned) │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│         │                                                      │
+│         ▼                                                      │
+│  StatefulAiAgent / plugin shim  →  input guardrails  →  LLM    │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+Surface area (`Vais.Agents.Abstractions` + `Vais.Agents.Core`):
+
+| Type | Role |
+|---|---|
+| `AgentInputMiddleware` (abstract) | Override `InvokeAsync(AgentInputContext, Func<Task> next, CancellationToken)`. Default is pass-through. Must be reentrant. |
+| `AgentInputContext` | Carries the inbound message, agent id, run id, and a `Properties` dictionary for downstream middleware to read. |
+| `IAgentInputMiddlewareFactory` | Resolves a named middleware from a `GatewayMiddlewareSpec` — same `{name, params}` shape used by the LLM / MCP gateway middleware chains. |
+| `DefaultAgentInputMiddlewareFactory` (Core) | Looks up `NamedAgentInputMiddlewareRegistration` singletons by name. |
+| `AddAgentInputMiddleware<T>()` / `AddNamedAgentInputMiddleware(name, factory)` / `AddDefaultAgentInputMiddlewareFactory()` | DI registration helpers. |
+
+Wired in three execution paths so the inbound shape is identical regardless of how the agent is invoked: `AiAgentGrain` (single-agent invoke), `GraphNodeExecutor` (graph node), and `GraphJoinNodeExecutor` (join body). `MafGraphBuilder` / `MafGraphOrchestrator` plumb the chain through to every agent-kind node. Plugin authors do not see this chain — it runs entirely on the runtime side of the plugin boundary.
+
+See [agent input middleware extension guide](../extensions/agent-input-middleware.md) for authoring a custom middleware.
 
 ## The 32 packages at a glance
 
