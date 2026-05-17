@@ -1,18 +1,18 @@
 # Install the CLI
 
-`Vais.Agents.Cli` ships as a `dotnet tool` — one install, one `vais` command on your PATH. Thirteen subcommands covering the HTTP control plane's verb surface, a kubectl-shape config file for switching between hosts, and POSIX exit codes for scripting.
+`Vais.Agents.Cli` ships as a `dotnet tool` — one install, one `vais` command on your PATH. ~41 commands (29 top-level + `eval` / `diagnose` / `config` branches) covering the HTTP control plane's verb surface, a kubectl-shape config file for switching between hosts, and POSIX exit codes for scripting.
 
-Shipped in v0.15 as `Vais.Agents.Cli` (package name on NuGet) → `vais` (command on PATH).
+Initial CLI pillar shipped in v0.15; subsequent pillars (graphs, plugins, eval, gateway config) layered commands onto the same surface. Package name on NuGet: `Vais.Agents.Cli` → command on PATH: `vais`.
 
 ## Prerequisites
 
 - **.NET 9 SDK** — the tool is published as `net9.0`.
-- **A v0.6 HTTP control plane reachable from your machine** — local `dotnet run` on `http://localhost:5080`, or a cluster-deployed host. The CLI is a pure client; without a backing server it can only bootstrap its config and print its version.
+- **An HTTP control plane reachable from your machine** — local `dotnet run` on `http://localhost:5080`, or a cluster-deployed host. The CLI is a pure client; without a backing server it can only bootstrap its config and print its version.
 
 ## Install
 
 ```bash
-dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
+dotnet tool install -g Vais.Agents.Cli --prerelease
 ```
 
 `--global` (`-g`) puts `vais` on PATH under your user profile — typically `~/.dotnet/tools/` on Linux/macOS, `%USERPROFILE%\.dotnet\tools\` on Windows. For per-project scoped installs use `--tool-path <dir>`; for project-local tool manifests use `dotnet new tool-manifest && dotnet tool install Vais.Agents.Cli`.
