@@ -350,6 +350,16 @@ Key invariants:
 
 See [runtime-plugins concept](runtime-plugins.md) for the plugin-authoring contract, ABI-matching rules, and security posture.
 
+Three sibling plugin models coexist on top of this tier:
+
+| Model | Process boundary | Communication | Concept doc |
+|---|---|---|---|
+| **Assembly plugin** (v0.18) | In-process (`PluginAssemblyLoadContext` per plugin) | Direct method calls | [runtime-plugins](runtime-plugins.md) |
+| **Python plugin / agent** (v0.23 / v0.24) | Subprocess (stdio) | JSON-RPC / MCP | [polyglot-plugins](polyglot-plugins.md) / [polyglot-agents](polyglot-agents.md) |
+| **Container plugin** (IP-1..IP-7, CP-1..CP-9) | Container (Docker / Pod) | HTTP gateway on port 5001 + HMAC token auth + optional OTLP receiver | [container-plugins](container-plugins.md) |
+
+The container model is the strictest P12 sandbox enforcement point — read-only rootfs, dropped caps, no-new-privileges, resource limits, and (Phase 2) egress isolation via an internal-only Docker network or Kubernetes `NetworkPolicy`. Plugin egress flows through the runtime's internal gateway (`ILlmGateway`, MCP Gateway, OTLP receiver) so policy / observability / rate-limit middleware applies uniformly regardless of plugin language.
+
 ## Graph control-plane tier (v0.19)
 
 Parallel to the agent control-plane — adds `AgentGraph` as a first-class managed object: stored in `OrleansAgentGraphRegistry`, exposed through the HTTP control plane, invocable via `POST /v1/graphs/{id}/invoke`, streamable via SSE `POST /v1/graphs/{id}/invoke/stream`, and manageable with `vais apply` / `vais get-graphs` / `vais delete-graph`.

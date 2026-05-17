@@ -21,7 +21,7 @@ reusable commands?"*
   / GitHub / documentation-lookup workflows.
 - Skill patterns (parameterised, scriptable recipes) for the repetitive operations this
   repo produces — build, test, pack, public-API promotion, preview-tag creation, sample
-  scaffolding, ADR authoring, deferred-backlog updates.
+  scaffolding, ADR authoring.
 - Guardrails that keep assistants out of trouble: what *not* to do autonomously.
 
 **Out of scope.**
@@ -51,8 +51,6 @@ issue-driven contribution begins.
 
 **Typical operations for this repo:**
 - Look up issues / PRs by ID or label (`plan`, `defer`, `pillar-*`).
-- Create issues from `docs/roadmap/deferred-backlog.md` entries when a Phase 4 triage
-  converts them into tracked work.
 - Check CI run status for a branch.
 - Read comments on a PR during code review.
 
@@ -294,9 +292,6 @@ green.
 3. Create the tag locally: `git tag -a v0.X.0-preview <sha> -m "<message>"`.
 4. **Do not push** the tag unless the user explicitly asks. Tags are close to immutable;
    a pushed mistake is expensive.
-5. Update each deferred item's destination: add it to
-   [`../roadmap/deferred-backlog.md`](../roadmap/deferred-backlog.md) under the right
-   theme.
 
 **Report:** tag name + commit SHA + CHANGELOG entry link. Confirm tag was not pushed.
 
@@ -334,23 +329,6 @@ samples/<Name>` succeeding.
 
 A simple ripgrep-based walker is enough (no MCP required). External links are out of
 scope here — consistency of *relative* links is the goal.
-
----
-
-### `/deferred` — append an entry to the deferred backlog
-
-**When:** any PR or milestone defers work. Per
-[`../../AGENTS.md`](../../AGENTS.md) §Agent etiquette rule 8, deferrals go into
-[`../roadmap/deferred-backlog.md`](../roadmap/deferred-backlog.md).
-
-**Recipe.** Open the backlog, find the matching theme (or add a new one if none fits),
-append a bullet:
-
-```markdown
-- **<one-line item>.** Next step: <concrete follow-up>.
-```
-
-**Report:** the theme hit + the one-line entry added.
 
 ---
 
