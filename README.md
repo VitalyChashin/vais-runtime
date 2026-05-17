@@ -8,49 +8,15 @@
 > **Status: pre-alpha private preview.** API unstable.
 > Trademark + NuGet-id clearance gate public release of the `Vais.Agents.*` package ids; not yet completed.
 
-Runtime for AI agents on .NET. Declare agents and multi-agent graphs as YAML manifests, then publish them to a durable, Orleans-backed runtime with the `vais` CLI or a Kubernetes operator. Author agent code in C# (in-process DLL), Python (subprocess), or any container image speaking the plugin HTTP protocol. Microsoft Agent Framework and Semantic Kernel are first-class swappable AI stacks underneath — pick either via DI without rewriting the agent.
+Open-source runtime for AI agents and multi-agent graphs — durable, declarative, deployed on infrastructure you own. Declare them as YAML manifests, then publish them to a durable, Orleans-backed runtime with the `vais` CLI or a Kubernetes operator. Author agent code in C# (in-process DLL), Python (subprocess), or any container image speaking the plugin HTTP protocol. Microsoft Agent Framework and Semantic Kernel are first-class swappable AI stacks underneath — pick either via DI without rewriting the agent.
 
 > 🚀 **New here?** [**QUICKSTART.md**](QUICKSTART.md) takes you from `git clone` to a running multi-agent graph with MCP tools + observable LLM/MCP gateways in ~15 minutes.
 
 ## Deployment topology
 
-```mermaid
-flowchart TB
-    author["Author<br/>agent.yaml · graph.yaml · plugin.yaml"]
+![Deployment topology](docs/images/deployment.png)
 
-    subgraph cp["Control plane"]
-        direction LR
-        cli["vais CLI"]
-        op["K8s Operator"]
-    end
-
-    subgraph silo["Runtime container — Orleans silo<br/><i>(scale-out via multi-silo cluster)</i>"]
-        reg["Registries<br/>Agent · Graph · Plugin · Gateway · MCP server"]
-        agent["AiAgentGrain"]
-        graphrun["GraphRunGrain<br/>plan → research → report"]
-        plugin["Plugin host<br/>C# DLL · Python subprocess · Container image"]
-        llmgw["LLM Gateway"]
-        mcpgw["MCP Gateway"]
-    end
-
-    models["Model APIs<br/>OpenAI · Azure · Anthropic · …"]
-    tools["MCP servers<br/>fetch · search · filesystem · …"]
-
-    footer["Backed by Redis · Postgres · OTel · Langfuse&nbsp;&nbsp;·&nbsp;&nbsp;Hosted on Docker Compose · Kubernetes Helm"]
-
-    author --> cli
-    author --> op
-    cli -- HTTP --> reg
-    op -- HTTP --> reg
-    reg --> agent
-    reg --> graphrun
-    graphrun --> agent
-    agent <--> plugin
-    agent --> llmgw
-    agent --> mcpgw
-    llmgw --> models
-    mcpgw --> tools
-```
+*Control plane, runtime, and the world it talks to. Self-hosted on infrastructure you own.*
 
 ## What you get
 
@@ -60,10 +26,12 @@ flowchart TB
 | Durable runtime container — Orleans silo with grain-backed agent and graph runs; survives silo restart | `Vais.Agents.Runtime.Host` (Docker image + Helm chart + docker-compose recipes) |
 | Multi-language plugins — C# DLL (in-process), Python subprocess, container image (IP-1 HTTP protocol) | `Vais.Agents.Runtime.Plugins`, `Vais.Agents.Runtime.Plugins.Python`, `Vais.Agents.Runtime.Plugins.Container` |
 | LLM and MCP gateways — middleware chains for logging, OTel, rate limit, fallback, truncation, policy gating | `Vais.Agents.Core` (built-ins) + `Vais.Agents.Gateways.*` reference plugins |
+| Typed `Section[]` at the harness boundary — per-section telemetry, plugin-side `/sections/build` + server-side flatten | `Vais.Agents.Core`, `Vais.Agents.Runtime.Plugins.Container` |
 | Kubernetes operator — `vais.io/v1alpha1` CRDs reconciled into running agents and graphs; OPA-gated | `Vais.Agents.Control.KubernetesOperator`, `Vais.Agents.Control.Policy.Opa` |
 | Stack-neutral library — embed in any .NET app; swap MAF or SK via DI | `Vais.Agents.Abstractions`, `Vais.Agents.Core`, `Vais.Agents.Ai.SemanticKernel`, `Vais.Agents.Ai.MicrosoftAgentFramework` |
 | Persistence — Redis (grain state), Postgres (durable), vector data for RAG | `Vais.Agents.Persistence.Redis`, `…Postgres`, `…VectorData` |
 | Observability — OTel GenAI semantic conventions + Langfuse enrichment | `Vais.Agents.Observability.OpenTelemetry`, `Vais.Agents.Observability.Langfuse` |
+| Evaluation harness — `kind: EvalSuite` manifest; batch scoring with `ToolCallSequence` / `JudgeScore` / `ResponseRegex` / `NoTurnFailed` assertions; `vais eval run / results / diff` CLI | `Vais.Agents.Eval` |
 | Interop — MCP tool-source adapter, A2A remote-agent-as-tool adapter | `Vais.Agents.Protocols.Mcp`, `Vais.Agents.Protocols.A2A` |
 
 ## Why Vais.Agents?
@@ -71,6 +39,7 @@ flowchart TB
 - **Durable agents, not durable workflows.** Other runtimes give you durable workflow primitives and ask you to build the agent loop on top. Vais.Agents ships the agent as the unit — one Orleans grain per `(agent, session)`, with state, history, and opaque-blob round-tripping handled by the host.
 - **Declarative-first, code-aware.** YAML for the 80%: model, prompt, tools, guardrails, gateway middleware. Drop into C#, Python, or any container speaking the plugin HTTP protocol when YAML isn't enough — same `vais apply` operator surface either way.
 - **Gateway is the only LLM and tool path.** Logging, OTel, rate limit, fallback, policy, cost gating — all middleware, all declared in a manifest, all applied uniformly. Adding observability is a YAML edit, not a search-and-replace across agent code.
+- **Decoupled application lifecycle.** Ship agent updates without rebuilding the host application. The runtime is the operational unit; agents are content you publish into it. Same `vais apply -f` surface in Docker, Compose, and Kubernetes — the platform team operates one runtime, the agent teams iterate against it independently.
 - **Native .NET, not bolted on.** Orleans for durability, MEAI for the AI contract, ASP.NET Core for HTTP, KubeOps for the operator. No node-style sidecar proxies, no foreign concurrency model.
 
 ## First run — declarative
@@ -137,48 +106,9 @@ The full multi-agent walk-through — planner → researcher → reporter graph 
 
 ## Inside the harness
 
-What surrounds your plugin code on every turn:
+![Inside the harness](docs/images/harness.png)
 
-```mermaid
-flowchart LR
-    turn["Turn arrives<br/>user msg + history +<br/>opaque state"]
-
-    subgraph inputmw["Input middleware (extension seam)"]
-        direction TB
-        ima["history assembly"]
-        imb["system prompt"]
-        imc["+ your middleware"]
-    end
-
-    plugin["<b>Your plugin</b><br/>C# DLL · Python subprocess ·<br/>Container image"]
-
-    state["Durable grain state<br/>history + opaque state<br/>events → bus · OTel · Langfuse"]
-
-    subgraph llmgw["LLM Gateway"]
-        direction TB
-        llm1["logging · OTel"]
-        llm2["rate limit · fallback"]
-        llm3["+ custom"]
-    end
-
-    subgraph mcpgw["MCP Gateway"]
-        direction TB
-        mcp1["logging · OTel"]
-        mcp2["rate limit · truncation"]
-        mcp3["+ custom"]
-    end
-
-    models["Model APIs"]
-    mcpsrv["MCP servers"]
-
-    turn --> inputmw
-    inputmw --> plugin
-    plugin --> state
-    plugin -- LLM call --> llmgw
-    llmgw --> models
-    plugin -- tool call --> mcpgw
-    mcpgw --> mcpsrv
-```
+*What surrounds your plugin code on every turn. You author the plugin; everything else is the harness.*
 
 Plugin code is the only thing you author. Everything else — input shaping, history persistence, LLM and tool call governance, observability, durability across silo restart — is the runtime. Custom middleware plugs in at the marked seams.
 
@@ -253,7 +183,7 @@ Event stream: `graph.started → node.started plan → node.completed plan → �
 
 </details>
 
-<details><summary><b>3. Embed in an existing .NET app (library mode)</b></summary>
+<details><summary><b>3. <em>Optional</em>: Embed primitives in an existing .NET app (library mode) — for cases where running the full runtime is overkill: a console tool, a one-off batch job</b></summary>
 
 ```csharp
 using Microsoft.SemanticKernel;
