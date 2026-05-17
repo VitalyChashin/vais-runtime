@@ -1,6 +1,6 @@
 # Reference: graph predicate operators
 
-`GraphEdgePredicate` is the closed vocabulary used on every `GraphEdge.When` slot. Seven subtypes, one ten-value `GraphPredicateOperator` enum, two escape hatches.
+`GraphEdgePredicate` is the closed vocabulary used on every `GraphEdge.When` slot. Seven subtypes, one ten-value `GraphPredicateOperator` enum, plus two declarative escape hatches: `Expression` (inline PowerFx) and `HandlerRef` (DI-resolved `IGraphEdgePredicate`).
 
 Parallel to Kubernetes `matchExpressions` on a `PodSelector` — deliberately familiar for operators and YAML-authored graphs. Inline [PowerFx](https://learn.microsoft.com/en-us/power-platform/power-fx/overview) expressions (`=...`) are also supported for simple conditions that the `PropertyMatcher` vocabulary can't cover.
 

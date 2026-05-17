@@ -4,12 +4,22 @@ Complete catalogue of OpenTelemetry tag names + metric names emitted by Vais.Age
 
 ## ActivitySource + Meter
 
-| | Name |
-|---|---|
-| `ActivitySource` | `"Vais.Agents"` (constant: `AgenticDiagnostics.ActivitySourceName`) |
-| `Meter` | `"Vais.Agents"` (constant: `AgenticDiagnostics.MeterName`) |
+The agent loop's primary source/meter:
 
-Shared name — one source for traces, one meter for metrics, same string.
+| | Name | Constant |
+|---|---|---|
+| Main `ActivitySource` | `"Vais.Agents"` | `AgenticDiagnostics.ActivitySourceName` |
+| Main `Meter` | `"Vais.Agents"` | `AgenticDiagnostics.MeterName` |
+
+Additional `ActivitySource`s subscribed by `AddAgenticInstrumentation()`:
+
+| Source | Owner | Emitted by |
+|---|---|---|
+| `Vais.Agents.Hosting.Orleans` | `Vais.Agents.Hosting.Orleans` | per-grain spans on `AiAgentGrain` / `AgentGraphLifecycleManager` |
+| `Vais.Agents.Core.Graph` | `Vais.Agents.Core` | per-node spans for the in-process graph runner + `MafGraphOrchestrator` |
+| `Vais.Agents.Runtime.Plugins.Python` | `Vais.Agents.Runtime.Plugins.Python` | per-call spans on Python subprocess invocations |
+| `Vais.Agents.Runtime.Plugins.Container.Otlp` | `Vais.Agents.Runtime.Plugins.Container` | re-emitted spans from container plugins via `OtlpSpanForwarder` (P12 OTLP receiver) |
+| `Vais.Agents.Policy.OPA` | `Vais.Agents.Control.Policy.Opa` | per-`EvaluateAsync` span (see v0.14 section below) |
 
 ## Activity — `chat` span
 
@@ -54,7 +64,7 @@ Token histogram splits into two recordings per call — one for input, one for o
 
 ## Langfuse enricher (`LangfuseEnrichmentFilter`)
 
-Adds to the active Activity on every `AskAsync` turn (not applied on `StreamAsync` — known gap):
+Adds to the active Activity on every `AskAsync` turn. (Streaming runs flow through `IStreamingAgentFilter` rather than `IAgentFilter`; wire equivalent enrichment in a streaming filter if needed.)
 
 | Tag | Source |
 |---|---|
@@ -147,17 +157,18 @@ Deny is a span-status `Error` with the reason as description — standard OTel c
 
 ## Constants in code
 
-All `vais.*` names are available as `const string` in `Vais.Agents.Core.AgenticTags` (core agent tags) + `AgenticTags.Control.*` / `AgenticTags.Stream.*` / `AgenticTags.Operator.*` / `AgenticTags.Policy.*` (post-v0.6 families, declared alongside their emitting packages):
+Core agent-loop tags (`vais.agent.name`, `vais.user.id`, `vais.tenant.id`, `vais.correlation.id`, `vais.tool.*`, `vais.stream.attempt.*`, plus the RCB family `vais.workspace.id` / `vais.privilege.level` / `vais.autonomy.level` / `vais.allowed_tools` / `vais.max_chain_depth`) are exposed as `const string` on `Vais.Agents.Core.AgenticTags`:
 
 ```csharp
 using Vais.Agents.Core;
 
 // Don't type strings — use:
 activity.SetTag(AgenticTags.UserId, ctx.UserId);
-activity.SetTag(AgenticTags.Policy.Decision, "deny");
 ```
 
-`gen_ai.*` names are the spec; they aren't re-exported as constants (OpenTelemetry's own `SemanticConventions` package carries them).
+The post-v0.6 families (`vais.control.idempotency.*`, `vais.stream.*` for SSE wire events, `vais.request.section.*`) are not all centralised in `AgenticTags` — some are inline string literals in their emitting package (`Vais.Agents.Control.Http.Server`, etc.). Treat the tag names listed in this document as the contract regardless of whether a `const string` is exposed.
+
+`gen_ai.*` names are the OTel GenAI semantic-convention spec; they aren't re-exported as constants (OpenTelemetry's own `SemanticConventions` package carries them).
 
 ## See also
 

@@ -51,20 +51,24 @@ Every field marked **required** must appear on the CR; missing any causes `Manif
 | `description` | string? | Human-readable description. Passed through to registries + dashboards. |
 | `labels` | map<string,string>? | Free-form metadata. Used by `ListAsync(labelPrefix)` filtering. |
 | `annotations` | map<string,string>? | Operator-visible metadata not indexed by the registry. K8s-style. |
-| `memory` | object? | `{backend, config?}` — pluggable memory-store backing. Null = ephemeral. |
-| `identity` | object? | `{provider, audience?}` — inbound/outbound auth configuration. |
-| `autoscaling` | object? | `{minReplicas, maxReplicas?, targetConcurrencyPerReplica?, idleTtl?}`. **Passed through; not wired to HPA by the operator in v0.13.** |
-| `model` | object? | `{provider, id, parameters?}` — LLM binding for declarative agents. |
+| `memory` | object? | Pluggable memory-store backing. `{provider, connectionName?, scope?, historyReducer?}`. Null = ephemeral. |
+| `identity` | object? | Inbound/outbound auth configuration. `{inboundAuth?, outboundCredentials?, credentials?, inboundClaims?}`. Null = unauthenticated. |
+| `autoscaling` | object? | `{minReplicas, maxReplicas?, target?, targetValue?, idleTtl?}`. Consumer-defined target metric string. **Passed through; not wired to HPA by the operator in v0.13.** |
+| `model` | object? | LLM binding for declarative agents. `{provider, id, apiKeyRef?, baseUrlRef?, temperature?, topP?, maxTokens?, responseFormat?}` — individual fields, no nested `parameters` object. |
 | `systemPrompt` | object? | `{inline?, templateRef?, fileRef?}` — exactly one shape set. |
 | `mcpServers` | array? | MCP server refs — each contributes tools at activation time. |
+| `a2aRemoteAgents` | array? | A2A remote-agent refs consumed by `a2a:<name>` tool sources. Translator validates; full `A2ARemoteAgentTool` materialisation is preview. |
+| `localAgents` | array? | Local same-runtime agent refs consumed by `agent:<name>` tool sources (v0.18 agent-as-tool). |
 | `guardrails` | object? | `{input?, output?, tool?}` — three-layer guardrail bindings. |
 | `handoffs` | array? | Declarative handoff targets by agent id. |
 | `budget` | object? | `{maxTurns?, maxPromptTokens?, maxCompletionTokens?, maxToolCalls?, maxDuration?}`. |
 | `contextProviders` | array? | Context-provider refs resolved against host DI keyspace. |
-| `outputSchema` | object? | Inline JSON Schema for the final assistant turn's structured output. |
+| `outputSchema` | object? | Inline JSON Schema for the final assistant turn's structured output. Mapped to the provider's `response_format` when supported (per `SupportsResponseFormat` DIM). |
 | `agentMode` | string | `ToolCalling` (default), `Reasoning` (contract-only in v0.6). |
 | `reasoning` | object? | Schema-Guided Reasoning configuration. |
 | `observability` | object? | `{langfuseProject?, sampling?, tags?}` — overlay for trace emission. |
+| `llmGatewayRef` | string? | Reference to a deployed `LlmGatewayConfigManifest` id. Builds a per-agent gateway pipeline that replaces the DI-global chain. |
+| `mcpGatewayRef` | string? | Reference to a deployed `McpGatewayConfigManifest` id. Same shape for tool-gateway middleware. |
 | `secretRefs` | map<string, object>? | Logical-name → `{name, key}` mappings. Validation-only in v0.13 — not injected into the runtime-side manifest. |
 | `preserveOnDelete` | bool | Default `false`. When `true`, CR deletion skips `EvictAsync`. |
 

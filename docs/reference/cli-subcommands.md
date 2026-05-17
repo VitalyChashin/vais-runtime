@@ -1,11 +1,13 @@
 # Reference: CLI subcommands
 
-Full per-command flag + argument + exit-code table for the `vais` CLI (v0.19). Thirteen top-level verbs + a `config` branch with four sub-verbs = seventeen commands.
+Per-command flag + argument + exit-code reference for the `vais` CLI. ~29 top-level commands plus three branches (`eval` × 5, `diagnose` × 3, `config` × 4) for a total of 41 commands. Run `vais --help` for the live, version-correct verb list.
 
-Every command (except `version`, `init`, and the `config` branch) supports:
+Every HTTP-bound command supports:
 
 - `--context <name>` — override the active context for this call.
 - `--token <value>` — override the resolved bearer token (highest auth precedence).
+
+Local-only commands (`version`, `init`, `plugin-init`, `plugin-build`, the `config` branch) ignore both.
 
 ## Root commands
 
@@ -21,12 +23,12 @@ Every command (except `version`, `init`, and the `config` branch) supports:
 
 ### `vais init <name>`
 
-Scaffold a starter agent manifest to stdout or a file. Local only; no HTTP.
+Scaffold a starter agent manifest to stdout or a file. Local only; no HTTP. The scaffold format is YAML; the `-o/--output` flag takes a filesystem path, not a format selector.
 
 | Field | Value |
 |---|---|
 | Arguments | `<name>` — agent id baked into the manifest's top-level `id` field. |
-| `-o, --output <path>` | Write path. Default: stdout. |
+| `-o, --output <path>` | Write the YAML scaffold to this path. Default: stdout. |
 | `--model <provider>` | LLM provider. Default: `openai`. |
 | `--mode <mode>` | Execution mode. Default: `toolCalling`. Other: `sgr`. |
 | Exit codes | `0`, `1` |
@@ -162,12 +164,21 @@ Start a graph run (v0.19). Unary by default; `--stream` switches to SSE. Pass `-
 | `--resume-payload <json>` | JSON payload forwarded to the resume handler. |
 | `--stream` | Use the SSE endpoint to stream graph events as they fire. |
 | `--idempotency-key <value>` | Stamp the call. Default: generated UUID. |
-| `-o, --output <format>` | `text` / `json`. Default: `text`. Ignored in `--stream` mode. |
+| `-o, --output <format>` | `text` (plain `lastAssistantText`) / `json` (full `GraphInvocationResult`) / `state` (raw `FinalState` JSON). Default: `text`. Ignored in `--stream` mode. |
 | Exit codes | `0`, `1`, `2`, `3`, `4`, `130` (on Ctrl-C during `--stream`) |
+
+### `vais graph-validate -f <file>`
+
+Validate a graph manifest against the runtime's loader + validator without registering it (v0.19). Surfaces every URN the apply path would surface, but no state is mutated.
+
+| Field | Value |
+|---|---|
+| `-f, --file <path>` | **Required.** Manifest path or `-` for stdin. |
+| Exit codes | `0`, `1`, `2`, `4` |
 
 ### `vais graph-logs <id>`
 
-Stream graph run events via SSE (v0.19). Renders each event with ANSI colors. Pass `--interrupt-id` + `--run-id` to resume and observe an interrupted run.
+Stream graph run events via SSE (v0.19). Renders each event with ANSI colors. Pass `--interrupt-id` + `--run-id` to resume and observe an interrupted run. Pass `--from-run-id` to replay stored events for a historical run.
 
 | Field | Value |
 |---|---|
@@ -176,10 +187,24 @@ Stream graph run events via SSE (v0.19). Renders each event with ANSI colors. Pa
 | `--version <value>` | Target a specific version. |
 | `--run-id <id>` | Explicit run id. Required when `--interrupt-id` is set. |
 | `--interrupt-id <id>` | Resume and observe from this interrupt id. Requires `--run-id`. |
+| `--from-run-id <id>` | Replay stored events for the given completed run from the run store instead of streaming live. |
+| `--node <id>` | Filter rendered events to one node id (works with both live and replay modes). |
 | `--only <kinds>` | Comma-separated graph event kind filter (case-insensitive, kebab-case wire names). Default: all. |
 | Exit codes | `0`, `1`, `2`, `3`, `4`, `130` (on Ctrl-C) |
 
-Graph event kinds: `graph.started`, `node.started`, `node.completed`, `edge.traversed`, `state.updated`, `graph.interrupted`, `graph.resumed`, `graph.completed`, `graph.failed`.
+Graph event kinds: `graph.started`, `node.started`, `node.agent_invoked`, `node.completed`, `edge.traversed`, `state.updated`, `graph.interrupted`, `graph.resumed`, `graph.completed`, `graph.failed`.
+
+### `vais get-runs`
+
+Inspect historical graph runs from the run store.
+
+| Field | Value |
+|---|---|
+| `--graph <id>` | List recent runs for one graph id. Omit to list across all graphs. |
+| `--run <id>` | Inspect one run's node executions (mutually exclusive with `--graph`). |
+| `--limit <n>` | Max entries. Default: implementation-defined. |
+| `-o, --output <format>` | `table` / `yaml` / `json`. Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `4` |
 
 ### `vais get-remote-runtimes`
 
@@ -192,6 +217,174 @@ List the remote runtimes configured on the target runtime host (v0.34). Queries 
 | Exit codes | `0`, `1`, `2`, `3`, `4` |
 
 Table columns: `NAME`, `URL`, `IDENTITY-MODE`.
+
+## Gateways + MCP servers
+
+### `vais get-llm-gateways [id]` / `vais get-mcp-gateways [id]` / `vais get-mcp-servers [id]` / `vais get-eval-suites [id]`
+
+Each follows the same shape as `vais get` — `[id]` argument is optional (omit for list, provide for single fetch); supports `--label-prefix`, `--limit`, and `-o table|yaml|json`.
+
+### `vais llm-gateway-validate -f <file>` / `vais mcp-gateway-validate -f <file>` / `vais mcp-server-validate -f <file>`
+
+Validate the corresponding manifest type against the runtime's loader without registering it. Same flag shape as `vais graph-validate`. Exit codes `0`, `1`, `2`, `4`.
+
+## Plugins
+
+Plugin-init and plugin-build are local; the others hit the runtime.
+
+### `vais plugin-init`
+
+Scaffold a `plugin.yaml` (and `Dockerfile` for dotnet runtimes) in the current directory. Local only.
+
+| Field | Value |
+|---|---|
+| `--runtime <dotnet\|python>` | Plugin runtime kind. Required. |
+| `--name <name>` | Plugin name. Default: directory name. |
+| `-o, --output <dir>` | Target directory. Default: current. |
+| Exit codes | `0`, `1` |
+
+### `vais plugin-build`
+
+Build a container plugin image via `docker build`. Local only.
+
+| Field | Value |
+|---|---|
+| `--image <tag>` | **Required.** Image tag (e.g. `ghcr.io/me/my-plugin:1.0`). |
+| `--context <dir>` | Docker build context. Default: current directory. |
+| `--push` | Run `docker push` after the build. |
+| Exit codes | `0`, `1` |
+
+### `vais plugin-push <plugin-name|image>`
+
+Push a plugin to the runtime. Two modes:
+
+- **Source mode** — argument is a simple plugin name (no `/` or `:`). Packs `./src` and `POST`s to `/v1/plugins/{name}/source` for hot reload.
+- **Image mode** — argument contains `/` or `:`, or `--image` is supplied. Runs `docker push` and `POST`s to `/v1/plugins/{name}/image`.
+
+| Field | Value |
+|---|---|
+| Arguments | `<plugin-name>` or `<image>` (see modes above). |
+| `--image <tag>` | Force image mode with this tag. |
+| `--source <dir>` | Source directory to pack (source mode). Default: `./src`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais plugin-deploy <release-name>`
+
+Aggregate command — `helm upgrade --install <release-name> <built-in-chart>` against the embedded `vais-plugin` chart, then `POST /v1/container-plugins` to register the plugin with the runtime.
+
+| Field | Value |
+|---|---|
+| Arguments | `<release-name>` — Helm release name. |
+| `--image <tag>` | **Required.** Plugin image. |
+| `--namespace <ns>` | K8s namespace. Default: `vais-agents`. |
+| `--replicas <n>` | Deployment replicas. Default: 1. |
+| `--port <port>` | Plugin container port. Default: 8080. |
+| `--image-pull-policy <policy>` | `Always` / `IfNotPresent` / `Never`. Default: `IfNotPresent`. |
+| `-f <values.yaml>` | Helm values overrides. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais plugin-status`
+
+List all loaded plugins (assembly, Python, container) with lifecycle state, image, declared handler type names, and PID where applicable.
+
+| Field | Value |
+|---|---|
+| `-o, --output <format>` | `table` / `yaml` / `json`. Default: `table`. K8s-topology plugins include replica counts. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais plugin-watch <plugin-name>`
+
+Watch a Python plugin's source directory and hot-reload on every change. Local-process loop that pushes to the runtime on each debounced batch.
+
+| Field | Value |
+|---|---|
+| Arguments | `<plugin-name>` — plugin to push to. |
+| `--source <dir>` | Source directory to watch. Default: `./src`. |
+| `--debounce <ms>` | Debounce window in ms. Default: 250. |
+| Exit codes | `0`, `1`, `130` (Ctrl-C) |
+
+## Eval
+
+### `vais eval run <suite>`
+
+Start a new eval run for a named suite. Prints the `evalRunId`.
+
+| Field | Value |
+|---|---|
+| Arguments | `<suite>` — suite name. |
+| `--version <value>` | Pin to a specific suite version. |
+| `--idempotency-key <value>` | Stamp the call. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais eval results <evalRunId>`
+
+Fetch per-case assertion results for an eval run.
+
+| Field | Value |
+|---|---|
+| Arguments | `<evalRunId>`. |
+| `-o, --output <format>` | `table` / `json` / `junit` (JUnit XML for CI). Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais eval list`
+
+List recent eval runs, optionally filtered by suite name.
+
+| Field | Value |
+|---|---|
+| `--suite <name>` | Filter by suite. |
+| `--limit <n>` | Max entries. Default: 20. |
+| `-o, --output <format>` | `table` / `json`. Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais eval cancel <evalRunId>`
+
+Request cancellation of an in-progress eval run.
+
+| Field | Value |
+|---|---|
+| Arguments | `<evalRunId>`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais eval diff <runA> <runB>`
+
+Compare two eval runs case-by-case and show assertion deltas, with a `DELTA` column for regressions.
+
+| Field | Value |
+|---|---|
+| Arguments | `<runA> <runB>` — eval run ids. |
+| `-o, --output <format>` | `table` / `json` / `junit`. Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+## Diagnose
+
+### `vais diagnose spans`
+
+Fetch recent OTel spans from the in-process buffer as NDJSON. Requires the runtime to be started with `VAIS_DIAG_SPAN_BUFFER=true`; otherwise returns `urn:vais-agents:diag-span-buffer-not-configured`.
+
+| Field | Value |
+|---|---|
+| `--since <iso8601>` | Only include spans started after the cutoff. |
+| `--limit <n>` | Max spans to return. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais diagnose trace <traceId>`
+
+Pretty-print the span tree for a given trace id.
+
+| Field | Value |
+|---|---|
+| Arguments | `<traceId>`. |
+| Exit codes | `0`, `1`, `2`, `4` |
+
+### `vais diagnose filter-status`
+
+Show per-interface outgoing Orleans grain call counters. Useful for diagnosing whether a custom `IAgentFilter` is being hit on the expected code path.
+
+| Field | Value |
+|---|---|
+| `-o, --output <format>` | `table` / `json`. Default: `table`. |
+| Exit codes | `0`, `1`, `2`, `4` |
 
 ## `config` subcommands
 
@@ -266,15 +459,17 @@ Not supported on other flags — `apply -f <path>` takes a path directly (no `@`
 
 ## Output-format flag
 
-`-o, --output <format>` is accepted on `get`, `invoke`, `init`:
+`-o, --output <format>` is accepted on most read commands:
 
 | Command | Formats | Default |
 |---|---|---|
-| `get` (list) | `table` | `table` |
-| `get <id>` | `yaml`, `json` | `yaml` |
+| `get` (list), `get-graphs` (list), `get-llm-gateways` (list), `get-mcp-gateways` (list), `get-mcp-servers` (list), `get-eval-suites` (list), `plugin-status`, `get-runs`, `get-remote-runtimes`, `diagnose filter-status`, `eval list`, `eval results`, `eval diff` | `table`, `yaml`, `json` (mix varies; see per-command rows) | `table` |
+| `get <id>` and the single-item form of every other `get-*` | `yaml`, `json` | `yaml` |
 | `invoke` (unary) | `text`, `json` | `text` |
-| `invoke --stream` | — (fixed terminal rendering) | — |
-| `init` | `yaml` (file/stdout) | `yaml` |
+| `invoke-graph` (unary) | `text`, `json`, `state` | `text` |
+| `eval results` / `eval diff` (additionally) | `junit` (JUnit XML) | — |
+| `invoke --stream`, `invoke-graph --stream`, `logs`, `graph-logs` | — (fixed terminal rendering) | — |
+| `init` | — (`-o`/`--output` takes a filesystem path, not a format) | — |
 
 Unrecognised values fall back to the command's default rather than erroring.
 
