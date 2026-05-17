@@ -72,6 +72,17 @@ spec:
   mcpGatewayRef: prod-mcp-governance   # fallback gateway when agent has none
 ```
 
+Supported `transport` values for physical servers:
+
+| Value | Owns | Use when |
+|---|---|---|
+| `streamableHttp` | external service | the MCP server already exposes HTTP at a URL |
+| `sse` | external service | legacy SSE-only MCP server |
+| `stdio` | the runtime process (in-process subprocess) | the server binary is on the runtime host's `$PATH` |
+| `containerStdio` | a runtime-supervised container | publishing a stdio-only MCP server (PyPI, `mcp/fetch`, etc.) against a containerised runtime; the runtime builds the image, starts a hardened container, wraps stdio↔streamableHttp internally. See [Guide: deploy a stdio-only MCP server](../guides/deploy-a-stdio-mcp-server.md). |
+
+Set `virtual: true` (with `sources` + `toolProjection`) for a logical aggregator over multiple registered servers. Middleware applies to every transport uniformly.
+
 ## Two orthogonal axes
 
 The MCP surface is two independent resources with distinct responsibilities:

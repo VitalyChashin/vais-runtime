@@ -78,6 +78,11 @@ public sealed class ApplyCommandMcpServerBuildOnApplyTests : IDisposable
         _dockerCalls.Should().HaveCount(1);
         _dockerCalls[0].Should().StartWith("build -t my-registry/mcp-fetch:1.0");
         client.CreateCalls.Should().HaveCount(1);
+        // After a successful build, the wire-side manifest carries only the resolved image —
+        // the build block is stripped so the server-side loader doesn't reject image+build.
+        var sent = client.CreateCalls[0].Container!;
+        sent.Image.Should().Be("my-registry/mcp-fetch:1.0");
+        sent.Build.Should().BeNull();
     }
 
     [Fact]
@@ -93,8 +98,10 @@ public sealed class ApplyCommandMcpServerBuildOnApplyTests : IDisposable
         _dockerCalls.Should().HaveCount(1);
         _dockerCalls[0].Should().StartWith("build -t vais-mcp-mcp-fetch:1.0");
         client.CreateCalls.Should().HaveCount(1);
-        // Patched manifest carries the resolved image
-        client.CreateCalls[0].Container!.Image.Should().Be("vais-mcp-mcp-fetch:1.0");
+        // Patched manifest carries the resolved image; build block stripped.
+        var sent = client.CreateCalls[0].Container!;
+        sent.Image.Should().Be("vais-mcp-mcp-fetch:1.0");
+        sent.Build.Should().BeNull();
     }
 
     [Fact]

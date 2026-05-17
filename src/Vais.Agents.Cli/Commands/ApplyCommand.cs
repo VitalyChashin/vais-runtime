@@ -258,8 +258,12 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
             }
 
             // Patch the manifest in-flight so the server-side record carries the resolved image.
+            // Clear the Build block too — once we have a tagged image the server has no use for the
+            // local build context, and the loader rejects image+build set simultaneously.
             if (imageOpt is null)
-                manifest = manifest with { Container = manifest.Container with { Image = imageTag } };
+                manifest = manifest with { Container = manifest.Container with { Image = imageTag, Build = null } };
+            else
+                manifest = manifest with { Container = manifest.Container with { Build = null } };
         }
 
         try
