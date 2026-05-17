@@ -2,10 +2,12 @@
 
 Wrap a remote A2A agent as a local `ITool` so your agent can delegate subtasks to a peer. Useful for multi-agent deployments where specialist agents live behind separate A2A endpoints.
 
+> **Preview status.** This guide covers the **direct C# API** (`A2ARemoteAgentTool.CreateAsync`), which is fully shipped. The matching **manifest-driven path** — `ToolRef.Source = "a2a:<name>"` against an `A2ARemoteAgents` declaration — is **validation-only today**. `AgentManifestTranslator` validates the declaration but does not yet instantiate `A2ARemoteAgentTool` from it; lazy materialisation is deferred to the broader outbound-A2A productisation. Until that ships, YAML-authored agents that need remote A2A delegation must register the tool from a C# composition root using the pattern below, or use the `agent:<name>` local prefix for in-runtime delegation (see [delegate-to-a-local-agent](delegate-to-a-local-agent.md)).
+
 ## Packages
 
 ```xml
-<PackageReference Include="Vais.Agents.Protocols.A2A" Version="0.4.0-preview" />
+<PackageReference Include="Vais.Agents.Protocols.A2A" />
 <PackageReference Include="A2A" Version="1.0.0-preview2" />
 ```
 
@@ -82,13 +84,14 @@ var registry = new InMemoryRegistry(remoteTools.ToArray());
 
 The model picks which peer to call by tool name; the agent's outer loop dispatches uniformly.
 
-## v0.4 limitations
+## Limitations
 
-- **Outbound only.** No `A2AAgentEndpoint` to expose your agent as an A2A server. Needs `A2A.AspNetCore` integration + `ITaskStore` wiring — deferred to a follow-up.
-- **No `A2ARemoteAgentProvider : ICompletionProvider`.** Using a remote A2A agent as the *completion stack* (instead of as a tool) loses our event stream + session semantics. Revisit post-inbound.
+- **Manifest-driven `a2a:` prefix is validation-only.** The translator validates that `a2a:<name>` references a declared `A2ARemoteAgents[]` entry but does not instantiate `A2ARemoteAgentTool` from it today. Use the direct C# API above (or the `agent:` local prefix) until manifest-driven instantiation ships.
+- **No `A2ARemoteAgentProvider : ICompletionProvider`.** Using a remote A2A agent as the *completion stack* (instead of as a tool) loses the event stream + session semantics. Stays as a follow-up.
 - **Fixed input schema.** `{message:string}` only. If you need structured sub-agent I/O, write a custom `ITool` wrapper that calls the A2A client directly with your own schema.
 - **Streaming response not surfaced to the outer agent.** `A2AClient.SendStreamingMessageAsync` returns `IAsyncEnumerable<StreamResponse>`; the wrapper uses `SendMessageAsync` for a single-shot result. Streaming pass-through is a future add.
 - **Text-only extraction.** Data / file / URL `Part.ContentCase`s in the response are ignored.
+- **Inbound A2A is shipped separately.** To expose your own agents as A2A servers, see [host-agents-as-a2a-endpoints](host-agents-as-a2a-endpoints.md). This guide covers outbound delegation only.
 
 ## Things that catch people
 
@@ -100,5 +103,7 @@ The model picks which peer to call by tool name; the agent's outer loop dispatch
 
 - [Interop concept](../concepts/interop.md)
 - [Tools concept](../concepts/tools.md)
+- [Delegate to a local agent](delegate-to-a-local-agent.md) — in-runtime delegation via the `agent:` source prefix; fully manifest-driven.
 - [Expose MCP tools to an agent](expose-mcp-tools-to-an-agent.md) — sibling pattern for MCP.
+- [Host agents as A2A endpoints](host-agents-as-a2a-endpoints.md) — the inbound side.
 - Sample: `samples/A2ARemoteAgentExample/` (per samples plan)

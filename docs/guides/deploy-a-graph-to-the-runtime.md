@@ -63,11 +63,7 @@ vais get-graphs my-pipeline
 vais invoke-graph my-pipeline --initial-state '{"user_query": "hello"}'
 ```
 
-Expected output:
-
-```
-run=run-abc123  complete=True
-```
+Default output is the graph's plain-text result — the `lastAssistantText` key from `FinalState` is printed verbatim when the run completes. Empty stdout means the run completed but produced no `lastAssistantText`. Add `-o json` for the full `GraphInvocationResult` envelope (run id, state, completion flag, pending-interrupt fields) or `-o state` for the raw `FinalState` JSON. When the run pauses at an `Interrupt` node, the default rendering prints an `interrupted interruptId=… node=… reason=…` line plus the resume command.
 
 For streaming output, add `--stream`:
 

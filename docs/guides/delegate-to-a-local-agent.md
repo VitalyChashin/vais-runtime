@@ -95,6 +95,8 @@ var coordinator = new StatefulAiAgent(
 
 ## LocalAgentRef fields
 
+YAML manifest authors set whichever fields they need — all but `name` are optional. The C# record splits these into positional ctor params (`Name`, `AgentId`, `AgentVersion`, `Mode`) and init-only properties (`Description`, `AllowCallerSuppliedSession`, `PropagateAllowedTools`); for hand-rolled C# usage the init-only ones go in an object initializer (`new LocalAgentRef("math") { PropagateAllowedTools = false }`).
+
 | Field | Type | Default | Purpose |
 |-------|------|---------|---------|
 | `name` | `string` | — | Logical name; matched against `tools[].source = "agent:<name>"`. |

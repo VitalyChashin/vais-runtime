@@ -30,7 +30,7 @@ sealed class PromptInjectionGuardrail : IInputGuardrail
 
 ## Output — redact obvious PII
 
-v0.4 doesn't support `Replacement` on `GuardrailOutcome` — Deny is the only blocking decision. If you need text rewriting, do it in an `IAgentFilter` (request/response pipeline) instead and use the output guardrail only for hard blocks.
+`GuardrailOutcome` ships three decisions: `Pass`, `Deny` (hard block, raises `AgentGuardrailDeniedException`), and `Interrupt` (pauses the run with an `AgentInterrupt` for HITL resume — emit via the static `GuardrailOutcome.Interrupt(...)` factory). There is no `Replacement` shape. If you need text rewriting on the way out, do it in an `IAgentFilter` (request/response pipeline) and reserve output guardrails for hard blocks or interrupts.
 
 ```csharp
 sealed class NoCreditCardsGuardrail : IOutputGuardrail

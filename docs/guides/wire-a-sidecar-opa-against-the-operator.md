@@ -51,15 +51,15 @@ import future.keywords.in
 default allow := {"allowed": false, "reason": "Policy denied — no matching rule."}
 
 allow := {"allowed": true} if {
-    input.schemaVersion == "v1"
+    input.schemaVersion == "1"
     input.operation in ["Invoke", "Signal", "Query"]
     input.principal.tenantId == input.agent.labels.tenantId
 }
 
 allow := {"allowed": true} if {
-    input.schemaVersion == "v1"
+    input.schemaVersion == "1"
     input.operation == "Create"
-    input.principal.roles[_] == "platform-admin"
+    input.principal.scopes[_] == "vais.agents:platform-admin"
 }
 ```
 
@@ -208,7 +208,7 @@ app.Run();
 IAgentLifecycleManager.CreateAsync
   → OpaPolicyEngine.IsAllowedAsync
       → POST http://127.0.0.1:8181/v1/data/vais/agents/allow
-        { "input": { "schemaVersion": "v1", "operation": "Create", "principal": {…}, "agent": {…} } }
+        { "input": { "schemaVersion": "1", "operation": "Create", "principal": {…}, "agent": {…} } }
       ← { "result": {"allowed": true} }
   → proceed
 ```

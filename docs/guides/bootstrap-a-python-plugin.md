@@ -56,7 +56,10 @@ Add a `Dockerfile.overlay` to your plugin directory:
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
 WORKDIR /plugin
 COPY pyproject.toml .
-# TODO: replace with "uv pip install vais-agent-sdk" once published to PyPI
+# vais-agent-sdk (subprocess plugins) and vais-plugin (container plugins) are
+# not yet on PyPI — install from the in-repo path until they ship.
+# Once published, drop the local COPY + path install and add the package
+# name to pyproject.toml's [project].dependencies instead.
 COPY path/to/python-agent-sdk /sdk
 RUN uv venv .venv \
  && uv pip install --python .venv/bin/python /sdk \
@@ -67,6 +70,8 @@ WORKDIR /plugin
 COPY --from=builder /plugin/.venv .venv
 COPY src src
 ```
+
+> If you're authoring a **container plugin** (OCI image rather than a Python subprocess), swap `python-agent-sdk` for `sdk/python` (`vais-plugin`); the rest of the overlay shape is the same. See [container-plugins concept](../concepts/container-plugins.md).
 
 Then extend your runtime's `Dockerfile` to copy the built plugin into the image:
 

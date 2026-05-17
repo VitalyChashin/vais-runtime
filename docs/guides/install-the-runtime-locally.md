@@ -33,7 +33,7 @@ docker build \
   .
 ```
 
-The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` for runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume (the plugin loader scans this path on startup), and exposes `/healthz` + `/readyz` + `/openapi/v1.json` on port 8080. Expect ~150 MB.
+The build uses `mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-alpine` for runtime; both are parameterised through `ARG DOTNET_VERSION=9.0` and `ARG BASE_IMAGE=...` in the Dockerfile so consumers can flip to a chiseled base with a single `--build-arg`. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume (the plugin loader scans this path on startup), and exposes `/healthz` + `/readyz` + `/openapi/v1.json` on port 8080. Expect ~150 MB.
 
 ```bash
 docker images | grep vais-agents-runtime
@@ -86,7 +86,7 @@ psql -U vais -d orleans \
 
 `PostgreSQL-Main.sql` is not needed in localhost mode — clustering stays in-memory. After the schema exists, container restarts preserve deployed agents and graphs. Pub-sub subscriptions can be made durable independently: `VAIS_LOCALHOST_PUBSUB_PERSISTENCE=postgres`.
 
-The local dev `dev.ps1 start` applies the schema automatically — see [../reference/runtime-configuration.md](../reference/runtime-configuration.md) for all env vars.
+See [../reference/runtime-configuration.md](../reference/runtime-configuration.md) for all env vars.
 
 ## 3. Clustered mode — Redis-backed
 

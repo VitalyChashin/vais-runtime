@@ -181,3 +181,19 @@ by Phase 1, but as a daemon-wide default for any container that doesn't opt in.
 
 The `--internal` network (Phase 2) is the only cross-platform answer for
 egress isolation. DOCKER-USER iptables rules are a Linux-only manual option.
+
+---
+
+## OTLP telemetry on the internal bridge
+
+Even with Phase 2 egress isolation, plugins can emit OpenTelemetry spans that
+land in the runtime's trace pipeline (Langfuse, Tempo, anywhere `OtlpSpanForwarder`
+re-emits to). The supervisor injects `OTEL_EXPORTER_OTLP_ENDPOINT` (pointing at
+the runtime's internal gateway port `5001` — `/v1/otlp/v1/traces`),
+`OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`, and
+`OTEL_EXPORTER_OTLP_HEADERS=Authorization=vais-plugin-token <hmac-token>`
+(token TTL 24 h) into the plugin container. The Python SDK auto-configures
+OpenTelemetry on `import vais_plugin` when the optional `vais-plugin[otlp]`
+extra is installed; nothing else is required from the plugin author. Plugins
+without the optional extra silently no-op — they never open a direct
+connection to an external collector. See [container-plugins concept](../concepts/container-plugins.md#otlp-telemetry).
