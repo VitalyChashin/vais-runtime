@@ -20,7 +20,7 @@ What is welcome:
 
 What needs an issue first:
 
-- **New features** or API additions. The maintainers may have a different shape in mind, or the feature may be deliberately out of scope (see [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md)).
+- **New features** or API additions. The maintainers may have a different shape in mind.
 - **Behavioural changes** to existing public API, even if the signature is unchanged.
 - **Refactors** that touch more than a few files.
 

@@ -149,5 +149,7 @@ The overlay pattern is the same as v0.18 .NET plugins — only the plugin conten
 
 - [Package a Python plugin](../guides/package-a-python-plugin.md) — step-by-step guide
 - [Runtime plugins](runtime-plugins.md) — the v0.18 .NET plugin baseline
+- [Container plugins](container-plugins.md) — the OCI-image sibling plugin model (Docker / Kubernetes supervision, HTTP gateway protocol)
+- [Polyglot agents](polyglot-agents.md) — the full-agent Python shim (vs the tool-scope plugins this doc covers)
 - [Tools](tools.md) — how tools flow through the registry
 - [PluginAgentResearchPlanner sample](../../samples/PluginAgentResearchPlanner/README.md)

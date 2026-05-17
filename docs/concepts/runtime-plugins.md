@@ -2,7 +2,7 @@
 
 The runtime loads code-authored `IAiAgent` implementations from DLLs dropped under `/var/lib/vais/plugins` and routes manifests to them when `AgentHandlerRef.TypeName` matches. Ship agents whose behaviour doesn't fit the "model + prompt + tools" declarative shape — custom loops, proprietary providers, deterministic fallbacks — without rebuilding the runtime container.
 
-> Python tool-contributing plugins are supported via a separate loader path (`IPythonPluginHost`, `INamedToolSourceProvider`). Python plugins contribute **tools** rather than a full agent loop, using the MCP stdio protocol. See [polyglot-plugins.md](polyglot-plugins.md).
+> Three sibling plugin models exist. This doc covers **assembly plugins** (in-process, .NET DLL). Python tool-contributing plugins are loaded via a separate path (`IPythonPluginHost`, `INamedToolSourceProvider`) and use the MCP stdio protocol — see [polyglot-plugins.md](polyglot-plugins.md) and the full-agent variant in [polyglot-agents.md](polyglot-agents.md). **Container plugins** — OCI images supervised as Docker containers or K8s Deployments, communicating over an HTTP gateway — are the right choice when the plugin needs its own OS / runtime / native deps. See [container-plugins.md](container-plugins.md).
 
 ## What ships
 
@@ -194,14 +194,17 @@ No pod restart, no manifest re-apply. The policy defaults to `Disabled` (v0.18-c
 
 See the [PluginAgentWeather sample](../../samples/PluginAgentWeather/README.md#hot-reload-without-restarting-the-host-v022) for a worked example.
 
-## Not in scope for v0.18 / still out of scope
+## Not in scope for the assembly model
 
-- **Non-.NET plugins.** WASM / gRPC / stdio plugin servers are not part of this pillar — the ABI is .NET-only.
-- **Sandboxing.** No assembly-level permission capture or service-access blocklists. Trust boundary = runtime pod.
-- **Plugin discovery via `vais list-plugins`.** The HTTP surface does not enumerate loaded plugins in v0.18; startup logs record the load manifest.
+- **Non-.NET plugins.** WASM / gRPC plugin servers are not part of this loader — the assembly ABI is .NET-only. For non-.NET / non-Python plugins, use the [container plugin model](container-plugins.md).
+- **Sandboxing.** No assembly-level permission capture or service-access blocklists. Trust boundary = runtime pod. Container plugins are the strict-sandbox option (P12 Phase 1+2 hardening; egress isolation via the internal bridge or NetworkPolicy).
+- **Plugin discovery via `vais list-plugins`.** Use `vais plugin-status` for the cross-model registry view (assembly, Python, container).
 
 ## Related
 
+- [container-plugins concept](container-plugins.md) — the OCI-image sibling plugin model with its own concept doc.
+- [polyglot-plugins concept](polyglot-plugins.md) — Python subprocess plugins (tool-scope only).
+- [polyglot-agents concept](polyglot-agents.md) — Python agent shim for full-agent handlers.
 - [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) — step-by-step walkthrough from `dotnet new classlib` to `vais invoke`.
 - [declarative-agents concept](declarative-agents.md) — the declarative path plugins complement; see §"`handler.typeName` coexistence with the plugin loader" for the precedence decision table.
 - [architecture concept §Plugin tier (v0.18)](architecture.md#plugin-tier-v018) — where the loader sits relative to the library stack.

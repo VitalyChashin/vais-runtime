@@ -310,8 +310,7 @@ Guidance for AI assistants working in this repo:
 5. **Use the Public API analyzer as your guide.** When it complains, it's right. Don't edit `PublicAPI.Shipped.txt` to silence it.
 6. **Every public type needs XML docs.** If you add one without a doc comment, CI will fail.
 7. **When in doubt about scope, ask.** Large unsolicited refactors are rejected on principle — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
-8. **Record deferred work.** If your PR defers something, add it to [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md) with a dated entry.
-9. **Update `CHANGELOG.md` for every notable change.** Add an entry under `## [Unreleased]` — `Added` for new features, `Changed` for behaviour or API changes (include migration guidance for breaking changes), `Fixed` for bug fixes. Do this in the same commit as the change, not as a follow-up.
+8. **Update `CHANGELOG.md` for every notable change.** Add an entry under `## [Unreleased]` — `Added` for new features, `Changed` for behaviour or API changes (include migration guidance for breaking changes), `Fixed` for bug fixes. Do this in the same commit as the change, not as a follow-up.
 
 ---
 

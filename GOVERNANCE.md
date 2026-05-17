@@ -16,8 +16,6 @@ Vais.Agents is in Phase 1 (pre-alpha). During Phase 1, governance is a **benevol
 | Breaking changes | Migration guidance required in the PR and `CHANGELOG.md` under `Changed`. Maintainer sign-off required. |
 | Architecture decisions | Captured inline in the PR description and the commit body; substantive rationale also lands in `CHANGELOG.md` and the relevant concept page. |
 
-Out-of-scope work is enumerated in [`docs/roadmap/deferred-backlog.md`](docs/roadmap/deferred-backlog.md). PRs that contradict an entry there are likely to be rejected unless the contributor first argues for re-prioritising the item.
-
 ## Evolution
 
 This document describes the Phase 1 model. As the project matures, governance will evolve — likely toward a small steering group with formal voting on contentious changes. That evolution is itself a decision the maintainers will make publicly, via a PR that updates this file.
