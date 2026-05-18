@@ -134,7 +134,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Protobuf runtime (Vais.Agents.Runtime.Plugins.Container). Google.Protobuf used to parse incoming OTLP trace export requests from container plugins.">
-    <PackageVersion Include="Google.Protobuf" Version="3.30.2" />
+    <PackageVersion Include="Google.Protobuf" Version="3.34.1" />
   </ItemGroup>
 
   <ItemGroup Label="ASP.NET Core TestHost — integration tests for the HTTP control plane.">
