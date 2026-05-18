@@ -24,6 +24,14 @@ export interface PluginSourcePushResponse {
   errorMessage?: string | null
 }
 
+export interface PluginDllPushResponse {
+  pluginName: string
+  status: 'Success' | 'AbiMismatch' | 'LoadFailed' | 'ReloadDisabled' | 'NotFound' | 'Bootstrapped' | 'ValidationFailed'
+  handlers?: string[] | null
+  targetApiVersion?: string | null
+  errorMessage?: string | null
+}
+
 export interface AgentHandlerRef {
   typeName: string
   assemblyName?: string | null

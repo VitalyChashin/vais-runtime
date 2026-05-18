@@ -22,6 +22,24 @@ export function registerPluginsIpc() {
     return resp.json() as Promise<unknown>
   })
 
+  ipcMain.handle('plugin:pushDll', async (_, name: string, baseUrl: string) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: `Select DLL for "${name}"`,
+      filters: [{ name: '.NET Assemblies', extensions: ['dll'] }],
+      properties: ['openFile'],
+    })
+    if (canceled || filePaths.length === 0) return { cancelled: true }
+
+    const dllBytes = fs.readFileSync(filePaths[0])
+    const url = `${baseUrl.replace(/\/$/, '')}/v1/plugins/${encodeURIComponent(name)}/dll`
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: dllBytes,
+    })
+    return resp.json() as Promise<unknown>
+  })
+
   ipcMain.handle('plugins:load', () => {
     const pluginsDir = path.join(os.homedir(), '.vais', 'workbench', 'plugins')
     fs.mkdirSync(pluginsDir, { recursive: true })

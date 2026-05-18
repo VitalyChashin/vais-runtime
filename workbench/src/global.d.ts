@@ -13,6 +13,13 @@ declare global {
         | { cancelled: true }
         | { cancelled?: false; pluginName: string; status: string; processId?: number | null; errorMessage?: string | null }
       >
+      pushPluginDll(
+        name: string,
+        baseUrl: string,
+      ): Promise<
+        | { cancelled: true }
+        | { cancelled?: false; pluginName: string; status: string; handlers?: string[] | null; targetApiVersion?: string | null; errorMessage?: string | null }
+      >
     }
   }
 }

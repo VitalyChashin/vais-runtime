@@ -25,6 +25,7 @@ export function PluginDetail({ pluginName }: Props) {
   const { select } = useSelection()
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [pushingDll, setPushingDll] = useState(false)
 
   const { data: plugins = [], isLoading } = useQuery({
     queryKey: ['plugins', client.baseUrl],
@@ -59,6 +60,27 @@ export function PluginDetail({ pluginName }: Props) {
     }
   }
 
+  async function handleDllPush() {
+    setPushingDll(true)
+    setPushResult(null)
+    try {
+      const res = await window.vais.pushPluginDll(pluginName, client.baseUrl)
+      if ('cancelled' in res && res.cancelled) {
+        // user dismissed dialog — no feedback
+      } else if (res.status === 'Success' || res.status === 'Bootstrapped') {
+        const verb = res.status === 'Bootstrapped' ? 'bootstrapped' : 'reloaded'
+        const handlers = res.handlers?.join(', ') ?? '—'
+        setPushResult({ ok: true, message: `${verb} (handlers: ${handlers})` })
+      } else {
+        setPushResult({ ok: false, message: res.errorMessage ?? res.status })
+      }
+    } catch (err) {
+      setPushResult({ ok: false, message: String(err) })
+    } finally {
+      setPushingDll(false)
+    }
+  }
+
   if (isLoading) {
     return <div style={{ padding: 16, fontSize: 13, color: 'var(--color-text-muted)' }}>Loading…</div>
   }
@@ -88,6 +110,13 @@ export function PluginDetail({ pluginName }: Props) {
           <div className="toolbar__actions">
             <button className="btn btn--ghost" disabled={pushing} onClick={handlePush}>
               {pushing ? 'Pushing…' : 'Push source…'}
+            </button>
+          </div>
+        )}
+        {plugin.kind === 'Assembly' && (
+          <div className="toolbar__actions">
+            <button className="btn btn--ghost" disabled={pushingDll} onClick={handleDllPush}>
+              {pushingDll ? 'Pushing…' : 'Push DLL…'}
             </button>
           </div>
         )}
