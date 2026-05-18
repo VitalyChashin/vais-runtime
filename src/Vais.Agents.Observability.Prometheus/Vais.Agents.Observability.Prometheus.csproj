@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
   </ItemGroup>
 
   <ItemGroup>

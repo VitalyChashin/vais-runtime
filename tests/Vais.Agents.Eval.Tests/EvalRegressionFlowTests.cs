@@ -54,8 +54,8 @@ public sealed class EvalRegressionFlowTests
     public async Task RegressionFlow_EndToEnd_BothCases_AssertionsPass()
     {
         var registry = BuildRegistry();
-        var caseCtx1 = new EvalCaseContext(SuiteSpec.Cases[0], Suite.Spec, AgentContext.Empty);
-        var caseCtx2 = new EvalCaseContext(SuiteSpec.Cases[1], Suite.Spec, AgentContext.Empty);
+        var caseCtx1 = new EvalCaseContext(SuiteSpec.Cases![0], Suite.Spec, AgentContext.Empty);
+        var caseCtx2 = new EvalCaseContext(SuiteSpec.Cases![1], Suite.Spec, AgentContext.Empty);
 
         // Case 1: response "found 42 results", tools search + summarize called, no failure.
         var record1 = MakeRecord(
@@ -63,7 +63,7 @@ public sealed class EvalRegressionFlowTests
             toolNames: new[] { "search", "summarize" },
             hasTurnFailed: false);
 
-        var results1 = await EvaluateAllAsync(registry, caseCtx1, record1, SuiteSpec.Cases[0]);
+        var results1 = await EvaluateAllAsync(registry, caseCtx1, record1, SuiteSpec.Cases![0]);
         results1.Should().HaveCount(3);
         results1[0].Status.Should().Be(EvalAssertionStatus.Pass);  // no-turn-failed
         results1[1].Status.Should().Be(EvalAssertionStatus.Pass);  // response-regex \d+
@@ -75,7 +75,7 @@ public sealed class EvalRegressionFlowTests
             toolNames: Array.Empty<string>(),
             hasTurnFailed: false);
 
-        var results2 = await EvaluateAllAsync(registry, caseCtx2, record2, SuiteSpec.Cases[1]);
+        var results2 = await EvaluateAllAsync(registry, caseCtx2, record2, SuiteSpec.Cases![1]);
         results2.Should().HaveCount(2);
         results2[0].Status.Should().Be(EvalAssertionStatus.Pass);  // no-turn-failed
         results2[1].Status.Should().Be(EvalAssertionStatus.Pass);  // response-regex hello (ignoreCase)
@@ -85,7 +85,7 @@ public sealed class EvalRegressionFlowTests
     public async Task ResponseRegex_Fail_WhenPatternDoesNotMatch()
     {
         var registry = BuildRegistry();
-        var @case = SuiteSpec.Cases[0];
+        var @case = SuiteSpec.Cases![0];
         var ctx = new EvalCaseContext(@case, Suite.Spec, AgentContext.Empty);
         var record = MakeRecord("no digits here!", Array.Empty<string>(), false);
 
@@ -103,7 +103,7 @@ public sealed class EvalRegressionFlowTests
     public async Task NoTurnFailed_Fail_WhenTurnFailedEventPresent()
     {
         var registry = BuildRegistry();
-        var @case = SuiteSpec.Cases[0];
+        var @case = SuiteSpec.Cases![0];
         var ctx = new EvalCaseContext(@case, Suite.Spec, AgentContext.Empty);
         var record = MakeRecord("response", Array.Empty<string>(), hasTurnFailed: true);
 
@@ -120,7 +120,7 @@ public sealed class EvalRegressionFlowTests
     public async Task ToolCallSequence_Exact_Fail_WhenOrderDiffers()
     {
         var registry = BuildRegistry();
-        var @case = SuiteSpec.Cases[0];
+        var @case = SuiteSpec.Cases![0];
         var ctx = new EvalCaseContext(@case, Suite.Spec, AgentContext.Empty);
         var record = MakeRecord("ok", new[] { "summarize", "search" }, false);
 
@@ -138,7 +138,7 @@ public sealed class EvalRegressionFlowTests
     public async Task ToolCallSequence_F1_PartialMatch_YieldsScore()
     {
         var registry = BuildRegistry();
-        var @case = SuiteSpec.Cases[0];
+        var @case = SuiteSpec.Cases![0];
         var ctx = new EvalCaseContext(@case, Suite.Spec, AgentContext.Empty);
 
         // actual has only "search", expected has "search" + "summarize"

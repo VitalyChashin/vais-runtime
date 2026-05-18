@@ -42,11 +42,44 @@ public sealed record EvalSuiteSpec
     /// <summary>Baseline run to diff against in <c>vais eval diff</c>.</summary>
     public EvalBaseline? Baseline { get; init; }
 
-    /// <summary>Test cases that make up this suite.</summary>
-    public required IReadOnlyList<EvalCase> Cases { get; init; }
+    /// <summary>
+    /// Test cases that make up this suite (batch mode). Exactly one of <see cref="Cases"/>
+    /// or <see cref="Sampling"/> must be set. Null when <see cref="Sampling"/> is present.
+    /// </summary>
+    public IReadOnlyList<EvalCase>? Cases { get; init; }
 
     /// <summary>Suite-level replay mode default. Per-case <see cref="EvalCase.Replay"/> overrides this. Default: Live.</summary>
     public EvalReplayMode ReplayMode { get; init; } = EvalReplayMode.Live;
+
+    /// <summary>
+    /// Continuous-mode sampling configuration. When set, exactly one of
+    /// <see cref="Cases"/> or <see cref="Sampling"/> must be present. Mutually exclusive
+    /// with <see cref="Cases"/>.
+    /// </summary>
+    public EvalSamplingSpec? Sampling { get; init; }
+
+    /// <summary>
+    /// Suite-level assertion list used when <see cref="Sampling"/> is set (continuous mode).
+    /// Each sampled production run is evaluated against all assertions here.
+    /// Must be non-empty when <see cref="Sampling"/> is present.
+    /// </summary>
+    public IReadOnlyList<EvalAssertion>? Assertions { get; init; }
+}
+
+/// <summary>
+/// Continuous-mode sampling configuration. Applied when <see cref="EvalSuiteSpec.Sampling"/>
+/// is set instead of <see cref="EvalSuiteSpec.Cases"/>.
+/// </summary>
+public sealed record EvalSamplingSpec
+{
+    /// <summary>Probability in [0, 1] that any one completed production run is scored.</summary>
+    public required double Rate { get; init; }
+
+    /// <summary>Target minimum samples per hour. Best-effort hint in v1 — strict floor is a follow-on.</summary>
+    public int? MinPerHour { get; init; }
+
+    /// <summary>Length of the rolling eval_runs window. Default 1 hour.</summary>
+    public TimeSpan WindowDuration { get; init; } = TimeSpan.FromHours(1);
 }
 
 /// <summary>Structured target reference for an eval suite, including optional version pinning.</summary>

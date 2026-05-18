@@ -99,7 +99,7 @@ public sealed class EvalSuiteManifestParserTests
         m.Spec.Defaults.Timeout.Should().Be(TimeSpan.FromMinutes(2));
         m.Spec.Baseline!.RunId.Should().Be("550e8400-e29b-41d4-a716-446655440000");
 
-        var c = m.Spec.Cases.Single();
+        var c = m.Spec.Cases!.Single();
         c.Name.Should().Be("Basic greeting");
         c.ExpectedOutput.Should().Be("Hi there!");
         c.Assertions.Should().ContainSingle(a => a.Kind == "contains");
@@ -340,7 +340,7 @@ public sealed class EvalSuiteManifestParserTests
             """;
 
         var resources = await LoadAsync(json);
-        var c = resources.OfType<ManifestResource.EvalSuiteCase>().Single().Suite.Spec.Cases.Single();
+        var c = resources.OfType<ManifestResource.EvalSuiteCase>().Single().Suite.Spec.Cases!.Single();
         c.Replay.Should().Be(EvalReplayMode.Cached);
         c.InitialHistory.Should().HaveCount(2);
         c.InitialHistory![0].Role.Should().Be("user");

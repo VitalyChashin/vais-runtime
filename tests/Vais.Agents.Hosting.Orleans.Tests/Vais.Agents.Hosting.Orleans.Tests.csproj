@@ -13,10 +13,13 @@
     <ProjectReference Include="..\..\src\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
     <ProjectReference Include="..\..\src\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />
+    <ProjectReference Include="..\..\src\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="A2A" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Orleans.TestingHost" />
     <PackageReference Include="Microsoft.Orleans.Client" />
     <PackageReference Include="Microsoft.Orleans.Server" />

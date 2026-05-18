@@ -550,7 +550,9 @@ Vais.Agents.EvalSuiteSpec.AgentId.get -> string?
 Vais.Agents.EvalSuiteSpec.AgentId.init -> void
 Vais.Agents.EvalSuiteSpec.Baseline.get -> Vais.Agents.EvalBaseline?
 Vais.Agents.EvalSuiteSpec.Baseline.init -> void
-Vais.Agents.EvalSuiteSpec.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalCase!>!
+Vais.Agents.EvalSuiteSpec.Assertions.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalAssertion!>?
+Vais.Agents.EvalSuiteSpec.Assertions.init -> void
+Vais.Agents.EvalSuiteSpec.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalCase!>?
 Vais.Agents.EvalSuiteSpec.Cases.init -> void
 Vais.Agents.EvalSuiteSpec.Defaults.get -> Vais.Agents.EvalDefaults?
 Vais.Agents.EvalSuiteSpec.Defaults.init -> void
@@ -560,11 +562,56 @@ Vais.Agents.EvalSuiteSpec.GraphId.get -> string?
 Vais.Agents.EvalSuiteSpec.GraphId.init -> void
 Vais.Agents.EvalSuiteSpec.ReplayMode.get -> Vais.Agents.EvalReplayMode
 Vais.Agents.EvalSuiteSpec.ReplayMode.init -> void
+Vais.Agents.EvalSuiteSpec.Sampling.get -> Vais.Agents.EvalSamplingSpec?
+Vais.Agents.EvalSuiteSpec.Sampling.init -> void
 Vais.Agents.EvalSuiteSpec.Target.get -> Vais.Agents.EvalTarget?
 Vais.Agents.EvalSuiteSpec.Target.init -> void
 override Vais.Agents.EvalSuiteSpec.Equals(object? obj) -> bool
 override Vais.Agents.EvalSuiteSpec.GetHashCode() -> int
 override Vais.Agents.EvalSuiteSpec.ToString() -> string!
+Vais.Agents.EvalSamplingSpec
+Vais.Agents.EvalSamplingSpec.<Clone>$() -> Vais.Agents.EvalSamplingSpec!
+Vais.Agents.EvalSamplingSpec.Equals(Vais.Agents.EvalSamplingSpec? other) -> bool
+Vais.Agents.EvalSamplingSpec.EvalSamplingSpec() -> void
+Vais.Agents.EvalSamplingSpec.MinPerHour.get -> int?
+Vais.Agents.EvalSamplingSpec.MinPerHour.init -> void
+Vais.Agents.EvalSamplingSpec.Rate.get -> double
+Vais.Agents.EvalSamplingSpec.Rate.init -> void
+Vais.Agents.EvalSamplingSpec.WindowDuration.get -> System.TimeSpan
+Vais.Agents.EvalSamplingSpec.WindowDuration.init -> void
+override Vais.Agents.EvalSamplingSpec.Equals(object? obj) -> bool
+override Vais.Agents.EvalSamplingSpec.GetHashCode() -> int
+override Vais.Agents.EvalSamplingSpec.ToString() -> string!
+static Vais.Agents.EvalSamplingSpec.operator !=(Vais.Agents.EvalSamplingSpec? left, Vais.Agents.EvalSamplingSpec? right) -> bool
+static Vais.Agents.EvalSamplingSpec.operator ==(Vais.Agents.EvalSamplingSpec? left, Vais.Agents.EvalSamplingSpec? right) -> bool
+Vais.Agents.IRunCompletionListener
+Vais.Agents.IRunCompletionListener.OnRunCompletedAsync(Vais.Agents.RunCompletionSignal! signal, System.Threading.CancellationToken ct) -> System.Threading.Tasks.ValueTask
+Vais.Agents.RunCompletionSignal
+Vais.Agents.RunCompletionSignal.<Clone>$() -> Vais.Agents.RunCompletionSignal!
+Vais.Agents.RunCompletionSignal.AgentRef.get -> string?
+Vais.Agents.RunCompletionSignal.AgentRef.init -> void
+Vais.Agents.RunCompletionSignal.AgentRunId.get -> string!
+Vais.Agents.RunCompletionSignal.AgentRunId.init -> void
+Vais.Agents.RunCompletionSignal.AssistantText.get -> string?
+Vais.Agents.RunCompletionSignal.AssistantText.init -> void
+Vais.Agents.RunCompletionSignal.CompletedAt.get -> System.DateTimeOffset
+Vais.Agents.RunCompletionSignal.CompletedAt.init -> void
+Vais.Agents.RunCompletionSignal.Deconstruct(out string! AgentRunId, out string? AgentRef, out string? GraphRef, out string! WorkspaceId, out System.DateTimeOffset CompletedAt, out System.TimeSpan Duration, out string? AssistantText, out System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? FinalState) -> void
+Vais.Agents.RunCompletionSignal.Duration.get -> System.TimeSpan
+Vais.Agents.RunCompletionSignal.Duration.init -> void
+Vais.Agents.RunCompletionSignal.Equals(Vais.Agents.RunCompletionSignal? other) -> bool
+Vais.Agents.RunCompletionSignal.FinalState.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>?
+Vais.Agents.RunCompletionSignal.FinalState.init -> void
+Vais.Agents.RunCompletionSignal.GraphRef.get -> string?
+Vais.Agents.RunCompletionSignal.GraphRef.init -> void
+Vais.Agents.RunCompletionSignal.RunCompletionSignal(string! AgentRunId, string? AgentRef, string? GraphRef, string! WorkspaceId, System.DateTimeOffset CompletedAt, System.TimeSpan Duration, string? AssistantText, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? FinalState) -> void
+Vais.Agents.RunCompletionSignal.WorkspaceId.get -> string!
+Vais.Agents.RunCompletionSignal.WorkspaceId.init -> void
+override Vais.Agents.RunCompletionSignal.Equals(object? obj) -> bool
+override Vais.Agents.RunCompletionSignal.GetHashCode() -> int
+override Vais.Agents.RunCompletionSignal.ToString() -> string!
+static Vais.Agents.RunCompletionSignal.operator !=(Vais.Agents.RunCompletionSignal? left, Vais.Agents.RunCompletionSignal? right) -> bool
+static Vais.Agents.RunCompletionSignal.operator ==(Vais.Agents.RunCompletionSignal? left, Vais.Agents.RunCompletionSignal? right) -> bool
 static Vais.Agents.EvalSuiteSpec.operator !=(Vais.Agents.EvalSuiteSpec? left, Vais.Agents.EvalSuiteSpec? right) -> bool
 static Vais.Agents.EvalSuiteSpec.operator ==(Vais.Agents.EvalSuiteSpec? left, Vais.Agents.EvalSuiteSpec? right) -> bool
 Vais.Agents.EvalTarget

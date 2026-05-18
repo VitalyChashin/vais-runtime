@@ -2,7 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Vais.Agents.Eval.Assertions;
+using Vais.Agents.Eval.Continuous;
 
 namespace Vais.Agents.Eval;
 
@@ -31,6 +33,10 @@ public static class EvalServiceCollectionExtensions
 
         services.AddSingleton<IEvalAssertionFactoryRegistry, EvalAssertionFactoryRegistry>();
         services.AddSingleton<IEvalResultStore, LoggingEvalResultStore>();
+
+        // Continuous-scoring support — index and no-op metric sink (replaced by Prometheus sink if wired)
+        services.TryAddSingleton<IContinuousSuiteIndex, InMemoryContinuousSuiteIndex>();
+        services.TryAddSingleton<IContinuousScoringMetricSink, NoopContinuousScoringMetricSink>();
 
         return services;
     }

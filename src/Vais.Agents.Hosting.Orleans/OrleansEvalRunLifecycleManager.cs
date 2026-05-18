@@ -63,6 +63,6 @@ public sealed class OrleansEvalRunLifecycleManager : IEvalRunLifecycleManager
     }
 
     /// <inheritdoc/>
-    public async ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, CancellationToken ct = default)
-        => await _resultStore.ListRunsAsync(suiteName, limit, ct).ConfigureAwait(false);
+    public async ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, CancellationToken ct = default)
+        => await _resultStore.ListRunsAsync(suiteName, limit, source, ct).ConfigureAwait(false);
 }

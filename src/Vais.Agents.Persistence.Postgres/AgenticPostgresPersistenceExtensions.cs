@@ -1,6 +1,10 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
+using Vais.Agents.Eval;
 using Vais.Agents.Hosting.Orleans;
 
 namespace Vais.Agents.Persistence.Postgres;
@@ -115,5 +119,23 @@ public static class AgenticPostgresPersistenceExtensions
                 options.Invariant = NpgsqlInvariant;
                 options.ConnectionString = connectionString;
             });
+    }
+
+    /// <summary>
+    /// Register <see cref="PostgresEvalResultStore"/> as the singleton <see cref="IEvalResultStore"/>.
+    /// Requires the tables from <c>Migrations/eval_results_tables.sql</c> to exist in the target database.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    /// <param name="connectionString">Postgres connection string.</param>
+    public static IServiceCollection AddPostgresEvalResultStore(
+        this IServiceCollection services,
+        string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        var ds = NpgsqlDataSource.Create(connectionString);
+        services.TryAddSingleton<IEvalResultStore>(new PostgresEvalResultStore(ds));
+        return services;
     }
 }

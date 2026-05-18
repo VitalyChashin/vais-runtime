@@ -304,10 +304,105 @@ The diff shows exactly which assertions moved and by how much. Here the prompt c
 
 `-o json` is available for machine-readable diff output (CI policy gates, Slack bots, etc.).
 
+## Step 7 — Continuous production monitoring
+
+Batch regression suites catch regressions before deployment. Continuous eval catches
+them in production by scoring a statistical sample of real traffic without ever replaying
+or altering it.
+
+### How it works
+
+Replace the `spec.cases:` block with a `spec.sampling:` block. The runtime subscribes
+to the agent event bus and scores every run whose `hash(runId) / 2⁶⁴ < rate` — a
+deterministic predicate that is identical on every silo, so N-silo deployments do not
+produce N×-duplicate samples.
+
+Each eval window (default: 1 h) accumulates samples in a single `eval_runs` row in
+Postgres. When the window expires the grain closes the row with `status = Completed`
+and opens the next one.
+
+### Author a continuous suite
+
+```yaml
+apiVersion: vais.agents/v1
+kind: EvalSuite
+metadata:
+  name: support-bot-continuous
+spec:
+  agentId: support-bot
+  sampling:
+    rate: 0.01            # Score 1% of production runs
+    windowDuration: 1h    # New eval_run row every hour
+  assertions:
+    - kind: no-turn-failed
+    - kind: response-regex
+      params:
+        pattern: "\\S+"   # Response must be non-empty
+```
+
+> **Cost budget:** at 1% sampling × 100 rps × 1 judge call per sample = 1 judge call/s.
+> For `judge-score` assertions, route the judge model through a `LlmGatewayConfig` with
+> semantic-cache enabled to amortize repeat prompts:
+>
+> ```yaml
+> spec.model.id: gpt-4o-judge
+> ```
+>
+> The formula is `rate × traffic × judges_per_case × cost_per_call`. Start with
+> `rate: 0.001` while validating your assertion chain; ramp up once the cost is justified.
+
+### Apply and observe
+
+```bash
+vais apply -f support-bot-continuous.yaml
+
+# List continuous runs (live, no --run-id needed)
+vais eval list --source continuous
+
+# Filter by suite
+vais eval list --source continuous --suite support-bot-continuous
+```
+
+Example output:
+
+```
+EVAL RUN ID                          SUITE                    STATUS   WINDOW START          SAMPLED
+ceval-support-bot-cont-20260518…     support-bot-continuous   Running  2026-05-18T14:00:00Z  12
+ceval-support-bot-cont-20260518…     support-bot-continuous   Done     2026-05-18T13:00:00Z  47
+```
+
+### Grafana
+
+Import `deploy/observability/grafana/dashboards/eval-continuous.json` into your Grafana
+instance. Five panels ship out of the box:
+
+| Panel | Metric | What to watch |
+|---|---|---|
+| Pass Rate Over Time | `vais_eval_continuous_cases_total` | Sustained drop below 95% = regression |
+| Assertion Score (p50/p90) | `vais_eval_continuous_assertion_score` | Falling p90 on `judge-score` = drift |
+| Sampled Runs Per Window | `vais_eval_continuous_window_sampled` | Zero = no traffic or sampler not running |
+| Window Time Remaining | `vais_eval_continuous_window_seconds_remaining` | Near-zero = window about to rotate |
+| Failed Cases/min | `vais_eval_continuous_cases_total{status="Fail"}` | Spike = investigate logs |
+
+Live data appears within 30 s of the first sampled production run.
+
+### Operational risks
+
+- **Samples are point-in-time observations.** Runs that complete during a silo restart
+  are not retroactively sampled. This is expected behaviour for `rate = 0.01` semantics.
+- **Judge non-determinism.** `judge-score` assertions are not perfectly repeatable;
+  treat sustained trends (5+ consecutive windows) rather than single-window spikes as
+  signals. See `research/evaluation-harness-design-2026-05-16.md §9`.
+- **Under-sampling.** When production traffic is below `1 / rate` rps, some windows get
+  zero samples. The "Sampled Runs Per Window" panel surfaces this.
+
+See `samples/EvalContinuousMonitor/` for a self-contained example.
+
 ## Clean up
 
 ```bash
 vais delete eval-suites/support-bot-regression
+vais delete eval-suites/support-bot-continuous
 vais delete support-bot
 vais delete mcp-gateways/support-mcp-gateway
 ```
@@ -318,6 +413,7 @@ vais delete mcp-gateways/support-mcp-gateway
 - A 3-case suite using five assertion kinds: `no-turn-failed`, `tool-call-sequence`, `response-regex`, `judge-score`, and `metric-threshold`.
 - A JUnit XML pipeline gate that turns any assertion failure into a failing CI job.
 - A baseline + diff workflow that surfaces regressions at the assertion level before they reach production.
+- A continuous sampling suite that monitors production traffic at configurable rate with no agent replay.
 
 ## Next
 
@@ -325,3 +421,4 @@ vais delete mcp-gateways/support-mcp-gateway
 - [Reference → EvalSuite manifest](../reference/manifest-schema.md#evalsuite) — full field reference for all ten assertion kinds.
 - [Extensions → Author a custom assertion](../extensions/author-a-custom-assertion.md) — plug in your own `IEvalAssertionFactory` via DI.
 - `samples/EvalRegression/` — self-contained sample: apply, run, and diff in one script.
+- `samples/EvalContinuousMonitor/` — continuous eval sample with Grafana panel reference.

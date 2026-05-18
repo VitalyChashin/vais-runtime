@@ -19,6 +19,6 @@ public interface IEvalRunLifecycleManager
     /// <summary>Fetch full run detail including per-case results. Null on miss.</summary>
     ValueTask<EvalRunDetail?> GetRunDetailAsync(string evalRunId, CancellationToken ct = default);
 
-    /// <summary>List runs, optionally filtered by suite name.</summary>
-    ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, CancellationToken ct = default);
+    /// <summary>List runs, optionally filtered by suite name and source ("batch" or "continuous").</summary>
+    ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, CancellationToken ct = default);
 }

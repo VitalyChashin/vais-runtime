@@ -342,6 +342,42 @@ Vais.Agents.Hosting.Orleans.EvalRunGrain.StartAsync(string! suiteJson, string! w
 Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager
 Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.CancelRunAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.GetRunDetailAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Eval.EvalRunDetail?>
-Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.ListRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
+Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
 Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.OrleansEvalRunLifecycleManager(Orleans.IGrainFactory! grainFactory, Vais.Agents.IEvalSuiteRegistry! suiteRegistry, Vais.Agents.Eval.IEvalResultStore! resultStore) -> void
 Vais.Agents.Hosting.Orleans.OrleansEvalRunLifecycleManager.StartRunAsync(string! suiteName, string! workspace, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddContinuousEvalScoring(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Hosting.Orleans.IContinuousScoringGrain
+Vais.Agents.Hosting.Orleans.IContinuousScoringGrain.EnqueueSampleAsync(string! productionRunId, System.DateTimeOffset completedAt, string? assistantText, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? finalState) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContinuousScoringGrain.ProcessNextAsync() -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrain
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrain.ContinuousScoringGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState!>! state, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Hosting.Orleans.ContinuousScoringGrain!>! logger) -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrain.EnqueueSampleAsync(string! productionRunId, System.DateTimeOffset completedAt, string? assistantText, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>? finalState) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrain.ProcessNextAsync() -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.ContinuousScoringGrainState() -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowEvalRunId.get -> string?
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowEvalRunId.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowEnd.get -> System.DateTimeOffset?
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowEnd.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowFailedCount.get -> int
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowFailedCount.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowPassedCount.get -> int
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowPassedCount.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowSampledCount.get -> int
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowSampledCount.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowStart.get -> System.DateTimeOffset?
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.CurrentWindowStart.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.PendingQueue.get -> System.Collections.Generic.List<Vais.Agents.Hosting.Orleans.PendingSample!>!
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.PendingQueue.set -> void
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.SuiteJson.get -> string?
+Vais.Agents.Hosting.Orleans.ContinuousScoringGrainState.SuiteJson.set -> void
+Vais.Agents.Hosting.Orleans.PendingSample
+Vais.Agents.Hosting.Orleans.PendingSample.AssistantText.get -> string?
+Vais.Agents.Hosting.Orleans.PendingSample.AssistantText.set -> void
+Vais.Agents.Hosting.Orleans.PendingSample.CompletedAt.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.PendingSample.CompletedAt.set -> void
+Vais.Agents.Hosting.Orleans.PendingSample.FinalStateJson.get -> string?
+Vais.Agents.Hosting.Orleans.PendingSample.FinalStateJson.set -> void
+Vais.Agents.Hosting.Orleans.PendingSample.PendingSample() -> void
+Vais.Agents.Hosting.Orleans.PendingSample.ProductionRunId.get -> string!
+Vais.Agents.Hosting.Orleans.PendingSample.ProductionRunId.set -> void

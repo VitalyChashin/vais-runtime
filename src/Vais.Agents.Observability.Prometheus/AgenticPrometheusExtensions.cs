@@ -3,10 +3,11 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Vais.Agents.Eval.Continuous;
 
 namespace Vais.Agents.Observability.Prometheus;
 
-/// <summary>DI helpers for <see cref="PrometheusSectionSink"/>.</summary>
+/// <summary>DI helpers for Prometheus metric sinks.</summary>
 public static class AgenticPrometheusExtensions
 {
     /// <summary>
@@ -21,6 +22,20 @@ public static class AgenticPrometheusExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<PrometheusSectionSink>();
         services.AddSingleton<ISectionTelemetrySink>(sp => sp.GetRequiredService<PrometheusSectionSink>());
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="PrometheusContinuousScoringMetricSink"/> as the
+    /// <see cref="IContinuousScoringMetricSink"/>. Replaces the no-op default registered by
+    /// <c>AddVaisAgentsEval</c>. Metrics are written to the default Prometheus registry.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddAgenticPrometheusContinuousScoringMetricSink(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<PrometheusContinuousScoringMetricSink>();
+        services.AddSingleton<IContinuousScoringMetricSink>(sp => sp.GetRequiredService<PrometheusContinuousScoringMetricSink>());
         return services;
     }
 }

@@ -402,8 +402,8 @@ public interface IAgentControlPlaneClient
     Task<EvalRunStartResponse> StartEvalRunAsync(string suiteName, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This IAgentControlPlaneClient implementation does not support eval run management. Use AgentControlPlaneClient.");
 
-    /// <summary>GET /v1/eval-runs — list eval runs, optionally filtered by suite. Default: empty list.</summary>
-    Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, CancellationToken cancellationToken = default)
+    /// <summary>GET /v1/eval-runs — list eval runs, optionally filtered by suite and source. Default: empty list.</summary>
+    Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, string? source = null, CancellationToken cancellationToken = default)
         => Task.FromResult(new EvalRunListResponse(Array.Empty<Vais.Agents.Eval.EvalRunSummary>()));
 
     /// <summary>GET /v1/eval-runs/{evalRunId} — get detail for a single eval run. Default: null (not found).</summary>

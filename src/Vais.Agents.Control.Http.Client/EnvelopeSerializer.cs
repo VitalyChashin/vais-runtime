@@ -322,7 +322,7 @@ internal static class EnvelopeSerializer
         if (s.Baseline is { } b)
             spec["baseline"] = new JsonObject { ["runId"] = b.RunId };
         var casesArr = new JsonArray();
-        foreach (var c in s.Cases)
+        foreach (var c in s.Cases ?? [])
         {
             var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
             if (c.Name is not null) caseObj["name"] = c.Name;

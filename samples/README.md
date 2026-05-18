@@ -44,6 +44,7 @@ Start the runtime, declare agents, ship plugins. Each sample below pairs with on
 5. **graph-yaml-authored** — compose multiple agents into a multi-agent graph.
 6. **KubernetesOperatorQuickstart** — production deploy via Helm + `vais.io/v1alpha1` CRD.
 7. **EvalRegression** — regression suite + JUnit XML CI gate.
+8. **EvalContinuousMonitor** — continuous production monitoring via sampling + Grafana dashboard.
 
 For library mode (embed primitives in a .NET app instead), see the path below.
 

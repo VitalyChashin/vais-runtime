@@ -1,2 +1,9 @@
 #nullable enable
 static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! name, string! connectionString) -> Orleans.Hosting.ISiloBuilder!
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddPostgresEvalResultStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.PostgresEvalResultStore(Npgsql.NpgsqlDataSource! dataSource) -> void
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.AppendRunAsync(Vais.Agents.Eval.EvalRunSummary! run, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.AppendCaseResultAsync(Vais.Agents.Eval.EvalCaseResultRecord! result, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
+Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.GetRunAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Eval.EvalRunDetail?>

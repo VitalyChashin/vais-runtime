@@ -1022,11 +1022,12 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
-    public async Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, CancellationToken cancellationToken = default)
+    public async Task<EvalRunListResponse> ListEvalRunsAsync(string? suiteName = null, int limit = 50, string? source = null, CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();
         if (!string.IsNullOrWhiteSpace(suiteName)) qs.Add($"suite={Uri.EscapeDataString(suiteName)}");
         if (limit != 50) qs.Add($"limit={limit}");
+        if (!string.IsNullOrWhiteSpace(source)) qs.Add($"source={Uri.EscapeDataString(source)}");
         var path = qs.Count > 0 ? $"/v1/eval-runs?{string.Join('&', qs)}" : "/v1/eval-runs";
         using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
