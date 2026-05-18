@@ -112,11 +112,14 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.Invoke, manifest, principal, cancellationToken).ConfigureAwait(false);
 
-        if (!_state.TryGetValue((handle.AgentId, handle.Version), out var state))
+        // Use the registry-resolved version so that "latest" aliases resolve to the concrete
+        // version registered by CreateAsync. HTTP invoke endpoints do the same resolution.
+        var resolvedVersion = manifest?.Version ?? handle.Version;
+        if (!_state.TryGetValue((handle.AgentId, resolvedVersion), out var state))
         {
-            await AuditAsync(PolicyOperation.Invoke, handle.AgentId, handle.Version, principal, allowed: true, denyReason: null, errorType: UnknownAgentErrorType).ConfigureAwait(false);
+            await AuditAsync(PolicyOperation.Invoke, handle.AgentId, resolvedVersion, principal, allowed: true, denyReason: null, errorType: UnknownAgentErrorType).ConfigureAwait(false);
             RecordVerb(PolicyOperation.Invoke, outcome: "errored", duration: null);
-            throw new InvalidOperationException($"Unknown agent handle: {handle.AgentId}/{handle.Version}. Call CreateAsync first.");
+            throw new InvalidOperationException($"Unknown agent handle: {handle.AgentId}/{resolvedVersion}. Call CreateAsync first.");
         }
 
         using var activity = StartVerbActivity(PolicyOperation.Invoke, manifest, principal);
@@ -295,12 +298,11 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
 
     private async ValueTask<AgentManifest?> ResolveManifestAsync(AgentHandle handle, CancellationToken ct)
     {
-        var manifest = await _registry.GetAsync(handle.AgentId, handle.Version, ct).ConfigureAwait(false);
-        if (manifest is null)
-        {
-            // Still return null — let the policy engine see the null manifest + decide; the
-            // verb impl throws the UnknownAgent error with the audit entry already in flight.
-        }
+        // Normalize "latest" to null so the registry returns the highest registered version.
+        var versionQuery = string.Equals(handle.Version, "latest", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : handle.Version;
+        var manifest = await _registry.GetAsync(handle.AgentId, versionQuery, ct).ConfigureAwait(false);
         return manifest;
     }
 

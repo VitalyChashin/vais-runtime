@@ -122,20 +122,33 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         string responseText = string.Empty;
         int? promptTokens = null, completionTokens = null;
 
+        // Apply case timeout from defaults if configured.
+        var caseTimeout = suite.Spec.Defaults?.Timeout;
+        using var timeoutCts = caseTimeout.HasValue
+            ? CancellationTokenSource.CreateLinkedTokenSource(ct)
+            : null;
+        if (timeoutCts is not null && caseTimeout.HasValue)
+            timeoutCts.CancelAfter(caseTimeout.Value);
+        var invokeToken = timeoutCts?.Token ?? ct;
+
         try
         {
             var lifecycle = ServiceProvider.GetRequiredService<IAgentLifecycleManager>();
             var eventBus = ServiceProvider.GetService<IAgentEventBus>();
 
             // Subscribe to event bus before invoke so we capture all events for this case.
+            // OrleansAgentEventBus.Subscribe() blocks synchronously via GetAwaiter().GetResult()
+            // on a stream subscription. Calling it directly inside a grain turn deadlocks the
+            // Orleans single-threaded scheduler. Task.Run escapes the scheduler so the blocking
+            // subscribe executes on a thread-pool thread without holding the grain's turn.
             IDisposable? sub = null;
             if (eventBus is not null)
             {
-                sub = eventBus.Subscribe((e, _) =>
+                sub = await Task.Run(() => eventBus.Subscribe((e, _) =>
                 {
                     events.Add(e);
                     return ValueTask.CompletedTask;
-                });
+                }));
             }
 
             try
@@ -159,12 +172,12 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
                 {
                     var contextSetter = ServiceProvider.GetService<IAgentContextSetter>();
                     using var _ = contextSetter?.Push(AgentContext.Empty with { BaselineRunId = baselineRunId });
-                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    var result = await lifecycle.InvokeAsync(handle, request, invokeToken);
                     responseText = result.Text;
                 }
                 else
                 {
-                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    var result = await lifecycle.InvokeAsync(handle, request, invokeToken);
                     responseText = result.Text;
                 }
             }
