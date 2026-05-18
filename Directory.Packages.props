@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup Label="Microsoft.Extensions.AI (MEAI) - unifying IChatClient abstraction. Aligned 10.x family.">
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
     <!--
       VectorData.Abstractions pinned at 10.1.0 — SK 1.74.0's InMemory connector (used in tests)
