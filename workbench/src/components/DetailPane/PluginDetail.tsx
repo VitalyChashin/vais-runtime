@@ -123,9 +123,17 @@ export function PluginDetail({ pluginName }: Props) {
       </div>
 
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <InfoRow label="Language">
+          <span>{plugin.kind === 'Assembly' ? 'C#' : plugin.kind === 'Python' ? 'Python' : plugin.kind}</span>
+        </InfoRow>
+
         <InfoRow label="State">
           <span style={{ color: STATE_COLOR[plugin.state] ?? 'currentColor' }}>● {plugin.state}</span>
         </InfoRow>
+
+        {plugin.targetApiVersion && (
+          <InfoRow label="API ver."><code>{plugin.targetApiVersion}</code></InfoRow>
+        )}
 
         {plugin.processId != null && (
           <InfoRow label="PID"><code>{plugin.processId}</code></InfoRow>

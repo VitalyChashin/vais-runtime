@@ -81,7 +81,7 @@ public static class PluginServiceCollectionExtensions
                 var reloaderLogger = sp.GetService<ILogger<DefaultPluginReloader>>();
                 var loader = new AssemblyPluginLoader(loaderOptions, loaderLogger);
                 var hooks = sp.GetServices<IPluginReloadHook>();
-                return new DefaultPluginReloader(loader, registry, hooks, reloaderLogger);
+                return new DefaultPluginReloader(loader, registry, loaderOptions, hooks, reloaderLogger);
             });
 
             services.AddSingleton<IHostedService>(sp =>

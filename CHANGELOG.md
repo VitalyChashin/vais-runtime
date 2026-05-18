@@ -11,6 +11,35 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **C# plugin hot-reload (CHR-1..21, Phases 1–4, P11 parity).** Closes the last P11 gap for in-process C# plugins: DLL changes can now be published to a running runtime via CLI or HTTP without restarting the silo.
+
+  **Phase 1 — HTTP DLL push (CHR-1..7):**
+  - `POST /v1/plugins/{name}/dll` — accepts `application/octet-stream` (raw DLL) or `application/zip` (DLL + plugin-private deps). Performs ABI pre-validation via `System.Reflection.Metadata.PEReader` + `MetadataReader` before any load. Returns `PluginDllPushResult` with status and handler list.
+  - `AssemblyDllPusher` — stages the upload to a temp file, validates the PE header and `[VaisPlugin]` attribute + `TargetApiVersion`, then atomically moves into the plugin folder and calls `IPluginReloader.ReloadAsync` directly (bypasses the filesystem watcher debounce for a synchronous response).
+  - `GrainReactivationOnPluginReloadHook` — new `IPluginReloadHook` (order −1) that calls `RequestDeactivationAsync()` on every `IAiAgentGrain` whose handler type matches the reloaded plugin. Grain deactivation is throttled at 50/grain·second to avoid silo-load spikes.
+  - `Order` property added to `IPluginReloadHook` (ascending sort; default 0); existing `GrainReactivation` uses −1 to run before user hooks.
+  - 7-case integration test covering success, ABI mismatch, unknown plugin, reload-disabled, and WeakReference GC unload assertions.
+
+  **Phase 2 — CLI + Workbench DLL push (CHR-8..10):**
+  - `vais plugin push --dll <file>` — new flag on the existing push command; opens the DLL (or `.zip`) and calls `POST /v1/plugins/{name}/dll`. Performs the same ABI pre-validation on the client side before the upload (friendly error before touching the network).
+  - Workbench **Push DLL…** button in the plugin detail pane for `Kind = Assembly` plugins.
+
+  **Phase 3 — Declarative manifest + apply/delete/import (CHR-11..17):**
+  - `kind: Plugin` manifest with `spec.language: csharp | python` and `spec.handlers[].typeName` — a single `kind` covers both in-process languages; `kind: ContainerPlugin` stays separate.
+  - Multipart `POST /v1/plugins` — accepts `manifest` (JSON/YAML) part + optional `dll` binary part in one request; `vais apply -f plugin.yaml` dispatches to this endpoint.
+  - `DELETE /v1/plugins/{name}` — removes a plugin from the registry; unloads the ALC if `IsCollectible`.
+  - `IPluginReloader.UnloadAsync` — new method on the reloader interface with `PluginUnloadResult` and `PluginUnloadStatus` return types.
+  - `vais apply` dispatch extended for `ManifestResource.PluginCase`; `vais delete plugin/<name>` wired.
+  - `vais plugin import-existing <name>` — explicit migration command; imports a filesystem-seeded plugin into the hot-reload registry without requiring a DLL push. No implicit auto-import on boot.
+  - `PluginManifest`, `PluginManifestSpec`, `PluginHandlerRef` types added to `Vais.Agents.Abstractions`.
+  - Apply-time consistency check: manifest `handlers` set must equal `[VaisPlugin].Handlers` set (catches "manifest edited but DLL not rebuilt").
+
+  **Phase 4 — Operator polish (CHR-18..21):**
+  - Helm `plugins.csharpReloadPolicy: "" | DrainAndSwap` value wires `VAIS_PLUGINS_RELOAD_POLICY`; matching README section and values table entry. Parallels the existing `pythonReloadPolicy` flag.
+  - `PluginLoaderOptions.DiagnoseUnloadLeaks` (default `true`) — after each `Unload()` call the reloader fires a background monitor that polls the `WeakReference<AssemblyLoadContext>` every 2 s for up to 30 s; emits `LogWarning("plugin-unload-leak: …")` if the context is still alive. Controlled by `VAIS_PLUGINS_DIAGNOSE_UNLOAD_LEAKS=false`.
+  - Workbench plugin tree: language badge (`C#` / `py` / `ctr`) next to each plugin row; detail pane gains **Language** + **API ver.** info rows.
+  - `research/extensions-contract-2026-05-18.md §6.4` amended: "code changes require silo restart" claim superseded — the collectible-ALC path applies equally to `kind: Extension` with `host: csharp`.
+
 - **DevOps guide — `docs/devops/configure-llm-providers.md`.** End-to-end credential-wiring walkthrough for operators: the `secret://env` vs `secret://file` pattern, local-dev Compose setup, production K8s Secret projection (including a chart-limitation workaround for the v0.16 `vais-agents-runtime` Helm chart that lacks `extraEnv:` / `extraVolumes:` knobs), multi-provider isolation in one runtime, custom-endpoint configuration for vLLM / Ollama / LiteLLM / OpenRouter / Azure, Fallback pools with full ModelSpec per entry, and an extension stub for KeyVault / AWS Secrets Manager / Vault via custom `ISecretResolver`. Cross-linked from `docs/devops/index.md`, `docs/concepts/declarative-agents.md`, `docs/guides/author-an-agent-in-yaml.md`, `docs/reference/manifest-schema.md`, and the `urn:vais-agents:model-provider-unsupported` row in `docs/reference/problem-details-urns.md`. `.env.example` gains an `ANTHROPIC_API_KEY` line with a comment clarifying that the Anthropic factory does not autowire that env var by convention.
 
 - **Plugin OTLP telemetry receiver (P12 optional outbound, OTLP-1–17).** Container plugins can now emit OpenTelemetry spans that appear in the same trace as the surrounding graph-node span in Langfuse and other OTel backends — without the plugin ever opening a direct connection to an external observability backend.

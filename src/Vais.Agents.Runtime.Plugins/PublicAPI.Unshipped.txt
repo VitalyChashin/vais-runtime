@@ -55,4 +55,6 @@ Vais.Agents.Runtime.Plugins.PluginUnloadStatus
 Vais.Agents.Runtime.Plugins.PluginUnloadStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
 Vais.Agents.Runtime.Plugins.PluginUnloadStatus.NotFound = 1 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
 Vais.Agents.Runtime.Plugins.PluginUnloadStatus.AgentsStillReference = 2 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.DiagnoseUnloadLeaks.get -> bool
+Vais.Agents.Runtime.Plugins.PluginLoaderOptions.DiagnoseUnloadLeaks.init -> void
 static Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions.EnsurePluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

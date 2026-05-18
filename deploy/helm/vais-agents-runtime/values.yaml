@@ -125,6 +125,10 @@ plugins:
   # filesystem watcher and source-push endpoint. Safe to enable on
   # Kubernetes: the watcher is a no-op if nothing changes files.
   pythonReloadPolicy: ""   # "" | DrainAndSwap
+  # C# plugin hot-reload policy. Set to DrainAndSwap to enable the filesystem
+  # watcher and DLL-push endpoint (POST /v1/plugins/{name}/dll). Safe to enable
+  # on Kubernetes: the watcher is a no-op if nothing changes files.
+  csharpReloadPolicy: ""   # "" | DrainAndSwap
 
 # v0.30 JWT bearer authentication. Off-by-default → existing localhost semantics
 # unchanged. When jwtAuthority is set the full bearer-token pipeline is wired on

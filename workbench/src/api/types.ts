@@ -9,12 +9,13 @@ export type SelectionKind = ResourceKind | 'plugins'
 
 export interface PluginInfo {
   name: string
-  kind: 'Assembly' | 'Python'
+  kind: 'Assembly' | 'Python' | 'Container'
   state: 'Loading' | 'Ready' | 'Restarting' | 'Unavailable'
   processId?: number | null
   handlers: string[]
   toolNames?: string[] | null
   lastErrorSnippet?: string | null
+  targetApiVersion?: string | null
 }
 
 export interface PluginSourcePushResponse {
