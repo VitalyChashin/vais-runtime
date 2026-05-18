@@ -77,6 +77,9 @@ export function PluginSection({ data, isLoading, error }: Props) {
           >
             {ROW_ICON}
             <span className="row__name">{plugin.name}</span>
+            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 4 }}>
+              {plugin.kind === 'Assembly' ? 'C#' : plugin.kind === 'Python' ? 'py' : plugin.kind === 'Container' ? 'ctr' : ''}
+            </span>
             <span style={{ marginLeft: 'auto', fontSize: 10, color: STATE_COLOR[plugin.state] ?? 'currentColor' }}>●</span>
           </div>
         ))}

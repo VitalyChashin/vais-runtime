@@ -181,6 +181,34 @@ public sealed record PluginImageUpdateResponse(
     PluginImageUpdateStatus Status,
     string? FailureUrn);
 
+/// <summary>Client-side mirror of <c>PluginDllPushStatus</c> from the server package.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PluginDllPushStatus
+{
+    /// <summary>DLL validated, loaded, and registry swapped.</summary>
+    Success = 0,
+    /// <summary><c>[VaisPlugin].TargetApiVersion</c> does not match the runtime ABI.</summary>
+    AbiMismatch = 1,
+    /// <summary>PE/IL was invalid, or a transitive dependency is missing.</summary>
+    LoadFailed = 2,
+    /// <summary>Hot-reload is disabled on this runtime.</summary>
+    ReloadDisabled = 3,
+    /// <summary>Plugin name is unknown (push without a prior apply or startup-load).</summary>
+    NotFound = 4,
+    /// <summary>First-time load — no prior version existed.</summary>
+    Bootstrapped = 5,
+    /// <summary>DLL failed pre-validation (missing <c>[VaisPlugin]</c>, handler type absent, etc.).</summary>
+    ValidationFailed = 6,
+}
+
+/// <summary>Client-side wire type for <c>POST /v1/plugins/{name}/dll</c>.</summary>
+public sealed record PluginDllPushResponse(
+    string PluginName,
+    PluginDllPushStatus Status,
+    IReadOnlyList<string>? Handlers,
+    string? TargetApiVersion,
+    string? ErrorMessage);
+
 /// <summary>
 /// Client-side wire type for <c>POST /v1/graphs/validate</c> (v0.38).
 /// Returned for all syntactically-valid requests; inspect <see cref="Valid"/> to

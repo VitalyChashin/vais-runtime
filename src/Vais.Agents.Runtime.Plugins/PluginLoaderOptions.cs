@@ -42,6 +42,15 @@ public sealed class PluginLoaderOptions
     /// <see cref="ReloadPolicy.DrainAndSwap"/> to opt in to hot-reload.
     /// </summary>
     public ReloadPolicy ReloadPolicy { get; init; } = ReloadPolicy.Disabled;
+
+    /// <summary>
+    /// When <see langword="true"/> (the default), the reloader monitors the
+    /// old <see cref="System.Runtime.Loader.AssemblyLoadContext"/> after each
+    /// unload and emits an operator-visible WARN if the context is still alive
+    /// after 30 seconds — indicating a GC-root leak in the plugin. Set
+    /// <c>VAIS_PLUGINS_DIAGNOSE_UNLOAD_LEAKS=false</c> to disable.
+    /// </summary>
+    public bool DiagnoseUnloadLeaks { get; init; } = true;
 }
 
 /// <summary>

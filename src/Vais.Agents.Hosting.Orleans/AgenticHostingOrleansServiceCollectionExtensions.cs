@@ -4,7 +4,9 @@
 using A2A;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Plugins;
 
 namespace Vais.Agents.Hosting.Orleans;
 
@@ -247,6 +249,25 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton(sp => new OrleansEvalSuiteRegistry(sp.GetRequiredService<IGrainFactory>()));
         services.TryAddSingleton<IEvalSuiteRegistry>(sp => sp.GetRequiredService<OrleansEvalSuiteRegistry>());
+        return services;
+    }
+
+    /// <summary>
+    /// Register <see cref="GrainReactivationOnPluginReloadHook"/> as an <see cref="IPluginReloadHook"/>.
+    /// When a plugin hot-reload swaps the handler registry, this hook deactivates affected
+    /// agent grains so the next invocation reactivates against the new plugin code.
+    /// Must be called after <c>AddAgentManifestInstantiator</c> (which registers the
+    /// <c>TranslatorInvalidationHook</c> at Order 0; this hook runs at Order 100).
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddGrainReactivationPluginReloadHook(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddSingleton<IPluginReloadHook>(sp =>
+            new GrainReactivationOnPluginReloadHook(
+                sp.GetRequiredService<IAgentRegistry>(),
+                sp.GetRequiredService<IGrainFactory>(),
+                sp.GetService<ILogger<GrainReactivationOnPluginReloadHook>>()));
         return services;
     }
 

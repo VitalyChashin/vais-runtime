@@ -25,6 +25,7 @@ export function PluginDetail({ pluginName }: Props) {
   const { select } = useSelection()
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [pushingDll, setPushingDll] = useState(false)
 
   const { data: plugins = [], isLoading } = useQuery({
     queryKey: ['plugins', client.baseUrl],
@@ -56,6 +57,27 @@ export function PluginDetail({ pluginName }: Props) {
       setPushResult({ ok: false, message: String(err) })
     } finally {
       setPushing(false)
+    }
+  }
+
+  async function handleDllPush() {
+    setPushingDll(true)
+    setPushResult(null)
+    try {
+      const res = await window.vais.pushPluginDll(pluginName, client.baseUrl)
+      if ('cancelled' in res && res.cancelled) {
+        // user dismissed dialog — no feedback
+      } else if (res.status === 'Success' || res.status === 'Bootstrapped') {
+        const verb = res.status === 'Bootstrapped' ? 'bootstrapped' : 'reloaded'
+        const handlers = res.handlers?.join(', ') ?? '—'
+        setPushResult({ ok: true, message: `${verb} (handlers: ${handlers})` })
+      } else {
+        setPushResult({ ok: false, message: res.errorMessage ?? res.status })
+      }
+    } catch (err) {
+      setPushResult({ ok: false, message: String(err) })
+    } finally {
+      setPushingDll(false)
     }
   }
 
@@ -91,12 +113,27 @@ export function PluginDetail({ pluginName }: Props) {
             </button>
           </div>
         )}
+        {plugin.kind === 'Assembly' && (
+          <div className="toolbar__actions">
+            <button className="btn btn--ghost" disabled={pushingDll} onClick={handleDllPush}>
+              {pushingDll ? 'Pushing…' : 'Push DLL…'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <InfoRow label="Language">
+          <span>{plugin.kind === 'Assembly' ? 'C#' : plugin.kind === 'Python' ? 'Python' : plugin.kind}</span>
+        </InfoRow>
+
         <InfoRow label="State">
           <span style={{ color: STATE_COLOR[plugin.state] ?? 'currentColor' }}>● {plugin.state}</span>
         </InfoRow>
+
+        {plugin.targetApiVersion && (
+          <InfoRow label="API ver."><code>{plugin.targetApiVersion}</code></InfoRow>
+        )}
 
         {plugin.processId != null && (
           <InfoRow label="PID"><code>{plugin.processId}</code></InfoRow>

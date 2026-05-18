@@ -110,6 +110,11 @@ public class PluginWatcherServiceTests
             CallCount++;
             return Task.FromResult(result);
         }
+
+        public Task<PluginUnloadResult> UnloadAsync(
+            string pluginName,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new PluginUnloadResult(pluginName, null, PluginUnloadStatus.NotFound, null));
     }
 
     private sealed class FakeHostApplicationLifetime : IHostApplicationLifetime

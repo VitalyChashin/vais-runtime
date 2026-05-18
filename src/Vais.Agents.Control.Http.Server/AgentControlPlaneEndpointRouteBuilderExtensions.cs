@@ -274,6 +274,51 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<PluginImageUpdateResponse>(StatusCodes.Status422UnprocessableEntity)
             .Produces<PluginImageUpdateResponse>(StatusCodes.Status503ServiceUnavailable);
 
+        // POST /plugins/{name}/dll — C# DLL hot-push + reload
+        plugins.MapPost("/plugins/{name}/dll", PushPluginDllAsync)
+            .WithName("Plugins.PushDll")
+            .WithSummary("Push a compiled C# DLL (or zip) and trigger a DrainAndSwap hot-reload.")
+            .WithDescription(
+                "Accepts application/octet-stream (raw DLL) or application/zip (DLL + dependencies). " +
+                "Pre-validates the [VaisPlugin] ABI attribute without loading the assembly. " +
+                "Returns 503 when hot-reload is disabled.")
+            .Accepts<IFormFile>("application/octet-stream", "application/zip")
+            .Produces<PluginDllPushResponse>(StatusCodes.Status200OK)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status201Created)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status400BadRequest)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /plugins — declarative apply: manifest + optional DLL in multipart/form-data
+        plugins.MapPost("/plugins", ApplyPluginAsync)
+            .WithName("Plugins.Apply")
+            .WithSummary("Apply a plugin manifest (multipart: manifest JSON + optional dll).")
+            .WithDescription(
+                "Accepts multipart/form-data with a 'manifest' field (JSON of PluginManifest) and an " +
+                "optional 'dll' file part. For csharp plugins the dll part is required. " +
+                "Cross-validates spec.handlers against the DLL's [VaisPlugin] handlers when both are present.")
+            .Produces<PluginDllPushResponse>(StatusCodes.Status200OK)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status201Created)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status400BadRequest)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status503ServiceUnavailable)
+            .DisableAntiforgery();
+
+        // DELETE /plugins/{name} — unregister and unload a plugin
+        plugins.MapDelete("/plugins/{name}", DeletePluginAsync)
+            .WithName("Plugins.Delete")
+            .WithSummary("Unload and unregister a plugin by name.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // POST /plugins/{name}/import — load a plugin already on disk
+        plugins.MapPost("/plugins/{name}/import", ImportExistingPluginAsync)
+            .WithName("Plugins.ImportExisting")
+            .WithSummary("Load (or hot-reload) a plugin whose DLL is already in the runtime plugins directory.")
+            .Produces<PluginDllPushResponse>(StatusCodes.Status200OK)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status201Created)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status404NotFound)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -711,6 +756,194 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         var result = await reloader.ReloadAsync(name, request.Image, ct).ConfigureAwait(false);
         return MapImageUpdateResult(result);
     }
+
+    private static async Task<IResult> PushPluginDllAsync(
+        string name,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var pusher = http.RequestServices.GetService<IAssemblyDllPusher>();
+
+        if (pusher is null)
+            return Results.Json(
+                new PluginDllPushResponse(name, PluginDllPushStatus.ReloadDisabled, null, null,
+                    "Hot-reload is disabled. Set VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        if (!IsValidPluginName(name))
+            return Results.Json(
+                new PluginDllPushResponse(name, PluginDllPushStatus.ValidationFailed, null, null,
+                    $"Invalid plugin name '{name}'."),
+                statusCode: StatusCodes.Status400BadRequest);
+
+        var contentType = http.Request.ContentType ?? "application/octet-stream";
+        var result = await pusher.PushAsync(name, http.Request.Body, contentType, ct).ConfigureAwait(false);
+
+        return result.Status switch
+        {
+            AssemblyDllPushStatus.Success =>
+                Results.Ok(new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Success,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.Bootstrapped =>
+                Results.Created((string?)null, new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Bootstrapped,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.AbiMismatch =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.AbiMismatch, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ValidationFailed =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ValidationFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ReloadDisabled =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ReloadDisabled, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status503ServiceUnavailable),
+            _ =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.LoadFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+        };
+    }
+
+    private static async Task<IResult> ApplyPluginAsync(HttpContext http, CancellationToken ct)
+    {
+        if (!http.Request.HasFormContentType)
+            return Results.Problem("Expected multipart/form-data.", statusCode: StatusCodes.Status400BadRequest);
+
+        var form = await http.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+        var manifestJson = form["manifest"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(manifestJson))
+            return Results.Problem("'manifest' form field is required.", statusCode: StatusCodes.Status400BadRequest);
+
+        PluginManifest? manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<PluginManifest>(manifestJson, PluginManifestJsonOptions);
+        }
+        catch
+        {
+            return Results.Problem("Failed to parse manifest JSON.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (manifest is null || string.IsNullOrWhiteSpace(manifest.Id))
+            return Results.Problem("manifest.id is required.", statusCode: StatusCodes.Status400BadRequest);
+
+        var language = manifest.Spec?.Language ?? string.Empty;
+
+        if (string.Equals(language, "csharp", StringComparison.OrdinalIgnoreCase))
+        {
+            var pusher = http.RequestServices.GetService<IAssemblyDllPusher>();
+            if (pusher is null)
+                return Results.Json(
+                    new PluginDllPushResponse(manifest.Id, PluginDllPushStatus.ReloadDisabled, null, null,
+                        "Hot-reload is disabled. Set VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            var dllFile = form.Files.GetFile("dll");
+            if (dllFile is null)
+                return Results.Json(
+                    new PluginDllPushResponse(manifest.Id, PluginDllPushStatus.ValidationFailed, null, null,
+                        "The 'dll' form file is required for csharp plugins."),
+                    statusCode: StatusCodes.Status400BadRequest);
+
+            var contentType = dllFile.ContentType ?? "application/octet-stream";
+            await using var dllStream = dllFile.OpenReadStream();
+            var pushResult = await pusher.PushAsync(manifest.Id, dllStream, contentType, ct).ConfigureAwait(false);
+
+            // Cross-validate manifest spec.handlers vs actual DLL handlers on success.
+            if (manifest.Spec?.Handlers is { Count: > 0 } expectedHandlers &&
+                pushResult.Status is AssemblyDllPushStatus.Success or AssemblyDllPushStatus.Bootstrapped &&
+                pushResult.Handlers is not null)
+            {
+                var actualNames = pushResult.Handlers.ToHashSet(StringComparer.Ordinal);
+                var missing = expectedHandlers
+                    .Select(h => h.TypeName)
+                    .Where(n => !actualNames.Contains(n))
+                    .ToList();
+                if (missing.Count > 0)
+                    return Results.Json(
+                        new PluginDllPushResponse(manifest.Id, PluginDllPushStatus.ValidationFailed, null, null,
+                            $"Manifest spec.handlers [{string.Join(", ", missing)}] not found in DLL."),
+                        statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            return MapDllPushResult(pushResult);
+        }
+
+        // For non-csharp (python, etc.): validate manifest, no DLL needed.
+        return Results.Ok(new PluginDllPushResponse(manifest.Id, PluginDllPushStatus.Success, null, null, null));
+    }
+
+    private static async Task<IResult> DeletePluginAsync(string name, HttpContext http, CancellationToken ct)
+    {
+        var reloader = http.RequestServices.GetService<IPluginReloader>();
+        if (reloader is null)
+            return Results.Problem("Plugin reloader is not available. Hot-reload may be disabled.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var result = await reloader.UnloadAsync(name, ct).ConfigureAwait(false);
+
+        return result.Status switch
+        {
+            PluginUnloadStatus.Success => Results.NoContent(),
+            PluginUnloadStatus.NotFound => Results.Problem(
+                $"Plugin '{name}' is not loaded.",
+                statusCode: StatusCodes.Status404NotFound),
+            _ => Results.Problem("Failed to unload plugin.", statusCode: StatusCodes.Status500InternalServerError),
+        };
+    }
+
+    private static async Task<IResult> ImportExistingPluginAsync(string name, HttpContext http, CancellationToken ct)
+    {
+        var pusher = http.RequestServices.GetService<IAssemblyDllPusher>();
+        if (pusher is null)
+            return Results.Json(
+                new PluginDllPushResponse(name, PluginDllPushStatus.ReloadDisabled, null, null,
+                    "Hot-reload is disabled. Set VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var result = await pusher.ImportExistingAsync(name, ct).ConfigureAwait(false);
+
+        return result.Status switch
+        {
+            AssemblyDllPushStatus.NotFound =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.NotFound, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status404NotFound),
+            _ => MapDllPushResult(result),
+        };
+    }
+
+    private static IResult MapDllPushResult(AssemblyDllPushResult result) =>
+        result.Status switch
+        {
+            AssemblyDllPushStatus.Success =>
+                Results.Ok(new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Success,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.Bootstrapped =>
+                Results.Created((string?)null, new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Bootstrapped,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.AbiMismatch =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.AbiMismatch, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ValidationFailed =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ValidationFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ReloadDisabled =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ReloadDisabled, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status503ServiceUnavailable),
+            _ =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.LoadFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+        };
+
+    private static readonly JsonSerializerOptions PluginManifestJsonOptions = new(JsonSerializerDefaults.Web);
 
     private static IResult MapImageUpdateResult(ContainerPluginReloadResult result) =>
         result.Status switch

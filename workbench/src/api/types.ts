@@ -9,18 +9,27 @@ export type SelectionKind = ResourceKind | 'plugins'
 
 export interface PluginInfo {
   name: string
-  kind: 'Assembly' | 'Python'
+  kind: 'Assembly' | 'Python' | 'Container'
   state: 'Loading' | 'Ready' | 'Restarting' | 'Unavailable'
   processId?: number | null
   handlers: string[]
   toolNames?: string[] | null
   lastErrorSnippet?: string | null
+  targetApiVersion?: string | null
 }
 
 export interface PluginSourcePushResponse {
   pluginName: string
   status: 'Success' | 'HandshakeFailed' | 'HandlerTypeNameChanged' | 'NoSupervisor' | 'ReloadDisabled' | 'UnpackFailed' | 'ScanFailed'
   processId?: number | null
+  errorMessage?: string | null
+}
+
+export interface PluginDllPushResponse {
+  pluginName: string
+  status: 'Success' | 'AbiMismatch' | 'LoadFailed' | 'ReloadDisabled' | 'NotFound' | 'Bootstrapped' | 'ValidationFailed'
+  handlers?: string[] | null
+  targetApiVersion?: string | null
   errorMessage?: string | null
 }
 

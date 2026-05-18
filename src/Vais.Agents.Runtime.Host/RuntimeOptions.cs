@@ -71,6 +71,14 @@ internal sealed record RuntimeOptions
     public ReloadPolicy PluginsHotReload { get; init; } = ReloadPolicy.Disabled;
 
     /// <summary>
+    /// When <see langword="true"/> (the default), the reloader monitors the old
+    /// <c>AssemblyLoadContext</c> after each unload and emits an operator-visible WARN if the
+    /// context is still alive after 30 seconds. Set <c>VAIS_PLUGINS_DIAGNOSE_UNLOAD_LEAKS=false</c>
+    /// to disable (useful when ALC churn is high and the diagnostic noise outweighs the benefit).
+    /// </summary>
+    public bool PluginsDiagnoseUnloadLeaks { get; init; } = true;
+
+    /// <summary>
     /// v0.23 Python-plugins pillar. Directory scanned for Python plugin subfolders (each containing
     /// <c>plugin.yaml</c> + <c>pyproject.toml</c>). Null or empty ⇒ Python plugin loader disabled.
     /// Set <c>VAIS_PYTHON_PLUGINS_DIRECTORY</c> in the container environment to enable.
@@ -299,6 +307,7 @@ internal sealed record RuntimeOptions
             OpaDataPath = Env("VAIS_OPA_DATAPATH"),
             PluginsDirectory = PluginsEnv("VAIS_PLUGINS_DIRECTORY"),
             PluginsHotReload = ParseReloadPolicy(Env("VAIS_PLUGINS_RELOAD_POLICY")),
+            PluginsDiagnoseUnloadLeaks = !string.Equals(Env("VAIS_PLUGINS_DIAGNOSE_UNLOAD_LEAKS"), "false", StringComparison.OrdinalIgnoreCase),
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),

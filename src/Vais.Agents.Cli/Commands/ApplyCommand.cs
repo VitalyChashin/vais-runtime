@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Vais.Agents.Cli.Plugins;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.Manifests;
@@ -49,6 +50,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         [Description("Skip the local docker build step even when spec.build is present. The manifest is applied as-is.")]
         [CommandOption("--no-build")]
         public bool NoBuild { get; init; }
+
+        [Description("Path to a compiled C# DLL to upload alongside a 'kind: Plugin' manifest (language: csharp).")]
+        [CommandOption("--dll")]
+        public string? Dll { get; init; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -129,6 +134,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                         break;
                     case ManifestResource.EvalSuiteCase evalSuiteCase:
                         await ApplyEvalSuiteAsync(client, evalSuiteCase.Suite, cancellationToken);
+                        break;
+                    case ManifestResource.PluginCase pluginCase:
+                        if (!await ApplyPluginAsync(client, pluginCase.Plugin, settings.Dll, cancellationToken))
+                            anyError = true;
                         break;
                     default:
                         AnsiConsole.MarkupLine($"[yellow]warning[/] unknown resource kind: {resource.GetType().Name}");
@@ -283,6 +292,78 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
     {
         var result = await client.UpsertEvalSuiteAsync(manifest, ct);
         AnsiConsole.MarkupLine($"{result.Handle.Id} [green]applied[/] (eval-suite, version {result.Handle.Version})");
+    }
+
+    internal static async Task<bool> ApplyPluginAsync(
+        IAgentControlPlaneClient client,
+        PluginManifest manifest,
+        string? dllPath,
+        CancellationToken ct)
+    {
+        var language = manifest.Spec?.Language ?? string.Empty;
+
+        if (!string.Equals(language, "csharp", StringComparison.OrdinalIgnoreCase))
+        {
+            AnsiConsole.MarkupLine($"{manifest.Id} [green]validated[/] (plugin, language: {Markup.Escape(language)})");
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(dllPath))
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]hint[/] {manifest.Id}: pass [bold]--dll <path>[/] to upload the assembly with this manifest.");
+            return true;
+        }
+
+        if (!File.Exists(dllPath))
+        {
+            AnsiConsole.MarkupLine($"[red]error[/] --dll file not found: {Markup.Escape(dllPath)}");
+            return false;
+        }
+
+        var abi = DllAbiReader.TryReadAbi(dllPath);
+        if (abi is null)
+        {
+            AnsiConsole.MarkupLine("[red]✗[/] DLL has no [VaisPlugin] attribute. Add it and rebuild.");
+            return false;
+        }
+        if (!DllAbiReader.AbiMatches(abi, DllAbiReader.RuntimeAbiVersion))
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]✗[/] ABI mismatch: DLL targets [bold]{Markup.Escape(abi)}[/], runtime expects [bold]{DllAbiReader.RuntimeAbiVersion}[/]");
+            return false;
+        }
+
+        try
+        {
+            PluginDllPushResponse? result = null;
+            await AnsiConsole.Status().StartAsync($"Applying {Markup.Escape(manifest.Id)}…", async _ =>
+            {
+                await using var dllStream = File.OpenRead(dllPath);
+                result = await client.ApplyPluginAsync(manifest, dllStream, ct);
+            });
+
+            if (result!.Status is PluginDllPushStatus.Success or PluginDllPushStatus.Bootstrapped)
+            {
+                var verb = result.Status == PluginDllPushStatus.Bootstrapped ? "created" : "updated";
+                var handlers = result.Handlers is { Count: > 0 }
+                    ? string.Join(", ", result.Handlers)
+                    : "—";
+                var color = result.Status == PluginDllPushStatus.Bootstrapped ? "green" : "blue";
+                AnsiConsole.MarkupLine(
+                    $"{manifest.Id} [{color}]{verb}[/] (plugin, handlers: {Markup.Escape(handlers)})");
+                return true;
+            }
+
+            AnsiConsole.MarkupLine(
+                $"[red]✗[/] {Markup.Escape(manifest.Id)}: {result.Status} — {Markup.Escape(result.ErrorMessage ?? result.Status.ToString())}");
+            return false;
+        }
+        catch (AgentControlPlaneException ex)
+        {
+            ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
+            return false;
+        }
     }
 
     internal static async Task<bool> ApplyContainerPluginAsync(

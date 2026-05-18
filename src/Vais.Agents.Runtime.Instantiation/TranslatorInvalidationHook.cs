@@ -18,6 +18,10 @@ internal sealed class TranslatorInvalidationHook : IPluginReloadHook
     private readonly IAgentManifestTranslator _translator;
     private readonly ILogger<TranslatorInvalidationHook> _logger;
 
+    // Must run before GrainReactivationOnPluginReloadHook (Order = 100) so the
+    // translator cache is cleared before grains reactivate and re-translate.
+    public int Order => 0;
+
     internal TranslatorInvalidationHook(
         IAgentRegistry registry,
         IAgentManifestTranslator translator,
@@ -30,13 +34,7 @@ internal sealed class TranslatorInvalidationHook : IPluginReloadHook
 
     public async Task OnReloadedAsync(PluginReloadResult result, CancellationToken cancellationToken = default)
     {
-        // Union of old+new names handles the edge case where V2 drops a handler type.
-        var handlerTypes = new HashSet<string>(StringComparer.Ordinal);
-        if (result.OldDescriptor is not null)
-            foreach (var h in result.OldDescriptor.Handlers) handlerTypes.Add(h);
-        if (result.NewDescriptor is not null)
-            foreach (var h in result.NewDescriptor.Handlers) handlerTypes.Add(h);
-
+        var handlerTypes = AffectedAgentResolver.UnionHandlers(result);
         if (handlerTypes.Count == 0) return;
 
         var count = 0;

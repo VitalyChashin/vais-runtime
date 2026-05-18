@@ -1357,3 +1357,50 @@ override Vais.Agents.EvalRunProgress.ToString() -> string!
 override sealed Vais.Agents.EvalRunProgress.Equals(Vais.Agents.AgentEvent? other) -> bool
 static Vais.Agents.EvalRunProgress.operator !=(Vais.Agents.EvalRunProgress? left, Vais.Agents.EvalRunProgress? right) -> bool
 static Vais.Agents.EvalRunProgress.operator ==(Vais.Agents.EvalRunProgress? left, Vais.Agents.EvalRunProgress? right) -> bool
+Vais.Agents.PluginManifest
+Vais.Agents.PluginManifest.<Clone>$() -> Vais.Agents.PluginManifest!
+Vais.Agents.PluginManifest.Deconstruct(out string! Id, out string! Version, out string? Description, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels) -> void
+Vais.Agents.PluginManifest.Description.get -> string?
+Vais.Agents.PluginManifest.Description.init -> void
+Vais.Agents.PluginManifest.Equals(Vais.Agents.PluginManifest? other) -> bool
+Vais.Agents.PluginManifest.Id.get -> string!
+Vais.Agents.PluginManifest.Id.init -> void
+Vais.Agents.PluginManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.PluginManifest.Labels.init -> void
+Vais.Agents.PluginManifest.PluginManifest(string! Id, string! Version, string? Description = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null) -> void
+Vais.Agents.PluginManifest.Spec.get -> Vais.Agents.PluginManifestSpec!
+Vais.Agents.PluginManifest.Spec.init -> void
+Vais.Agents.PluginManifest.Version.get -> string!
+Vais.Agents.PluginManifest.Version.init -> void
+override Vais.Agents.PluginManifest.Equals(object? obj) -> bool
+override Vais.Agents.PluginManifest.GetHashCode() -> int
+override Vais.Agents.PluginManifest.ToString() -> string!
+static Vais.Agents.PluginManifest.operator !=(Vais.Agents.PluginManifest? left, Vais.Agents.PluginManifest? right) -> bool
+static Vais.Agents.PluginManifest.operator ==(Vais.Agents.PluginManifest? left, Vais.Agents.PluginManifest? right) -> bool
+Vais.Agents.PluginManifestSpec
+Vais.Agents.PluginManifestSpec.<Clone>$() -> Vais.Agents.PluginManifestSpec!
+Vais.Agents.PluginManifestSpec.Equals(Vais.Agents.PluginManifestSpec? other) -> bool
+Vais.Agents.PluginManifestSpec.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.PluginHandlerRef!>?
+Vais.Agents.PluginManifestSpec.Handlers.init -> void
+Vais.Agents.PluginManifestSpec.Language.get -> string!
+Vais.Agents.PluginManifestSpec.Language.init -> void
+Vais.Agents.PluginManifestSpec.PluginManifestSpec() -> void
+override Vais.Agents.PluginManifestSpec.Equals(object? obj) -> bool
+override Vais.Agents.PluginManifestSpec.GetHashCode() -> int
+override Vais.Agents.PluginManifestSpec.ToString() -> string!
+static Vais.Agents.PluginManifestSpec.operator !=(Vais.Agents.PluginManifestSpec? left, Vais.Agents.PluginManifestSpec? right) -> bool
+static Vais.Agents.PluginManifestSpec.operator ==(Vais.Agents.PluginManifestSpec? left, Vais.Agents.PluginManifestSpec? right) -> bool
+Vais.Agents.PluginHandlerRef
+Vais.Agents.PluginHandlerRef.<Clone>$() -> Vais.Agents.PluginHandlerRef!
+Vais.Agents.PluginHandlerRef.AssemblyName.get -> string?
+Vais.Agents.PluginHandlerRef.AssemblyName.init -> void
+Vais.Agents.PluginHandlerRef.Deconstruct(out string! TypeName, out string? AssemblyName) -> void
+Vais.Agents.PluginHandlerRef.Equals(Vais.Agents.PluginHandlerRef? other) -> bool
+Vais.Agents.PluginHandlerRef.PluginHandlerRef(string! TypeName, string? AssemblyName = null) -> void
+Vais.Agents.PluginHandlerRef.TypeName.get -> string!
+Vais.Agents.PluginHandlerRef.TypeName.init -> void
+override Vais.Agents.PluginHandlerRef.Equals(object? obj) -> bool
+override Vais.Agents.PluginHandlerRef.GetHashCode() -> int
+override Vais.Agents.PluginHandlerRef.ToString() -> string!
+static Vais.Agents.PluginHandlerRef.operator !=(Vais.Agents.PluginHandlerRef? left, Vais.Agents.PluginHandlerRef? right) -> bool
+static Vais.Agents.PluginHandlerRef.operator ==(Vais.Agents.PluginHandlerRef? left, Vais.Agents.PluginHandlerRef? right) -> bool

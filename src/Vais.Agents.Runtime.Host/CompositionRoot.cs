@@ -211,7 +211,11 @@ internal static class CompositionRoot
         {
             services.AddAgentPlugins(
                 options.PluginsDirectory,
-                new PluginLoaderOptions { ReloadPolicy = options.PluginsHotReload });
+                new PluginLoaderOptions
+                {
+                    ReloadPolicy = options.PluginsHotReload,
+                    DiagnoseUnloadLeaks = options.PluginsDiagnoseUnloadLeaks,
+                });
         }
 
         // v0.23 Python-plugins pillar — opt-in via VAIS_PYTHON_PLUGINS_DIRECTORY. Must register
@@ -280,6 +284,7 @@ internal static class CompositionRoot
         services.AddDefaultToolGatewayMiddlewareFactory();
 
         services.AddAgentManifestInstantiator();
+        services.AddGrainReactivationPluginReloadHook();
         services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();

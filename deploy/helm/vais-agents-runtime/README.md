@@ -87,6 +87,7 @@ Production installs push to a private registry and override `image.repository`.
 | `plugins.enabled` | `false` | Reserve `/var/lib/vais/plugins` mount (Pillar C uses this). |
 | `plugins.persistentVolumeClaimName` | `""` | PVC to mount; empty → emptyDir. |
 | `plugins.pythonReloadPolicy` | `""` | `""` disables hot-reload; `DrainAndSwap` enables the filesystem watcher and `POST /v1/plugins/{name}/source` endpoint. |
+| `plugins.csharpReloadPolicy` | `""` | `""` disables hot-reload; `DrainAndSwap` enables the filesystem watcher and `POST /v1/plugins/{name}/dll` DLL-push endpoint. |
 | `service.type` | `ClusterIP` | |
 | `service.port` | `8080` | |
 | `readinessProbe.failureThreshold` | `12` | 12 × 5s = 60s tolerance — tune up for larger Orleans clusters. |
@@ -179,6 +180,30 @@ production. Three delivery patterns are supported:
 
 `vais plugin push` is the recommended CI/CD integration point — it targets the
 runtime directly and does not require a pod restart or `kubectl exec`.
+
+## C# plugin hot-reload on Kubernetes
+
+Enable the reload policy so the runtime watches for DLL changes and exposes the
+`POST /v1/plugins/{name}/dll` push endpoint:
+
+```bash
+helm upgrade vais-runtime . \
+  --namespace vais \
+  --set plugins.enabled=true \
+  --set plugins.csharpReloadPolicy=DrainAndSwap
+```
+
+The watcher is a no-op when nothing changes files — it is safe to enable in
+production. Two delivery patterns are supported:
+
+| Pattern | Description | Best for |
+|---|---|---|
+| `vais plugin push --dll <file>` | Pushes a compiled DLL (or zip with deps) via the HTTP endpoint; ABI-validated before swap | CI/CD after `dotnet build` |
+| `vais apply -f plugin.yaml` | Declarative manifest with embedded DLL reference; full P11 round-trip | GitOps workflows |
+
+The runtime performs ABI pre-validation (PE header + handler type check) before
+the swap. If validation fails the running plugin is untouched and an error is
+returned — no partial state is possible.
 
 ## Security posture
 

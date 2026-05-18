@@ -32,6 +32,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Vais.Agents.Runtime.Plugins.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Instantiation" />
+    <InternalsVisibleTo Include="Vais.Agents.Hosting.Orleans" />
   </ItemGroup>
 
 </Project>

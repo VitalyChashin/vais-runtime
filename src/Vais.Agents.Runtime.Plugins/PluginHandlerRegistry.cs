@@ -106,6 +106,36 @@ internal sealed class PluginHandlerRegistry : IPluginHandlerRegistry
         }
     }
 
+    /// <summary>
+    /// Atomically removes all handler entries and the plugin descriptor for
+    /// <paramref name="pluginName"/>. Returns the removed <see cref="PluginDescriptor"/>,
+    /// or <c>null</c> when no such plugin is loaded.
+    /// </summary>
+    internal async Task<PluginDescriptor?> RemoveAsync(string pluginName, CancellationToken cancellationToken = default)
+    {
+        await _swapLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            PluginDescriptor? removed;
+            lock (_pluginsLock)
+            {
+                removed = _plugins.FirstOrDefault(p => p.Name == pluginName);
+                if (removed is not null)
+                    _plugins.Remove(removed);
+            }
+            if (removed is not null)
+            {
+                foreach (var handlerTypeName in removed.Handlers)
+                    _factories.TryRemove(handlerTypeName, out _);
+            }
+            return removed;
+        }
+        finally
+        {
+            _swapLock.Release();
+        }
+    }
+
     /// <summary>Returns a snapshot view of all currently registered factories. Used by <see cref="DefaultPluginReloader"/> to extract factories from a temporary registry.</summary>
     internal IReadOnlyDictionary<string, IAgentHandlerFactory> GetAllFactories() => _factories;
 }

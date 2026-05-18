@@ -4,13 +4,20 @@
 using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Vais.Agents.Cli.Plugins;
 using Vais.Agents.Control.Http;
 
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
-/// Two modes depending on arguments:
+/// Three modes depending on arguments:
 /// <list type="bullet">
+/// <item>
+///   <term>DLL push</term>
+///   <description>When <c>--dll</c> is supplied, or the positional argument ends
+///   with <c>.dll</c>, hot-reloads a C# plugin via
+///   <c>POST /v1/plugins/{name}/dll</c>.</description>
+/// </item>
 /// <item>
 ///   <term>Source push (default)</term>
 ///   <description>Packs a Python plugin source directory and hot-reloads via
@@ -45,6 +52,10 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
         [CommandOption("--plugin")]
         public string? Plugin { get; init; }
 
+        [Description("Path to a compiled .NET assembly (.dll) for C# plugin push. Forces DLL push mode.")]
+        [CommandOption("--dll")]
+        public string? Dll { get; init; }
+
         [Description("Source directory to pack and push (source mode). Defaults to the current directory (plugin root).")]
         [CommandOption("--source")]
         public string? Source { get; init; }
@@ -60,6 +71,11 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
+        var isDllMode = settings.Dll is not null
+            || settings.PluginOrImage.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
+        if (isDllMode)
+            return await ExecuteDllPushAsync(settings, cancellationToken);
+
         var isImageMode = settings.Image is not null
             || settings.PluginOrImage.Contains('/', StringComparison.Ordinal)
             || settings.PluginOrImage.Contains(':', StringComparison.Ordinal);
@@ -67,6 +83,68 @@ internal sealed class PluginPushCommand : AsyncCommand<PluginPushCommand.Setting
         return isImageMode
             ? await ExecuteImagePushAsync(settings, cancellationToken)
             : await ExecuteSourcePushAsync(settings, cancellationToken);
+    }
+
+    private static async Task<int> ExecuteDllPushAsync(Settings settings, CancellationToken cancellationToken)
+    {
+        var dllPath = settings.Dll ?? settings.PluginOrImage;
+        if (!File.Exists(dllPath))
+        {
+            AnsiConsole.MarkupLine($"[red]error[/] DLL not found: {Markup.Escape(dllPath)}");
+            return ProblemDetailsParser.ExitUsageError;
+        }
+
+        var pluginName = settings.Plugin ?? Path.GetFileNameWithoutExtension(dllPath);
+
+        // CLI-side ABI pre-validation — friendly error before any upload.
+        var abi = DllAbiReader.TryReadAbi(dllPath);
+        if (abi is null)
+        {
+            AnsiConsole.MarkupLine("[red]✗[/] DLL has no [VaisPlugin] attribute. Add it and rebuild.");
+            return ProblemDetailsParser.ExitUsageError;
+        }
+        if (!DllAbiReader.AbiMatches(abi, DllAbiReader.RuntimeAbiVersion))
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]✗[/] ABI mismatch: DLL targets [bold]{Markup.Escape(abi)}[/], runtime expects [bold]{DllAbiReader.RuntimeAbiVersion}[/]");
+            AnsiConsole.MarkupLine(
+                $"  Update [[assembly: VaisPlugin(targetApiVersion: \"{DllAbiReader.RuntimeAbiVersion}\")]] and rebuild.");
+            return ProblemDetailsParser.ExitUsageError;
+        }
+
+        var config = VaisConfigFile.LoadOrDefault();
+        var client = ClientFactory.Create(config, settings.Context, settings.Token);
+
+        try
+        {
+            PluginDllPushResponse? result = null;
+            await AnsiConsole.Status()
+                .StartAsync($"Pushing {Markup.Escape(pluginName)}...", async _ =>
+                {
+                    await using var stream = File.OpenRead(dllPath);
+                    result = await client.PushPluginDllAsync(pluginName, stream, "application/octet-stream", cancellationToken);
+                });
+
+            if (result!.Status is PluginDllPushStatus.Success or PluginDllPushStatus.Bootstrapped)
+            {
+                var verb = result.Status == PluginDllPushStatus.Bootstrapped ? "bootstrapped" : "reloaded";
+                var handlers = result.Handlers is { Count: > 0 }
+                    ? string.Join(", ", result.Handlers)
+                    : "—";
+                AnsiConsole.MarkupLine(
+                    $"[green]✓[/] {Markup.Escape(pluginName)} {verb} (handlers: {Markup.Escape(handlers)})");
+                return ProblemDetailsParser.ExitSuccess;
+            }
+
+            var detail = result.ErrorMessage ?? result.Status.ToString();
+            AnsiConsole.MarkupLine(
+                $"[red]✗[/] reload failed: {Markup.Escape(result.Status.ToString())} — {Markup.Escape(detail)}");
+            return ProblemDetailsParser.ExitApiError;
+        }
+        catch (AgentControlPlaneException ex)
+        {
+            return ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
+        }
     }
 
     private static async Task<int> ExecuteImagePushAsync(Settings settings, CancellationToken cancellationToken)

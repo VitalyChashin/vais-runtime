@@ -17,18 +17,21 @@ internal sealed class DefaultPluginReloader : IPluginReloader
 {
     private readonly AssemblyPluginLoader _loader;
     private readonly PluginHandlerRegistry _registry;
+    private readonly PluginLoaderOptions _options;
     private readonly IPluginReloadHook[] _hooks;
     private readonly ILogger<DefaultPluginReloader> _logger;
 
     internal DefaultPluginReloader(
         AssemblyPluginLoader loader,
         PluginHandlerRegistry registry,
+        PluginLoaderOptions? options = null,
         IEnumerable<IPluginReloadHook>? hooks = null,
         ILogger<DefaultPluginReloader>? logger = null)
     {
         _loader = loader;
         _registry = registry;
-        _hooks = hooks?.ToArray() ?? [];
+        _options = options ?? new PluginLoaderOptions();
+        _hooks = hooks?.OrderBy(h => h.Order).ToArray() ?? [];
         _logger = logger ?? NullLogger<DefaultPluginReloader>.Instance;
     }
 
@@ -90,10 +93,58 @@ internal sealed class DefaultPluginReloader : IPluginReloader
         // Unload the old ALC after hooks complete so hooks can still access old types during drain.
         if (swappedOld?.LoadContext is { IsCollectible: true } oldAlc)
         {
+            var alcRef = _options.DiagnoseUnloadLeaks ? new WeakReference(oldAlc) : null;
             oldAlc.Unload();
+            if (alcRef is not null)
+                _ = MonitorUnloadAsync(alcRef, pluginName);
         }
 
         return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<PluginUnloadResult> UnloadAsync(string pluginName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
+
+        var removed = await _registry.RemoveAsync(pluginName, cancellationToken).ConfigureAwait(false);
+        if (removed is null)
+        {
+            return new PluginUnloadResult(pluginName, null, PluginUnloadStatus.NotFound, null);
+        }
+
+        _logger.LogInformation("unload-success: plugin '{Plugin}'", pluginName);
+
+        if (removed.LoadContext is { IsCollectible: true } alc)
+        {
+            var alcRef = _options.DiagnoseUnloadLeaks ? new WeakReference(alc) : null;
+            alc.Unload();
+            if (alcRef is not null)
+                _ = MonitorUnloadAsync(alcRef, pluginName);
+        }
+
+        return new PluginUnloadResult(pluginName, removed, PluginUnloadStatus.Success, null);
+    }
+
+    private async Task MonitorUnloadAsync(WeakReference alcRef, string pluginName)
+    {
+        const int pollIntervalMs = 2_000;
+        const int maxPolls = 15; // 30 s
+        for (int i = 0; i < maxPolls && alcRef.IsAlive; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            await Task.Delay(pollIntervalMs).ConfigureAwait(false);
+        }
+
+        if (alcRef.IsAlive)
+        {
+            _logger.LogWarning(
+                "plugin-unload-leak: AssemblyLoadContext for plugin '{Plugin}' is still alive after {Seconds}s. " +
+                "A live object reference (static field, event handler, background task, or thread) is preventing GC. " +
+                "Inspect the plugin for captured closures or static state.",
+                pluginName, maxPolls * pollIntervalMs / 1000);
+        }
     }
 
     private async Task DispatchHooksAsync(PluginReloadResult result, CancellationToken cancellationToken)

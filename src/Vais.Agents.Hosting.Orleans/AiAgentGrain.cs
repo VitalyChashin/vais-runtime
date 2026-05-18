@@ -340,6 +340,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         DeactivateOnIdle();
     }
 
+    /// <inheritdoc />
+    public Task RequestDeactivationAsync()
+    {
+        DeactivateOnIdle();
+        return Task.CompletedTask;
+    }
+
     private IAiAgent EnsureAgent() =>
         _agent ?? throw new InvalidOperationException("Grain is not activated.");
 

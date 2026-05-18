@@ -49,4 +49,10 @@ public interface IAiAgentGrain : IGrainWithStringKey
 
     /// <summary>Clear persisted state and deactivate on idle.</summary>
     Task DeleteAsync();
+
+    /// <summary>
+    /// Ask this grain to deactivate on idle so the next caller gets a fresh
+    /// activation against the current handler registry (used after a plugin hot-reload).
+    /// </summary>
+    Task RequestDeactivationAsync();
 }

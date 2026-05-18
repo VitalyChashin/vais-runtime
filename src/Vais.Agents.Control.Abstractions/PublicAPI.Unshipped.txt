@@ -210,3 +210,16 @@ override Vais.Agents.Control.ManifestResource.EvalSuiteCase.ToString() -> string
 override sealed Vais.Agents.Control.ManifestResource.EvalSuiteCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
 static Vais.Agents.Control.ManifestResource.EvalSuiteCase.operator !=(Vais.Agents.Control.ManifestResource.EvalSuiteCase? left, Vais.Agents.Control.ManifestResource.EvalSuiteCase? right) -> bool
 static Vais.Agents.Control.ManifestResource.EvalSuiteCase.operator ==(Vais.Agents.Control.ManifestResource.EvalSuiteCase? left, Vais.Agents.Control.ManifestResource.EvalSuiteCase? right) -> bool
+Vais.Agents.Control.ManifestResource.PluginCase
+Vais.Agents.Control.ManifestResource.PluginCase.Deconstruct(out Vais.Agents.PluginManifest! Plugin) -> void
+Vais.Agents.Control.ManifestResource.PluginCase.Equals(Vais.Agents.Control.ManifestResource.PluginCase? other) -> bool
+Vais.Agents.Control.ManifestResource.PluginCase.Plugin.get -> Vais.Agents.PluginManifest!
+Vais.Agents.Control.ManifestResource.PluginCase.Plugin.init -> void
+Vais.Agents.Control.ManifestResource.PluginCase.PluginCase(Vais.Agents.PluginManifest! Plugin) -> void
+override Vais.Agents.Control.ManifestResource.PluginCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.PluginCase!
+override Vais.Agents.Control.ManifestResource.PluginCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.PluginCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.PluginCase.ToString() -> string!
+override sealed Vais.Agents.Control.ManifestResource.PluginCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+static Vais.Agents.Control.ManifestResource.PluginCase.operator !=(Vais.Agents.Control.ManifestResource.PluginCase? left, Vais.Agents.Control.ManifestResource.PluginCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.PluginCase.operator ==(Vais.Agents.Control.ManifestResource.PluginCase? left, Vais.Agents.Control.ManifestResource.PluginCase? right) -> bool

@@ -78,6 +78,9 @@ internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
                 case "eval-suites":
                     await client.EvictEvalSuiteAsync(resourceId, settings.Version, cancellationToken);
                     break;
+                case "plugins":
+                    await client.DeletePluginAsync(resourceId, cancellationToken);
+                    break;
                 default:
                     await client.EvictAsync(resourceId, settings.Version, idempotencyKey, cancellationToken);
                     break;

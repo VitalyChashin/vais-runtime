@@ -155,3 +155,31 @@ public sealed record PluginImageUpdateResponse(
     string PluginName,
     PluginImageUpdateStatus Status,
     string? FailureUrn);
+
+/// <summary>Outcome of a <c>POST /v1/plugins/{name}/dll</c> DLL-push reload request.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PluginDllPushStatus
+{
+    /// <summary>DLL validated, loaded, and registry swapped.</summary>
+    Success = 0,
+    /// <summary><c>[VaisPlugin].TargetApiVersion</c> does not match the runtime ABI.</summary>
+    AbiMismatch = 1,
+    /// <summary>PE/IL was invalid, or a transitive dependency is missing.</summary>
+    LoadFailed = 2,
+    /// <summary>Hot-reload is disabled. Set <c>VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap</c> to enable.</summary>
+    ReloadDisabled = 3,
+    /// <summary>Plugin name is unknown (push without a prior apply or startup-load).</summary>
+    NotFound = 4,
+    /// <summary>First-time load — no prior version existed. Analogous to Python's <c>Bootstrapped</c>.</summary>
+    Bootstrapped = 5,
+    /// <summary>The DLL body failed pre-validation (no <c>[VaisPlugin]</c>, handler type absent, etc.).</summary>
+    ValidationFailed = 6,
+}
+
+/// <summary>Response body for <c>POST /v1/plugins/{name}/dll</c>.</summary>
+public sealed record PluginDllPushResponse(
+    string PluginName,
+    PluginDllPushStatus Status,
+    IReadOnlyList<string>? Handlers,
+    string? TargetApiVersion,
+    string? ErrorMessage);

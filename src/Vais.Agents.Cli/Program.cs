@@ -119,6 +119,9 @@ app.Configure(config =>
     config.AddCommand<PluginWatchCommand>("plugin-watch")
         .WithDescription("Watch a Python plugin's source directory and hot-reload on every change.");
 
+    config.AddCommand<PluginImportExistingCommand>("plugin-import-existing")
+        .WithDescription("Load (or hot-reload) a plugin whose DLL is already in the runtime's plugins directory.");
+
     config.AddBranch("diagnose", branch =>
     {
         branch.SetDescription("Runtime diagnostics: spans, traces, filter counters.");
