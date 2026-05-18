@@ -97,9 +97,11 @@ spec:
     baseUrlRef: secret://env/SGR_ENDPOINT   # resolves to http://sgr:8010/v1
 ```
 
-The `docker-compose.sgr.yml` overlay sets `SGR_ENDPOINT=http://sgr:8010/v1` in the
-runtime container's environment, so the manifest above works without any other
-configuration. See `deploy/compose/docker-compose.sgr.yml`.
+Inject `SGR_ENDPOINT` (or whatever variable your `baseUrlRef` resolves) into
+the runtime container's environment — via a Compose `environment:` block, a K8s
+Secret, or the host shell for local dev. The
+[Configure LLM providers](../devops/configure-llm-providers.md) devops guide
+walks through end-to-end wiring for vLLM, Ollama, LiteLLM, Azure, and SGR.
 
 Resolution errors:
 

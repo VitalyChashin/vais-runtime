@@ -10,8 +10,9 @@ You'll stand up the `vais-agents-runtime` container locally with Docker Compose,
 2. **[Deploy the runtime on Kubernetes](deploy-runtime-on-kubernetes.md)** — Helm chart walkthrough: kind quickstart → production with external Redis.
 3. **[Add Redis persistence](add-redis-persistence.md)** — Orleans clustering, grain storage, and event-bus streams on Redis.
 4. **[Add Postgres persistence](add-postgres-persistence.md)** — durable backing for grain storage with optional hybrid (Postgres + Redis streams).
-5. **[Wire Langfuse](wire-langfuse.md)** — point the runtime's OTel pipeline at Langfuse for LLM-specific UI views.
-6. **[Wire Prometheus + Grafana](wire-prometheus-and-grafana.md)** — scrape config, starter dashboard JSON, and the `vais.*` metrics that matter.
+5. **[Configure LLM providers](configure-llm-providers.md)** — `secret://` URIs, env vs file-backed keys, multi-provider isolation, custom endpoints (vLLM / Ollama / LiteLLM / Azure), Fallback pools.
+6. **[Wire Langfuse](wire-langfuse.md)** — point the runtime's OTel pipeline at Langfuse for LLM-specific UI views.
+7. **[Wire Prometheus + Grafana](wire-prometheus-and-grafana.md)** — scrape config, starter dashboard JSON, and the `vais.*` metrics that matter.
 
 ## After this section
 

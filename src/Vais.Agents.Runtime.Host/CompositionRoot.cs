@@ -654,11 +654,13 @@ internal static class CompositionRoot
     }
 
     // Registers "Fallback" as a manifest-driven named LLM gateway middleware.
-    // Each pool entry in spec.Params is a full model spec (provider, id, apiKeyRef);
-    // ICompletionProviderPool resolves and caches the provider instances.
-    // Called from ConfigureServices instead of AddNamedLlmGatewayMiddleware_Fallback()
-    // so the factory can resolve ICompletionProviderPool without the Fallback package
-    // needing a dependency on Runtime.Instantiation.
+    // Each pool entry in spec.Params is a full model spec — same shape as a top-level
+    // spec.model block (provider, id, apiKeyRef, baseUrlRef, temperature, topP,
+    // maxTokens, responseFormat). ICompletionProviderPool resolves and caches the
+    // provider instances. Called from ConfigureServices instead of
+    // AddNamedLlmGatewayMiddleware_Fallback() so the factory can resolve
+    // ICompletionProviderPool without the Fallback package needing a dependency on
+    // Runtime.Instantiation.
     private static void RegisterManifestDrivenFallback(IServiceCollection services)
     {
         services.AddSingleton(sp =>
@@ -676,16 +678,9 @@ internal static class CompositionRoot
 
     private static ICompletionProvider[] BuildProviderPool(JsonElement? paramsEl, ICompletionProviderPool pool)
     {
-        if (paramsEl is not { } p || !p.TryGetProperty("pool", out var poolEl))
-            return [];
-
         var providers = new List<ICompletionProvider>();
-        foreach (var entry in poolEl.EnumerateArray())
+        foreach (var modelSpec in FallbackPoolManifestParser.ParsePool(paramsEl))
         {
-            var provider = entry.GetProperty("provider").GetString()!;
-            var id = entry.GetProperty("id").GetString()!;
-            var apiKeyRef = entry.TryGetProperty("apiKeyRef", out var kEl) ? kEl.GetString() : null;
-            var modelSpec = new ModelSpec(provider, id, ApiKeyRef: apiKeyRef);
             // GetAsync is async; safe to block here — runs once at agent activation, not per request.
             providers.Add(pool.GetAsync(modelSpec).AsTask().GetAwaiter().GetResult());
         }

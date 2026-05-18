@@ -50,10 +50,12 @@ Every `AgentManifest` field the translator consumes is documented in [manifest-s
 
 ### `ModelSpec`
 
-- **`provider`** — case-insensitive match against a registered `IModelProviderFactory`. Ships with `openai`, `anthropic`, `azure-openai`. Register custom factories for Bedrock / Gemini / Ollama / etc. — see [ship-a-custom-model-provider](../guides/ship-a-custom-model-provider.md).
+- **`provider`** — case-insensitive match against a registered `IModelProviderFactory`. Ships with `openai`, `anthropic`, `azure-openai`. Register custom factories for Bedrock / Gemini / a native Ollama protocol by adding your own `IModelProviderFactory` to the runtime's composition root.
 - **`id`** — model id (e.g. `gpt-4o`) or Azure deployment name.
 - **`apiKeyRef`** — `secret://` URI resolved by the registered `ISecretResolver` composite (env + file by default). K8s projected Secrets work via `secret://file/var/run/secrets/vais/openai-key`.
 - **`baseUrlRef`** — `secret://` URI resolving to a custom API endpoint. Works with any `openai`-provider agent to point at proxies, self-hosted models, or compatible sidecars (e.g. SGR Agent). Required for `azure-openai`. Optional and unused by default for OpenAI/Anthropic.
+
+End-to-end credential wiring (env vs file, K8s Secret projection, custom endpoints, Fallback pools, custom resolver schemes) is in **[DevOps → Configure LLM providers](../devops/configure-llm-providers.md)**.
 
 Unknown `provider` ⇒ `400 urn:vais-agents:model-provider-unsupported` at apply-validation time.
 
@@ -166,7 +168,7 @@ All surface as HTTP Problem Details when `vais apply` / `vais invoke` hits them.
 - [runtime-plugins concept](runtime-plugins.md) — the C# plugin escape hatch for manifests that need behaviour beyond the declarative shape.
 - [package-an-agent-as-a-plugin guide](../guides/package-an-agent-as-a-plugin.md) — end-to-end walkthrough for the plugin path.
 - [ship-a-guardrail guide](../guides/ship-a-guardrail.md) — custom `IGuardrailFactory`.
-- [ship-a-custom-model-provider guide](../guides/ship-a-custom-model-provider.md) — custom `IModelProviderFactory`.
+- [configure-llm-providers devops guide](../devops/configure-llm-providers.md) — credential wiring + custom-endpoint patterns + Fallback pools, with a note on registering a custom `IModelProviderFactory`.
 - [manifest-schema reference](../reference/manifest-schema.md) — canonical field-by-field catalog.
 - [control-plane concept](control-plane.md) — `IAgentLifecycleManager` verbs.
 - [execution-loop concept](execution-loop.md) — what `StatefulAiAgent` actually does with the translated options.
