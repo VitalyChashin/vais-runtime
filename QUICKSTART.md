@@ -579,38 +579,26 @@ For Kubernetes deployments, `vais plugin-deploy` uses the embedded Helm chart.
 
 ## OpenAI-compatible gateway
 
-The `Vais.Agents.Gateways.OpenAiCompat` package exposes a standard
-`POST /v1/chat/completions` + `GET /v1/models` surface, so any tool that speaks
-the OpenAI Chat Completions API (OpenWebUI, LiteLLM, Continue.dev, …) can talk to
-your agents and graphs without modification.
-
-### Register in Program.cs
-
-```csharp
-// Register the runtime and any agents/graphs as usual, then:
-builder.Services.AddOpenAiCompatGateway(options =>
-{
-    // (optional) add a static model alias that routes to a real LLM provider
-    options.AddAlias("gpt-4o-mini", new CompletionRequest { Model = "gpt-4o-mini" });
-});
-
-var app = builder.Build();
-app.MapOpenAiCompatEndpoints();   // mounts /v1/chat/completions and /v1/models
-app.Run();
-```
+`Vais.Agents.Gateways.OpenAiCompat` is already wired into the runtime image —
+`POST /v1/chat/completions` and `GET /v1/models` are mounted on the same `:8080`
+port the rest of the runtime serves. **No `Program.cs` changes, no extra
+registration step.** Any client that speaks the OpenAI Chat Completions API
+(OpenWebUI, LiteLLM, Continue.dev, …) can point at the runtime and call your
+agents and graphs directly.
 
 `GET /v1/models` automatically discovers:
-- Every registered agent (`agent:<id>` model IDs via `IAgentRegistry`).
-- Every graph that opts in via the `vais.io/openai-compat-input-key` annotation
-  (`graph:<id>` model IDs via `IAgentGraphRegistry`).
 
-If `IAgentRegistry` or `IAgentGraphRegistry` are not registered, the endpoint
-simply omits those entries — no error.
+- Every registered agent — exposed as `agent:<id>`.
+- Every graph that opts in via the `vais.io/openai-compat-input-key` annotation
+  — exposed as `graph:<id>`.
+
+(To turn either off, set `Vais__OpenAiCompat__AgentRoutingEnabled=false` or
+`Vais__OpenAiCompat__GraphRoutingEnabled=false` on the runtime container.)
 
 ### Call an agent
 
 ```bash
-curl http://localhost:5000/v1/chat/completions \
+curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "agent:planner",
@@ -620,42 +608,36 @@ curl http://localhost:5000/v1/chat/completions \
   }'
 ```
 
-Every call is stateless: the full message history is reinjected from the
-`messages` array, so edit / regenerate works correctly in any chat UI.
-
-**Multi-turn streaming session** — add the `X-Session-Id` header to pin turns to
-a single in-process session (useful when the UI sends only the latest message):
-
-```bash
-curl http://localhost:5000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "X-Session-Id: my-session-42" \
-  -d '{"model": "agent:planner", "stream": true,
-       "messages": [{"role": "user", "content": "Follow up question…"}]}'
-```
-
-When `X-Session-Id` is absent, a new GUID is used and history is seeded from
-`messages` (stateless mode).
+Multi-turn is stateless: send the full `messages` array on each request and the
+gateway re-seeds history from messages before the last `user` entry. That matches
+how OpenWebUI, LiteLLM, and most chat UIs already behave — no session header
+required.
 
 ### Call a graph
 
-Graphs must opt in with two annotations in their manifest:
+A graph opts in with two annotations under `metadata.annotations`. Edit
+`research-pipeline.yaml` from §5 to add them:
 
 ```yaml
+apiVersion: vais.agents/v1
 kind: AgentGraph
 metadata:
-  name: research-pipeline
-spec:
+  id: research-pipeline
+  version: "1.0"
   annotations:
-    vais.io/openai-compat-input-key: query      # state field to write the user message into
-    vais.io/openai-compat-output-key: report    # state field to read the assistant reply from
-  # ... nodes, edges, etc.
+    vais.io/openai-compat-input-key: query           # state field to write the user message into
+    vais.io/openai-compat-output-key: final_report   # state field to read the assistant reply from
+spec:
+  entry: plan
+  # ... nodes, edges, as before
 ```
 
-Then:
+Re-apply, then call it like any other model:
 
 ```bash
-curl http://localhost:5000/v1/chat/completions \
+vais apply -f research-pipeline.yaml
+
+curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "graph:research-pipeline",
@@ -666,30 +648,29 @@ curl http://localhost:5000/v1/chat/completions \
 ```
 
 The gateway writes the last user message into the `query` field of the initial
-state and reads the final `report` field as the assistant reply.  If the output
-key points to a list of messages (e.g. a conversation array), the last assistant
-message in that list is returned.
-
-A graph that lacks either annotation returns `422 Unprocessable Entity`.
+state and reads `final_report` from the final state as the assistant reply. If
+the output key holds a list of chat messages, the last assistant message is
+returned. A graph that lacks the input annotation is hidden from `/v1/models` and
+returns `422 Unprocessable Entity` if invoked directly.
 
 ### Caller parameters
 
 `temperature`, `max_tokens`, `tools`, and `tool_choice` from the request body are
-forwarded to the agent as metadata keys (`oai.temperature`, `oai.max_tokens`, …).
-They are available to agent code via `AgentInvocationRequest.Metadata` but are not
-enforced by the gateway itself — it is up to each agent implementation to honour them.
+forwarded to the agent as metadata keys (`oai.temperature`, `oai.max_tokens`,
+`oai.tools`, `oai.tool_choice`) and exposed via `AgentInvocationRequest.Metadata`.
+The gateway does not enforce them — honouring them is up to each agent
+implementation.
 
 ### Connect OpenWebUI
 
-1. In OpenWebUI → Settings → Connections → Add OpenAI connection.
-2. Set **Base URL** to `http://<runtime-host>:5000/v1`.
-3. Set **API Key** to any non-empty string (the gateway accepts any value; auth is
-   handled by upstream middleware if you configure it).
-4. Your agents and graphs now appear in the model selector.
+1. Settings → Connections → Add OpenAI connection.
+2. **Base URL** — `http://<runtime-host>:8080/v1`.
+3. **API Key** — any non-empty string (the gateway accepts any value; auth is
+   handled by upstream JWT middleware if you configure it).
+4. Your agents and graphs appear in the model selector.
 
-For multi-turn conversations from OpenWebUI, the gateway uses the full `messages`
-history sent on each request (OpenWebUI always sends the full history), so
-stateless mode works out of the box.
+OpenWebUI sends the full message history on every request, so stateless
+multi-turn works out of the box.
 
 ---
 
