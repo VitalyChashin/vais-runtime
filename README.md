@@ -46,31 +46,42 @@ Open-source runtime for AI agents and multi-agent graphs — durable, declarativ
 
 Start the runtime, declare an agent, invoke it. No C# required. Make sure `OPENAI_API_KEY` is set in your shell environment first.
 
-```bash
-# Build the runtime image, install the CLI (one-time)
-docker build -f src/Vais.Agents.Runtime.Host/Dockerfile -t vais-agents-runtime:local .
-dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
+> Pre-alpha note: `Vais.Agents.Cli` is not yet on nuget.org (trademark / package-id clearance pending). For now, build the CLI package locally from a clone and install it from `artifacts/packages/`.
 
-# Start the runtime and point the CLI at it
+```bash
+# Build the runtime image + the CLI package (one-time, from a clone of this repo)
+docker build -f src/Vais.Agents.Runtime.Host/Dockerfile -t vais-agents-runtime:local .
+dotnet pack Vais.Agents.sln --configuration Release --output artifacts/packages
+dotnet tool install -g Vais.Agents.Cli --version 0.0.1-alpha --add-source ./artifacts/packages
+
+# Start the runtime and wait until it's healthy
 # (the docker.sock mount lets the runtime supervise plugin containers later)
 docker run -d --name vais -p 8080:8080 \
     -e OPENAI_API_KEY \
     -v /var/run/docker.sock:/var/run/docker.sock \
     vais-agents-runtime:local
+until curl -sf http://localhost:8080/healthz >/dev/null; do sleep 1; done
+
+# Point the CLI at the runtime and activate the context
 vais config set-context local --server http://localhost:8080
+vais config use-context local
 ```
 
 <details><summary>PowerShell</summary>
 
 ```powershell
 docker build -f src/Vais.Agents.Runtime.Host/Dockerfile -t vais-agents-runtime:local .
-dotnet tool install -g Vais.Agents.Cli --version 0.15.0-preview
+dotnet pack Vais.Agents.sln --configuration Release --output artifacts/packages
+dotnet tool install -g Vais.Agents.Cli --version 0.0.1-alpha --add-source ./artifacts/packages
 
 docker run -d --name vais -p 8080:8080 `
     -e OPENAI_API_KEY `
     -v /var/run/docker.sock:/var/run/docker.sock `
     vais-agents-runtime:local
+do { Start-Sleep -Seconds 1 } until ((Invoke-WebRequest -UseBasicParsing http://localhost:8080/healthz -ErrorAction SilentlyContinue).StatusCode -eq 200)
+
 vais config set-context local --server http://localhost:8080
+vais config use-context local
 ```
 
 </details>
@@ -86,7 +97,8 @@ metadata:
 spec:
   model:
     provider: openai
-    name: gpt-4o-mini
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: "Be concise."
   handler:
@@ -126,7 +138,10 @@ metadata:
   id: researcher
   version: "1.0"
 spec:
-  model: { provider: openai, name: gpt-4o-mini }
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
   systemPrompt:
     inline: |
       For each user question, fetch a relevant URL and summarise
