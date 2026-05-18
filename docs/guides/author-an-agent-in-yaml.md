@@ -188,6 +188,6 @@ Registry row gone + grain evicted + translator cache cleared. Re-applying brings
 
 - [declarative-agents concept](../concepts/declarative-agents.md) — the full design story.
 - [ship-a-guardrail](ship-a-guardrail.md) — custom `IGuardrailFactory`.
-- [ship-a-custom-model-provider](ship-a-custom-model-provider.md) — extend beyond the three built-in providers.
+- [configure-llm-providers](../devops/configure-llm-providers.md) — credential wiring, custom endpoints, Fallback pools, and how to register a custom `IModelProviderFactory`.
 - [manifest-schema reference](../reference/manifest-schema.md) — every field, every type.
 - [install-the-runtime-locally](install-the-runtime-locally.md) — stand up the runtime if you haven't yet.

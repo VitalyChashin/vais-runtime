@@ -25,7 +25,7 @@ Emitted by `AgentManifestTranslator` during grain activation — surfacing as HT
 | URN | Pairs with | Meaning | Ships in | Typical caller response |
 |---|---|---|---|---|
 | `urn:vais-agents:handler-not-loaded` | `501` | Manifest has no `Model` and no loaded plugin exports the requested `Handler.TypeName`. | v0.17 | Ship a plugin that exports the handler, or add a `Model` block to the manifest. |
-| `urn:vais-agents:model-provider-unsupported` | `400` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`. | v0.17 | Register a matching factory (see ship-a-custom-model-provider guide), or use one of `openai` / `anthropic` / `azure-openai`. |
+| `urn:vais-agents:model-provider-unsupported` | `400` | `ModelSpec.Provider` doesn't match any registered `IModelProviderFactory`, or `ApiKeyRef` / `BaseUrlRef` failed to resolve. | v0.17 | Register a matching factory (see [configure-llm-providers](../devops/configure-llm-providers.md)), or use one of `openai` / `anthropic` / `azure-openai`. For resolution failures, check the URI scheme + target. |
 | `urn:vais-agents:prompt-spec-ambiguous` | `400` | `SystemPromptSpec` has more than one of `inline` / `templateRef` / `fileRef` set. | v0.17 | Pick exactly one shape. |
 | `urn:vais-agents:prompt-template-not-registered` | `400` | `templateRef` doesn't resolve in the `IPromptTemplateRegistry`. | v0.17 | Register the template at host startup or fix the ref name. |
 | `urn:vais-agents:prompt-file-unreadable` | `400` | `fileRef` missing / permissioned / outside the configured root. | v0.17 | Mount the file + adjust the root path. |
