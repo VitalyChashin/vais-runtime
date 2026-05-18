@@ -604,6 +604,54 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<PluginDllPushResponse> ApplyPluginAsync(
+        PluginManifest manifest,
+        Stream? dllStream,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        using var form = new MultipartFormDataContent();
+        var manifestJson = JsonSerializer.Serialize(manifest, JsonOptions);
+        form.Add(new StringContent(manifestJson, Encoding.UTF8, "application/json"), "manifest");
+        if (dllStream is not null)
+        {
+            var dllContent = new StreamContent(dllStream);
+            dllContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            form.Add(dllContent, "dll", "plugin.dll");
+        }
+        using var response = await _http.PostAsync("/v1/plugins", form, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PluginDllPushResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from ApplyPluginAsync.");
+    }
+
+    /// <inheritdoc />
+    public async Task DeletePluginAsync(string pluginName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
+        using var response = await _http.DeleteAsync(
+            $"/v1/plugins/{Uri.EscapeDataString(pluginName)}", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<PluginDllPushResponse> ImportExistingPluginAsync(
+        string pluginName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
+        using var response = await _http.PostAsync(
+            $"/v1/plugins/{Uri.EscapeDataString(pluginName)}/import",
+            new StringContent(string.Empty),
+            cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PluginDllPushResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from ImportExistingPluginAsync.");
+    }
+
+    /// <inheritdoc />
     public async Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(manifest);

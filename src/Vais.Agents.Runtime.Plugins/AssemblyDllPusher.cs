@@ -29,6 +29,16 @@ public interface IAssemblyDllPusher
         Stream dllStream,
         string contentType,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Load (or hot-reload) a plugin that is already present in the runtime's plugins
+    /// directory. Used by <c>vais plugin import-existing</c> for plugins deployed
+    /// via external mechanisms (sidecars, CI/CD). Returns
+    /// <see cref="AssemblyDllPushStatus.NotFound"/> when the directory or DLL is absent.
+    /// </summary>
+    Task<AssemblyDllPushResult> ImportExistingAsync(
+        string pluginName,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Outcome of a <see cref="IAssemblyDllPusher.PushAsync"/> call.</summary>
@@ -193,6 +203,45 @@ internal sealed class AssemblyDllPusher : IAssemblyDllPusher
             // cleanup immediately; the .staging folder can be cleaned up on the next push.
             try { Directory.Delete(stagingDir, recursive: true); } catch { }
         }
+    }
+
+    public async Task<AssemblyDllPushResult> ImportExistingAsync(
+        string pluginName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
+
+        var pluginDir = Path.Combine(_pluginsDirectory, pluginName);
+        if (!Directory.Exists(pluginDir))
+            return Fail(pluginName, AssemblyDllPushStatus.NotFound,
+                $"Plugin directory not found: {pluginDir}");
+
+        var dllPath = Path.Combine(pluginDir, pluginName + ".dll");
+        if (!File.Exists(dllPath))
+            dllPath = ResolvePrimaryInDirectory(pluginDir, pluginName) ?? dllPath;
+
+        if (!File.Exists(dllPath))
+            return Fail(pluginName, AssemblyDllPushStatus.NotFound,
+                $"Plugin DLL not found in '{pluginDir}'.");
+
+        var isBootstrap = !_registry.Plugins.Any(p =>
+            string.Equals(p.Name, pluginName, StringComparison.OrdinalIgnoreCase));
+
+        var reloadResult = await _reloader.ReloadAsync(dllPath, cancellationToken).ConfigureAwait(false);
+
+        return reloadResult.Status switch
+        {
+            PluginReloadStatus.Success => new AssemblyDllPushResult(
+                pluginName,
+                isBootstrap ? AssemblyDllPushStatus.Bootstrapped : AssemblyDllPushStatus.Success,
+                reloadResult.NewDescriptor?.Handlers?.ToList(),
+                reloadResult.NewDescriptor?.TargetApiVersion,
+                null),
+            PluginReloadStatus.AbiMismatch => Fail(pluginName, AssemblyDllPushStatus.AbiMismatch,
+                "ABI mismatch detected during import."),
+            _ => Fail(pluginName, AssemblyDllPushStatus.LoadFailed,
+                reloadResult.FailureException?.Message ?? "Plugin load failed."),
+        };
     }
 
     private static AssemblyDllPushResult Fail(string pluginName, AssemblyDllPushStatus status, string message) =>

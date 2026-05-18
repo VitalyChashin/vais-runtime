@@ -31,6 +31,7 @@ public sealed class JsonAgentGraphManifestLoader
     internal const string McpServerKind = "McpServer";
     internal const string ContainerPluginKind = "ContainerPlugin";
     internal const string EvalSuiteKind = "EvalSuite";
+    internal const string PluginKind = "Plugin";
 
     /// <summary>Parse graph manifests from an in-memory string. Agent-kind documents in the stream are silently skipped.</summary>
     public ValueTask<IReadOnlyList<AgentGraphManifest>> LoadFromStringAsync(string content, CancellationToken cancellationToken = default)
@@ -200,9 +201,14 @@ public sealed class JsonAgentGraphManifestLoader
             var suite = EvalSuiteManifestParser.Parse(root, errors, prefix);
             return suite is null ? null : new ManifestResource.EvalSuiteCase(suite);
         }
+        if (string.Equals(kind, PluginKind, StringComparison.Ordinal))
+        {
+            var plugin = ParsePlugin(root, errors, prefix);
+            return plugin is null ? null : new ManifestResource.PluginCase(plugin);
+        }
 
         errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' " +
-            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', '{ContainerPluginKind}', or '{EvalSuiteKind}')");
+            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', '{ContainerPluginKind}', '{EvalSuiteKind}', or '{PluginKind}')");
         return null;
     }
 
@@ -655,6 +661,7 @@ public sealed class JsonAgentGraphManifestLoader
                 ManifestResource.McpServerCase s => ("McpServer", s.Server.Id, s.Server.Version),
                 ManifestResource.ContainerPluginCase p => ("ContainerPlugin", p.Manifest.Id, p.Manifest.Version),
                 ManifestResource.EvalSuiteCase e => ("EvalSuite", e.Suite.Id, e.Suite.Version),
+                ManifestResource.PluginCase pl => ("Plugin", pl.Plugin.Id, pl.Plugin.Version),
                 _ => throw new NotSupportedException($"Unknown ManifestResource type: {r.GetType().Name}"),
             };
             if (!seen.Add(key))
@@ -1090,6 +1097,69 @@ public sealed class JsonAgentGraphManifestLoader
                 RetryPolicy = retryPolicy,
                 Kubernetes = k8sConfig,
                 Secrets = secrets,
+            },
+        };
+    }
+
+    private static PluginManifest? ParsePlugin(JsonElement root, List<string> errors, string prefix)
+    {
+        if (!root.TryGetProperty("metadata", out var metadata) || metadata.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid metadata block");
+            return null;
+        }
+
+        var id = metadata.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+        var version = metadata.TryGetProperty("version", out var vEl) ? vEl.GetString() : null;
+        if (string.IsNullOrEmpty(version)) version = "1.0";
+
+        var description = metadata.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+
+        if (string.IsNullOrEmpty(id))
+            errors.Add($"{prefix}metadata.id is required");
+        else if (!ManifestValidation.IsValidId(id))
+            errors.Add($"{prefix}metadata.id '{id}' does not match ^[a-z][a-z0-9-]{{0,62}}$");
+
+        var labels = ParseStringMap(metadata, "labels");
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(id)) return null;
+
+        var language = spec.TryGetProperty("language", out var langEl) ? langEl.GetString() : null;
+        if (string.IsNullOrEmpty(language))
+            errors.Add($"{prefix}spec.language is required ('csharp' or 'python')");
+
+        IReadOnlyList<PluginHandlerRef>? handlers = null;
+        if (spec.TryGetProperty("handlers", out var handlersEl) && handlersEl.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<PluginHandlerRef>();
+            var idx = 0;
+            foreach (var item in handlersEl.EnumerateArray())
+            {
+                var itemPrefix = $"{prefix}spec.handlers[{idx}] ";
+                var typeName = item.TryGetProperty("typeName", out var tnEl) ? tnEl.GetString() : null;
+                if (string.IsNullOrEmpty(typeName))
+                    errors.Add($"{itemPrefix}typeName is required");
+                else
+                    list.Add(new PluginHandlerRef(typeName!, item.TryGetProperty("assemblyName", out var anEl) ? anEl.GetString() : null));
+                idx++;
+            }
+            if (list.Count > 0) handlers = list;
+        }
+
+        if (string.IsNullOrEmpty(language)) return null;
+
+        return new PluginManifest(id!, version!, description, labels)
+        {
+            Spec = new PluginManifestSpec
+            {
+                Language = language!,
+                Handlers = handlers,
             },
         };
     }

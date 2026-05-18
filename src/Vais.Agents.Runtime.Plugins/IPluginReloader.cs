@@ -18,6 +18,15 @@ public interface IPluginReloader
     /// the old descriptor is kept unchanged.
     /// </summary>
     Task<PluginReloadResult> ReloadAsync(string pluginPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Unload the plugin identified by <paramref name="pluginName"/>. Removes
+    /// all handler registrations and unloads the collectible
+    /// <see cref="System.Runtime.Loader.AssemblyLoadContext"/>. Returns
+    /// <see cref="PluginUnloadStatus.NotFound"/> when no plugin with that name
+    /// is currently loaded.
+    /// </summary>
+    Task<PluginUnloadResult> UnloadAsync(string pluginName, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -75,4 +84,32 @@ public enum PluginReloadStatus
 
     /// <summary>Watcher fired but the plugin did not change (debounce or spurious event). No swap performed.</summary>
     NoChange = 3,
+}
+
+/// <summary>
+/// Outcome of a <see cref="IPluginReloader.UnloadAsync"/> call.
+/// </summary>
+/// <param name="PluginName">Name of the plugin targeted by the unload.</param>
+/// <param name="RemovedDescriptor">The descriptor that was removed, or <c>null</c> when the plugin was not found.</param>
+/// <param name="Status">Whether the unload succeeded or why it did not.</param>
+/// <param name="FailureUrn">Optional URN from <see cref="PluginReloadUrns"/> when unload failed.</param>
+public sealed record PluginUnloadResult(
+    string PluginName,
+    PluginDescriptor? RemovedDescriptor,
+    PluginUnloadStatus Status,
+    string? FailureUrn);
+
+/// <summary>
+/// Outcome categories for <see cref="IPluginReloader.UnloadAsync"/>.
+/// </summary>
+public enum PluginUnloadStatus
+{
+    /// <summary>Plugin removed from registry and ALC unloaded.</summary>
+    Success = 0,
+
+    /// <summary>No plugin with the given name was loaded — nothing to unload.</summary>
+    NotFound = 1,
+
+    /// <summary>One or more agents still reference this plugin's handler types. Reserved for future enforcement.</summary>
+    AgentsStillReference = 2,
 }

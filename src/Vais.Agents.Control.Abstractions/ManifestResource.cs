@@ -46,4 +46,7 @@ public abstract record ManifestResource
 
     /// <summary><c>kind: EvalSuite</c>.</summary>
     public sealed record EvalSuiteCase(EvalSuiteManifest Suite) : ManifestResource;
+
+    /// <summary><c>kind: Plugin</c>.</summary>
+    public sealed record PluginCase(PluginManifest Plugin) : ManifestResource;
 }

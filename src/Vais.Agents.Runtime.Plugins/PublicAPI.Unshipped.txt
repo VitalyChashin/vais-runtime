@@ -30,5 +30,29 @@ Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.Success = 0 -> Vais.Agents.Run
 Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.ValidationFailed = 6 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
 Vais.Agents.Runtime.Plugins.IAssemblyDllPusher
 Vais.Agents.Runtime.Plugins.IAssemblyDllPusher.PushAsync(string! pluginName, System.IO.Stream! dllStream, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.AssemblyDllPushResult!>!
+Vais.Agents.Runtime.Plugins.IAssemblyDllPusher.ImportExistingAsync(string! pluginName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.AssemblyDllPushResult!>!
 Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.Register(Vais.Agents.IAgentHandlerFactory! factory, string! ownerPluginName) -> void
+Vais.Agents.Runtime.Plugins.IPluginReloader.UnloadAsync(string! pluginName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.PluginUnloadResult!>!
+Vais.Agents.Runtime.Plugins.PluginUnloadResult
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.PluginUnloadResult!
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.Deconstruct(out string! PluginName, out Vais.Agents.Runtime.Plugins.PluginDescriptor? RemovedDescriptor, out Vais.Agents.Runtime.Plugins.PluginUnloadStatus Status, out string? FailureUrn) -> void
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.Equals(Vais.Agents.Runtime.Plugins.PluginUnloadResult? other) -> bool
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.PluginName.get -> string!
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.PluginName.init -> void
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.PluginUnloadResult(string! PluginName, Vais.Agents.Runtime.Plugins.PluginDescriptor? RemovedDescriptor, Vais.Agents.Runtime.Plugins.PluginUnloadStatus Status, string? FailureUrn) -> void
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.RemovedDescriptor.get -> Vais.Agents.Runtime.Plugins.PluginDescriptor?
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.RemovedDescriptor.init -> void
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.Status.get -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
+Vais.Agents.Runtime.Plugins.PluginUnloadResult.Status.init -> void
+override Vais.Agents.Runtime.Plugins.PluginUnloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.PluginUnloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.PluginUnloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.PluginUnloadResult.operator !=(Vais.Agents.Runtime.Plugins.PluginUnloadResult? left, Vais.Agents.Runtime.Plugins.PluginUnloadResult? right) -> bool
+static Vais.Agents.Runtime.Plugins.PluginUnloadResult.operator ==(Vais.Agents.Runtime.Plugins.PluginUnloadResult? left, Vais.Agents.Runtime.Plugins.PluginUnloadResult? right) -> bool
+Vais.Agents.Runtime.Plugins.PluginUnloadStatus
+Vais.Agents.Runtime.Plugins.PluginUnloadStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
+Vais.Agents.Runtime.Plugins.PluginUnloadStatus.NotFound = 1 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
+Vais.Agents.Runtime.Plugins.PluginUnloadStatus.AgentsStillReference = 2 -> Vais.Agents.Runtime.Plugins.PluginUnloadStatus
 static Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions.EnsurePluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

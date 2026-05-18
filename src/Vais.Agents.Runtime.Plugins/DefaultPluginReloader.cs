@@ -96,6 +96,25 @@ internal sealed class DefaultPluginReloader : IPluginReloader
         return result;
     }
 
+    /// <inheritdoc />
+    public async Task<PluginUnloadResult> UnloadAsync(string pluginName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
+
+        var removed = await _registry.RemoveAsync(pluginName, cancellationToken).ConfigureAwait(false);
+        if (removed is null)
+        {
+            return new PluginUnloadResult(pluginName, null, PluginUnloadStatus.NotFound, null);
+        }
+
+        _logger.LogInformation("unload-success: plugin '{Plugin}'", pluginName);
+
+        if (removed.LoadContext is { IsCollectible: true } alc)
+            alc.Unload();
+
+        return new PluginUnloadResult(pluginName, removed, PluginUnloadStatus.Success, null);
+    }
+
     private async Task DispatchHooksAsync(PluginReloadResult result, CancellationToken cancellationToken)
     {
         foreach (var hook in _hooks)
