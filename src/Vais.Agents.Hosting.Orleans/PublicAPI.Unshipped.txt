@@ -381,3 +381,6 @@ Vais.Agents.Hosting.Orleans.PendingSample.FinalStateJson.set -> void
 Vais.Agents.Hosting.Orleans.PendingSample.PendingSample() -> void
 Vais.Agents.Hosting.Orleans.PendingSample.ProductionRunId.get -> string!
 Vais.Agents.Hosting.Orleans.PendingSample.ProductionRunId.set -> void
+Vais.Agents.Hosting.Orleans.AiAgentGrain.RequestDeactivationAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAiAgentGrain.RequestDeactivationAsync() -> System.Threading.Tasks.Task!
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddGrainReactivationPluginReloadHook(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

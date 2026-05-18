@@ -572,6 +572,8 @@ static Vais.Agents.Control.Http.PluginImageUpdateResponse.operator !=(Vais.Agent
 static Vais.Agents.Control.Http.PluginImageUpdateResponse.operator ==(Vais.Agents.Control.Http.PluginImageUpdateResponse? left, Vais.Agents.Control.Http.PluginImageUpdateResponse? right) -> bool
 Vais.Agents.Control.Http.IAgentControlPlaneClient.PushPluginImageAsync(string! pluginName, string! image, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginImageUpdateResponse!>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.PushPluginImageAsync(string! pluginName, string! image, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginImageUpdateResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.PushPluginDllAsync(string! pluginName, System.IO.Stream! dllStream, string! contentType = "application/octet-stream", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginDllPushResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.PushPluginDllAsync(string! pluginName, System.IO.Stream! dllStream, string! contentType = "application/octet-stream", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.PluginDllPushResponse!>!
 Vais.Agents.Control.Http.IAgentControlPlaneClient.CreateContainerPluginAsync(Vais.Agents.ContainerPluginManifest! manifest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ContainerPluginHandle!>!
 Vais.Agents.Control.Http.IAgentControlPlaneClient.CreateContainerPluginAsync(Vais.Agents.ContainerPluginManifest! manifest, string? idempotencyKey, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ContainerPluginHandle!>!
 Vais.Agents.Control.Http.IAgentControlPlaneClient.UpdateContainerPluginAsync(string! id, Vais.Agents.ContainerPluginManifest! manifest, string? version = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ContainerPluginHandle!>!
@@ -822,3 +824,31 @@ override Vais.Agents.Control.Http.EvalAssertionDiff.GetHashCode() -> int
 override Vais.Agents.Control.Http.EvalAssertionDiff.ToString() -> string!
 static Vais.Agents.Control.Http.EvalAssertionDiff.operator !=(Vais.Agents.Control.Http.EvalAssertionDiff? left, Vais.Agents.Control.Http.EvalAssertionDiff? right) -> bool
 static Vais.Agents.Control.Http.EvalAssertionDiff.operator ==(Vais.Agents.Control.Http.EvalAssertionDiff? left, Vais.Agents.Control.Http.EvalAssertionDiff? right) -> bool
+Vais.Agents.Control.Http.PluginDllPushResponse
+Vais.Agents.Control.Http.PluginDllPushResponse.<Clone>$() -> Vais.Agents.Control.Http.PluginDllPushResponse!
+Vais.Agents.Control.Http.PluginDllPushResponse.Deconstruct(out string! PluginName, out Vais.Agents.Control.Http.PluginDllPushStatus Status, out System.Collections.Generic.IReadOnlyList<string!>? Handlers, out string? TargetApiVersion, out string? ErrorMessage) -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.Equals(Vais.Agents.Control.Http.PluginDllPushResponse? other) -> bool
+Vais.Agents.Control.Http.PluginDllPushResponse.ErrorMessage.get -> string?
+Vais.Agents.Control.Http.PluginDllPushResponse.ErrorMessage.init -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Http.PluginDllPushResponse.Handlers.init -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.PluginDllPushResponse(string! PluginName, Vais.Agents.Control.Http.PluginDllPushStatus Status, System.Collections.Generic.IReadOnlyList<string!>? Handlers, string? TargetApiVersion, string? ErrorMessage) -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.PluginName.get -> string!
+Vais.Agents.Control.Http.PluginDllPushResponse.PluginName.init -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.Status.get -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushResponse.Status.init -> void
+Vais.Agents.Control.Http.PluginDllPushResponse.TargetApiVersion.get -> string?
+Vais.Agents.Control.Http.PluginDllPushResponse.TargetApiVersion.init -> void
+Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.AbiMismatch = 1 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.Bootstrapped = 5 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.LoadFailed = 2 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.NotFound = 4 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.ReloadDisabled = 3 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.Success = 0 -> Vais.Agents.Control.Http.PluginDllPushStatus
+Vais.Agents.Control.Http.PluginDllPushStatus.ValidationFailed = 6 -> Vais.Agents.Control.Http.PluginDllPushStatus
+override Vais.Agents.Control.Http.PluginDllPushResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.PluginDllPushResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.PluginDllPushResponse.ToString() -> string!
+static Vais.Agents.Control.Http.PluginDllPushResponse.operator !=(Vais.Agents.Control.Http.PluginDllPushResponse? left, Vais.Agents.Control.Http.PluginDllPushResponse? right) -> bool
+static Vais.Agents.Control.Http.PluginDllPushResponse.operator ==(Vais.Agents.Control.Http.PluginDllPushResponse? left, Vais.Agents.Control.Http.PluginDllPushResponse? right) -> bool

@@ -280,6 +280,7 @@ internal static class CompositionRoot
         services.AddDefaultToolGatewayMiddlewareFactory();
 
         services.AddAgentManifestInstantiator();
+        services.AddGrainReactivationPluginReloadHook();
         services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();

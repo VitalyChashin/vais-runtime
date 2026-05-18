@@ -92,6 +92,13 @@ public static class PluginServiceCollectionExtensions
                     ?? NullLogger<PluginWatcherService>.Instance;
                 return new PluginWatcherService(reloader, lifetime, pluginsDirectory, logger);
             });
+
+            services.TryAddSingleton<IAssemblyDllPusher>(sp => new AssemblyDllPusher(
+                sp.GetRequiredService<IPluginHandlerRegistry>(),
+                sp.GetRequiredService<IPluginReloader>(),
+                pluginsDirectory,
+                loaderOptions.RuntimeAbiVersion,
+                sp.GetService<ILogger<AssemblyDllPusher>>()));
         }
 
         return services;

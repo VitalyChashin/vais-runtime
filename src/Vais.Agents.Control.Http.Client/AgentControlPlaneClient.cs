@@ -586,6 +586,24 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<PluginDllPushResponse> PushPluginDllAsync(
+        string pluginName,
+        Stream dllStream,
+        string contentType = "application/octet-stream",
+        CancellationToken cancellationToken = default)
+    {
+        using var content = new StreamContent(dllStream);
+        content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        using var response = await _http.PostAsync(
+            $"/v1/plugins/{Uri.EscapeDataString(pluginName)}/dll", content, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<PluginDllPushResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from PushPluginDllAsync.");
+    }
+
+    /// <inheritdoc />
     public async Task<GraphValidationResult> ValidateGraphAsync(AgentGraphManifest manifest, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(manifest);

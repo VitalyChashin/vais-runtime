@@ -274,6 +274,20 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<PluginImageUpdateResponse>(StatusCodes.Status422UnprocessableEntity)
             .Produces<PluginImageUpdateResponse>(StatusCodes.Status503ServiceUnavailable);
 
+        // POST /plugins/{name}/dll — C# DLL hot-push + reload
+        plugins.MapPost("/plugins/{name}/dll", PushPluginDllAsync)
+            .WithName("Plugins.PushDll")
+            .WithSummary("Push a compiled C# DLL (or zip) and trigger a DrainAndSwap hot-reload.")
+            .WithDescription(
+                "Accepts application/octet-stream (raw DLL) or application/zip (DLL + dependencies). " +
+                "Pre-validates the [VaisPlugin] ABI attribute without loading the assembly. " +
+                "Returns 503 when hot-reload is disabled.")
+            .Accepts<IFormFile>("application/octet-stream", "application/zip")
+            .Produces<PluginDllPushResponse>(StatusCodes.Status200OK)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status201Created)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status400BadRequest)
+            .Produces<PluginDllPushResponse>(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -710,6 +724,55 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         var result = await reloader.ReloadAsync(name, request.Image, ct).ConfigureAwait(false);
         return MapImageUpdateResult(result);
+    }
+
+    private static async Task<IResult> PushPluginDllAsync(
+        string name,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        var pusher = http.RequestServices.GetService<IAssemblyDllPusher>();
+
+        if (pusher is null)
+            return Results.Json(
+                new PluginDllPushResponse(name, PluginDllPushStatus.ReloadDisabled, null, null,
+                    "Hot-reload is disabled. Set VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        if (!IsValidPluginName(name))
+            return Results.Json(
+                new PluginDllPushResponse(name, PluginDllPushStatus.ValidationFailed, null, null,
+                    $"Invalid plugin name '{name}'."),
+                statusCode: StatusCodes.Status400BadRequest);
+
+        var contentType = http.Request.ContentType ?? "application/octet-stream";
+        var result = await pusher.PushAsync(name, http.Request.Body, contentType, ct).ConfigureAwait(false);
+
+        return result.Status switch
+        {
+            AssemblyDllPushStatus.Success =>
+                Results.Ok(new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Success,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.Bootstrapped =>
+                Results.Created((string?)null, new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.Bootstrapped,
+                    result.Handlers, result.TargetApiVersion, null)),
+            AssemblyDllPushStatus.AbiMismatch =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.AbiMismatch, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ValidationFailed =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ValidationFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+            AssemblyDllPushStatus.ReloadDisabled =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.ReloadDisabled, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status503ServiceUnavailable),
+            _ =>
+                Results.Json(
+                    new PluginDllPushResponse(result.PluginName, PluginDllPushStatus.LoadFailed, null, null, result.ErrorMessage),
+                    statusCode: StatusCodes.Status400BadRequest),
+        };
     }
 
     private static IResult MapImageUpdateResult(ContainerPluginReloadResult result) =>

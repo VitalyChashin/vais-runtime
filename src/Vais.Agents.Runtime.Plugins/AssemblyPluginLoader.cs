@@ -98,7 +98,11 @@ public sealed class AssemblyPluginLoader
         try
         {
             loadContext = new PluginAssemblyLoadContext(primaryAssembly);
-            assembly = loadContext.LoadFromAssemblyPath(primaryAssembly);
+            // Load via stream to bypass .NET's cross-ALC path-based assembly cache.
+            // After a hot-swap, the new DLL sits at the same path as the old one;
+            // LoadFromAssemblyPath would return the previously-cached assembly instead
+            // of reading the new bytes from disk.
+            assembly = loadContext.LoadFromStream(new MemoryStream(File.ReadAllBytes(primaryAssembly)));
         }
         catch (Exception ex)
         {

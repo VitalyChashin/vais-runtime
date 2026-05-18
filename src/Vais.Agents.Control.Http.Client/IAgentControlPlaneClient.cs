@@ -257,6 +257,20 @@ public interface IAgentControlPlaneClient
         => Task.FromResult(new PluginImageUpdateResponse(
             pluginName, PluginImageUpdateStatus.NoSupervisor, "Not supported by this client."));
 
+    /// <summary>
+    /// POST /v1/plugins/{name}/dll — push a compiled C# DLL (or zip of DLL + dependencies)
+    /// and trigger a DrainAndSwap hot-reload. Use <c>application/octet-stream</c> for a raw DLL
+    /// or <c>application/zip</c> for a zip archive containing the DLL and its dependencies.
+    /// Returns <see cref="PluginDllPushStatus.ReloadDisabled"/> (503) when hot-reload is not enabled.
+    /// </summary>
+    Task<PluginDllPushResponse> PushPluginDllAsync(
+        string pluginName,
+        Stream dllStream,
+        string contentType = "application/octet-stream",
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new PluginDllPushResponse(
+            pluginName, PluginDllPushStatus.ReloadDisabled, null, null, "Not supported by this client."));
+
     // ── LLM gateway config verbs (GCF-13) ──────────────────────────────────────
 
     /// <summary>POST /v1/llm-gateways — register a manifest, get a handle.</summary>

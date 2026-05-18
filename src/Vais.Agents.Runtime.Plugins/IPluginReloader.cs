@@ -46,6 +46,12 @@ public sealed record PluginReloadResult(
 public interface IPluginReloadHook
 {
     /// <summary>
+    /// Lower values run first. Default 0. Use to order hooks relative to each other
+    /// (e.g. translator-cache invalidation = 0, grain deactivation = 100).
+    /// </summary>
+    int Order => 0;
+
+    /// <summary>
     /// Called once per successful reload, after the handler registry has been
     /// atomically swapped. Implementations should complete quickly; long-running
     /// drain logic should be internally time-bounded.

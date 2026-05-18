@@ -28,7 +28,7 @@ internal sealed class DefaultPluginReloader : IPluginReloader
     {
         _loader = loader;
         _registry = registry;
-        _hooks = hooks?.ToArray() ?? [];
+        _hooks = hooks?.OrderBy(h => h.Order).ToArray() ?? [];
         _logger = logger ?? NullLogger<DefaultPluginReloader>.Instance;
     }
 

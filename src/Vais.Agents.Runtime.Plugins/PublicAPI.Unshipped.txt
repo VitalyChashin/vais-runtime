@@ -1,3 +1,34 @@
 #nullable enable
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.<Clone>$() -> Vais.Agents.Runtime.Plugins.AssemblyDllPushResult!
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.AssemblyDllPushResult(string! PluginName, Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus Status, System.Collections.Generic.IReadOnlyList<string!>? Handlers, string? TargetApiVersion, string? ErrorMessage) -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Deconstruct(out string! PluginName, out Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus Status, out System.Collections.Generic.IReadOnlyList<string!>? Handlers, out string? TargetApiVersion, out string? ErrorMessage) -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Equals(Vais.Agents.Runtime.Plugins.AssemblyDllPushResult? other) -> bool
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.ErrorMessage.get -> string?
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.ErrorMessage.init -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Handlers.init -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.PluginName.get -> string!
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.PluginName.init -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Status.get -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Status.init -> void
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.TargetApiVersion.get -> string?
+Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.TargetApiVersion.init -> void
+Vais.Agents.Runtime.Plugins.IPluginReloadHook.Order.get -> int
+override Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.ToString() -> string!
+static Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.operator !=(Vais.Agents.Runtime.Plugins.AssemblyDllPushResult? left, Vais.Agents.Runtime.Plugins.AssemblyDllPushResult? right) -> bool
+static Vais.Agents.Runtime.Plugins.AssemblyDllPushResult.operator ==(Vais.Agents.Runtime.Plugins.AssemblyDllPushResult? left, Vais.Agents.Runtime.Plugins.AssemblyDllPushResult? right) -> bool
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.AbiMismatch = 1 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.Bootstrapped = 5 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.LoadFailed = 2 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.NotFound = 4 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.ReloadDisabled = 3 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.Success = 0 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus.ValidationFailed = 6 -> Vais.Agents.Runtime.Plugins.AssemblyDllPushStatus
+Vais.Agents.Runtime.Plugins.IAssemblyDllPusher
+Vais.Agents.Runtime.Plugins.IAssemblyDllPusher.PushAsync(string! pluginName, System.IO.Stream! dllStream, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Plugins.AssemblyDllPushResult!>!
 Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry.Register(Vais.Agents.IAgentHandlerFactory! factory, string! ownerPluginName) -> void
 static Vais.Agents.Runtime.Plugins.PluginServiceCollectionExtensions.EnsurePluginRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
