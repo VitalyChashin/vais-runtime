@@ -5,3 +5,11 @@ Vais.Agents.Observability.Prometheus.PrometheusSectionSink.EmitAsync(Vais.Agents
 Vais.Agents.Observability.Prometheus.PrometheusSectionSink.PrometheusSectionSink() -> void
 Vais.Agents.Observability.Prometheus.PrometheusSectionSink.PrometheusSectionSink(Prometheus.MetricFactory! metricFactory) -> void
 static Vais.Agents.Observability.Prometheus.AgenticPrometheusExtensions.AddAgenticPrometheusSectionSink(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Observability.Prometheus.AgenticPrometheusExtensions.AddAgenticPrometheusContinuousScoringMetricSink(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.PrometheusContinuousScoringMetricSink() -> void
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.PrometheusContinuousScoringMetricSink(Prometheus.MetricFactory! metricFactory) -> void
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.RecordSample(string! suiteId, string! status) -> void
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.ObserveAssertionScore(string! suiteId, string! kind, double score) -> void
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.SetWindowSampledCount(string! suiteId, double count) -> void
+Vais.Agents.Observability.Prometheus.PrometheusContinuousScoringMetricSink.SetWindowSecondsRemaining(string! suiteId, double seconds) -> void

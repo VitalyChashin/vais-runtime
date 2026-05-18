@@ -93,31 +93,80 @@ internal static class EvalSuiteManifestParser
             replayMode = ParseReplayMode(rmEl.GetString(), errors, $"{prefix}spec.replayMode");
         }
 
+        // ── sampling ─────────────────────────────────────────────────────────────
+        EvalSamplingSpec? sampling = null;
+        if (spec.TryGetProperty("sampling", out var samplingEl) && samplingEl.ValueKind == JsonValueKind.Object)
+        {
+            double rate = 0;
+            if (samplingEl.TryGetProperty("rate", out var rateEl) && rateEl.ValueKind == JsonValueKind.Number)
+                rate = rateEl.GetDouble();
+            else
+                errors.Add($"{prefix}spec.sampling.rate is required");
+
+            int? minPerHour = null;
+            if (samplingEl.TryGetProperty("minPerHour", out var mphEl) && mphEl.ValueKind == JsonValueKind.Number)
+                minPerHour = mphEl.GetInt32();
+
+            var windowDuration = TimeSpan.FromHours(1);
+            if (samplingEl.TryGetProperty("windowDuration", out var wdEl) && wdEl.ValueKind == JsonValueKind.String)
+            {
+                if (TimeSpan.TryParse(wdEl.GetString(), out var wd))
+                    windowDuration = wd;
+            }
+
+            sampling = new EvalSamplingSpec { Rate = rate, MinPerHour = minPerHour, WindowDuration = windowDuration };
+        }
+
+        // ── spec-level assertions (continuous mode) ───────────────────────────
+        List<EvalAssertion>? specAssertions = null;
+        if (spec.TryGetProperty("assertions", out var specAssertEl) && specAssertEl.ValueKind == JsonValueKind.Array)
+        {
+            specAssertions = new List<EvalAssertion>();
+            var ai = 0;
+            foreach (var a in specAssertEl.EnumerateArray())
+            {
+                var aPrefix = $"{prefix}spec.assertions[{ai}] ";
+                var kind = a.TryGetProperty("kind", out var kEl) ? kEl.GetString() : null;
+                if (string.IsNullOrEmpty(kind))
+                    errors.Add($"{aPrefix}kind is required");
+                else
+                {
+                    JsonElement? params_ = a.TryGetProperty("params", out var pEl) ? pEl.Clone() : null;
+                    specAssertions.Add(new EvalAssertion(kind, params_));
+                }
+                ai++;
+            }
+        }
+
         // ── cases ────────────────────────────────────────────────────────────────
-        if (!spec.TryGetProperty("cases", out var casesEl) || casesEl.ValueKind != JsonValueKind.Array)
+        List<EvalCase>? cases = null;
+        if (sampling is null)
         {
-            errors.Add($"{prefix}spec.cases is required and must be an array");
-            return null;
-        }
+            if (!spec.TryGetProperty("cases", out var casesEl) || casesEl.ValueKind != JsonValueKind.Array)
+            {
+                errors.Add($"{prefix}spec.cases is required and must be an array (or use spec.sampling for continuous mode)");
+                return null;
+            }
 
-        var cases = new List<EvalCase>();
-        var caseIndex = 0;
-        foreach (var caseEl in casesEl.EnumerateArray())
-        {
-            var casePrefix = $"{prefix}spec.cases[{caseIndex}] ";
-            var evalCase = ParseCase(caseEl, errors, casePrefix);
-            if (evalCase is not null) cases.Add(evalCase);
-            caseIndex++;
-        }
+            cases = new List<EvalCase>();
+            var caseIndex = 0;
+            foreach (var caseEl in casesEl.EnumerateArray())
+            {
+                var casePrefix = $"{prefix}spec.cases[{caseIndex}] ";
+                var evalCase = ParseCase(caseEl, errors, casePrefix);
+                if (evalCase is not null) cases.Add(evalCase);
+                caseIndex++;
+            }
 
-        if (cases.Count == 0)
-            errors.Add($"{prefix}spec.cases must contain at least one case");
+            if (cases.Count == 0)
+                errors.Add($"{prefix}spec.cases must contain at least one case");
 
-        var caseIdsSeen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var c in cases)
-        {
-            if (!caseIdsSeen.Add(c.Id))
-                errors.Add($"{prefix}duplicate case id '{c.Id}'");
+            var caseIdsSeen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var c in cases)
+            {
+                if (!caseIdsSeen.Add(c.Id))
+                    errors.Add($"{prefix}duplicate case id '{c.Id}'");
+            }
         }
 
         return new EvalSuiteManifest(id, version, description, labels)
@@ -130,6 +179,8 @@ internal static class EvalSuiteManifestParser
                 Defaults = defaults,
                 Baseline = baseline,
                 Cases = cases,
+                Sampling = sampling,
+                Assertions = specAssertions,
                 ReplayMode = replayMode,
             },
         };

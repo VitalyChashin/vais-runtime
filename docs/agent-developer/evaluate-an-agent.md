@@ -1,6 +1,6 @@
 # Evaluate an agent
 
-You'll author a 3-case regression suite that scores a customer support agent on tool dispatch, response shape, and judge-rated quality; publish the results as JUnit XML for CI; and diff two runs side-by-side to see exactly what changed. About 25 minutes. End state: `vais eval run support-bot-regression --wait` gates your CI pipeline, and `vais eval diff` surfaces regressions before they reach production.
+You'll author a 3-case regression suite that scores a customer support agent on response shape and judge-rated quality; publish the results as JUnit XML for CI; and diff two runs side-by-side to see exactly what changed. About 25 minutes. End state: `vais eval run support-bot-regression --wait` gates your CI pipeline, and `vais eval diff` surfaces regressions before they reach production.
 
 ## Why this matters
 
@@ -20,25 +20,7 @@ Shipping an agent is step one. Knowing whether the next model version, a prompt 
 
 ## Step 1 — Register the target agent
 
-This tutorial evaluates a `support-bot` agent that searches a knowledge base before answering. If you already have a registered agent you'd like to evaluate, skip to Step 2 and swap in its id wherever you see `support-bot`.
-
-Save as `support-gateway.yaml`:
-
-```yaml
-apiVersion: vais.agents/v1
-kind: McpGatewayConfig
-metadata:
-  id: support-mcp-gateway
-  version: "1.0"
-spec:
-  servers:
-    - id: kb-server
-      transport: streamableHttp
-      url: http://localhost:3001
-  middleware:
-    - name: ToolLogging
-    - name: ToolOtel
-```
+This tutorial evaluates a `support-bot` agent that handles customer support queries. If you already have a registered agent you'd like to evaluate, skip to Step 2 and swap in its id wherever you see `support-bot`.
 
 Save as `support-bot.yaml`:
 
@@ -48,7 +30,7 @@ kind: Agent
 metadata:
   id: support-bot
   version: "1.0"
-  description: Customer support agent that searches the knowledge base.
+  description: Customer support agent.
 spec:
   model:
     provider: openai
@@ -57,20 +39,15 @@ spec:
   systemPrompt:
     inline: |
       You are a helpful customer support assistant.
-      Always call search_kb before answering. Acknowledge the customer's
-      issue first, then propose a concrete next step.
+      Acknowledge the customer's issue first, then propose a concrete next step.
       Keep replies under 80 words.
   handler:
     typeName: declarative
   protocols:
     - kind: Http
-  mcpGatewayRef: support-mcp-gateway
 ```
 
-Apply gateway first, then agent (the agent's `mcpGatewayRef` is validated eagerly):
-
 ```bash
-vais apply -f support-gateway.yaml
 vais apply -f support-bot.yaml
 ```
 
@@ -99,17 +76,14 @@ spec:
       input: "How do I request a refund for an overcharge?"
       assertions:
         - kind: no-turn-failed
-        - kind: tool-call-sequence
-          params:
-            expected:
-              - name: search_kb
-                argsContains:
-                  query: refund
-            scoring: contains
         - kind: response-regex
           params:
             pattern: "refund|policy|30.?day"
             flags: ignoreCase
+        - kind: metric-threshold
+          params:
+            metric: duration
+            max: 20000
 
     - id: billing-duplicate
       name: Duplicate charge complaint
@@ -149,7 +123,6 @@ spec:
 | Kind | What it checks |
 |---|---|
 | `no-turn-failed` | No `TurnFailed` event in the run — the agent didn't crash or throw. |
-| `tool-call-sequence` | The tool call journal contains `search_kb` with `query` containing "refund". `scoring: contains` (subsequence match, not exact). |
 | `response-regex` | The agent's text reply matches the pattern (case-insensitive). |
 | `judge-score` | An LLM judge scores the reply 0–1; pass threshold is `minScore`. |
 | `metric-threshold` | `duration` (wall-clock ms) and `totalTokens` (prompt + completion) must stay under `max`. |
@@ -161,10 +134,7 @@ vais apply -f eval-support-bot.yaml
 vais get-eval-suites support-bot-regression
 ```
 
-```
-ID                       VERSION   CASES   TARGET              LABELS
-support-bot-regression   1.0       3       agent:support-bot   -
-```
+The command returns the full suite manifest YAML, confirming the id, version, and case list.
 
 ## Step 3 — Run the suite
 
@@ -175,7 +145,7 @@ vais eval run support-bot-regression --wait
 ```
 
 ```
-started evalRunId=eval-7f3a...
+started evalRunId=5641e831...
   pass refund-policy
   pass billing-duplicate
   pass account-access
@@ -189,8 +159,8 @@ vais eval list --suite support-bot-regression
 ```
 
 ```
-RUN ID       SUITE                    STATUS     PASS  FAIL  STARTED
-eval-7f3a...  support-bot-regression  completed  3     0     2026-05-16 13:21
+RUN ID              SUITE                    STATUS     PASS  FAIL  STARTED
+5641e831...         support-bot-regression   completed  3     0     2026-05-16 13:21
 ```
 
 ## Step 4 — Read results
@@ -198,23 +168,26 @@ eval-7f3a...  support-bot-regression  completed  3     0     2026-05-16 13:21
 `vais eval results` renders a case × assertion matrix for a run:
 
 ```bash
-vais eval results eval-7f3a...
+vais eval results 5641e831...
 ```
 
 ```
-support-bot-regression v1.0 — run eval-7f3a...
+support-bot-regression v1.0 — run 5641e831...
 Status: Completed  Pass: 3  Fail: 0  Total: 3
 
-CASE               STATUS  ASSERTIONS
-refund-policy      pass    no-turn-failed✓, tool-call-sequence✓, response-regex✓
-billing-duplicate  pass    no-turn-failed✓, judge-score✓, metric-threshold✓
-account-access     pass    no-turn-failed✓, response-regex✓, metric-threshold✓
+┌───────────────────┬────────┬────────────────────────────────────────────────────┐
+│ CASE              │ STATUS │ ASSERTIONS                                         │
+├───────────────────┼────────┼────────────────────────────────────────────────────┤
+│ refund-policy     │ pass   │ no-turn-failed✓, response-regex✓, metric-threshold✓│
+│ billing-duplicate │ pass   │ no-turn-failed✓, judge-score✓, metric-threshold✓   │
+│ account-access    │ pass   │ no-turn-failed✓, response-regex✓, metric-threshold✓│
+└───────────────────┴────────┴────────────────────────────────────────────────────┘
 ```
 
 The ASSERTIONS column lists every assertion by kind with a pass (✓), fail (✗), or error (!) marker. For scripting or audit, `-o json` returns the full result with per-assertion scores and diagnostics:
 
 ```bash
-vais eval results eval-7f3a... -o json
+vais eval results 5641e831... -o json
 ```
 
 ## Step 5 — Wire into CI
@@ -259,7 +232,7 @@ Copy the passing run id into the suite manifest:
 spec:
   agentId: support-bot
   baseline:
-    runId: eval-7f3a...        # ← your passing run id
+    runId: 5641e831...        # ← your passing run id
   defaults:
     judgeModel: gpt-4o-mini
     timeout: "00:00:30"
@@ -277,47 +250,146 @@ vais eval run support-bot-regression --wait
 ```
 
 ```
-  started  support-bot-regression  run=eval-9c1b...
-  fail     billing-duplicate
-  pass     refund-policy
-  pass     account-access
+started evalRunId=1b7bf5e8...
+  pass refund-policy
+  fail billing-duplicate
+  pass account-access
 run completed
 ```
 
 Diff the two runs:
 
 ```bash
-vais eval diff eval-7f3a... eval-9c1b...
+vais eval diff 5641e831... 1b7bf5e8...
 ```
 
 ```
-base:      eval-7f3a...
-candidate: eval-9c1b...
+base:      5641e831...
+candidate: 1b7bf5e8...
 
-CASE               BASE  CANDIDATE  DELTA
-refund-policy      pass  pass       —
-billing-duplicate  pass  fail       judge-score: pass → fail  metric-threshold: 0.82 → 0.41 (-0.41)
-account-access     pass  pass       —
+┌───────────────────┬──────┬───────────┬──────────────────────────────────┐
+│ CASE              │ BASE │ CANDIDATE │ DELTA                            │
+├───────────────────┼──────┼───────────┼──────────────────────────────────┤
+│ refund-policy     │ pass │ pass      │ —                                │
+│ billing-duplicate │ pass │ fail      │ judge-score ✗ (0.41 < 0.60)     │
+│ account-access    │ pass │ pass      │ —                                │
+└───────────────────┴──────┴───────────┴──────────────────────────────────┘
 ```
 
 The diff shows exactly which assertions moved and by how much. Here the prompt change hurt the quality of the duplicate-charge response and doubled its latency — both surfaces visible in one command before the change ships.
 
 `-o json` is available for machine-readable diff output (CI policy gates, Slack bots, etc.).
 
+## Step 7 — Continuous production monitoring
+
+Batch regression suites catch regressions before deployment. Continuous eval catches
+them in production by scoring a statistical sample of real traffic without ever replaying
+or altering it.
+
+### How it works
+
+Replace the `spec.cases:` block with a `spec.sampling:` block. The runtime subscribes
+to the agent event bus and scores every run whose `hash(runId) / 2⁶⁴ < rate` — a
+deterministic predicate that is identical on every silo, so N-silo deployments do not
+produce N×-duplicate samples.
+
+Each eval window (default: 1 h) accumulates samples in a single `eval_runs` row in
+Postgres. When the window expires the grain closes the row with `status = Completed`
+and opens the next one.
+
+### Author a continuous suite
+
+```yaml
+apiVersion: vais.agents/v1
+kind: EvalSuite
+metadata:
+  id: support-bot-continuous
+  version: "1.0"
+spec:
+  agentId: support-bot
+  sampling:
+    rate: 0.01            # Score 1% of production runs
+    windowDuration: 1h    # New eval_run row every hour
+  assertions:
+    - kind: no-turn-failed
+    - kind: response-regex
+      params:
+        pattern: "\\S+"   # Response must be non-empty
+```
+
+> **Cost budget:** at 1% sampling × 100 rps × 1 judge call per sample = 1 judge call/s.
+> For `judge-score` assertions, route the judge model through a `LlmGatewayConfig` with
+> semantic-cache enabled to amortize repeat prompts:
+>
+> ```yaml
+> spec.model.id: gpt-4o-judge
+> ```
+>
+> The formula is `rate × traffic × judges_per_case × cost_per_call`. Start with
+> `rate: 0.001` while validating your assertion chain; ramp up once the cost is justified.
+
+### Apply and observe
+
+```bash
+vais apply -f support-bot-continuous.yaml
+
+# List continuous runs (live, no --run-id needed)
+vais eval list --source continuous
+
+# Filter by suite
+vais eval list --source continuous --suite support-bot-continuous
+```
+
+Example output:
+
+```
+EVAL RUN ID                          SUITE                    STATUS   WINDOW START          SAMPLED
+ceval-support-bot-cont-20260518…     support-bot-continuous   Running  2026-05-18T14:00:00Z  12
+ceval-support-bot-cont-20260518…     support-bot-continuous   Done     2026-05-18T13:00:00Z  47
+```
+
+### Grafana
+
+Import `deploy/observability/grafana/dashboards/eval-continuous.json` into your Grafana
+instance. Five panels ship out of the box:
+
+| Panel | Metric | What to watch |
+|---|---|---|
+| Pass Rate Over Time | `vais_eval_continuous_cases_total` | Sustained drop below 95% = regression |
+| Assertion Score (p50/p90) | `vais_eval_continuous_assertion_score` | Falling p90 on `judge-score` = drift |
+| Sampled Runs Per Window | `vais_eval_continuous_window_sampled` | Zero = no traffic or sampler not running |
+| Window Time Remaining | `vais_eval_continuous_window_seconds_remaining` | Near-zero = window about to rotate |
+| Failed Cases/min | `vais_eval_continuous_cases_total{status="Fail"}` | Spike = investigate logs |
+
+Live data appears within 30 s of the first sampled production run.
+
+### Operational risks
+
+- **Samples are point-in-time observations.** Runs that complete during a silo restart
+  are not retroactively sampled. This is expected behaviour for `rate = 0.01` semantics.
+- **Judge non-determinism.** `judge-score` assertions are not perfectly repeatable;
+  treat sustained trends (5+ consecutive windows) rather than single-window spikes as
+  signals. See `research/evaluation-harness-design-2026-05-16.md §9`.
+- **Under-sampling.** When production traffic is below `1 / rate` rps, some windows get
+  zero samples. The "Sampled Runs Per Window" panel surfaces this.
+
+See `samples/EvalContinuousMonitor/` for a self-contained example.
+
 ## Clean up
 
 ```bash
 vais delete eval-suites/support-bot-regression
+vais delete eval-suites/support-bot-continuous
 vais delete support-bot
-vais delete mcp-gateways/support-mcp-gateway
 ```
 
 ## What you built
 
 - A declarative `EvalSuite` manifest published via `vais apply` alongside the agent it tests.
-- A 3-case suite using five assertion kinds: `no-turn-failed`, `tool-call-sequence`, `response-regex`, `judge-score`, and `metric-threshold`.
+- A 3-case suite using four assertion kinds: `no-turn-failed`, `response-regex`, `judge-score`, and `metric-threshold`.
 - A JUnit XML pipeline gate that turns any assertion failure into a failing CI job.
 - A baseline + diff workflow that surfaces regressions at the assertion level before they reach production.
+- A continuous sampling suite that monitors production traffic at configurable rate with no agent replay.
 
 ## Next
 
@@ -325,3 +397,4 @@ vais delete mcp-gateways/support-mcp-gateway
 - [Reference → EvalSuite manifest](../reference/manifest-schema.md#evalsuite) — full field reference for all ten assertion kinds.
 - [Extensions → Author a custom assertion](../extensions/author-a-custom-assertion.md) — plug in your own `IEvalAssertionFactory` via DI.
 - `samples/EvalRegression/` — self-contained sample: apply, run, and diff in one script.
+- `samples/EvalContinuousMonitor/` — continuous eval sample with Grafana panel reference.

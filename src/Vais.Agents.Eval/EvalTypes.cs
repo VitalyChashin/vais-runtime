@@ -107,7 +107,10 @@ public sealed record EvalRunSummary(
     EvalRunStatus Status,
     int TotalCases,
     int PassedCases,
-    int FailedCases);
+    int FailedCases,
+    string Source = "batch",
+    DateTimeOffset? WindowStart = null,
+    DateTimeOffset? WindowEnd = null);
 
 /// <summary>Full detail of an eval run including per-case and per-assertion results.</summary>
 public sealed record EvalRunDetail(EvalRunSummary Summary, IReadOnlyList<EvalCaseResultRecord> Cases);
@@ -121,7 +124,8 @@ public sealed record EvalCaseResultRecord(
     DateTimeOffset? CompletedAt,
     EvalCaseStatus Status,
     string? ResponseText,
-    IReadOnlyList<EvalAssertionResultRecord> AssertionResults);
+    IReadOnlyList<EvalAssertionResultRecord> AssertionResults,
+    string? ProductionRunId = null);
 
 /// <summary>Per-assertion result within a case.</summary>
 public sealed record EvalAssertionResultRecord(

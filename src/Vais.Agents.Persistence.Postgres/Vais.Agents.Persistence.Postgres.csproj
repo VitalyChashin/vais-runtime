@@ -8,10 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
     <ProjectReference Include="..\Vais.Agents.Hosting.Orleans\Vais.Agents.Hosting.Orleans.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" />
     <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" />
     <PackageReference Include="Npgsql" />

@@ -46,10 +46,11 @@ public sealed class LoggingEvalResultStore : IEvalResultStore
     }
 
     /// <inheritdoc/>
-    public ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, CancellationToken ct = default)
+    public ValueTask<IReadOnlyList<EvalRunSummary>> ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, CancellationToken ct = default)
     {
         var items = _summaries.Values
             .Where(s => suiteName is null || string.Equals(s.SuiteName, suiteName, StringComparison.Ordinal))
+            .Where(s => source is null || string.Equals(s.Source, source, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(s => s.StartedAt)
             .Take(limit)
             .ToArray();

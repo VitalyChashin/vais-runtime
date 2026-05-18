@@ -45,7 +45,7 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         _state.State.SuiteName = suite.Id;
         _state.State.SuiteVersion = suite.Version;
         _state.State.SuiteJson = suiteJson;
-        _state.State.TotalCases = suite.Spec.Cases.Count;
+        _state.State.TotalCases = suite.Spec.Cases?.Count ?? 0;
         _state.State.Status = EvalRunStatus.Running;
         _state.State.StartedAt = DateTimeOffset.UtcNow;
         _state.State.Workspace = workspace;
@@ -70,13 +70,14 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         var suite = JsonSerializer.Deserialize<EvalSuiteManifest>(_state.State.SuiteJson!, JsonOpts)!;
         var idx = _state.State.CurrentCaseIndex;
 
-        if (idx >= suite.Spec.Cases.Count)
+        var cases = suite.Spec.Cases ?? [];
+        if (idx >= cases.Count)
         {
             await CompleteRunAsync(evalRunId, ct);
             return;
         }
 
-        var @case = suite.Spec.Cases[idx];
+        var @case = cases[idx];
         var caseResult = await ProcessCaseAsync(evalRunId, suite, @case, ct);
 
         if (caseResult.Status == EvalCaseStatus.Pass) _state.State.PassedCases++;
@@ -91,7 +92,7 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
 
         PublishProgress(evalRunId, "case-completed", @case.Id, (int)caseResult.Status);
 
-        if (_state.State.CurrentCaseIndex >= suite.Spec.Cases.Count)
+        if (_state.State.CurrentCaseIndex >= cases.Count)
             await CompleteRunAsync(evalRunId, ct);
         else
             _ = this.AsReference<IEvalRunGrain>().ProcessNextCaseAsync();
@@ -121,20 +122,33 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
         string responseText = string.Empty;
         int? promptTokens = null, completionTokens = null;
 
+        // Apply case timeout from defaults if configured.
+        var caseTimeout = suite.Spec.Defaults?.Timeout;
+        using var timeoutCts = caseTimeout.HasValue
+            ? CancellationTokenSource.CreateLinkedTokenSource(ct)
+            : null;
+        if (timeoutCts is not null && caseTimeout.HasValue)
+            timeoutCts.CancelAfter(caseTimeout.Value);
+        var invokeToken = timeoutCts?.Token ?? ct;
+
         try
         {
             var lifecycle = ServiceProvider.GetRequiredService<IAgentLifecycleManager>();
             var eventBus = ServiceProvider.GetService<IAgentEventBus>();
 
             // Subscribe to event bus before invoke so we capture all events for this case.
+            // OrleansAgentEventBus.Subscribe() blocks synchronously via GetAwaiter().GetResult()
+            // on a stream subscription. Calling it directly inside a grain turn deadlocks the
+            // Orleans single-threaded scheduler. Task.Run escapes the scheduler so the blocking
+            // subscribe executes on a thread-pool thread without holding the grain's turn.
             IDisposable? sub = null;
             if (eventBus is not null)
             {
-                sub = eventBus.Subscribe((e, _) =>
+                sub = await Task.Run(() => eventBus.Subscribe((e, _) =>
                 {
                     events.Add(e);
                     return ValueTask.CompletedTask;
-                });
+                }));
             }
 
             try
@@ -158,12 +172,12 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
                 {
                     var contextSetter = ServiceProvider.GetService<IAgentContextSetter>();
                     using var _ = contextSetter?.Push(AgentContext.Empty with { BaselineRunId = baselineRunId });
-                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    var result = await lifecycle.InvokeAsync(handle, request, invokeToken);
                     responseText = result.Text;
                 }
                 else
                 {
-                    var result = await lifecycle.InvokeAsync(handle, request, ct);
+                    var result = await lifecycle.InvokeAsync(handle, request, invokeToken);
                     responseText = result.Text;
                 }
             }

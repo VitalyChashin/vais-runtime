@@ -43,9 +43,9 @@ Vais.Agents.Eval.IEvalResultStore
 Vais.Agents.Eval.IEvalResultStore.AppendCaseResultAsync(Vais.Agents.Eval.EvalCaseResultRecord! result, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Eval.IEvalResultStore.AppendRunAsync(Vais.Agents.Eval.EvalRunSummary! run, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Eval.IEvalResultStore.GetRunAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Eval.EvalRunDetail?>
-Vais.Agents.Eval.IEvalResultStore.ListRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
+Vais.Agents.Eval.IEvalResultStore.ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
 Vais.Agents.Eval.EvalRunSummary
-Vais.Agents.Eval.EvalRunSummary.EvalRunSummary(string! EvalRunId, string! SuiteName, string! SuiteVersion, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalRunStatus Status, int TotalCases, int PassedCases, int FailedCases) -> void
+Vais.Agents.Eval.EvalRunSummary.EvalRunSummary(string! EvalRunId, string! SuiteName, string! SuiteVersion, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalRunStatus Status, int TotalCases, int PassedCases, int FailedCases, string! Source = "batch", System.DateTimeOffset? WindowStart = null, System.DateTimeOffset? WindowEnd = null) -> void
 Vais.Agents.Eval.EvalRunSummary.EvalRunId.get -> string!
 Vais.Agents.Eval.EvalRunSummary.SuiteName.get -> string!
 Vais.Agents.Eval.EvalRunSummary.SuiteVersion.get -> string!
@@ -55,12 +55,18 @@ Vais.Agents.Eval.EvalRunSummary.Status.get -> Vais.Agents.Eval.EvalRunStatus
 Vais.Agents.Eval.EvalRunSummary.TotalCases.get -> int
 Vais.Agents.Eval.EvalRunSummary.PassedCases.get -> int
 Vais.Agents.Eval.EvalRunSummary.FailedCases.get -> int
+Vais.Agents.Eval.EvalRunSummary.Source.get -> string!
+Vais.Agents.Eval.EvalRunSummary.Source.init -> void
+Vais.Agents.Eval.EvalRunSummary.WindowStart.get -> System.DateTimeOffset?
+Vais.Agents.Eval.EvalRunSummary.WindowStart.init -> void
+Vais.Agents.Eval.EvalRunSummary.WindowEnd.get -> System.DateTimeOffset?
+Vais.Agents.Eval.EvalRunSummary.WindowEnd.init -> void
 Vais.Agents.Eval.EvalRunDetail
 Vais.Agents.Eval.EvalRunDetail.EvalRunDetail(Vais.Agents.Eval.EvalRunSummary! Summary, System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalCaseResultRecord!>! Cases) -> void
 Vais.Agents.Eval.EvalRunDetail.Summary.get -> Vais.Agents.Eval.EvalRunSummary!
 Vais.Agents.Eval.EvalRunDetail.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalCaseResultRecord!>!
 Vais.Agents.Eval.EvalCaseResultRecord
-Vais.Agents.Eval.EvalCaseResultRecord.EvalCaseResultRecord(string! EvalRunId, string! CaseId, string? AgentRunId, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalCaseStatus Status, string? ResponseText, System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults) -> void
+Vais.Agents.Eval.EvalCaseResultRecord.EvalCaseResultRecord(string! EvalRunId, string! CaseId, string? AgentRunId, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalCaseStatus Status, string? ResponseText, System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, string? ProductionRunId = null) -> void
 Vais.Agents.Eval.EvalCaseResultRecord.EvalRunId.get -> string!
 Vais.Agents.Eval.EvalCaseResultRecord.CaseId.get -> string!
 Vais.Agents.Eval.EvalCaseResultRecord.AgentRunId.get -> string?
@@ -69,6 +75,8 @@ Vais.Agents.Eval.EvalCaseResultRecord.CompletedAt.get -> System.DateTimeOffset?
 Vais.Agents.Eval.EvalCaseResultRecord.Status.get -> Vais.Agents.Eval.EvalCaseStatus
 Vais.Agents.Eval.EvalCaseResultRecord.ResponseText.get -> string?
 Vais.Agents.Eval.EvalCaseResultRecord.AssertionResults.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>!
+Vais.Agents.Eval.EvalCaseResultRecord.ProductionRunId.get -> string?
+Vais.Agents.Eval.EvalCaseResultRecord.ProductionRunId.init -> void
 Vais.Agents.Eval.EvalAssertionResultRecord
 Vais.Agents.Eval.EvalAssertionResultRecord.EvalAssertionResultRecord(int Index, string! Kind, Vais.Agents.Eval.EvalAssertionStatus Status, double? Score, string? Reason) -> void
 Vais.Agents.Eval.EvalAssertionResultRecord.Index.get -> int
@@ -90,12 +98,12 @@ Vais.Agents.Eval.LoggingEvalResultStore
 Vais.Agents.Eval.LoggingEvalResultStore.AppendCaseResultAsync(Vais.Agents.Eval.EvalCaseResultRecord! result, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Eval.LoggingEvalResultStore.AppendRunAsync(Vais.Agents.Eval.EvalRunSummary! run, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Eval.LoggingEvalResultStore.GetRunAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Eval.EvalRunDetail?>
-Vais.Agents.Eval.LoggingEvalResultStore.ListRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
+Vais.Agents.Eval.LoggingEvalResultStore.ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
 Vais.Agents.Eval.LoggingEvalResultStore.LoggingEvalResultStore(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Eval.LoggingEvalResultStore!>! logger) -> void
 Vais.Agents.Eval.IEvalRunLifecycleManager
 Vais.Agents.Eval.IEvalRunLifecycleManager.CancelRunAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Eval.IEvalRunLifecycleManager.GetRunDetailAsync(string! evalRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Eval.EvalRunDetail?>
-Vais.Agents.Eval.IEvalRunLifecycleManager.ListRunsAsync(string? suiteName = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
+Vais.Agents.Eval.IEvalRunLifecycleManager.ListRunsAsync(string? suiteName = null, int limit = 50, string? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalRunSummary!>!>
 Vais.Agents.Eval.IEvalRunLifecycleManager.StartRunAsync(string! suiteName, string! workspace, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
 Vais.Agents.Eval.EvalServiceCollectionExtensions
 static Vais.Agents.Eval.EvalServiceCollectionExtensions.AddVaisAgentsEval(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -141,7 +149,7 @@ static Vais.Agents.Eval.EvalRunRecord.operator !=(Vais.Agents.Eval.EvalRunRecord
 static Vais.Agents.Eval.EvalRunRecord.operator ==(Vais.Agents.Eval.EvalRunRecord? left, Vais.Agents.Eval.EvalRunRecord? right) -> bool
 Vais.Agents.Eval.EvalRunSummary.<Clone>$() -> Vais.Agents.Eval.EvalRunSummary!
 Vais.Agents.Eval.EvalRunSummary.CompletedAt.init -> void
-Vais.Agents.Eval.EvalRunSummary.Deconstruct(out string! EvalRunId, out string! SuiteName, out string! SuiteVersion, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalRunStatus Status, out int TotalCases, out int PassedCases, out int FailedCases) -> void
+Vais.Agents.Eval.EvalRunSummary.Deconstruct(out string! EvalRunId, out string! SuiteName, out string! SuiteVersion, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalRunStatus Status, out int TotalCases, out int PassedCases, out int FailedCases, out string! Source, out System.DateTimeOffset? WindowStart, out System.DateTimeOffset? WindowEnd) -> void
 Vais.Agents.Eval.EvalRunSummary.Equals(Vais.Agents.Eval.EvalRunSummary? other) -> bool
 Vais.Agents.Eval.EvalRunSummary.EvalRunId.init -> void
 Vais.Agents.Eval.EvalRunSummary.FailedCases.init -> void
@@ -171,7 +179,7 @@ Vais.Agents.Eval.EvalCaseResultRecord.AgentRunId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.AssertionResults.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.CaseId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.CompletedAt.init -> void
-Vais.Agents.Eval.EvalCaseResultRecord.Deconstruct(out string! EvalRunId, out string! CaseId, out string? AgentRunId, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalCaseStatus Status, out string? ResponseText, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults) -> void
+Vais.Agents.Eval.EvalCaseResultRecord.Deconstruct(out string! EvalRunId, out string! CaseId, out string? AgentRunId, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalCaseStatus Status, out string? ResponseText, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, out string? ProductionRunId) -> void
 Vais.Agents.Eval.EvalCaseResultRecord.Equals(Vais.Agents.Eval.EvalCaseResultRecord? other) -> bool
 Vais.Agents.Eval.EvalCaseResultRecord.EvalRunId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.ResponseText.init -> void
@@ -195,3 +203,41 @@ override Vais.Agents.Eval.EvalAssertionResultRecord.GetHashCode() -> int
 override Vais.Agents.Eval.EvalAssertionResultRecord.ToString() -> string!
 static Vais.Agents.Eval.EvalAssertionResultRecord.operator !=(Vais.Agents.Eval.EvalAssertionResultRecord? left, Vais.Agents.Eval.EvalAssertionResultRecord? right) -> bool
 static Vais.Agents.Eval.EvalAssertionResultRecord.operator ==(Vais.Agents.Eval.EvalAssertionResultRecord? left, Vais.Agents.Eval.EvalAssertionResultRecord? right) -> bool
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.<Clone>$() -> Vais.Agents.Eval.Continuous.ContinuousSuiteEntry!
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.AgentRef.get -> string?
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.AgentRef.init -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.ContinuousSuiteEntry(string! SuiteId, string! WorkspaceId, string? AgentRef, string? GraphRef, double SamplingRate) -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.Deconstruct(out string! SuiteId, out string! WorkspaceId, out string? AgentRef, out string? GraphRef, out double SamplingRate) -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.Equals(Vais.Agents.Eval.Continuous.ContinuousSuiteEntry? other) -> bool
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.GraphRef.get -> string?
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.GraphRef.init -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.SamplingRate.get -> double
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.SamplingRate.init -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.SuiteId.get -> string!
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.SuiteId.init -> void
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.WorkspaceId.get -> string!
+Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.WorkspaceId.init -> void
+override Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.Equals(object? obj) -> bool
+override Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.GetHashCode() -> int
+override Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.ToString() -> string!
+static Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.operator !=(Vais.Agents.Eval.Continuous.ContinuousSuiteEntry? left, Vais.Agents.Eval.Continuous.ContinuousSuiteEntry? right) -> bool
+static Vais.Agents.Eval.Continuous.ContinuousSuiteEntry.operator ==(Vais.Agents.Eval.Continuous.ContinuousSuiteEntry? left, Vais.Agents.Eval.Continuous.ContinuousSuiteEntry? right) -> bool
+Vais.Agents.Eval.Continuous.IContinuousScoringMetricSink
+Vais.Agents.Eval.Continuous.IContinuousScoringMetricSink.ObserveAssertionScore(string! suiteId, string! kind, double score) -> void
+Vais.Agents.Eval.Continuous.IContinuousScoringMetricSink.RecordSample(string! suiteId, string! status) -> void
+Vais.Agents.Eval.Continuous.IContinuousScoringMetricSink.SetWindowSampledCount(string! suiteId, double count) -> void
+Vais.Agents.Eval.Continuous.IContinuousScoringMetricSink.SetWindowSecondsRemaining(string! suiteId, double seconds) -> void
+Vais.Agents.Eval.Continuous.IContinuousSuiteIndex
+Vais.Agents.Eval.Continuous.IContinuousSuiteIndex.Refresh(System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalSuiteManifest!>! activeSuites) -> void
+Vais.Agents.Eval.Continuous.IContinuousSuiteIndex.SuitesFor(string! workspaceId, string? agentRef, string? graphRef) -> System.Collections.Generic.IEnumerable<Vais.Agents.Eval.Continuous.ContinuousSuiteEntry!>!
+Vais.Agents.Eval.Continuous.InMemoryContinuousSuiteIndex
+Vais.Agents.Eval.Continuous.InMemoryContinuousSuiteIndex.InMemoryContinuousSuiteIndex() -> void
+Vais.Agents.Eval.Continuous.InMemoryContinuousSuiteIndex.Refresh(System.Collections.Generic.IReadOnlyList<Vais.Agents.EvalSuiteManifest!>! activeSuites) -> void
+Vais.Agents.Eval.Continuous.InMemoryContinuousSuiteIndex.SuitesFor(string! workspaceId, string? agentRef, string? graphRef) -> System.Collections.Generic.IEnumerable<Vais.Agents.Eval.Continuous.ContinuousSuiteEntry!>!
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.NoopContinuousScoringMetricSink() -> void
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.ObserveAssertionScore(string! suiteId, string! kind, double score) -> void
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.RecordSample(string! suiteId, string! status) -> void
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.SetWindowSampledCount(string! suiteId, double count) -> void
+Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.SetWindowSecondsRemaining(string! suiteId, double seconds) -> void

@@ -263,4 +263,24 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
             sp => sp.GetRequiredService<OrleansEvalRunLifecycleManager>());
         return services;
     }
+
+    /// <summary>
+    /// Register the continuous eval scoring pipeline:
+    /// <list type="bullet">
+    ///   <item><see cref="RunCompletionEventBusBridge"/> — bridges <see cref="IAgentEventBus"/> events to <see cref="IRunCompletionListener"/>s.</item>
+    ///   <item><see cref="ProductionSampler"/> — deterministic-hash sampler that enqueues matched runs to <see cref="IContinuousScoringGrain"/>.</item>
+    ///   <item><see cref="ContinuousSuiteActivator"/> — refreshes the in-memory suite index from the registry every 30 s.</item>
+    /// </list>
+    /// Requires <see cref="IAgentEventBus"/>, <c>IEvalSuiteRegistry</c>,
+    /// <c>IContinuousSuiteIndex</c>, and <see cref="IGrainFactory"/> in the container.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    public static IServiceCollection AddContinuousEvalScoring(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IRunCompletionListener, ProductionSampler>());
+        services.AddHostedService<RunCompletionEventBusBridge>();
+        services.AddHostedService<ContinuousSuiteActivator>();
+        return services;
+    }
 }

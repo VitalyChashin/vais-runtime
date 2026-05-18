@@ -107,7 +107,7 @@ internal sealed class GetEvalSuitesCommand : AsyncCommand<GetEvalSuitesCommand.S
             var labels = m.Labels is null || m.Labels.Count == 0
                 ? "-"
                 : string.Join(",", m.Labels.Select(kv => $"{kv.Key}={kv.Value}"));
-            table.AddRow(m.Id, m.Version, m.Spec.Cases.Count.ToString(), target, labels);
+            table.AddRow(m.Id, m.Version, (m.Spec.Cases?.Count ?? 0).ToString(), target, labels);
         }
         AnsiConsole.Write(table);
     }

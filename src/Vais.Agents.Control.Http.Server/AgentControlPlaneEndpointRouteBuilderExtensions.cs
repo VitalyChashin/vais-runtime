@@ -3191,12 +3191,12 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     }
 
     private static async Task<IResult> EvalRunListAsync(
-        HttpContext http, string? suite = null, int limit = 50, CancellationToken ct = default)
+        HttpContext http, string? suite = null, int limit = 50, string? source = null, CancellationToken ct = default)
     {
         var manager = http.RequestServices.GetService<Vais.Agents.Eval.IEvalRunLifecycleManager>();
         if (manager is null) return Results.Ok(new EvalRunListResponse(Array.Empty<Vais.Agents.Eval.EvalRunSummary>()));
 
-        var items = await manager.ListRunsAsync(suite, Math.Clamp(limit, 1, 200), ct).ConfigureAwait(false);
+        var items = await manager.ListRunsAsync(suite, Math.Clamp(limit, 1, 200), source, ct).ConfigureAwait(false);
         return Results.Ok(new EvalRunListResponse(items));
     }
 

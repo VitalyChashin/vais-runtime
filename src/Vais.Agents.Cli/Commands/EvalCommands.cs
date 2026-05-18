@@ -265,6 +265,11 @@ internal sealed class EvalListCommand : AsyncCommand<EvalListCommand.Settings>
         [CommandOption("--limit")]
         public int? Limit { get; init; }
 
+        /// <summary>Filter by source: batch, continuous, or all (default).</summary>
+        [Description("Filter results by source: batch | continuous. Omit to return all sources.")]
+        [CommandOption("--source")]
+        public string? Source { get; init; }
+
         /// <summary>Output format.</summary>
         [Description("Output format: table | json. Default: table.")]
         [CommandOption("-o|--output")]
@@ -289,7 +294,7 @@ internal sealed class EvalListCommand : AsyncCommand<EvalListCommand.Settings>
 
         try
         {
-            var response = await client.ListEvalRunsAsync(settings.Suite, settings.Limit ?? 50, cancellationToken);
+            var response = await client.ListEvalRunsAsync(settings.Suite, settings.Limit ?? 50, settings.Source, cancellationToken);
 
             var format = OutputFormatter.Parse(settings.Output, OutputFormat.Table);
             if (format == OutputFormat.Json)
