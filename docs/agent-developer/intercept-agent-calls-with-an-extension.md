@@ -79,7 +79,7 @@ vais apply -f ext-log.yaml --dll ./out/ext-log-csharp.dll
 Expected output:
 
 ```
-ext-log created (version 1.0.0)
+ext-log created (extension, host: csharp, handlers: log-input, log-output)
 ```
 
 The runtime loaded the DLL into a fresh AssemblyLoadContext, discovered `LogInput` and `LogOutput` via the `[VaisExtension]` attribute, and registered them in the handler registry. The handlers are now active for every agent.
@@ -97,17 +97,13 @@ The agent responds normally. Meanwhile the runtime logged:
 [ext-log] out agent=greeter tokens=27
 ```
 
-Tail the runtime logs to see them:
+The extension writes through `ILogger`, which goes to the runtime container's stdout. To see the lines:
 
 ```bash
-vais logs greeter
+docker logs vais-runtime --tail 20
 ```
 
-Or for a standalone runtime container:
-
-```bash
-docker logs vais-agents-runtime --tail 20
-```
+`vais logs greeter` streams SSE run-lifecycle events (turn started / chunk / completed) — useful for observing conversation flow, but it does not include `ILogger` output from extensions.
 
 The agent received no signal that an extension was bound — its manifest, state, and behaviour are unchanged.
 
@@ -154,8 +150,12 @@ vais agent extensions greeter
 ```
 
 ```
- SCOPE MATCHED | SCOPE
- yes           | agentIds=[greeter]
+ EXTENSION | HANDLER    | SEAM        | PRI | FAILURE | SCOPE MATCHED | SCOPE
+-----------+------------+-------------+-----+---------+---------------+-------------------
+ ext-log   | log-input  | agentInput  | 900 | log     | yes           | agentIds=[greeter]
+ ext-log   | log-output | agentOutput | 900 | log     | yes           | agentIds=[greeter]
+
+Matched handlers are included in the agent's invocation chain.
 ```
 
 ```bash
@@ -163,11 +163,15 @@ vais agent extensions other-agent
 ```
 
 ```
- SCOPE MATCHED | SCOPE
- no            | agentIds=[greeter]
+ EXTENSION | HANDLER    | SEAM        | PRI | FAILURE | SCOPE MATCHED | SCOPE
+-----------+------------+-------------+-----+---------+---------------+-------------------
+ ext-log   | log-input  | agentInput  | 900 | log     | no            | agentIds=[greeter]
+ ext-log   | log-output | agentOutput | 900 | log     | no            | agentIds=[greeter]
+
+No handlers matched — agent's invocation chain is empty.
 ```
 
-`no` means the extension is registered but excluded from that agent's chain.
+`SCOPE MATCHED: no` means the extension is registered but excluded from that agent's chain.
 
 ## Step 7 — List all loaded extensions
 
@@ -192,11 +196,11 @@ Output is YAML by default; pass `-o json` or `-o table` for other formats.
 ## Step 8 — Remove the extension
 
 ```bash
-vais delete extension/ext-log
+vais delete extensions/ext-log
 ```
 
 ```
-ext-log deleted.
+ext-log deleted
 ```
 
 The runtime unloads the ALC, removes both handlers from the registry, and invalidates cached agent chains. The next invocation of `greeter` runs with no extension handlers — exactly as it did before Step 3. No agent manifests were modified.
