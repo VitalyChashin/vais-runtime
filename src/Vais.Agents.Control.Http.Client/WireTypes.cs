@@ -277,3 +277,84 @@ public sealed record DiagSpanListResponse(IReadOnlyList<Vais.Agents.Control.Diag
 
 /// <summary>Client-side wire type for <c>GET /v1/diagnostics/filter-status</c>. Mirrors server's <c>FilterStatusResponse</c>.</summary>
 public sealed record FilterStatusResponse(IReadOnlyList<Vais.Agents.Control.FilterCallEntry> Calls, long TotalCalls);
+
+// ── Extension wire types ────────────────────────────────────────────────────
+
+/// <summary>Client-side mirror of <c>ExtensionApplyStatus</c> from the server package.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ExtensionApplyStatus
+{
+    /// <summary>Extension updated — an older version was replaced.</summary>
+    Success = 0,
+    /// <summary>Extension loaded for the first time (no prior version).</summary>
+    Created = 1,
+    /// <summary>DLL could not be loaded (bad IL, missing deps, or IO error).</summary>
+    LoadFailed = 2,
+    /// <summary><c>[VaisExtension].TargetApiVersion</c> does not match the runtime ABI.</summary>
+    AbiMismatch = 3,
+    /// <summary>Two handlers on the same seam share the same priority in the same scope.</summary>
+    PriorityConflict = 4,
+    /// <summary>Manifest was missing or could not be parsed.</summary>
+    ValidationFailed = 5,
+}
+
+/// <summary>Client-side wire type for <c>POST /v1/extensions</c>.</summary>
+public sealed record ExtensionApplyResponse(
+    string ExtensionId,
+    ExtensionApplyStatus Status,
+    IReadOnlyList<string>? Handlers,
+    string? ErrorMessage);
+
+/// <summary>Client-side mirror of <c>ExtensionDeleteStatus</c> from the server package.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ExtensionDeleteStatus
+{
+    /// <summary>Extension removed from registry and ALC unloaded.</summary>
+    Success = 0,
+    /// <summary>No extension with the given id was loaded — nothing to unload.</summary>
+    NotFound = 1,
+}
+
+/// <summary>Client-side wire type for <c>DELETE /v1/extensions/{name}</c>.</summary>
+public sealed record ExtensionDeleteResponse(
+    string ExtensionId,
+    ExtensionDeleteStatus Status);
+
+// ── EXT-25 / EXT-28 list + query + diagnostic types ─────────────────────────
+
+/// <summary>Client-side wire type for a single handler binding summary.</summary>
+public sealed record ExtensionHandlerInfo(
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode);
+
+/// <summary>Client-side wire type for a loaded extension summary.</summary>
+public sealed record ExtensionInfo(
+    string ExtensionId,
+    string Version,
+    string Host,
+    IReadOnlyList<ExtensionHandlerInfo> Handlers);
+
+/// <summary>Client-side wire type for <c>GET /v1/extensions</c>.</summary>
+public sealed record ExtensionListResponse(IReadOnlyList<ExtensionInfo> Items);
+
+/// <summary>Client-side wire type for <c>GET /v1/extensions/{name}</c>.</summary>
+public sealed record ExtensionQueryResponse(
+    ExtensionInfo Extension,
+    ExtensionManifest Manifest);
+
+/// <summary>Client-side wire type for one entry in the per-agent extension diagnostic.</summary>
+public sealed record AgentExtensionEntry(
+    string ExtensionId,
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode,
+    bool MatchedScope,
+    string? ScopeSummary);
+
+/// <summary>Client-side wire type for <c>GET /v1/agents/{id}/extensions</c>.</summary>
+public sealed record AgentExtensionChainResponse(
+    string AgentId,
+    IReadOnlyList<AgentExtensionEntry> Handlers);

@@ -32,6 +32,7 @@ public sealed class JsonAgentGraphManifestLoader
     internal const string ContainerPluginKind = "ContainerPlugin";
     internal const string EvalSuiteKind = "EvalSuite";
     internal const string PluginKind = "Plugin";
+    internal const string ExtensionKind = "Extension";
 
     /// <summary>Parse graph manifests from an in-memory string. Agent-kind documents in the stream are silently skipped.</summary>
     public ValueTask<IReadOnlyList<AgentGraphManifest>> LoadFromStringAsync(string content, CancellationToken cancellationToken = default)
@@ -206,9 +207,14 @@ public sealed class JsonAgentGraphManifestLoader
             var plugin = ParsePlugin(root, errors, prefix);
             return plugin is null ? null : new ManifestResource.PluginCase(plugin);
         }
+        if (string.Equals(kind, ExtensionKind, StringComparison.Ordinal))
+        {
+            var ext = ParseExtension(root, errors, prefix);
+            return ext is null ? null : new ManifestResource.ExtensionCase(ext);
+        }
 
         errors.Add($"{prefix}unexpected kind '{kind ?? "<null>"}' " +
-            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', '{ContainerPluginKind}', '{EvalSuiteKind}', or '{PluginKind}')");
+            $"(expected '{AgentKind}', '{AgentGraphKind}', '{LlmGatewayConfigKind}', '{McpGatewayConfigKind}', '{McpServerKind}', '{ContainerPluginKind}', '{EvalSuiteKind}', '{PluginKind}', or '{ExtensionKind}')");
         return null;
     }
 
@@ -662,6 +668,7 @@ public sealed class JsonAgentGraphManifestLoader
                 ManifestResource.ContainerPluginCase p => ("ContainerPlugin", p.Manifest.Id, p.Manifest.Version),
                 ManifestResource.EvalSuiteCase e => ("EvalSuite", e.Suite.Id, e.Suite.Version),
                 ManifestResource.PluginCase pl => ("Plugin", pl.Plugin.Id, pl.Plugin.Version),
+                ManifestResource.ExtensionCase ex => ("Extension", ex.Extension.Id, ex.Extension.Version),
                 _ => throw new NotSupportedException($"Unknown ManifestResource type: {r.GetType().Name}"),
             };
             if (!seen.Add(key))
@@ -1162,5 +1169,122 @@ public sealed class JsonAgentGraphManifestLoader
                 Handlers = handlers,
             },
         };
+    }
+
+    private static ExtensionManifest? ParseExtension(JsonElement root, List<string> errors, string prefix)
+    {
+        if (!root.TryGetProperty("metadata", out var metadata) || metadata.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid metadata block");
+            return null;
+        }
+
+        // Extension manifests use 'name' (K8s-like); fall back to 'id' for compatibility.
+        var id = (metadata.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null)
+              ?? (metadata.TryGetProperty("id", out var idEl) ? idEl.GetString() : null);
+        var version = metadata.TryGetProperty("version", out var vEl) ? vEl.GetString() : null;
+        if (string.IsNullOrEmpty(version)) version = "0.0.0";
+
+        var description = metadata.TryGetProperty("description", out var dEl) ? dEl.GetString() : null;
+        var labels = ParseStringMap(metadata, "labels");
+
+        if (string.IsNullOrEmpty(id))
+        {
+            errors.Add($"{prefix}metadata.name (or metadata.id) is required");
+            return null;
+        }
+
+        if (!root.TryGetProperty("spec", out var spec) || spec.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}missing or invalid spec block");
+            return null;
+        }
+
+        var host = spec.TryGetProperty("host", out var hostEl) ? hostEl.GetString() : null;
+        if (string.IsNullOrEmpty(host))
+        {
+            errors.Add($"{prefix}spec.host is required ('csharp' or 'container')");
+            return null;
+        }
+
+        var handlers = new List<ExtensionHandler>();
+        if (spec.TryGetProperty("handlers", out var handlersEl) && handlersEl.ValueKind == JsonValueKind.Array)
+        {
+            var idx = 0;
+            foreach (var item in handlersEl.EnumerateArray())
+            {
+                var hp = $"{prefix}spec.handlers[{idx}] ";
+                var hid = item.TryGetProperty("id", out var hidEl) ? hidEl.GetString() : null;
+                var seam = item.TryGetProperty("seam", out var seamEl) ? seamEl.GetString() : null;
+                if (string.IsNullOrEmpty(hid)) errors.Add($"{hp}id is required");
+                if (string.IsNullOrEmpty(seam)) errors.Add($"{hp}seam is required");
+                var priority = item.TryGetProperty("priority", out var priEl) && priEl.TryGetInt32(out var priVal)
+                    ? priVal : 100;
+                var failureMode = item.TryGetProperty("failureMode", out var fmEl) ? fmEl.GetString() ?? "fail" : "fail";
+                var typeName = item.TryGetProperty("typeName", out var tnEl) ? tnEl.GetString() : null;
+                var endpoint = item.TryGetProperty("endpoint", out var epEl) ? epEl.GetString() : null;
+                if (!string.IsNullOrEmpty(hid) && !string.IsNullOrEmpty(seam))
+                {
+                    handlers.Add(new ExtensionHandler
+                    {
+                        Id = hid!,
+                        Seam = seam!,
+                        TypeName = typeName,
+                        Endpoint = endpoint,
+                        Priority = priority,
+                        FailureMode = failureMode,
+                    });
+                }
+                idx++;
+            }
+        }
+
+        if (handlers.Count == 0)
+        {
+            errors.Add($"{prefix}spec.handlers must contain at least one handler");
+            return null;
+        }
+
+        return new ExtensionManifest(
+            Id: id!,
+            Version: version!,
+            Spec: new ExtensionSpec
+            {
+                Host = host!,
+                Package = spec.TryGetProperty("package", out var pkgEl) ? pkgEl.GetString() : null,
+                Image = spec.TryGetProperty("image", out var imgEl) ? imgEl.GetString() : null,
+                Handlers = handlers,
+                Scope = ParseExtensionScope(spec, prefix),
+            },
+            Labels: labels,
+            Description: description);
+    }
+
+    private static ExtensionScope? ParseExtensionScope(JsonElement spec, string prefix)
+    {
+        if (!spec.TryGetProperty("scope", out var scopeEl) || scopeEl.ValueKind != JsonValueKind.Object)
+            return null;
+
+        IReadOnlyList<string>? workspaces = null;
+        if (scopeEl.TryGetProperty("workspaces", out var wsEl) && wsEl.ValueKind == JsonValueKind.Array)
+            workspaces = [.. wsEl.EnumerateArray().Select(e => e.GetString() ?? string.Empty).Where(s => s.Length > 0)];
+
+        IReadOnlyList<string>? agentIds = null;
+        if (scopeEl.TryGetProperty("agentIds", out var aidEl) && aidEl.ValueKind == JsonValueKind.Array)
+            agentIds = [.. aidEl.EnumerateArray().Select(e => e.GetString() ?? string.Empty).Where(s => s.Length > 0)];
+
+        LabelSelector? selector = null;
+        if (scopeEl.TryGetProperty("selector", out var selEl) && selEl.ValueKind == JsonValueKind.Object)
+        {
+            var labels = selEl.EnumerateObject()
+                .ToDictionary(p => p.Name, p => p.Value.GetString() ?? string.Empty, StringComparer.Ordinal);
+            if (labels.Count > 0)
+                selector = new LabelSelector(labels);
+        }
+
+        if (workspaces is null && agentIds is null && selector is null)
+            return null;
+
+        return new ExtensionScope(workspaces, agentIds, selector);
     }
 }

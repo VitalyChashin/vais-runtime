@@ -553,6 +553,39 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<ExtensionListResponse> ListExtensionsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/v1/extensions", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new ExtensionListResponse(Array.Empty<ExtensionInfo>());
+    }
+
+    /// <inheritdoc />
+    public async Task<ExtensionQueryResponse?> GetExtensionAsync(
+        string extensionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(extensionId);
+        using var response = await _http.GetAsync(
+            $"/v1/extensions/{Uri.EscapeDataString(extensionId)}", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<AgentExtensionChainResponse?> GetAgentExtensionsAsync(
+        string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        using var response = await _http.GetAsync(
+            $"/v1/agents/{Uri.EscapeDataString(agentId)}/extensions", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<AgentExtensionChainResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<PluginSourcePushResponse> PushPluginSourceAsync(
         string pluginName, Stream sourceTarGz, CancellationToken cancellationToken = default)
     {
@@ -1153,6 +1186,42 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             if (line.StartsWith("data:", StringComparison.Ordinal))
                 yield return line[5..].TrimStart();
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<ExtensionApplyResponse> ApplyExtensionAsync(
+        string manifestYaml,
+        Stream? dllStream,
+        bool acceptLatencyCost = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(manifestYaml);
+        using var form = new MultipartFormDataContent();
+        var manifestContent = new StringContent(manifestYaml, Encoding.UTF8, "application/yaml");
+        form.Add(manifestContent, "manifest", "manifest.yaml");
+        if (dllStream is not null)
+        {
+            var dllContent = new StreamContent(dllStream);
+            dllContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            form.Add(dllContent, "dll", "extension.dll");
+        }
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/extensions") { Content = form };
+        if (acceptLatencyCost)
+            request.Headers.TryAddWithoutValidation("X-Vais-Accept-Latency-Cost", "true");
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionApplyResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from ApplyExtensionAsync.");
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(extensionId);
+        using var response = await _http.DeleteAsync(
+            $"/v1/extensions/{Uri.EscapeDataString(extensionId)}", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

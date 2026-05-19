@@ -12,14 +12,15 @@ namespace Vais.Agents.Cli.Commands;
 /// Destructive delete. Accepts either a plain agent id (backward-compat) or a
 /// <c>&lt;resource-type&gt;/&lt;id&gt;</c> path for gateway resources:
 /// <c>agents/&lt;id&gt;</c>, <c>llm-gateways/&lt;id&gt;</c>,
-/// <c>mcp-gateways/&lt;id&gt;</c>, <c>mcp-servers/&lt;id&gt;</c>, <c>eval-suites/&lt;id&gt;</c>.
+/// <c>mcp-gateways/&lt;id&gt;</c>, <c>mcp-servers/&lt;id&gt;</c>, <c>eval-suites/&lt;id&gt;</c>,
+/// <c>extensions/&lt;id&gt;</c>.
 /// Prompts confirm when stdin is a TTY and <c>--force</c> is not set.
 /// </summary>
 internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
-        [Description("Resource to delete: plain agent-id, or <resource-type>/<id> (agents/, llm-gateways/, mcp-gateways/, mcp-servers/).")]
+        [Description("Resource to delete: plain agent-id, or <resource-type>/<id> (agents/, llm-gateways/, mcp-gateways/, mcp-servers/, extensions/).")]
         [CommandArgument(0, "<resource>")]
         public required string Resource { get; init; }
 
@@ -80,6 +81,9 @@ internal sealed class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
                     break;
                 case "plugins":
                     await client.DeletePluginAsync(resourceId, cancellationToken);
+                    break;
+                case "extensions":
+                    await client.DeleteExtensionAsync(resourceId, cancellationToken);
                     break;
                 default:
                     await client.EvictAsync(resourceId, settings.Version, idempotencyKey, cancellationToken);

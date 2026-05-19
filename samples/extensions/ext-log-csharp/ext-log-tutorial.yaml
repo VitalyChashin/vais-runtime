@@ -1,0 +1,17 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-log
+  version: "1.0.0"
+  description: Logs every agent input and LLM output.
+spec:
+  host: csharp
+  handlers:
+    - id: log-input
+      seam: agentInput
+      priority: 900
+      failureMode: log
+    - id: log-output
+      seam: agentOutput
+      priority: 900
+      failureMode: log

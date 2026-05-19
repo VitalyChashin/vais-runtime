@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Runtime.Extensions</RootNamespace>
+    <AssemblyName>Vais.Agents.Runtime.Extensions</AssemblyName>
+    <Description>Extension loader for Vais.Agents. Loads seam middleware (AgentInputMiddleware, AgentOutputMiddleware, …) into collectible AssemblyLoadContexts and composes per-agent chains. Phase A: csharp host. v0.30.</Description>
+    <PackageTags>agents;ai;llm;extensions;runtime;vais</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Manifests.Yaml\Vais.Agents.Control.Manifests.Yaml.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Extensions.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Extensions.Container.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Extensions.Conformance" />
+    <InternalsVisibleTo Include="Vais.Agents.Hosting.Orleans" />
+    <InternalsVisibleTo Include="Vais.Agents.Control.Http.Server" />
+  </ItemGroup>
+
+</Project>

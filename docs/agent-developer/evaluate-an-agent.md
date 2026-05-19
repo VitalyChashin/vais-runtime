@@ -393,6 +393,7 @@ vais delete support-bot
 
 ## Next
 
+- **[Intercept agent calls with an extension](intercept-agent-calls-with-an-extension.md)** — bind cross-cutting behaviour (logging, guardrails, memory enrichment) to any agent without touching its manifest; scope it, inspect the resolved chain, and remove it cleanly.
 - **[Deep agent development](../deep-development/index.md)** — author plugin code when declarative YAML isn't enough.
 - [Reference → EvalSuite manifest](../reference/manifest-schema.md#evalsuite) — full field reference for all ten assertion kinds.
 - [Extensions → Author a custom assertion](../extensions/author-a-custom-assertion.md) — plug in your own `IEvalAssertionFactory` via DI.

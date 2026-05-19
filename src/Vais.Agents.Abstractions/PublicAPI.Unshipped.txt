@@ -1404,3 +1404,145 @@ override Vais.Agents.PluginHandlerRef.GetHashCode() -> int
 override Vais.Agents.PluginHandlerRef.ToString() -> string!
 static Vais.Agents.PluginHandlerRef.operator !=(Vais.Agents.PluginHandlerRef? left, Vais.Agents.PluginHandlerRef? right) -> bool
 static Vais.Agents.PluginHandlerRef.operator ==(Vais.Agents.PluginHandlerRef? left, Vais.Agents.PluginHandlerRef? right) -> bool
+Vais.Agents.AgentOutputContext
+Vais.Agents.AgentOutputContext.AgentId.get -> string!
+Vais.Agents.AgentOutputContext.AgentId.init -> void
+Vais.Agents.AgentOutputContext.AgentOutputContext() -> void
+Vais.Agents.AgentOutputContext.Properties.get -> System.Collections.Generic.IDictionary<string!, object?>!
+Vais.Agents.AgentOutputContext.RequestMessages.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ChatTurn!>!
+Vais.Agents.AgentOutputContext.RequestMessages.init -> void
+Vais.Agents.AgentOutputContext.ResponseMessage.get -> Vais.Agents.ChatTurn!
+Vais.Agents.AgentOutputContext.ResponseMessage.init -> void
+Vais.Agents.AgentOutputContext.RunId.get -> string!
+Vais.Agents.AgentOutputContext.RunId.init -> void
+Vais.Agents.AgentOutputContext.SessionId.get -> string?
+Vais.Agents.AgentOutputContext.SessionId.init -> void
+Vais.Agents.AgentOutputContext.Usage.get -> Vais.Agents.TokenUsage?
+Vais.Agents.AgentOutputContext.Usage.init -> void
+Vais.Agents.AgentOutputMiddleware
+Vais.Agents.AgentOutputMiddleware.AgentOutputMiddleware() -> void
+virtual Vais.Agents.AgentOutputMiddleware.InvokeAsync(Vais.Agents.AgentOutputContext! context, System.Func<System.Threading.Tasks.Task!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.TokenUsage
+Vais.Agents.TokenUsage.<Clone>$() -> Vais.Agents.TokenUsage!
+Vais.Agents.TokenUsage.Deconstruct(out int? InputTokens, out int? OutputTokens) -> void
+Vais.Agents.TokenUsage.Equals(Vais.Agents.TokenUsage? other) -> bool
+Vais.Agents.TokenUsage.InputTokens.get -> int?
+Vais.Agents.TokenUsage.InputTokens.init -> void
+Vais.Agents.TokenUsage.OutputTokens.get -> int?
+Vais.Agents.TokenUsage.OutputTokens.init -> void
+Vais.Agents.TokenUsage.TokenUsage(int? InputTokens, int? OutputTokens) -> void
+override Vais.Agents.TokenUsage.Equals(object? obj) -> bool
+override Vais.Agents.TokenUsage.GetHashCode() -> int
+override Vais.Agents.TokenUsage.ToString() -> string!
+static Vais.Agents.TokenUsage.operator !=(Vais.Agents.TokenUsage? left, Vais.Agents.TokenUsage? right) -> bool
+static Vais.Agents.TokenUsage.operator ==(Vais.Agents.TokenUsage? left, Vais.Agents.TokenUsage? right) -> bool
+Vais.Agents.VaisExtensionAttribute
+Vais.Agents.VaisExtensionAttribute.Handlers.get -> System.Type![]!
+Vais.Agents.VaisExtensionAttribute.Handlers.init -> void
+Vais.Agents.VaisExtensionAttribute.TargetApiVersion.get -> string!
+Vais.Agents.VaisExtensionAttribute.TargetApiVersion.init -> void
+Vais.Agents.VaisExtensionAttribute.VaisExtensionAttribute() -> void
+Vais.Agents.ExtensionManifest
+Vais.Agents.ExtensionManifest.<Clone>$() -> Vais.Agents.ExtensionManifest!
+Vais.Agents.ExtensionManifest.Deconstruct(out string! Id, out string! Version, out Vais.Agents.ExtensionSpec! Spec, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels, out string? Description) -> void
+Vais.Agents.ExtensionManifest.Description.get -> string?
+Vais.Agents.ExtensionManifest.Description.init -> void
+Vais.Agents.ExtensionManifest.Equals(Vais.Agents.ExtensionManifest? other) -> bool
+Vais.Agents.ExtensionManifest.ExtensionManifest(string! Id, string! Version, Vais.Agents.ExtensionSpec! Spec, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Labels = null, string? Description = null) -> void
+Vais.Agents.ExtensionManifest.Id.get -> string!
+Vais.Agents.ExtensionManifest.Id.init -> void
+Vais.Agents.ExtensionManifest.Labels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ExtensionManifest.Labels.init -> void
+Vais.Agents.ExtensionManifest.Spec.get -> Vais.Agents.ExtensionSpec!
+Vais.Agents.ExtensionManifest.Spec.init -> void
+Vais.Agents.ExtensionManifest.Version.get -> string!
+Vais.Agents.ExtensionManifest.Version.init -> void
+override Vais.Agents.ExtensionManifest.Equals(object? obj) -> bool
+override Vais.Agents.ExtensionManifest.GetHashCode() -> int
+override Vais.Agents.ExtensionManifest.ToString() -> string!
+static Vais.Agents.ExtensionManifest.operator !=(Vais.Agents.ExtensionManifest? left, Vais.Agents.ExtensionManifest? right) -> bool
+static Vais.Agents.ExtensionManifest.operator ==(Vais.Agents.ExtensionManifest? left, Vais.Agents.ExtensionManifest? right) -> bool
+Vais.Agents.ExtensionSpec
+Vais.Agents.ExtensionSpec.<Clone>$() -> Vais.Agents.ExtensionSpec!
+Vais.Agents.ExtensionSpec.Config.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+Vais.Agents.ExtensionSpec.Config.init -> void
+Vais.Agents.ExtensionSpec.Equals(Vais.Agents.ExtensionSpec? other) -> bool
+Vais.Agents.ExtensionSpec.ExtensionSpec() -> void
+Vais.Agents.ExtensionSpec.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ExtensionHandler!>!
+Vais.Agents.ExtensionSpec.Handlers.init -> void
+Vais.Agents.ExtensionSpec.Host.get -> string!
+Vais.Agents.ExtensionSpec.Host.init -> void
+Vais.Agents.ExtensionSpec.Image.get -> string?
+Vais.Agents.ExtensionSpec.Image.init -> void
+Vais.Agents.ExtensionSpec.ImagePullPolicy.get -> string?
+Vais.Agents.ExtensionSpec.ImagePullPolicy.init -> void
+Vais.Agents.ExtensionSpec.InvokeTimeoutSeconds.get -> int?
+Vais.Agents.ExtensionSpec.InvokeTimeoutSeconds.init -> void
+Vais.Agents.ExtensionSpec.Package.get -> string?
+Vais.Agents.ExtensionSpec.Package.init -> void
+Vais.Agents.ExtensionSpec.Port.get -> int?
+Vais.Agents.ExtensionSpec.Port.init -> void
+Vais.Agents.ExtensionSpec.Scope.get -> Vais.Agents.ExtensionScope?
+Vais.Agents.ExtensionSpec.Scope.init -> void
+Vais.Agents.ExtensionSpec.Secrets.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.ExtensionSpec.Secrets.init -> void
+Vais.Agents.ExtensionSpec.StartupTimeoutSeconds.get -> int?
+Vais.Agents.ExtensionSpec.StartupTimeoutSeconds.init -> void
+Vais.Agents.ExtensionSpec.Topology.get -> string?
+Vais.Agents.ExtensionSpec.Topology.init -> void
+override Vais.Agents.ExtensionSpec.Equals(object? obj) -> bool
+override Vais.Agents.ExtensionSpec.GetHashCode() -> int
+override Vais.Agents.ExtensionSpec.ToString() -> string!
+static Vais.Agents.ExtensionSpec.operator !=(Vais.Agents.ExtensionSpec? left, Vais.Agents.ExtensionSpec? right) -> bool
+static Vais.Agents.ExtensionSpec.operator ==(Vais.Agents.ExtensionSpec? left, Vais.Agents.ExtensionSpec? right) -> bool
+Vais.Agents.ExtensionHandler
+Vais.Agents.ExtensionHandler.<Clone>$() -> Vais.Agents.ExtensionHandler!
+Vais.Agents.ExtensionHandler.Endpoint.get -> string?
+Vais.Agents.ExtensionHandler.Endpoint.init -> void
+Vais.Agents.ExtensionHandler.Equals(Vais.Agents.ExtensionHandler? other) -> bool
+Vais.Agents.ExtensionHandler.ExtensionHandler() -> void
+Vais.Agents.ExtensionHandler.FailureMode.get -> string!
+Vais.Agents.ExtensionHandler.FailureMode.init -> void
+Vais.Agents.ExtensionHandler.Id.get -> string!
+Vais.Agents.ExtensionHandler.Id.init -> void
+Vais.Agents.ExtensionHandler.Priority.get -> int
+Vais.Agents.ExtensionHandler.Priority.init -> void
+Vais.Agents.ExtensionHandler.Seam.get -> string!
+Vais.Agents.ExtensionHandler.Seam.init -> void
+Vais.Agents.ExtensionHandler.TimeoutSeconds.get -> int?
+Vais.Agents.ExtensionHandler.TimeoutSeconds.init -> void
+Vais.Agents.ExtensionHandler.TypeName.get -> string?
+Vais.Agents.ExtensionHandler.TypeName.init -> void
+override Vais.Agents.ExtensionHandler.Equals(object? obj) -> bool
+override Vais.Agents.ExtensionHandler.GetHashCode() -> int
+override Vais.Agents.ExtensionHandler.ToString() -> string!
+static Vais.Agents.ExtensionHandler.operator !=(Vais.Agents.ExtensionHandler? left, Vais.Agents.ExtensionHandler? right) -> bool
+static Vais.Agents.ExtensionHandler.operator ==(Vais.Agents.ExtensionHandler? left, Vais.Agents.ExtensionHandler? right) -> bool
+Vais.Agents.ExtensionScope
+Vais.Agents.ExtensionScope.<Clone>$() -> Vais.Agents.ExtensionScope!
+Vais.Agents.ExtensionScope.AgentIds.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.ExtensionScope.AgentIds.init -> void
+Vais.Agents.ExtensionScope.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>? Workspaces, out System.Collections.Generic.IReadOnlyList<string!>? AgentIds, out Vais.Agents.LabelSelector? Selector) -> void
+Vais.Agents.ExtensionScope.Equals(Vais.Agents.ExtensionScope? other) -> bool
+Vais.Agents.ExtensionScope.ExtensionScope(System.Collections.Generic.IReadOnlyList<string!>? Workspaces = null, System.Collections.Generic.IReadOnlyList<string!>? AgentIds = null, Vais.Agents.LabelSelector? Selector = null) -> void
+Vais.Agents.ExtensionScope.Selector.get -> Vais.Agents.LabelSelector?
+Vais.Agents.ExtensionScope.Selector.init -> void
+Vais.Agents.ExtensionScope.Workspaces.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.ExtensionScope.Workspaces.init -> void
+override Vais.Agents.ExtensionScope.Equals(object? obj) -> bool
+override Vais.Agents.ExtensionScope.GetHashCode() -> int
+override Vais.Agents.ExtensionScope.ToString() -> string!
+static Vais.Agents.ExtensionScope.operator !=(Vais.Agents.ExtensionScope? left, Vais.Agents.ExtensionScope? right) -> bool
+static Vais.Agents.ExtensionScope.operator ==(Vais.Agents.ExtensionScope? left, Vais.Agents.ExtensionScope? right) -> bool
+Vais.Agents.LabelSelector
+Vais.Agents.LabelSelector.<Clone>$() -> Vais.Agents.LabelSelector!
+Vais.Agents.LabelSelector.Deconstruct(out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! MatchLabels) -> void
+Vais.Agents.LabelSelector.Equals(Vais.Agents.LabelSelector? other) -> bool
+Vais.Agents.LabelSelector.LabelSelector(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! MatchLabels) -> void
+Vais.Agents.LabelSelector.MatchLabels.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.LabelSelector.MatchLabels.init -> void
+override Vais.Agents.LabelSelector.Equals(object? obj) -> bool
+override Vais.Agents.LabelSelector.GetHashCode() -> int
+override Vais.Agents.LabelSelector.ToString() -> string!
+static Vais.Agents.LabelSelector.operator !=(Vais.Agents.LabelSelector? left, Vais.Agents.LabelSelector? right) -> bool
+static Vais.Agents.LabelSelector.operator ==(Vais.Agents.LabelSelector? left, Vais.Agents.LabelSelector? right) -> bool

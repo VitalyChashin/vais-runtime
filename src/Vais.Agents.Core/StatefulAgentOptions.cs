@@ -292,6 +292,15 @@ public sealed class StatefulAgentOptions
         = Array.Empty<AgentInputMiddleware>();
 
     /// <summary>
+    /// Ordered output middleware chain. Each <see cref="AgentOutputMiddleware"/>
+    /// runs after each LLM call (per round-trip, not per turn). First-registered = outermost.
+    /// Extension-bound middleware (via <c>IExtensionChainComposer</c>) is concatenated after
+    /// statically-registered middleware. Default: empty.
+    /// </summary>
+    public IReadOnlyList<AgentOutputMiddleware> OutputMiddleware { get; init; }
+        = Array.Empty<AgentOutputMiddleware>();
+
+    /// <summary>
     /// Dispatcher for tool calls surfaced by the provider. When null, <c>StatefulAiAgent</c>
     /// constructs a <see cref="DefaultToolCallDispatcher"/> from <see cref="ToolRegistry"/> +
     /// <see cref="ToolGuardrails"/> automatically. Supply your own to override — e.g., a

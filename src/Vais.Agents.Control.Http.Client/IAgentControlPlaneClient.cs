@@ -472,6 +472,47 @@ public interface IAgentControlPlaneClient
     { yield break; }
 #pragma warning restore CS1998
 
+    // ── Extension operations (EXT-12) ─────────────────────────────────────────
+
+    /// <summary>
+    /// POST /v1/extensions — apply an extension from raw YAML + optional DLL.
+    /// Returns <see cref="ExtensionApplyStatus.Created"/> (201) on first load;
+    /// <see cref="ExtensionApplyStatus.Success"/> (200) on hot-swap.
+    /// </summary>
+    Task<ExtensionApplyResponse> ApplyExtensionAsync(
+        string manifestYaml,
+        Stream? dllStream,
+        bool acceptLatencyCost = false,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new ExtensionApplyResponse(
+            string.Empty, ExtensionApplyStatus.ValidationFailed, null,
+            "Not supported by this client implementation."));
+
+    /// <summary>
+    /// DELETE /v1/extensions/{name} — unload and unregister an extension by id.
+    /// Throws <see cref="AgentControlPlaneException"/> when the extension is not loaded.
+    /// </summary>
+    Task DeleteExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>GET /v1/extensions — list all currently loaded extensions.</summary>
+    Task<ExtensionListResponse> ListExtensionsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new ExtensionListResponse(Array.Empty<ExtensionInfo>()));
+
+    /// <summary>
+    /// GET /v1/extensions/{name} — fetch a single loaded extension by id.
+    /// Returns <see langword="null"/> when not found.
+    /// </summary>
+    Task<ExtensionQueryResponse?> GetExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
+        => Task.FromResult((ExtensionQueryResponse?)null);
+
+    /// <summary>
+    /// GET /v1/agents/{id}/extensions — list all extension handlers visible to an agent,
+    /// including scope match diagnostics. Returns <see langword="null"/> when unavailable.
+    /// </summary>
+    Task<AgentExtensionChainResponse?> GetAgentExtensionsAsync(string agentId, CancellationToken cancellationToken = default)
+        => Task.FromResult((AgentExtensionChainResponse?)null);
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

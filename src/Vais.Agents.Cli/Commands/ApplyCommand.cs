@@ -54,6 +54,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         [Description("Path to a compiled C# DLL to upload alongside a 'kind: Plugin' manifest (language: csharp).")]
         [CommandOption("--dll")]
         public string? Dll { get; init; }
+
+        [Description("Acknowledge that a container extension targets a hot seam and may add per-call latency. Required when the server returns 412.")]
+        [CommandOption("--accept-latency-cost")]
+        public bool AcceptLatencyCost { get; init; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -137,6 +141,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                         break;
                     case ManifestResource.PluginCase pluginCase:
                         if (!await ApplyPluginAsync(client, pluginCase.Plugin, settings.Dll, cancellationToken))
+                            anyError = true;
+                        break;
+                    case ManifestResource.ExtensionCase extensionCase:
+                        if (!await ApplyExtensionAsync(client, extensionCase.Extension, settings.File, settings.Dll, settings.AcceptLatencyCost, cancellationToken))
                             anyError = true;
                         break;
                     default:
@@ -353,6 +361,83 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                 AnsiConsole.MarkupLine(
                     $"{manifest.Id} [{color}]{verb}[/] (plugin, handlers: {Markup.Escape(handlers)})");
                 return true;
+            }
+
+            AnsiConsole.MarkupLine(
+                $"[red]✗[/] {Markup.Escape(manifest.Id)}: {result.Status} — {Markup.Escape(result.ErrorMessage ?? result.Status.ToString())}");
+            return false;
+        }
+        catch (AgentControlPlaneException ex)
+        {
+            ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
+            return false;
+        }
+    }
+
+    private static async Task<bool> ApplyExtensionAsync(
+        IAgentControlPlaneClient client,
+        ExtensionManifest manifest,
+        string manifestFilePath,
+        string? dllPath,
+        bool acceptLatencyCost,
+        CancellationToken ct)
+    {
+        var host = manifest.Spec?.Host ?? string.Empty;
+
+        if (string.Equals(host, "csharp", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(dllPath))
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]hint[/] {manifest.Id}: pass [bold]--dll <path>[/] to upload the assembly with this manifest.");
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dllPath) && !File.Exists(dllPath))
+        {
+            AnsiConsole.MarkupLine($"[red]error[/] --dll file not found: {Markup.Escape(dllPath)}");
+            return false;
+        }
+
+        string rawYaml;
+        try
+        {
+            rawYaml = await File.ReadAllTextAsync(manifestFilePath, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]error[/] could not read manifest file: {Markup.Escape(ex.Message)}");
+            return false;
+        }
+
+        try
+        {
+            ExtensionApplyResponse? result = null;
+            await AnsiConsole.Status().StartAsync($"Applying {Markup.Escape(manifest.Id)}…", async _ =>
+            {
+                Stream? dllStream = string.IsNullOrWhiteSpace(dllPath) ? null : File.OpenRead(dllPath);
+                await using (dllStream)
+                {
+                    result = await client.ApplyExtensionAsync(rawYaml, dllStream, acceptLatencyCost, ct);
+                }
+            });
+
+            if (result!.Status is ExtensionApplyStatus.Success or ExtensionApplyStatus.Created)
+            {
+                var verb = result.Status == ExtensionApplyStatus.Created ? "created" : "updated";
+                var handlers = result.Handlers is { Count: > 0 }
+                    ? string.Join(", ", result.Handlers)
+                    : "—";
+                var color = result.Status == ExtensionApplyStatus.Created ? "green" : "blue";
+                AnsiConsole.MarkupLine(
+                    $"{manifest.Id} [{color}]{verb}[/] (extension, host: {Markup.Escape(host)}, handlers: {Markup.Escape(handlers)})");
+                return true;
+            }
+
+            if (result.Status == ExtensionApplyStatus.ValidationFailed &&
+                result.ErrorMessage?.Contains("hot-seam guard", StringComparison.OrdinalIgnoreCase) is true)
+            {
+                AnsiConsole.MarkupLine($"[yellow]latency-warning[/] {Markup.Escape(result.ErrorMessage)}");
+                AnsiConsole.MarkupLine("Re-run with [bold]--accept-latency-cost[/] to proceed.");
+                return false;
             }
 
             AnsiConsole.MarkupLine(
