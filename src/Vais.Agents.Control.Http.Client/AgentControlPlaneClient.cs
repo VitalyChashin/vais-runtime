@@ -1156,6 +1156,38 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<ExtensionApplyResponse> ApplyExtensionAsync(
+        string manifestYaml,
+        Stream? dllStream,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(manifestYaml);
+        using var form = new MultipartFormDataContent();
+        var manifestContent = new StringContent(manifestYaml, Encoding.UTF8, "application/yaml");
+        form.Add(manifestContent, "manifest", "manifest.yaml");
+        if (dllStream is not null)
+        {
+            var dllContent = new StreamContent(dllStream);
+            dllContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            form.Add(dllContent, "dll", "extension.dll");
+        }
+        using var response = await _http.PostAsync("/v1/extensions", form, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionApplyResponse>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Empty response body from ApplyExtensionAsync.");
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(extensionId);
+        using var response = await _http.DeleteAsync(
+            $"/v1/extensions/{Uri.EscapeDataString(extensionId)}", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();

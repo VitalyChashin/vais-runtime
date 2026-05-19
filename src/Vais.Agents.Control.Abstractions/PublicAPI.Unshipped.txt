@@ -223,3 +223,20 @@ override Vais.Agents.Control.ManifestResource.PluginCase.ToString() -> string!
 override sealed Vais.Agents.Control.ManifestResource.PluginCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
 static Vais.Agents.Control.ManifestResource.PluginCase.operator !=(Vais.Agents.Control.ManifestResource.PluginCase? left, Vais.Agents.Control.ManifestResource.PluginCase? right) -> bool
 static Vais.Agents.Control.ManifestResource.PluginCase.operator ==(Vais.Agents.Control.ManifestResource.PluginCase? left, Vais.Agents.Control.ManifestResource.PluginCase? right) -> bool
+Vais.Agents.Control.ManifestResource.ExtensionCase
+Vais.Agents.Control.ManifestResource.ExtensionCase.Deconstruct(out Vais.Agents.ExtensionManifest! Extension) -> void
+Vais.Agents.Control.ManifestResource.ExtensionCase.Equals(Vais.Agents.Control.ManifestResource.ExtensionCase? other) -> bool
+Vais.Agents.Control.ManifestResource.ExtensionCase.Extension.get -> Vais.Agents.ExtensionManifest!
+Vais.Agents.Control.ManifestResource.ExtensionCase.Extension.init -> void
+Vais.Agents.Control.ManifestResource.ExtensionCase.ExtensionCase(Vais.Agents.ExtensionManifest! Extension) -> void
+override Vais.Agents.Control.ManifestResource.ExtensionCase.<Clone>$() -> Vais.Agents.Control.ManifestResource.ExtensionCase!
+override Vais.Agents.Control.ManifestResource.ExtensionCase.Equals(object? obj) -> bool
+override Vais.Agents.Control.ManifestResource.ExtensionCase.GetHashCode() -> int
+override Vais.Agents.Control.ManifestResource.ExtensionCase.ToString() -> string!
+override sealed Vais.Agents.Control.ManifestResource.ExtensionCase.Equals(Vais.Agents.Control.ManifestResource? other) -> bool
+static Vais.Agents.Control.ManifestResource.ExtensionCase.operator !=(Vais.Agents.Control.ManifestResource.ExtensionCase? left, Vais.Agents.Control.ManifestResource.ExtensionCase? right) -> bool
+static Vais.Agents.Control.ManifestResource.ExtensionCase.operator ==(Vais.Agents.Control.ManifestResource.ExtensionCase? left, Vais.Agents.Control.ManifestResource.ExtensionCase? right) -> bool
+Vais.Agents.Control.PolicyOperation.ExtensionCreate = 33 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ExtensionUpdate = 34 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ExtensionQuery = 35 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.ExtensionEvict = 36 -> Vais.Agents.Control.PolicyOperation

@@ -121,4 +121,18 @@ public enum PolicyOperation
 
     /// <summary>Remove an eval suite manifest.</summary>
     EvalSuiteEvict = 32,
+
+    // ── Extension operations (EXT-13) ─────────────────────────────────────
+
+    /// <summary>Load a new extension (first registration).</summary>
+    ExtensionCreate = 33,
+
+    /// <summary>Reload an existing extension (hot-swap).</summary>
+    ExtensionUpdate = 34,
+
+    /// <summary>Read-only query of loaded extension descriptors.</summary>
+    ExtensionQuery = 35,
+
+    /// <summary>Unload an extension and remove its handler registrations.</summary>
+    ExtensionEvict = 36,
 }

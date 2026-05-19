@@ -1,0 +1,117 @@
+#nullable enable
+Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext
+Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext.ExtensionAssemblyLoadContext(string! primaryAssemblyPath) -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionDescriptor(string! ExtensionId, string! Version, Vais.Agents.ExtensionManifest! Manifest, System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionId.get -> string!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionId.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Version.get -> string!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Version.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Manifest.get -> Vais.Agents.ExtensionManifest!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Manifest.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Handlers.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.LoadContext.get -> Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.LoadContext.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.<Clone>$() -> Vais.Agents.Runtime.Extensions.ExtensionDescriptor!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Deconstruct(out string! ExtensionId, out string! Version, out Vais.Agents.ExtensionManifest! Manifest, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, out Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Equals(Vais.Agents.Runtime.Extensions.ExtensionDescriptor? other) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionDescriptor.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.ExtensionDescriptor.operator ==(Vais.Agents.Runtime.Extensions.ExtensionDescriptor? left, Vais.Agents.Runtime.Extensions.ExtensionDescriptor? right) -> bool
+static Vais.Agents.Runtime.Extensions.ExtensionDescriptor.operator !=(Vais.Agents.Runtime.Extensions.ExtensionDescriptor? left, Vais.Agents.Runtime.Extensions.ExtensionDescriptor? right) -> bool
+Vais.Agents.Runtime.Extensions.HandlerBinding
+Vais.Agents.Runtime.Extensions.HandlerBinding.HandlerBinding(string! HandlerId, string! Seam, int Priority, string! FailureMode, object! HandlerInstance) -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.HandlerId.get -> string!
+Vais.Agents.Runtime.Extensions.HandlerBinding.HandlerId.init -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.Seam.get -> string!
+Vais.Agents.Runtime.Extensions.HandlerBinding.Seam.init -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.Priority.get -> int
+Vais.Agents.Runtime.Extensions.HandlerBinding.Priority.init -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.FailureMode.get -> string!
+Vais.Agents.Runtime.Extensions.HandlerBinding.FailureMode.init -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.HandlerInstance.get -> object!
+Vais.Agents.Runtime.Extensions.HandlerBinding.HandlerInstance.init -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.<Clone>$() -> Vais.Agents.Runtime.Extensions.HandlerBinding!
+Vais.Agents.Runtime.Extensions.HandlerBinding.Deconstruct(out string! HandlerId, out string! Seam, out int Priority, out string! FailureMode, out object! HandlerInstance) -> void
+Vais.Agents.Runtime.Extensions.HandlerBinding.Equals(Vais.Agents.Runtime.Extensions.HandlerBinding? other) -> bool
+override Vais.Agents.Runtime.Extensions.HandlerBinding.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.HandlerBinding.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.HandlerBinding.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.HandlerBinding.operator ==(Vais.Agents.Runtime.Extensions.HandlerBinding? left, Vais.Agents.Runtime.Extensions.HandlerBinding? right) -> bool
+static Vais.Agents.Runtime.Extensions.HandlerBinding.operator !=(Vais.Agents.Runtime.Extensions.HandlerBinding? left, Vais.Agents.Runtime.Extensions.HandlerBinding? right) -> bool
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions.ExtensionLoaderOptions() -> void
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions.RuntimeAbiVersion.get -> string!
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions.RuntimeAbiVersion.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions.DiagnoseUnloadLeaks.get -> bool
+Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions.DiagnoseUnloadLeaks.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionManifestYamlDeserializer
+Vais.Agents.Runtime.Extensions.ExtensionManifestYamlDeserializer.ExtensionManifestYamlDeserializer() -> void
+Vais.Agents.Runtime.Extensions.ExtensionManifestYamlDeserializer.Deserialize(string! yaml) -> Vais.Agents.ExtensionManifest!
+Vais.Agents.Runtime.Extensions.ExtensionServiceCollectionExtensions
+static Vais.Agents.Runtime.Extensions.ExtensionServiceCollectionExtensions.AddVaisExtensions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Runtime.Extensions.ExtensionLoaderOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Runtime.Extensions.ExtensionUrns
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionAbiBismatch = "urn:vais:extension/abi-mismatch" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionLoadFailed = "urn:vais:extension/load-failed" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionNotFound = "urn:vais:extension/not-found" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionPriorityConflict = "urn:vais:extension/priority-collision" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionReloadFailed = "urn:vais:extension/reload-failed" -> string!
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetInputChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentInputMiddleware!>!>!
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetOutputChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentOutputMiddleware!>!>!
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAgent(string! agentId) -> void
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAll() -> void
+Vais.Agents.Runtime.Extensions.IExtensionReloader
+Vais.Agents.Runtime.Extensions.IExtensionReloader.ReloadAsync(Vais.Agents.ExtensionManifest! manifest, System.IO.Stream? dllStream, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Extensions.ExtensionReloadResult!>!
+Vais.Agents.Runtime.Extensions.IExtensionReloader.UnloadAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Runtime.Extensions.ExtensionUnloadResult!>!
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.ExtensionReloadResult(Vais.Agents.Runtime.Extensions.ExtensionDescriptor? OldDescriptor, Vais.Agents.Runtime.Extensions.ExtensionDescriptor? NewDescriptor, Vais.Agents.Runtime.Extensions.ExtensionReloadStatus Status, string? FailureUrn, System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.OldDescriptor.get -> Vais.Agents.Runtime.Extensions.ExtensionDescriptor?
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.OldDescriptor.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.NewDescriptor.get -> Vais.Agents.Runtime.Extensions.ExtensionDescriptor?
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.NewDescriptor.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.Status.get -> Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.Status.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.FailureException.get -> System.Exception?
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.FailureException.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.<Clone>$() -> Vais.Agents.Runtime.Extensions.ExtensionReloadResult!
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.Deconstruct(out Vais.Agents.Runtime.Extensions.ExtensionDescriptor? OldDescriptor, out Vais.Agents.Runtime.Extensions.ExtensionDescriptor? NewDescriptor, out Vais.Agents.Runtime.Extensions.ExtensionReloadStatus Status, out string? FailureUrn, out System.Exception? FailureException) -> void
+Vais.Agents.Runtime.Extensions.ExtensionReloadResult.Equals(Vais.Agents.Runtime.Extensions.ExtensionReloadResult? other) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionReloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionReloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.ExtensionReloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.ExtensionReloadResult.operator ==(Vais.Agents.Runtime.Extensions.ExtensionReloadResult? left, Vais.Agents.Runtime.Extensions.ExtensionReloadResult? right) -> bool
+static Vais.Agents.Runtime.Extensions.ExtensionReloadResult.operator !=(Vais.Agents.Runtime.Extensions.ExtensionReloadResult? left, Vais.Agents.Runtime.Extensions.ExtensionReloadResult? right) -> bool
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.ExtensionUnloadResult(string! ExtensionId, Vais.Agents.Runtime.Extensions.ExtensionDescriptor? RemovedDescriptor, Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus Status, string? FailureUrn) -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.ExtensionId.get -> string!
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.ExtensionId.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.RemovedDescriptor.get -> Vais.Agents.Runtime.Extensions.ExtensionDescriptor?
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.RemovedDescriptor.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.Status.get -> Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.Status.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.FailureUrn.get -> string?
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.FailureUrn.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.<Clone>$() -> Vais.Agents.Runtime.Extensions.ExtensionUnloadResult!
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.Deconstruct(out string! ExtensionId, out Vais.Agents.Runtime.Extensions.ExtensionDescriptor? RemovedDescriptor, out Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus Status, out string? FailureUrn) -> void
+Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.Equals(Vais.Agents.Runtime.Extensions.ExtensionUnloadResult? other) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.operator ==(Vais.Agents.Runtime.Extensions.ExtensionUnloadResult? left, Vais.Agents.Runtime.Extensions.ExtensionUnloadResult? right) -> bool
+static Vais.Agents.Runtime.Extensions.ExtensionUnloadResult.operator !=(Vais.Agents.Runtime.Extensions.ExtensionUnloadResult? left, Vais.Agents.Runtime.Extensions.ExtensionUnloadResult? right) -> bool
+Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionReloadStatus.Success = 0 -> Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionReloadStatus.LoadFailed = 1 -> Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionReloadStatus.AbiMismatch = 2 -> Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionReloadStatus.PriorityConflict = 3 -> Vais.Agents.Runtime.Extensions.ExtensionReloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus.Success = 0 -> Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus
+Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus.NotFound = 1 -> Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus
+Vais.Agents.Runtime.Extensions.IExtensionReloadHook
+Vais.Agents.Runtime.Extensions.IExtensionReloadHook.Order.get -> int
+Vais.Agents.Runtime.Extensions.IExtensionReloadHook.OnReloadedAsync(Vais.Agents.Runtime.Extensions.ExtensionReloadResult! result, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

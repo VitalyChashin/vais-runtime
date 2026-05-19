@@ -53,6 +53,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly IReadOnlyList<IInputGuardrail> _inputGuardrails;
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
     private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
+    private readonly AgentOutputMiddleware[] _outputMiddleware;
     private readonly RunBudget _budget;
     private readonly IToolCallDispatcher _toolCallDispatcher;
     private readonly IAgentJournal _journal;
@@ -127,6 +128,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _replayMode = options.ReplayMode;
         _runIdFactory = options.RunIdFactory ?? DefaultRunIdFactory;
         _agentName = options.AgentName;
+        _outputMiddleware = options.OutputMiddleware.Count == 0
+            ? []
+            : options.OutputMiddleware.ToArray();
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
             sessionId: null,
@@ -249,6 +253,23 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     cancellationToken).ConfigureAwait(false);
                 lastResponse = response;
 
+                // Output middleware fires per LLM call (per OQ-5). Runs before the
+                // tool-call loop decision so multi-round turns fire it on every round-trip.
+                if (_outputMiddleware.Length > 0)
+                {
+                    var responseTurn = new ChatTurn(AgentChatRole.Assistant, response.Text ?? string.Empty, ToolCalls: response.ToolCalls);
+                    var outputCtx = new AgentOutputContext
+                    {
+                        AgentId = _session.AgentId,
+                        RunId = context.RunId ?? string.Empty,
+                        SessionId = _session.SessionId,
+                        RequestMessages = workingHistory,
+                        ResponseMessage = responseTurn,
+                        Usage = new TokenUsage(response.PromptTokens, response.CompletionTokens),
+                    };
+                    await RunOutputMiddlewareAsync(outputCtx, _outputMiddleware, cancellationToken).ConfigureAwait(false);
+                }
+
                 if (response.PromptTokens is int pt)
                 {
                     aggregatedPromptTokens += pt;
@@ -284,7 +305,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 // is NOT mutated here — only the final assistant turn lands in it.
                 workingHistory.Add(new ChatTurn(
                     AgentChatRole.Assistant,
-                    response.Text,
+                    response.Text ?? string.Empty,
                     ToolCalls: response.ToolCalls));
 
                 foreach (var toolCall in response.ToolCalls)
@@ -1411,6 +1432,21 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         AgentChatRole.System => SectionKind.SystemSegment,
         _ => SectionKind.UserMessage,
     };
+
+    private static Task RunOutputMiddlewareAsync(
+        AgentOutputContext ctx,
+        AgentOutputMiddleware[] middleware,
+        CancellationToken cancellationToken)
+    {
+        Func<Task> chain = () => Task.CompletedTask;
+        for (var i = middleware.Length - 1; i >= 0; i--)
+        {
+            var mw = middleware[i];
+            var inner = chain;
+            chain = () => mw.InvokeAsync(ctx, inner, cancellationToken);
+        }
+        return chain();
+    }
 
     private async Task RunInputGuardrailsAsync(
         CompletionRequest request,

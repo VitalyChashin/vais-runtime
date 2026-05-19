@@ -31,6 +31,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.McpGatewayEventStore\Vais.Agents.Observability.McpGatewayEventStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.AgentLogs\Vais.Agents.Observability.AgentLogs.csproj" />
     <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.Extensions\Vais.Agents.Runtime.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

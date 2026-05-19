@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 
 namespace Vais.Agents.Hosting.Orleans;
 
@@ -44,6 +45,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly IAgentContextAccessor? _contextAccessor;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<AiAgentGrain> _logger;
+    private readonly IExtensionChainComposer? _extensionChainComposer;
     private string? _agentId;
     private IAiAgent? _agent;
     // Non-null only in plugin mode — signals that AskAsync should record tool calls from history delta.
@@ -66,7 +68,8 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         ICompletionProvider? provider = null,
         Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>? optionsFactory = null,
         ILoggerFactory? loggerFactory = null,
-        IAgentContextAccessor? contextAccessor = null)
+        IAgentContextAccessor? contextAccessor = null,
+        IExtensionChainComposer? extensionChainComposer = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         _state = state;
@@ -75,6 +78,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         _contextAccessor = contextAccessor;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<AiAgentGrain>();
+        _extensionChainComposer = extensionChainComposer;
     }
 
     /// <inheritdoc />
@@ -148,9 +152,24 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                 "configure the manifest instantiator (v0.17 Pillar B) so the translator " +
                 "supplies a per-agent provider via StatefulAgentOptions.CompletionProvider.");
 
-        _inputMiddleware = supplied.InputMiddleware.Count > 0
-            ? supplied.InputMiddleware.ToArray()
-            : null;
+        // Fetch extension-bound middleware chains and merge after the statically-registered chains.
+        IReadOnlyList<AgentInputMiddleware> extInputChain = Array.Empty<AgentInputMiddleware>();
+        IReadOnlyList<AgentOutputMiddleware> extOutputChain = Array.Empty<AgentOutputMiddleware>();
+        if (_extensionChainComposer is not null)
+        {
+            extInputChain = await _extensionChainComposer.GetInputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+            extOutputChain = await _extensionChainComposer.GetOutputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
+
+        var mergedInputMiddleware = supplied.InputMiddleware.Count > 0 || extInputChain.Count > 0
+            ? [.. supplied.InputMiddleware, .. extInputChain]
+            : (IReadOnlyList<AgentInputMiddleware>)Array.Empty<AgentInputMiddleware>();
+
+        _inputMiddleware = mergedInputMiddleware.Count > 0 ? mergedInputMiddleware.ToArray() : null;
+
+        var mergedOutputMiddleware = supplied.OutputMiddleware.Count > 0 || extOutputChain.Count > 0
+            ? [.. supplied.OutputMiddleware, .. extOutputChain]
+            : (IReadOnlyList<AgentOutputMiddleware>)Array.Empty<AgentOutputMiddleware>();
 
         var seeded = new StatefulAgentOptions
         {
@@ -167,7 +186,8 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             Budget = supplied.Budget,
             GatewayMiddleware = supplied.GatewayMiddleware,
             ToolGatewayMiddleware = supplied.ToolGatewayMiddleware,
-            InputMiddleware = supplied.InputMiddleware,
+            InputMiddleware = mergedInputMiddleware,
+            OutputMiddleware = mergedOutputMiddleware,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
         };
 

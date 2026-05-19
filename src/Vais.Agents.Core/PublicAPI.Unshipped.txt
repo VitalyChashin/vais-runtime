@@ -167,3 +167,5 @@ Vais.Agents.Core.StatefulAgentOptions.InputMiddleware.get -> System.Collections.
 Vais.Agents.Core.StatefulAgentOptions.InputMiddleware.init -> void
 Vais.Agents.Core.Guardrails.LlmJudgeScorer
 static Vais.Agents.Core.Guardrails.LlmJudgeScorer.TryScoreAsync(Vais.Agents.ICompletionProvider! judge, string! judgePrompt, string! response, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<double?>!
+Vais.Agents.Core.StatefulAgentOptions.OutputMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentOutputMiddleware!>!
+Vais.Agents.Core.StatefulAgentOptions.OutputMiddleware.init -> void

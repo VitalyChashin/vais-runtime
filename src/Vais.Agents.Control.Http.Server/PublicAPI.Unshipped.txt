@@ -886,3 +886,46 @@ override Vais.Agents.Control.Http.PluginDllPushResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.PluginDllPushResponse.ToString() -> string!
 static Vais.Agents.Control.Http.PluginDllPushResponse.operator !=(Vais.Agents.Control.Http.PluginDllPushResponse? left, Vais.Agents.Control.Http.PluginDllPushResponse? right) -> bool
 static Vais.Agents.Control.Http.PluginDllPushResponse.operator ==(Vais.Agents.Control.Http.PluginDllPushResponse? left, Vais.Agents.Control.Http.PluginDllPushResponse? right) -> bool
+Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.Success = 0 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.Created = 1 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.LoadFailed = 2 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.AbiMismatch = 3 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.PriorityConflict = 4 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyStatus.ValidationFailed = 5 -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyResponse
+Vais.Agents.Control.Http.ExtensionApplyResponse.ExtensionApplyResponse(string! ExtensionId, Vais.Agents.Control.Http.ExtensionApplyStatus Status, System.Collections.Generic.IReadOnlyList<string!>? Handlers, string? ErrorMessage) -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.ExtensionId.get -> string!
+Vais.Agents.Control.Http.ExtensionApplyResponse.ExtensionId.init -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.Status.get -> Vais.Agents.Control.Http.ExtensionApplyStatus
+Vais.Agents.Control.Http.ExtensionApplyResponse.Status.init -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.Handlers.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Http.ExtensionApplyResponse.Handlers.init -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.ErrorMessage.get -> string?
+Vais.Agents.Control.Http.ExtensionApplyResponse.ErrorMessage.init -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.<Clone>$() -> Vais.Agents.Control.Http.ExtensionApplyResponse!
+Vais.Agents.Control.Http.ExtensionApplyResponse.Deconstruct(out string! ExtensionId, out Vais.Agents.Control.Http.ExtensionApplyStatus Status, out System.Collections.Generic.IReadOnlyList<string!>? Handlers, out string? ErrorMessage) -> void
+Vais.Agents.Control.Http.ExtensionApplyResponse.Equals(Vais.Agents.Control.Http.ExtensionApplyResponse? other) -> bool
+override Vais.Agents.Control.Http.ExtensionApplyResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionApplyResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionApplyResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ExtensionApplyResponse.operator ==(Vais.Agents.Control.Http.ExtensionApplyResponse? left, Vais.Agents.Control.Http.ExtensionApplyResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionApplyResponse.operator !=(Vais.Agents.Control.Http.ExtensionApplyResponse? left, Vais.Agents.Control.Http.ExtensionApplyResponse? right) -> bool
+Vais.Agents.Control.Http.ExtensionDeleteStatus
+Vais.Agents.Control.Http.ExtensionDeleteStatus.Success = 0 -> Vais.Agents.Control.Http.ExtensionDeleteStatus
+Vais.Agents.Control.Http.ExtensionDeleteStatus.NotFound = 1 -> Vais.Agents.Control.Http.ExtensionDeleteStatus
+Vais.Agents.Control.Http.ExtensionDeleteResponse
+Vais.Agents.Control.Http.ExtensionDeleteResponse.ExtensionDeleteResponse(string! ExtensionId, Vais.Agents.Control.Http.ExtensionDeleteStatus Status) -> void
+Vais.Agents.Control.Http.ExtensionDeleteResponse.ExtensionId.get -> string!
+Vais.Agents.Control.Http.ExtensionDeleteResponse.ExtensionId.init -> void
+Vais.Agents.Control.Http.ExtensionDeleteResponse.Status.get -> Vais.Agents.Control.Http.ExtensionDeleteStatus
+Vais.Agents.Control.Http.ExtensionDeleteResponse.Status.init -> void
+Vais.Agents.Control.Http.ExtensionDeleteResponse.<Clone>$() -> Vais.Agents.Control.Http.ExtensionDeleteResponse!
+Vais.Agents.Control.Http.ExtensionDeleteResponse.Deconstruct(out string! ExtensionId, out Vais.Agents.Control.Http.ExtensionDeleteStatus Status) -> void
+Vais.Agents.Control.Http.ExtensionDeleteResponse.Equals(Vais.Agents.Control.Http.ExtensionDeleteResponse? other) -> bool
+override Vais.Agents.Control.Http.ExtensionDeleteResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionDeleteResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionDeleteResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ExtensionDeleteResponse.operator ==(Vais.Agents.Control.Http.ExtensionDeleteResponse? left, Vais.Agents.Control.Http.ExtensionDeleteResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionDeleteResponse.operator !=(Vais.Agents.Control.Http.ExtensionDeleteResponse? left, Vais.Agents.Control.Http.ExtensionDeleteResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapExtensionControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!

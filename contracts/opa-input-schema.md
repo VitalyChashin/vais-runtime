@@ -51,11 +51,14 @@ acts on:
 | MCP server (v0.20) | `McpServerCreate`, `McpServerUpdate`, `McpServerQuery`, `McpServerEvict` |
 | Container plugin (v0.24) | `ContainerPluginCreate`, `ContainerPluginUpdate`, `ContainerPluginQuery`, `ContainerPluginEvict` |
 | Eval suite (E1) | `EvalSuiteUpsert`, `EvalSuiteQuery`, `EvalSuiteEvict` |
+| Extension (EXT-13) | `ExtensionCreate`, `ExtensionUpdate`, `ExtensionQuery`, `ExtensionEvict` |
 
 The shape of `input.agent` depends on the resource: for agent operations
 it carries an `AgentManifest`; for graph operations a graph manifest;
 for gateway-config / MCP-server / container-plugin / eval-suite
-operations the corresponding manifest type. Rego policies that gate by
+operations the corresponding manifest type. **Extension operations use
+`input.extension` instead of `input.agent`** — `input.agent` is null
+for all extension operations. Rego policies that gate by
 operation should branch on the operation name first, then dereference
 the manifest-specific fields. Policies that don't care about a resource
 kind can rely on the default-deny fall-through (no rule matched).
@@ -131,6 +134,42 @@ prefer `not input.agent.memory` over `input.agent.memory == null`.
 - `annotations` (object) — operator-visible metadata; not indexed.
 - `llmGatewayRef` (string) — id of a deployed `LlmGatewayConfigManifest` (v0.6+).
 - `mcpGatewayRef` (string) — id of a deployed `McpGatewayConfigManifest` (v0.6+).
+
+### `extension` (object | null) — EXT-13
+
+Present **only** for extension operations (`ExtensionCreate`,
+`ExtensionUpdate`, `ExtensionQuery`, `ExtensionEvict`). **Null for all
+other operation kinds.** Populated by `OpaInputBuilder.Build(PolicyOperation, ExtensionManifest?, AgentPrincipal?)`.
+
+```json
+{
+  "id": "my-logger",
+  "version": "1.2.0",
+  "host": "csharp",
+  "handlers": [
+    { "id": "log-input",  "seam": "agentInput" },
+    { "id": "log-output", "seam": "agentOutput" }
+  ],
+  "scope": {
+    "workspaces": ["ws-a"],
+    "agentIds": ["agent-1"]
+  },
+  "labels": { "team": "platform" }
+}
+```
+
+Fields:
+
+- `id` (string) — extension name, unique across the runtime.
+- `version` (string) — semver string from the manifest.
+- `host` (string) — `"csharp"` or `"container"`.
+- `handlers` (array of `{id, seam}`, optional) — omitted when empty.
+  - `id` (string) — handler id from the manifest.
+  - `seam` (string) — `"agentInput"`, `"agentOutput"`, or future seam names.
+- `scope` (object, optional) — workspace and agent filters; omitted for global scope.
+  - `workspaces` (array of strings, optional).
+  - `agentIds` (array of strings, optional).
+- `labels` (object, optional) — key/value metadata; omitted when empty.
 
 ---
 

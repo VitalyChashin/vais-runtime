@@ -49,4 +49,7 @@ public abstract record ManifestResource
 
     /// <summary><c>kind: Plugin</c>.</summary>
     public sealed record PluginCase(PluginManifest Plugin) : ManifestResource;
+
+    /// <summary><c>kind: Extension</c>.</summary>
+    public sealed record ExtensionCase(ExtensionManifest Extension) : ManifestResource;
 }

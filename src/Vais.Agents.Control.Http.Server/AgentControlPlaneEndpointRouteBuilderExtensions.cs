@@ -18,6 +18,7 @@ using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.RunStore;
+using Vais.Agents.Runtime.Extensions;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Container;
 using Vais.Agents.Runtime.Plugins.Python;
@@ -197,6 +198,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapMcpGatewayControlPlane(builder, prefix);
         MapMcpServerControlPlane(builder, prefix);
         MapContainerPluginControlPlane(builder, prefix);
+        MapExtensionControlPlane(builder, prefix);
         MapEvalSuiteControlPlane(builder, prefix);
         MapEvalRunControlPlane(builder, prefix);
         MapDiagnosticsControlPlane(builder, prefix);
@@ -3170,6 +3172,172 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         {
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, id);
         }
+    }
+
+    // ── Extension endpoints (EXT-11) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Mount the extension control-plane endpoints.
+    /// </summary>
+    public static IEndpointRouteBuilder MapExtensionControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var extensions = builder.MapGroup(prefix).WithTags("Extensions");
+
+        // POST /extensions — apply (create or update) a C# extension via multipart/form-data
+        extensions.MapPost("/extensions", ApplyExtensionAsync)
+            .WithName("Extensions.Apply")
+            .WithSummary("Apply an extension manifest + optional DLL (multipart/form-data).")
+            .WithDescription(
+                "Accepts multipart/form-data with a 'manifest' YAML file part and an optional 'dll' file part. " +
+                "For host:csharp extensions the dll part is required. " +
+                "Returns 200 on update, 201 on first-time load, 400 on ABI mismatch, 409 on priority conflict, 422 on load failure.")
+            .Produces<ExtensionApplyResponse>(StatusCodes.Status200OK)
+            .Produces<ExtensionApplyResponse>(StatusCodes.Status201Created)
+            .Produces<ExtensionApplyResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ExtensionApplyResponse>(StatusCodes.Status409Conflict)
+            .Produces<ExtensionApplyResponse>(StatusCodes.Status422UnprocessableEntity)
+            .DisableAntiforgery();
+
+        // DELETE /extensions/{name} — unload an extension by id
+        extensions.MapDelete("/extensions/{name}", DeleteExtensionAsync)
+            .WithName("Extensions.Delete")
+            .WithSummary("Unload and unregister an extension by id.")
+            .Produces<ExtensionDeleteResponse>(StatusCodes.Status200OK)
+            .Produces<ExtensionDeleteResponse>(StatusCodes.Status404NotFound);
+
+        return builder;
+    }
+
+    private static async Task<IResult> ApplyExtensionAsync(HttpContext http, CancellationToken ct)
+    {
+        if (!http.Request.HasFormContentType)
+            return Results.Problem("Expected multipart/form-data.", statusCode: StatusCodes.Status415UnsupportedMediaType);
+
+        var form = await http.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+        var manifestFile = form.Files.GetFile("manifest");
+        if (manifestFile is null)
+            return Results.Json(
+                new ExtensionApplyResponse(string.Empty, ExtensionApplyStatus.ValidationFailed, null,
+                    "The 'manifest' file part is required."),
+                statusCode: StatusCodes.Status400BadRequest);
+
+        string yaml;
+        using (var reader = new System.IO.StreamReader(manifestFile.OpenReadStream()))
+        {
+            yaml = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+        }
+
+        var deserializer = http.RequestServices.GetService<ExtensionManifestYamlDeserializer>();
+        if (deserializer is null)
+            return Results.Json(
+                new ExtensionApplyResponse(string.Empty, ExtensionApplyStatus.ValidationFailed, null,
+                    "Extension runtime is not registered. Call AddVaisExtensions() in your service configuration."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        ExtensionManifest manifest;
+        try
+        {
+            manifest = deserializer.Deserialize(yaml);
+        }
+        catch (Exception ex)
+        {
+            return Results.Json(
+                new ExtensionApplyResponse(string.Empty, ExtensionApplyStatus.ValidationFailed, null,
+                    $"Failed to parse extension manifest: {ex.Message}"),
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(manifest.Id))
+            return Results.Json(
+                new ExtensionApplyResponse(string.Empty, ExtensionApplyStatus.ValidationFailed, null,
+                    "manifest.id is required."),
+                statusCode: StatusCodes.Status400BadRequest);
+
+        var reloader = http.RequestServices.GetService<IExtensionReloader>();
+        if (reloader is null)
+            return Results.Json(
+                new ExtensionApplyResponse(manifest.Id, ExtensionApplyStatus.ValidationFailed, null,
+                    "Extension runtime is not registered. Call AddVaisExtensions() in your service configuration."),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var dllFile = form.Files.GetFile("dll");
+        Stream? dllStream = dllFile?.OpenReadStream();
+
+        try
+        {
+            var result = await reloader.ReloadAsync(manifest, dllStream, ct).ConfigureAwait(false);
+            return ExtensionReloadResultToHttp(result, manifest.Id);
+        }
+        finally
+        {
+            if (dllStream is not null)
+                await dllStream.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<IResult> DeleteExtensionAsync(string name, HttpContext http, CancellationToken ct)
+    {
+        var reloader = http.RequestServices.GetService<IExtensionReloader>();
+        if (reloader is null)
+            return Results.Json(
+                new ExtensionDeleteResponse(name, ExtensionDeleteStatus.NotFound),
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var result = await reloader.UnloadAsync(name, ct).ConfigureAwait(false);
+
+        return result.Status switch
+        {
+            ExtensionUnloadStatus.Success =>
+                Results.Ok(new ExtensionDeleteResponse(name, ExtensionDeleteStatus.Success)),
+            ExtensionUnloadStatus.NotFound =>
+                Results.Json(
+                    new ExtensionDeleteResponse(name, ExtensionDeleteStatus.NotFound),
+                    statusCode: StatusCodes.Status404NotFound),
+            _ =>
+                Results.Json(
+                    new ExtensionDeleteResponse(name, ExtensionDeleteStatus.NotFound),
+                    statusCode: StatusCodes.Status404NotFound),
+        };
+    }
+
+    private static IResult ExtensionReloadResultToHttp(ExtensionReloadResult result, string manifestId)
+    {
+        var handlers = result.NewDescriptor?.Handlers
+            .Select(h => h.HandlerId)
+            .ToArray();
+        var extensionId = result.NewDescriptor?.ExtensionId
+            ?? result.OldDescriptor?.ExtensionId
+            ?? manifestId;
+        var isNew = result.OldDescriptor is null;
+
+        return result.Status switch
+        {
+            ExtensionReloadStatus.Success when isNew =>
+                Results.Created((string?)null,
+                    new ExtensionApplyResponse(extensionId, ExtensionApplyStatus.Created, handlers, null)),
+            ExtensionReloadStatus.Success =>
+                Results.Ok(
+                    new ExtensionApplyResponse(extensionId, ExtensionApplyStatus.Success, handlers, null)),
+            ExtensionReloadStatus.AbiMismatch =>
+                Results.Json(
+                    new ExtensionApplyResponse(extensionId, ExtensionApplyStatus.AbiMismatch, null,
+                        result.FailureException?.Message ?? "ABI version mismatch."),
+                    statusCode: StatusCodes.Status400BadRequest),
+            ExtensionReloadStatus.PriorityConflict =>
+                Results.Json(
+                    new ExtensionApplyResponse(extensionId, ExtensionApplyStatus.PriorityConflict, null,
+                        result.FailureException?.Message ?? "Priority conflict detected."),
+                    statusCode: StatusCodes.Status409Conflict),
+            _ =>
+                Results.Json(
+                    new ExtensionApplyResponse(extensionId, ExtensionApplyStatus.LoadFailed, null,
+                        result.FailureException?.Message ?? "Extension load failed."),
+                    statusCode: StatusCodes.Status422UnprocessableEntity),
+        };
     }
 
     // ── Eval suite endpoints (E1) ─────────────────────────────────────────────
