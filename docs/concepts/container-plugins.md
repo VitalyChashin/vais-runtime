@@ -68,8 +68,11 @@ spec:
     maxAttempts: 3
     backoffSeconds: 2
     retryOn: [502, 503, 504]
-  secrets:
-    OPENAI_API_KEY: secret://env/OPENAI_API_KEY
+  secrets:                           # non-provider creds only: DB URLs, internal API
+                                     # tokens, vector-store keys. NEVER LLM provider keys
+                                     # (OPENAI_API_KEY, ANTHROPIC_API_KEY, …) — those
+                                     # belong on the runtime's LLM gateway per P12.
+    APP_DATABASE_URL: secret://env/APP_DATABASE_URL
   build:                             # optional client-side build-on-apply
     context: ./
     dockerfile: Dockerfile
