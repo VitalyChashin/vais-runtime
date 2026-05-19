@@ -16,6 +16,7 @@ You'll deploy a declarative agent against the runtime, route every model call an
 8. **[Dispatch from a graph node with agent-as-tool](dispatch-from-a-graph-node.md)** — let the coordinator's LLM pick among sibling specialists via `localAgents`; one-field flip to background fan-out.
 9. **[Connect OpenWebUI](connect-openwebui.md)** — point OpenWebUI at the runtime's OpenAI-compatible endpoint; chat with agents and graphs from a browser UI.
 10. **[Evaluate an agent](evaluate-an-agent.md)** — author a declarative regression suite, score responses with built-in assertions, publish JUnit XML for CI, and diff two runs to surface regressions before they ship.
+11. **[Intercept agent calls with an extension](intercept-agent-calls-with-an-extension.md)** — bind a cross-cutting handler (logging, guardrails, memory enrichment) to an agent without touching its manifest; scope it, inspect the resolved chain, and remove it cleanly.
 
 ## After this section
 
