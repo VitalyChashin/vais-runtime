@@ -19,7 +19,7 @@ A larger working example is in [`samples/PluginAgentLangGraphResearcherLive/`](.
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/) installed locally.
 - Docker.
 - The `agentic` repo checked out locally — `vais-plugin` is not yet published to PyPI and must be installed from source. The Dockerfile in this tutorial copies it directly from the repo.
-- A running runtime ([DevOps section](../devops/index.md)) with `OPENAI_API_KEY` set in its environment — the plugin manifest below references it via `secret://env/OPENAI_API_KEY`, which tells the runtime to read its own env and inject the value into the plugin container.
+- A running runtime ([DevOps section](../devops/index.md)) with an LLM gateway configured that serves a `gpt-4o-mini` model — see [Wire the LLM gateway](../agent-developer/wire-the-llm-gateway.md). The plugin never sees provider credentials; all model calls exit via `request.llm`, which routes through the gateway. This is principle [**P12**](../concepts/control-plane.md) — plugins must not instantiate provider SDKs (`openai`, `anthropic`, `langchain_openai`, …) directly; the Python SDK installs an import guard that hard-fails on such imports.
 
 ## 1. Scaffold
 
@@ -57,7 +57,6 @@ requires-python = ">=3.11"
 dependencies = [
   "vais-plugin",
   "langgraph >=0.2",
-  "langchain-openai >=0.2",
   "pydantic >=2.8,<3",
 ]
 
@@ -66,28 +65,38 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 ```
 
+Note: no `langchain-openai` or `openai` dependency. All LLM calls go through `request.llm` (the SDK's pre-wired gateway client), so the plugin doesn't link to a provider SDK at all.
+
 ## 3. Define the LangGraph state and graph
 
 ```python
 # src/intent_router/graph.py
 from typing import Literal
-from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from vais_plugin import AsyncLlmClient, Message
 
 class State(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     user_message: str
     intent: Literal["FACTUAL", "CREATIVE", "OPINION", ""] = ""
     reply: str = ""
-
-_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    # Injected per invocation by IntentRouter.invoke; carries the runtime's
+    # call_token, run_id, and traceparent so every gateway call is correlated.
+    llm: AsyncLlmClient | None = None
 
 async def classify(state: State) -> State:
-    out = await _llm.ainvoke(
-        f"Classify the following message as exactly one of: FACTUAL, CREATIVE, OPINION. "
-        f"Reply with the single word. Message: {state.user_message}"
+    response = await state.llm.complete(
+        [Message(role="user", content=(
+            "Classify the following message as exactly one of: "
+            "FACTUAL, CREATIVE, OPINION. Reply with the single word. "
+            f"Message: {state.user_message}"
+        ))],
+        model_id="gpt-4o-mini",
+        temperature=0,
     )
-    intent = out.content.strip().upper()
+    intent = (response.content or "").strip().upper()
     if intent not in {"FACTUAL", "CREATIVE", "OPINION"}:
         intent = "FACTUAL"
     return state.model_copy(update={"intent": intent})
@@ -98,8 +107,12 @@ async def respond(state: State) -> State:
         "CREATIVE": "Answer imaginatively.",
         "OPINION":  "Acknowledge the opinion-laden nature; give a balanced view.",
     }[state.intent]
-    out = await _llm.ainvoke(f"{style} Question: {state.user_message}")
-    return state.model_copy(update={"reply": out.content})
+    response = await state.llm.complete(
+        [Message(role="user", content=f"{style} Question: {state.user_message}")],
+        model_id="gpt-4o-mini",
+        temperature=0,
+    )
+    return state.model_copy(update={"reply": response.content or ""})
 
 def build_graph():
     g = StateGraph(State)
@@ -111,7 +124,9 @@ def build_graph():
     return g.compile()
 ```
 
-Two nodes. The first calls the model to label intent; the second tailors the response style to that label. Linear edges keep the tutorial simple — LangGraph's real power is conditional edges (`add_conditional_edges`), checkpointing, and parallel execution; once this graph runs, those extensions are localized to `graph.py`.
+Two nodes. The first calls the model to label intent; the second tailors the response style to that label. Each node calls `state.llm.complete(...)` — the `AsyncLlmClient` is pre-wired by the SDK to the runtime's LLM gateway and carries the per-invocation `call_token`, `run_id`, and `traceparent` headers, so every model call lands in `vais_gateway_events` correlated to this run.
+
+Linear edges keep the tutorial simple — LangGraph's real power is conditional edges (`add_conditional_edges`), checkpointing, and parallel execution; once this graph runs, those extensions are localized to `graph.py`.
 
 ## 4. Bridge to the plugin SDK
 
@@ -129,11 +144,13 @@ class IntentRouter(PluginAgent):
             (m.content or "" for m in reversed(request.messages) if m.role == "user"),
             "",
         )
-        result = await _graph.ainvoke(State(user_message=user_text))
+        result = await _graph.ainvoke(
+            State(user_message=user_text, llm=request.llm)
+        )
         return InvokeResponse(assistant_message=result["reply"])
 ```
 
-The SDK marshals the IP-1 protocol — request comes in with `messages` + opaque state; you return an `InvokeResponse`. LangGraph's compiled graph handles the actual flow.
+The SDK marshals the IP-1 protocol — request comes in with `messages` + opaque state; the SDK constructs `request.llm` (an `AsyncLlmClient` already pointed at the runtime's LLM gateway URL with this invocation's headers) and `request.tools` (an `AsyncToolClient` for the MCP gateway). The agent passes `request.llm` into LangGraph state so every node has gateway-routed model access. You return an `InvokeResponse`. LangGraph's compiled graph handles the actual flow.
 
 ## 5. Entrypoint
 
@@ -179,20 +196,19 @@ spec:
   build:
     context: ../../
     dockerfile: samples/intent-router/Dockerfile
-  secrets:
-    OPENAI_API_KEY: secret://env/OPENAI_API_KEY
 ```
 
-`spec.secrets` is a map of env-var name (inside the plugin container) → `secret://` URI. The `secret://env/OPENAI_API_KEY` URI tells the runtime to read `OPENAI_API_KEY` from its own environment and inject it as `OPENAI_API_KEY` in the plugin container at startup. The runtime never persists the value.
+No `spec.secrets` block — provider credentials (e.g. `OPENAI_API_KEY`) live with the runtime's LLM gateway, never with the plugin. The plugin container has no outbound path to provider APIs; the [P12 plugin sandbox contract](../concepts/control-plane.md) enforces this with `NetworkPolicy` (Kubernetes) and `--internal` Docker network topology (when `VAIS_DOCKER_PLUGIN_NETWORK=vais-internal`). If you ever find yourself wanting `secret://env/OPENAI_API_KEY` in a plugin manifest, the answer is almost always to add a model to the runtime's LLM gateway instead.
 
 `vais apply` reads `spec.build`, builds the image locally (only if the tag doesn't exist), and registers the plugin in one shot.
 
 ## 8. Apply and invoke
 
 ```bash
-# Confirm OPENAI_API_KEY is set in the runtime container's environment.
-# (Set at runtime startup — see the DevOps section. The secret reference
-# in plugin.yaml resolves against this.)
+# Confirm the runtime has an LLM gateway serving `gpt-4o-mini`:
+#   vais gateway-status
+# If not, wire one up first — see docs/agent-developer/wire-the-llm-gateway.md.
+# The plugin itself needs no provider credentials.
 
 # Build + register the plugin
 vais apply -f plugin.yaml
@@ -254,7 +270,7 @@ The runtime drains in-flight `/v1/invoke` calls for this plugin, replaces the co
 
 - **Conditional edges.** Replace `add_edge` with `add_conditional_edges(node, router_fn, {...})` to branch dynamically per state.
 - **Checkpointing.** LangGraph supports its own checkpointing — fine for transient mid-graph state, but the runtime's grain is the source of truth across turns. Don't double-persist; round-trip critical state through the plugin's `opaqueState` blob.
-- **Real tools.** Add LangChain tools to your nodes; route them through the runtime's MCP gateway by calling `request.tool_gateway_url` instead of contacting MCP servers directly. See the [P12 plugin sandbox contract](../concepts/control-plane.md) for why.
+- **Real tools.** Add tool calls to your nodes via `state.tools` (an `AsyncToolClient`, populated the same way `state.llm` is). Threaded the same way as the LLM client: extend `State` with a `tools: AsyncToolClient | None = None` field, set it in `IntentRouter.invoke` from `request.tools`, and call `await state.tools.invoke(ToolCall(...))` inside a node. The client routes through the runtime's MCP gateway middleware chain — guardrails, journal, observability — so plugins never contact MCP servers directly. See the [P12 plugin sandbox contract](../concepts/control-plane.md) for why.
 
 ## Next
 
