@@ -11,6 +11,23 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Extension handler contract — Phase B: container host (EXT-15..EXT-24).** Adds `host: container` support so extensions can be written in any language and communicate with the runtime over HTTP. Parallel type to the C# in-process path — no shared base, per OQ-2b.
+  - `ContainerExtensionLifecycleManager` — starts the container via `IContainerExtensionHost`, calls `GET /v1/handlers` at startup to discover advertised handlers, cross-checks against the manifest, and registers `HandlerBinding`s whose `HandlerInstance` is an `HttpContainerHandlerProxy`.
+  - `HttpContainerHandlerProxy` — generic proxy that translates each seam invocation into paired `POST /handlers/<id>/pre` and `POST /handlers/<id>/post` HTTP calls. Pre-response actions: `next` (continue chain), `shortCircuit` (stop chain), `mutate` (continue + apply `contextPatch` to `AgentInputContext.Properties`).
+  - `HotSeamGuard` — evaluates an extension manifest and returns violations for any handler that targets a hot seam (`agentInput`, `agentOutput`) with `host: container`. Server returns HTTP 412 when guard triggers; CLI prompts and re-issues with `X-Vais-Accept-Latency-Cost: true` when operator passes `--accept-latency-cost`.
+  - `agentic/contracts/extensions/handler-protocol.md` — new contract document (frozen at v0.30) defining `GET /v1/handlers`, per-handler pre/post endpoints, wire shapes for all seams, authentication, and failure-mode mapping.
+  - `AgentInputHandlerProxy` / `AgentOutputHandlerProxy` — typed per-seam wrappers over `HttpContainerHandlerProxy`.
+  - Wire shapes in `Container/Wire/` — `AgentInputPreRequest`, `AgentInputContextWire`, `HandlerPreResponse`, `AgentInputPostRequest`, `HandlerPostResponse`; `AgentOutputPreRequest`, `AgentOutputContextWire`.
+  - `ExtensionDescriptor.LoadContext` made nullable (`ExtensionAssemblyLoadContext?`) — container descriptors pass `null` (no DLL/ALC).
+  - 8 integration tests in `Vais.Agents.Runtime.Extensions.Container.Tests`: handler-discovery mismatch, successful apply, remove, not-found, HotSeamGuard (empty + violation), `shortCircuit` action, unreachable container.
+
+- **Extension handler contract — Phase C: ergonomics (EXT-25..EXT-29).**
+  - **`vais ext` CLI commands** — `vais ext list` (table/json/yaml output; HANDLERS column shows `id(seam:priority)` tuples), `vais ext get <name>` (default YAML; `-o table` for key/value view), `vais ext logs <name>` (informational stub with `docker logs` / `kubectl logs` guidance), `vais ext metrics <name>` (informational stub pointing to OTLP spans via `vais diagnose spans`).
+  - **`vais agent extensions <id>`** — prints the full extension chain bound to an agent: EXTENSION, HANDLER, SEAM, PRI, FAILURE, SCOPE MATCHED (green yes / grey no), SCOPE columns. Accepts bare `<id>` or `agent/<id>`. Helps operators debug "why isn't my extension applying?" without grepping logs.
+  - **HTTP read endpoints** — `GET /v1/extensions` (list all loaded extensions), `GET /v1/extensions/{name}` (single extension + manifest), `GET /v1/agents/{id}/extensions` (agent-scoped handler chain with scope-match diagnostics). Client-side mirrors in `IAgentControlPlaneClient` and `AgentControlPlaneClient`.
+  - **Conformance test suite** (`Vais.Agents.Runtime.Extensions.Conformance/`) — abstract `ExtensionConformanceBase` (6 registry/composer tests: registration, cluster-wide scope, agentId filter, priority sort, remove, swap). `CsharpExtensionConformanceTests` adds 4 invocation tests (passthrough, shortCircuit, mutation, priority-order). `ContainerExtensionConformanceTests` inherits base tests and adds 4 HTTP-proxy-specific tests (next/shortCircuit/mutate actions, failureMode=skip). All 20 tests pass.
+  - **Authoring guide** — `docs/guides/author-an-extension.md`: C# boilerplate + `[VaisExtension]`/`[VaisExtensionServices]`, container FastAPI starter, mutation/short-circuit semantics, scope/priority/failure-mode reference, hot-seam tradeoffs, conformance suite integration.
+
 - **C# plugin hot-reload (CHR-1..21, Phases 1–4, P11 parity).** Closes the last P11 gap for in-process C# plugins: DLL changes can now be published to a running runtime via CLI or HTTP without restarting the silo.
 
   **Phase 1 — HTTP DLL push (CHR-1..7):**

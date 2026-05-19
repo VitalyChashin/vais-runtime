@@ -44,3 +44,45 @@ public enum ExtensionDeleteStatus
 public sealed record ExtensionDeleteResponse(
     string ExtensionId,
     ExtensionDeleteStatus Status);
+
+// ── EXT-25 / EXT-28 list + query + diagnostic types ─────────────────────────
+
+/// <summary>Summary of one handler within a loaded extension.</summary>
+public sealed record ExtensionHandlerInfo(
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode);
+
+/// <summary>Summary of a loaded extension for <c>GET /v1/extensions</c>.</summary>
+public sealed record ExtensionInfo(
+    string ExtensionId,
+    string Version,
+    string Host,
+    IReadOnlyList<ExtensionHandlerInfo> Handlers);
+
+/// <summary>Response body for <c>GET /v1/extensions</c>.</summary>
+public sealed record ExtensionListResponse(IReadOnlyList<ExtensionInfo> Items);
+
+/// <summary>Response body for <c>GET /v1/extensions/{name}</c>.</summary>
+public sealed record ExtensionQueryResponse(
+    ExtensionInfo Extension,
+    ExtensionManifest Manifest);
+
+/// <summary>
+/// One handler entry in the per-agent extension chain diagnostic returned by
+/// <c>GET /v1/agents/{id}/extensions</c>.
+/// </summary>
+public sealed record AgentExtensionEntry(
+    string ExtensionId,
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode,
+    bool MatchedScope,
+    string? ScopeSummary);
+
+/// <summary>Response body for <c>GET /v1/agents/{id}/extensions</c>.</summary>
+public sealed record AgentExtensionChainResponse(
+    string AgentId,
+    IReadOnlyList<AgentExtensionEntry> Handlers);

@@ -553,6 +553,39 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<ExtensionListResponse> ListExtensionsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/v1/extensions", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new ExtensionListResponse(Array.Empty<ExtensionInfo>());
+    }
+
+    /// <inheritdoc />
+    public async Task<ExtensionQueryResponse?> GetExtensionAsync(
+        string extensionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(extensionId);
+        using var response = await _http.GetAsync(
+            $"/v1/extensions/{Uri.EscapeDataString(extensionId)}", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionQueryResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<AgentExtensionChainResponse?> GetAgentExtensionsAsync(
+        string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        using var response = await _http.GetAsync(
+            $"/v1/agents/{Uri.EscapeDataString(agentId)}/extensions", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<AgentExtensionChainResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<PluginSourcePushResponse> PushPluginSourceAsync(
         string pluginName, Stream sourceTarGz, CancellationToken cancellationToken = default)
     {

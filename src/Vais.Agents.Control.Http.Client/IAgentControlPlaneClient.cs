@@ -495,6 +495,24 @@ public interface IAgentControlPlaneClient
     Task DeleteExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    /// <summary>GET /v1/extensions — list all currently loaded extensions.</summary>
+    Task<ExtensionListResponse> ListExtensionsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(new ExtensionListResponse(Array.Empty<ExtensionInfo>()));
+
+    /// <summary>
+    /// GET /v1/extensions/{name} — fetch a single loaded extension by id.
+    /// Returns <see langword="null"/> when not found.
+    /// </summary>
+    Task<ExtensionQueryResponse?> GetExtensionAsync(string extensionId, CancellationToken cancellationToken = default)
+        => Task.FromResult((ExtensionQueryResponse?)null);
+
+    /// <summary>
+    /// GET /v1/agents/{id}/extensions — list all extension handlers visible to an agent,
+    /// including scope match diagnostics. Returns <see langword="null"/> when unavailable.
+    /// </summary>
+    Task<AgentExtensionChainResponse?> GetAgentExtensionsAsync(string agentId, CancellationToken cancellationToken = default)
+        => Task.FromResult((AgentExtensionChainResponse?)null);
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

@@ -122,6 +122,31 @@ app.Configure(config =>
     config.AddCommand<PluginImportExistingCommand>("plugin-import-existing")
         .WithDescription("Load (or hot-reload) a plugin whose DLL is already in the runtime's plugins directory.");
 
+    config.AddBranch("ext", branch =>
+    {
+        branch.SetDescription("List and inspect loaded extensions.");
+
+        branch.AddCommand<ExtListCommand>("list")
+            .WithDescription("List all loaded extensions with host, version, and handler summary.");
+
+        branch.AddCommand<ExtGetCommand>("get")
+            .WithDescription("Fetch a single loaded extension by id (full manifest + handler details).");
+
+        branch.AddCommand<ExtLogsCommand>("logs")
+            .WithDescription("Show container extension logs (host:container only; redirects to docker/kubectl).");
+
+        branch.AddCommand<ExtMetricsCommand>("metrics")
+            .WithDescription("Show per-handler latency metrics (p50/p95) for a loaded extension.");
+    });
+
+    config.AddBranch("agent", branch =>
+    {
+        branch.SetDescription("Agent diagnostics and inspection.");
+
+        branch.AddCommand<AgentExtensionsCommand>("extensions")
+            .WithDescription("List extension handlers bound to an agent with scope match diagnostics.");
+    });
+
     config.AddBranch("diagnose", branch =>
     {
         branch.SetDescription("Runtime diagnostics: spans, traces, filter counters.");

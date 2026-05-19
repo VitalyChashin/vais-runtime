@@ -3209,6 +3209,28 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<ExtensionDeleteResponse>(StatusCodes.Status200OK)
             .Produces<ExtensionDeleteResponse>(StatusCodes.Status404NotFound);
 
+        // GET /extensions — list all loaded extensions
+        extensions.MapGet("/extensions", ListExtensionsAsync)
+            .WithName("Extensions.List")
+            .WithSummary("List all currently loaded extensions.")
+            .Produces<ExtensionListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /extensions/{name} — fetch a single loaded extension
+        extensions.MapGet("/extensions/{name}", GetExtensionByNameAsync)
+            .WithName("Extensions.Get")
+            .WithSummary("Fetch a single loaded extension by id.")
+            .Produces<ExtensionQueryResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        // GET /agents/{id}/extensions — per-agent extension chain diagnostic
+        extensions.MapGet("/agents/{id}/extensions", GetAgentExtensionsAsync)
+            .WithName("Agents.Extensions")
+            .WithSummary("List extension handlers visible to an agent with scope match diagnostics.")
+            .Produces<AgentExtensionChainResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -3335,6 +3357,86 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                     new ExtensionDeleteResponse(name, ExtensionDeleteStatus.NotFound),
                     statusCode: StatusCodes.Status404NotFound),
         };
+    }
+
+    private static Task<IResult> ListExtensionsAsync(HttpContext http, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetService<ExtensionHandlerRegistry>();
+        if (registry is null)
+            return Task.FromResult(Results.Problem(
+                "Extension runtime not registered.", statusCode: StatusCodes.Status503ServiceUnavailable));
+
+        var items = registry.Snapshot().Values
+            .Select(ToExtensionInfo)
+            .ToArray();
+        return Task.FromResult(Results.Ok(new ExtensionListResponse(items)));
+    }
+
+    private static Task<IResult> GetExtensionByNameAsync(string name, HttpContext http, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetService<ExtensionHandlerRegistry>();
+        if (registry is null)
+            return Task.FromResult(Results.Problem(
+                "Extension runtime not registered.", statusCode: StatusCodes.Status503ServiceUnavailable));
+
+        var snapshot = registry.Snapshot();
+        if (!snapshot.TryGetValue(name, out var descriptor))
+            return Task.FromResult(Results.NotFound(new { error = $"extension '{name}' not loaded" }));
+
+        return Task.FromResult(Results.Ok(
+            new ExtensionQueryResponse(ToExtensionInfo(descriptor), descriptor.Manifest)));
+    }
+
+    private static Task<IResult> GetAgentExtensionsAsync(string id, HttpContext http, CancellationToken ct)
+    {
+        var registry = http.RequestServices.GetService<ExtensionHandlerRegistry>();
+        if (registry is null)
+            return Task.FromResult(Results.Problem(
+                "Extension runtime not registered.", statusCode: StatusCodes.Status503ServiceUnavailable));
+
+        var entries = new List<AgentExtensionEntry>();
+        foreach (var descriptor in registry.Snapshot().Values)
+        {
+            var scope = descriptor.Manifest.Spec.Scope;
+            var matched = ExtensionScopeMatcher.Matches(scope, manifest: null, agentId: id);
+            var scopeSummary = BuildScopeSummary(scope);
+
+            foreach (var h in descriptor.Handlers)
+            {
+                entries.Add(new AgentExtensionEntry(
+                    descriptor.ExtensionId, h.HandlerId, h.Seam,
+                    h.Priority, h.FailureMode, matched, scopeSummary));
+            }
+        }
+
+        entries.Sort((a, b) =>
+        {
+            var seam = string.Compare(a.Seam, b.Seam, StringComparison.Ordinal);
+            if (seam != 0) return seam;
+            var match = b.MatchedScope.CompareTo(a.MatchedScope); // matched first
+            if (match != 0) return match;
+            return a.Priority.CompareTo(b.Priority);
+        });
+
+        return Task.FromResult(Results.Ok(new AgentExtensionChainResponse(id, entries)));
+    }
+
+    private static ExtensionInfo ToExtensionInfo(ExtensionDescriptor d) =>
+        new(d.ExtensionId, d.Version, d.Manifest.Spec.Host,
+            d.Handlers.Select(h => new ExtensionHandlerInfo(h.HandlerId, h.Seam, h.Priority, h.FailureMode))
+                      .ToArray());
+
+    private static string BuildScopeSummary(ExtensionScope? scope)
+    {
+        if (scope is null) return "cluster-wide";
+        var parts = new List<string>();
+        if (scope.AgentIds is { Count: > 0 })
+            parts.Add($"agentIds=[{string.Join(",", scope.AgentIds)}]");
+        if (scope.Workspaces is { Count: > 0 })
+            parts.Add($"workspaces=[{string.Join(",", scope.Workspaces)}]");
+        if (scope.Selector is not null)
+            parts.Add($"selector=[{string.Join(",", scope.Selector.MatchLabels.Select(kv => $"{kv.Key}={kv.Value}"))}]");
+        return parts.Count > 0 ? string.Join("; ", parts) : "cluster-wide";
     }
 
     private static IResult ExtensionReloadResultToHttp(ExtensionReloadResult result, string manifestId)

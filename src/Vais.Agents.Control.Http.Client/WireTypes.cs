@@ -319,3 +319,42 @@ public enum ExtensionDeleteStatus
 public sealed record ExtensionDeleteResponse(
     string ExtensionId,
     ExtensionDeleteStatus Status);
+
+// ── EXT-25 / EXT-28 list + query + diagnostic types ─────────────────────────
+
+/// <summary>Client-side wire type for a single handler binding summary.</summary>
+public sealed record ExtensionHandlerInfo(
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode);
+
+/// <summary>Client-side wire type for a loaded extension summary.</summary>
+public sealed record ExtensionInfo(
+    string ExtensionId,
+    string Version,
+    string Host,
+    IReadOnlyList<ExtensionHandlerInfo> Handlers);
+
+/// <summary>Client-side wire type for <c>GET /v1/extensions</c>.</summary>
+public sealed record ExtensionListResponse(IReadOnlyList<ExtensionInfo> Items);
+
+/// <summary>Client-side wire type for <c>GET /v1/extensions/{name}</c>.</summary>
+public sealed record ExtensionQueryResponse(
+    ExtensionInfo Extension,
+    ExtensionManifest Manifest);
+
+/// <summary>Client-side wire type for one entry in the per-agent extension diagnostic.</summary>
+public sealed record AgentExtensionEntry(
+    string ExtensionId,
+    string HandlerId,
+    string Seam,
+    int Priority,
+    string FailureMode,
+    bool MatchedScope,
+    string? ScopeSummary);
+
+/// <summary>Client-side wire type for <c>GET /v1/agents/{id}/extensions</c>.</summary>
+public sealed record AgentExtensionChainResponse(
+    string AgentId,
+    IReadOnlyList<AgentExtensionEntry> Handlers);

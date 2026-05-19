@@ -904,3 +904,109 @@ Vais.Agents.Control.Http.IAgentControlPlaneClient.ApplyExtensionAsync(string! ma
 Vais.Agents.Control.Http.IAgentControlPlaneClient.DeleteExtensionAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 Vais.Agents.Control.Http.AgentControlPlaneClient.ApplyExtensionAsync(string! manifestYaml, System.IO.Stream? dllStream, bool acceptLatencyCost = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionApplyResponse!>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.DeleteExtensionAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetAgentExtensionsAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.AgentExtensionChainResponse?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetExtensionAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionQueryResponse?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListExtensionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionListResponse!>!
+Vais.Agents.Control.Http.AgentExtensionChainResponse
+Vais.Agents.Control.Http.AgentExtensionChainResponse.<Clone>$() -> Vais.Agents.Control.Http.AgentExtensionChainResponse!
+Vais.Agents.Control.Http.AgentExtensionChainResponse.AgentExtensionChainResponse(string! AgentId, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.AgentExtensionEntry!>! Handlers) -> void
+Vais.Agents.Control.Http.AgentExtensionChainResponse.AgentId.get -> string!
+Vais.Agents.Control.Http.AgentExtensionChainResponse.AgentId.init -> void
+Vais.Agents.Control.Http.AgentExtensionChainResponse.Deconstruct(out string! AgentId, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.AgentExtensionEntry!>! Handlers) -> void
+Vais.Agents.Control.Http.AgentExtensionChainResponse.Equals(Vais.Agents.Control.Http.AgentExtensionChainResponse? other) -> bool
+Vais.Agents.Control.Http.AgentExtensionChainResponse.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.AgentExtensionEntry!>!
+Vais.Agents.Control.Http.AgentExtensionChainResponse.Handlers.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry
+Vais.Agents.Control.Http.AgentExtensionEntry.<Clone>$() -> Vais.Agents.Control.Http.AgentExtensionEntry!
+Vais.Agents.Control.Http.AgentExtensionEntry.AgentExtensionEntry(string! ExtensionId, string! HandlerId, string! Seam, int Priority, string! FailureMode, bool MatchedScope, string? ScopeSummary) -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.Deconstruct(out string! ExtensionId, out string! HandlerId, out string! Seam, out int Priority, out string! FailureMode, out bool MatchedScope, out string? ScopeSummary) -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.Equals(Vais.Agents.Control.Http.AgentExtensionEntry? other) -> bool
+Vais.Agents.Control.Http.AgentExtensionEntry.ExtensionId.get -> string!
+Vais.Agents.Control.Http.AgentExtensionEntry.ExtensionId.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.FailureMode.get -> string!
+Vais.Agents.Control.Http.AgentExtensionEntry.FailureMode.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.HandlerId.get -> string!
+Vais.Agents.Control.Http.AgentExtensionEntry.HandlerId.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.MatchedScope.get -> bool
+Vais.Agents.Control.Http.AgentExtensionEntry.MatchedScope.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.Priority.get -> int
+Vais.Agents.Control.Http.AgentExtensionEntry.Priority.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.ScopeSummary.get -> string?
+Vais.Agents.Control.Http.AgentExtensionEntry.ScopeSummary.init -> void
+Vais.Agents.Control.Http.AgentExtensionEntry.Seam.get -> string!
+Vais.Agents.Control.Http.AgentExtensionEntry.Seam.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo
+Vais.Agents.Control.Http.ExtensionHandlerInfo.<Clone>$() -> Vais.Agents.Control.Http.ExtensionHandlerInfo!
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Deconstruct(out string! HandlerId, out string! Seam, out int Priority, out string! FailureMode) -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Equals(Vais.Agents.Control.Http.ExtensionHandlerInfo? other) -> bool
+Vais.Agents.Control.Http.ExtensionHandlerInfo.ExtensionHandlerInfo(string! HandlerId, string! Seam, int Priority, string! FailureMode) -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo.FailureMode.get -> string!
+Vais.Agents.Control.Http.ExtensionHandlerInfo.FailureMode.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo.HandlerId.get -> string!
+Vais.Agents.Control.Http.ExtensionHandlerInfo.HandlerId.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Priority.get -> int
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Priority.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Seam.get -> string!
+Vais.Agents.Control.Http.ExtensionHandlerInfo.Seam.init -> void
+Vais.Agents.Control.Http.ExtensionInfo
+Vais.Agents.Control.Http.ExtensionInfo.<Clone>$() -> Vais.Agents.Control.Http.ExtensionInfo!
+Vais.Agents.Control.Http.ExtensionInfo.Deconstruct(out string! ExtensionId, out string! Version, out string! Host, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerInfo!>! Handlers) -> void
+Vais.Agents.Control.Http.ExtensionInfo.Equals(Vais.Agents.Control.Http.ExtensionInfo? other) -> bool
+Vais.Agents.Control.Http.ExtensionInfo.ExtensionId.get -> string!
+Vais.Agents.Control.Http.ExtensionInfo.ExtensionId.init -> void
+Vais.Agents.Control.Http.ExtensionInfo.ExtensionInfo(string! ExtensionId, string! Version, string! Host, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerInfo!>! Handlers) -> void
+Vais.Agents.Control.Http.ExtensionInfo.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerInfo!>!
+Vais.Agents.Control.Http.ExtensionInfo.Handlers.init -> void
+Vais.Agents.Control.Http.ExtensionInfo.Host.get -> string!
+Vais.Agents.Control.Http.ExtensionInfo.Host.init -> void
+Vais.Agents.Control.Http.ExtensionInfo.Version.get -> string!
+Vais.Agents.Control.Http.ExtensionInfo.Version.init -> void
+Vais.Agents.Control.Http.ExtensionListResponse
+Vais.Agents.Control.Http.ExtensionListResponse.<Clone>$() -> Vais.Agents.Control.Http.ExtensionListResponse!
+Vais.Agents.Control.Http.ExtensionListResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionInfo!>! Items) -> void
+Vais.Agents.Control.Http.ExtensionListResponse.Equals(Vais.Agents.Control.Http.ExtensionListResponse? other) -> bool
+Vais.Agents.Control.Http.ExtensionListResponse.ExtensionListResponse(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionInfo!>! Items) -> void
+Vais.Agents.Control.Http.ExtensionListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionInfo!>!
+Vais.Agents.Control.Http.ExtensionListResponse.Items.init -> void
+Vais.Agents.Control.Http.ExtensionQueryResponse
+Vais.Agents.Control.Http.ExtensionQueryResponse.<Clone>$() -> Vais.Agents.Control.Http.ExtensionQueryResponse!
+Vais.Agents.Control.Http.ExtensionQueryResponse.Deconstruct(out Vais.Agents.Control.Http.ExtensionInfo! Extension, out Vais.Agents.ExtensionManifest! Manifest) -> void
+Vais.Agents.Control.Http.ExtensionQueryResponse.Equals(Vais.Agents.Control.Http.ExtensionQueryResponse? other) -> bool
+Vais.Agents.Control.Http.ExtensionQueryResponse.Extension.get -> Vais.Agents.Control.Http.ExtensionInfo!
+Vais.Agents.Control.Http.ExtensionQueryResponse.Extension.init -> void
+Vais.Agents.Control.Http.ExtensionQueryResponse.ExtensionQueryResponse(Vais.Agents.Control.Http.ExtensionInfo! Extension, Vais.Agents.ExtensionManifest! Manifest) -> void
+Vais.Agents.Control.Http.ExtensionQueryResponse.Manifest.get -> Vais.Agents.ExtensionManifest!
+Vais.Agents.Control.Http.ExtensionQueryResponse.Manifest.init -> void
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetAgentExtensionsAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.AgentExtensionChainResponse?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetExtensionAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionQueryResponse?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListExtensionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionListResponse!>!
+override Vais.Agents.Control.Http.AgentExtensionChainResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentExtensionChainResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentExtensionChainResponse.ToString() -> string!
+override Vais.Agents.Control.Http.AgentExtensionEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentExtensionEntry.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentExtensionEntry.ToString() -> string!
+override Vais.Agents.Control.Http.ExtensionHandlerInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionHandlerInfo.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionHandlerInfo.ToString() -> string!
+override Vais.Agents.Control.Http.ExtensionInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionInfo.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionInfo.ToString() -> string!
+override Vais.Agents.Control.Http.ExtensionListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionListResponse.ToString() -> string!
+override Vais.Agents.Control.Http.ExtensionQueryResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionQueryResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionQueryResponse.ToString() -> string!
+static Vais.Agents.Control.Http.AgentExtensionChainResponse.operator !=(Vais.Agents.Control.Http.AgentExtensionChainResponse? left, Vais.Agents.Control.Http.AgentExtensionChainResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentExtensionChainResponse.operator ==(Vais.Agents.Control.Http.AgentExtensionChainResponse? left, Vais.Agents.Control.Http.AgentExtensionChainResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentExtensionEntry.operator !=(Vais.Agents.Control.Http.AgentExtensionEntry? left, Vais.Agents.Control.Http.AgentExtensionEntry? right) -> bool
+static Vais.Agents.Control.Http.AgentExtensionEntry.operator ==(Vais.Agents.Control.Http.AgentExtensionEntry? left, Vais.Agents.Control.Http.AgentExtensionEntry? right) -> bool
+static Vais.Agents.Control.Http.ExtensionHandlerInfo.operator !=(Vais.Agents.Control.Http.ExtensionHandlerInfo? left, Vais.Agents.Control.Http.ExtensionHandlerInfo? right) -> bool
+static Vais.Agents.Control.Http.ExtensionHandlerInfo.operator ==(Vais.Agents.Control.Http.ExtensionHandlerInfo? left, Vais.Agents.Control.Http.ExtensionHandlerInfo? right) -> bool
+static Vais.Agents.Control.Http.ExtensionInfo.operator !=(Vais.Agents.Control.Http.ExtensionInfo? left, Vais.Agents.Control.Http.ExtensionInfo? right) -> bool
+static Vais.Agents.Control.Http.ExtensionInfo.operator ==(Vais.Agents.Control.Http.ExtensionInfo? left, Vais.Agents.Control.Http.ExtensionInfo? right) -> bool
+static Vais.Agents.Control.Http.ExtensionListResponse.operator !=(Vais.Agents.Control.Http.ExtensionListResponse? left, Vais.Agents.Control.Http.ExtensionListResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionListResponse.operator ==(Vais.Agents.Control.Http.ExtensionListResponse? left, Vais.Agents.Control.Http.ExtensionListResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionQueryResponse.operator !=(Vais.Agents.Control.Http.ExtensionQueryResponse? left, Vais.Agents.Control.Http.ExtensionQueryResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionQueryResponse.operator ==(Vais.Agents.Control.Http.ExtensionQueryResponse? left, Vais.Agents.Control.Http.ExtensionQueryResponse? right) -> bool
