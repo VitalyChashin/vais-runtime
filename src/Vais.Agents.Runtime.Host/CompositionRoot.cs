@@ -41,6 +41,7 @@ using Vais.Agents.Gateways.Governance;
 using Vais.Agents.Gateways.SemanticCache;
 using Vais.Agents.Gateways.StructuredOutput;
 using Vais.Agents.Gateways.McpGovernance;
+using Vais.Agents.Runtime.Extensions;
 using Vais.Agents.Gateways.McpSecurity;
 using Vais.Agents.Gateways.McpReliability;
 using Vais.Agents.Gateways.McpCache;
@@ -199,6 +200,7 @@ internal static class CompositionRoot
         services.AddOrleansEvalRunLifecycleManager();
         services.AddVaisAgentsEval();
         services.TryAddSingleton<IEvalAssertionKindRegistry>(new PassthroughEvalAssertionKindRegistry());
+        services.AddVaisExtensions();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
         // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator

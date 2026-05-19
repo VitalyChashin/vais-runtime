@@ -92,21 +92,22 @@ internal sealed class ExtensionAssemblyLoader
         var bindings = new List<HandlerBinding>();
         foreach (var handlerSpec in manifest.Spec.Handlers)
         {
+            Type? type;
             if (string.IsNullOrEmpty(handlerSpec.TypeName))
             {
-                _logger.LogWarning(
-                    "Extension '{Id}' handler '{HandlerId}': no TypeName declared for host=csharp.",
-                    manifest.Id, handlerSpec.Id);
-                continue;
+                type = AutoResolveType(attr.Handlers, handlerSpec.Seam, manifest.Id, handlerSpec.Id);
+            }
+            else
+            {
+                type = ResolveType(assembly, attr.Handlers, handlerSpec.TypeName, manifest.Id);
             }
 
-            var type = ResolveType(assembly, attr.Handlers, handlerSpec.TypeName, manifest.Id);
             if (type is null)
             {
                 continue;
             }
 
-            var seam = ResolveSeam(type, manifest.Id, handlerSpec.TypeName);
+            var seam = ResolveSeam(type, manifest.Id, handlerSpec.TypeName ?? type.FullName ?? type.Name);
             if (seam is null)
             {
                 continue;
@@ -155,6 +156,45 @@ internal sealed class ExtensionAssemblyLoader
             Manifest: manifest,
             Handlers: bindings,
             LoadContext: loadContext);
+    }
+
+    /// <summary>
+    /// Auto-resolve a handler type by seam name when the manifest omits <c>typeName</c>.
+    /// Succeeds only when exactly one declared type matches the seam; requires explicit
+    /// <c>typeName</c> when the extension exports multiple handlers for the same seam.
+    /// </summary>
+    private Type? AutoResolveType(Type[] declaredTypes, string seam, string extensionId, string handlerId)
+    {
+        var seamType = SeamNames.FirstOrDefault(kv => string.Equals(kv.Value, seam, StringComparison.OrdinalIgnoreCase)).Key;
+        if (seamType is null)
+        {
+            _logger.LogWarning(
+                "Extension '{Id}' handler '{HandlerId}': unknown seam '{Seam}' for auto-resolution.",
+                extensionId, handlerId, seam);
+            return null;
+        }
+
+        var candidates = Array.FindAll(declaredTypes, t => seamType.IsAssignableFrom(t));
+        if (candidates.Length == 0)
+        {
+            _logger.LogWarning(
+                "Extension '{Id}' handler '{HandlerId}': no declared type implements seam '{Seam}'.",
+                extensionId, handlerId, seam);
+            return null;
+        }
+
+        if (candidates.Length > 1)
+        {
+            _logger.LogWarning(
+                "Extension '{Id}' handler '{HandlerId}': multiple types implement seam '{Seam}' — set 'typeName' to disambiguate.",
+                extensionId, handlerId, seam);
+            return null;
+        }
+
+        _logger.LogDebug(
+            "Extension '{Id}' handler '{HandlerId}': auto-resolved to '{Type}' by seam '{Seam}'.",
+            extensionId, handlerId, candidates[0].FullName, seam);
+        return candidates[0];
     }
 
     private Type? ResolveType(Assembly assembly, Type[] declaredTypes, string typeName, string extensionId)
