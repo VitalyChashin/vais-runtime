@@ -19,6 +19,7 @@ using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.RunStore;
 using Vais.Agents.Runtime.Extensions;
+using Vais.Agents.Runtime.Extensions.Container;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Container;
 using Vais.Agents.Runtime.Plugins.Python;
@@ -3256,6 +3257,38 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 new ExtensionApplyResponse(string.Empty, ExtensionApplyStatus.ValidationFailed, null,
                     "manifest.id is required."),
                 statusCode: StatusCodes.Status400BadRequest);
+
+        // Hot-seam guard: container extensions on hot seams require explicit acknowledgment.
+        var hotSeamGuard = http.RequestServices.GetService<HotSeamGuard>() ?? HotSeamGuard.Default;
+        var violations = hotSeamGuard.Evaluate(manifest);
+        if (violations.Count > 0)
+        {
+            var acceptHeader = http.Request.Headers.TryGetValue("X-Vais-Accept-Latency-Cost", out var hv)
+                && string.Equals(hv.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+            if (!acceptHeader)
+            {
+                var detail = string.Join("; ", violations.Select(v => $"{v.HandlerId} on seam '{v.Seam}'"));
+                return Results.Json(
+                    new ExtensionApplyResponse(manifest.Id, ExtensionApplyStatus.ValidationFailed, null,
+                        $"Hot-seam guard: the following handlers are on latency-sensitive seams and require explicit acknowledgment: {detail}. " +
+                        "Re-apply with 'X-Vais-Accept-Latency-Cost: true' or '--accept-latency-cost'."),
+                    statusCode: 412);
+            }
+        }
+
+        // Route by host type.
+        if (string.Equals(manifest.Spec.Host, "container", StringComparison.OrdinalIgnoreCase))
+        {
+            var containerManager = http.RequestServices.GetService<ContainerExtensionLifecycleManager>();
+            if (containerManager is null)
+                return Results.Json(
+                    new ExtensionApplyResponse(manifest.Id, ExtensionApplyStatus.ValidationFailed, null,
+                        "Container extension support is not registered. Call AddVaisExtensions() in your service configuration."),
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            var containerResult = await containerManager.ApplyAsync(manifest, ct).ConfigureAwait(false);
+            return ExtensionReloadResultToHttp(containerResult, manifest.Id);
+        }
 
         var reloader = http.RequestServices.GetService<IExtensionReloader>();
         if (reloader is null)

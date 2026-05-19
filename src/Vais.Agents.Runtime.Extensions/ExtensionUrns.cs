@@ -16,4 +16,12 @@ public static class ExtensionUrns
     public const string ExtensionPriorityConflict = "urn:vais:extension/priority-collision";
     /// <summary>Extension reload failed after a previous version was already loaded.</summary>
     public const string ExtensionReloadFailed  = "urn:vais:extension/reload-failed";
+    /// <summary>The extension's host value is not recognized by this runtime version.</summary>
+    public const string HostNotSupported        = "urn:vais:extension/host-not-supported";
+    /// <summary>The container's GET /v1/handlers call failed or timed out.</summary>
+    public const string HandlerDiscoveryFailed  = "urn:vais:extension/handler-discovery-failed";
+    /// <summary>The container's advertised handler set does not match the manifest.</summary>
+    public const string HandlerMismatch         = "urn:vais:extension/handler-mismatch";
+    /// <summary>A container extension targets a hot seam without operator acknowledgment.</summary>
+    public const string HotSeamNotAcknowledged  = "urn:vais:extension/hot-seam-not-acknowledged";
 }

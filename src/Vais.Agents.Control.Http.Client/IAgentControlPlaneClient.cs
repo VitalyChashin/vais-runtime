@@ -482,6 +482,7 @@ public interface IAgentControlPlaneClient
     Task<ExtensionApplyResponse> ApplyExtensionAsync(
         string manifestYaml,
         Stream? dllStream,
+        bool acceptLatencyCost = false,
         CancellationToken cancellationToken = default)
         => Task.FromResult(new ExtensionApplyResponse(
             string.Empty, ExtensionApplyStatus.ValidationFailed, null,

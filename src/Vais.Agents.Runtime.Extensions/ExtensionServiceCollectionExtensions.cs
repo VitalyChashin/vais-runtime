@@ -4,6 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Runtime.Extensions.Container;
 
 namespace Vais.Agents.Runtime.Extensions;
 
@@ -42,6 +43,15 @@ public static class ExtensionServiceCollectionExtensions
             var hooks = sp.GetServices<IExtensionReloadHook>();
             return new DefaultExtensionReloader(loader, registry, composer, loaderOptions, hooks, reloaderLogger);
         });
+
+        services.TryAddSingleton<HotSeamGuard>();
+        services.TryAddSingleton<IContainerExtensionHost>(NullContainerExtensionHost.Instance);
+        services.TryAddSingleton<ContainerExtensionLifecycleManager>(sp =>
+            new ContainerExtensionLifecycleManager(
+                registry,
+                sp.GetRequiredService<IExtensionChainComposer>(),
+                sp.GetService<IContainerExtensionHost>(),
+                sp.GetService<ILogger<ContainerExtensionLifecycleManager>>()));
 
         return services;
     }

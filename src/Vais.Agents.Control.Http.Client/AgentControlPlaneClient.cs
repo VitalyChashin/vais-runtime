@@ -1159,6 +1159,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     public async Task<ExtensionApplyResponse> ApplyExtensionAsync(
         string manifestYaml,
         Stream? dllStream,
+        bool acceptLatencyCost = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(manifestYaml);
@@ -1171,7 +1172,10 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             dllContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             form.Add(dllContent, "dll", "extension.dll");
         }
-        using var response = await _http.PostAsync("/v1/extensions", form, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/extensions") { Content = form };
+        if (acceptLatencyCost)
+            request.Headers.TryAddWithoutValidation("X-Vais-Accept-Latency-Cost", "true");
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<ExtensionApplyResponse>(JsonOptions, cancellationToken)
             .ConfigureAwait(false)

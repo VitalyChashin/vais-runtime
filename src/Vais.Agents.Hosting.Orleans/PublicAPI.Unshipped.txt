@@ -384,3 +384,33 @@ Vais.Agents.Hosting.Orleans.PendingSample.ProductionRunId.set -> void
 Vais.Agents.Hosting.Orleans.AiAgentGrain.RequestDeactivationAsync() -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IAiAgentGrain.RequestDeactivationAsync() -> System.Threading.Tasks.Task!
 static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddGrainReactivationPluginReloadHook(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryGrain
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryGrain.RegisterAsync(string! manifestYaml) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryDirectoryGrain.TrackAsync(string! extensionId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryDirectoryGrain.UntrackAsync(string! extensionId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.IContainerExtensionRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState.ContainerExtensionRegistryGrainState() -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState.ManifestYamlByVersion.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState.ManifestYamlByVersion.set -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState.LatestVersion.get -> string?
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState.LatestVersion.set -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrainState
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrainState.ContainerExtensionRegistryDirectoryGrainState() -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrainState.ExtensionIds.get -> System.Collections.Generic.HashSet<string!>!
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrainState.ExtensionIds.set -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain.ContainerExtensionRegistryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrainState!>! state, Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain.RegisterAsync(string! manifestYaml) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain.GetAsync(string? version) -> System.Threading.Tasks.ValueTask<string?>
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain.RemoveAsync(string! version) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryGrain.ListAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrain
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrain.ContainerExtensionRegistryDirectoryGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrain.TrackAsync(string! extensionId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrain.UntrackAsync(string! extensionId) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.ContainerExtensionRegistryDirectoryGrain.ListIdsAsync() -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>

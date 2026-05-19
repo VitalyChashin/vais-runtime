@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Vais.Agents.Runtime.Extensions.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Extensions.Container.Tests" />
     <InternalsVisibleTo Include="Vais.Agents.Hosting.Orleans" />
     <InternalsVisibleTo Include="Vais.Agents.Control.Http.Server" />
   </ItemGroup>

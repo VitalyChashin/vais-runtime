@@ -12,7 +12,7 @@ public sealed record ExtensionDescriptor(
     string Version,
     ExtensionManifest Manifest,
     IReadOnlyList<HandlerBinding> Handlers,
-    ExtensionAssemblyLoadContext LoadContext);
+    ExtensionAssemblyLoadContext? LoadContext);
 
 /// <summary>
 /// A single bound handler within a loaded extension — maps one manifest

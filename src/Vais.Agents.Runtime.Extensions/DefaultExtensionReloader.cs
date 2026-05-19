@@ -47,10 +47,12 @@ internal sealed class DefaultExtensionReloader : IExtensionReloader
 
         if (!string.Equals(manifest.Spec.Host, "csharp", StringComparison.OrdinalIgnoreCase))
         {
+            // Container and other hosts are routed to ContainerExtensionLifecycleManager
+            // via the HTTP control-plane handler — not through this reloader.
             _logger.LogWarning(
-                "reload-skip: extension '{Id}' host='{Host}' is not supported in Phase A.",
+                "reload-skip: extension '{Id}' host='{Host}' is not handled by the C# reloader; use ContainerExtensionLifecycleManager.",
                 manifest.Id, manifest.Spec.Host);
-            return Failure(null, ExtensionUrns.ExtensionLoadFailed, null);
+            return Failure(null, ExtensionUrns.HostNotSupported, null);
         }
 
         if (dllStream is null)

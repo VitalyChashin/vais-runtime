@@ -2,7 +2,7 @@
 Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext
 Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext.ExtensionAssemblyLoadContext(string! primaryAssemblyPath) -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor
-Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionDescriptor(string! ExtensionId, string! Version, Vais.Agents.ExtensionManifest! Manifest, System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionDescriptor(string! ExtensionId, string! Version, Vais.Agents.ExtensionManifest! Manifest, System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext? LoadContext) -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionId.get -> string!
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.ExtensionId.init -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Version.get -> string!
@@ -11,10 +11,10 @@ Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Manifest.get -> Vais.Agents.E
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Manifest.init -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>!
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Handlers.init -> void
-Vais.Agents.Runtime.Extensions.ExtensionDescriptor.LoadContext.get -> Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext!
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.LoadContext.get -> Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext?
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.LoadContext.init -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.<Clone>$() -> Vais.Agents.Runtime.Extensions.ExtensionDescriptor!
-Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Deconstruct(out string! ExtensionId, out string! Version, out Vais.Agents.ExtensionManifest! Manifest, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, out Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext! LoadContext) -> void
+Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Deconstruct(out string! ExtensionId, out string! Version, out Vais.Agents.ExtensionManifest! Manifest, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerBinding!>! Handlers, out Vais.Agents.Runtime.Extensions.ExtensionAssemblyLoadContext? LoadContext) -> void
 Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Equals(Vais.Agents.Runtime.Extensions.ExtensionDescriptor? other) -> bool
 override Vais.Agents.Runtime.Extensions.ExtensionDescriptor.Equals(object? obj) -> bool
 override Vais.Agents.Runtime.Extensions.ExtensionDescriptor.GetHashCode() -> int
@@ -115,3 +115,30 @@ Vais.Agents.Runtime.Extensions.ExtensionUnloadStatus.NotFound = 1 -> Vais.Agents
 Vais.Agents.Runtime.Extensions.IExtensionReloadHook
 Vais.Agents.Runtime.Extensions.IExtensionReloadHook.Order.get -> int
 Vais.Agents.Runtime.Extensions.IExtensionReloadHook.OnReloadedAsync(Vais.Agents.Runtime.Extensions.ExtensionReloadResult! result, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.HostNotSupported = "urn:vais:extension/host-not-supported" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.HandlerDiscoveryFailed = "urn:vais:extension/handler-discovery-failed" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.HandlerMismatch = "urn:vais:extension/handler-mismatch" -> string!
+const Vais.Agents.Runtime.Extensions.ExtensionUrns.HotSeamNotAcknowledged = "urn:vais:extension/hot-seam-not-acknowledged" -> string!
+Vais.Agents.Runtime.Extensions.HotSeamGuard
+Vais.Agents.Runtime.Extensions.HotSeamGuard.HotSeamGuard(System.Collections.Generic.IReadOnlySet<string!>? hotSeams = null) -> void
+Vais.Agents.Runtime.Extensions.HotSeamGuard.Evaluate(Vais.Agents.ExtensionManifest! manifest) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HotSeamViolation!>!
+static readonly Vais.Agents.Runtime.Extensions.HotSeamGuard.Default -> Vais.Agents.Runtime.Extensions.HotSeamGuard!
+Vais.Agents.Runtime.Extensions.HotSeamViolation
+Vais.Agents.Runtime.Extensions.HotSeamViolation.HotSeamViolation(string! HandlerId, string! Seam) -> void
+Vais.Agents.Runtime.Extensions.HotSeamViolation.HandlerId.get -> string!
+Vais.Agents.Runtime.Extensions.HotSeamViolation.HandlerId.init -> void
+Vais.Agents.Runtime.Extensions.HotSeamViolation.Seam.get -> string!
+Vais.Agents.Runtime.Extensions.HotSeamViolation.Seam.init -> void
+Vais.Agents.Runtime.Extensions.HotSeamViolation.<Clone>$() -> Vais.Agents.Runtime.Extensions.HotSeamViolation!
+Vais.Agents.Runtime.Extensions.HotSeamViolation.Deconstruct(out string! HandlerId, out string! Seam) -> void
+Vais.Agents.Runtime.Extensions.HotSeamViolation.Equals(Vais.Agents.Runtime.Extensions.HotSeamViolation? other) -> bool
+override Vais.Agents.Runtime.Extensions.HotSeamViolation.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.HotSeamViolation.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.HotSeamViolation.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.HotSeamViolation.operator ==(Vais.Agents.Runtime.Extensions.HotSeamViolation? left, Vais.Agents.Runtime.Extensions.HotSeamViolation? right) -> bool
+static Vais.Agents.Runtime.Extensions.HotSeamViolation.operator !=(Vais.Agents.Runtime.Extensions.HotSeamViolation? left, Vais.Agents.Runtime.Extensions.HotSeamViolation? right) -> bool
+Vais.Agents.Runtime.Extensions.Container.IContainerExtensionHost
+Vais.Agents.Runtime.Extensions.Container.IContainerExtensionHost.StartAsync(Vais.Agents.ExtensionManifest! manifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Uri?>
+Vais.Agents.Runtime.Extensions.Container.IContainerExtensionHost.StopAsync(string! extensionId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Runtime.Extensions.Container.ExtensionHandlerProxyException
+Vais.Agents.Runtime.Extensions.Container.ExtensionHandlerProxyException.ExtensionHandlerProxyException(string! endpoint, System.Exception! inner) -> void

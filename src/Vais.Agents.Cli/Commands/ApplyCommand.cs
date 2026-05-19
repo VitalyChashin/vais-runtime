@@ -54,6 +54,10 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         [Description("Path to a compiled C# DLL to upload alongside a 'kind: Plugin' manifest (language: csharp).")]
         [CommandOption("--dll")]
         public string? Dll { get; init; }
+
+        [Description("Acknowledge that a container extension targets a hot seam and may add per-call latency. Required when the server returns 412.")]
+        [CommandOption("--accept-latency-cost")]
+        public bool AcceptLatencyCost { get; init; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -140,7 +144,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                             anyError = true;
                         break;
                     case ManifestResource.ExtensionCase extensionCase:
-                        if (!await ApplyExtensionAsync(client, extensionCase.Extension, settings.File, settings.Dll, cancellationToken))
+                        if (!await ApplyExtensionAsync(client, extensionCase.Extension, settings.File, settings.Dll, settings.AcceptLatencyCost, cancellationToken))
                             anyError = true;
                         break;
                     default:
@@ -375,6 +379,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
         ExtensionManifest manifest,
         string manifestFilePath,
         string? dllPath,
+        bool acceptLatencyCost,
         CancellationToken ct)
     {
         var host = manifest.Spec?.Host ?? string.Empty;
@@ -411,7 +416,7 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                 Stream? dllStream = string.IsNullOrWhiteSpace(dllPath) ? null : File.OpenRead(dllPath);
                 await using (dllStream)
                 {
-                    result = await client.ApplyExtensionAsync(rawYaml, dllStream, ct);
+                    result = await client.ApplyExtensionAsync(rawYaml, dllStream, acceptLatencyCost, ct);
                 }
             });
 
@@ -425,6 +430,14 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                 AnsiConsole.MarkupLine(
                     $"{manifest.Id} [{color}]{verb}[/] (extension, host: {Markup.Escape(host)}, handlers: {Markup.Escape(handlers)})");
                 return true;
+            }
+
+            if (result.Status == ExtensionApplyStatus.ValidationFailed &&
+                result.ErrorMessage?.Contains("hot-seam guard", StringComparison.OrdinalIgnoreCase) is true)
+            {
+                AnsiConsole.MarkupLine($"[yellow]latency-warning[/] {Markup.Escape(result.ErrorMessage)}");
+                AnsiConsole.MarkupLine("Re-run with [bold]--accept-latency-cost[/] to proceed.");
+                return false;
             }
 
             AnsiConsole.MarkupLine(
