@@ -174,7 +174,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             var docker = new DockerClientConfiguration().CreateClient();
             supervisor = new DockerContainerSupervisor(
                 descriptor, docker, _loggerFactory.CreateLogger<DockerContainerSupervisor>(),
-                _callTokenService, _options.OtlpEndpointUrl);
+                _callTokenService, _options.OtlpEndpointUrl, _options.LogEndpointUrl);
         }
 
         try

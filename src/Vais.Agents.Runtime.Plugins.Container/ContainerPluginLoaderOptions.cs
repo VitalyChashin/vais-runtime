@@ -38,6 +38,14 @@ public sealed class ContainerPluginLoaderOptions
     /// Set to null to disable OTLP injection.
     /// </summary>
     public string? OtlpEndpointUrl { get; set; }
+
+    /// <summary>
+    /// Base URL of the structured-log endpoint injected into Docker plugin containers as
+    /// <c>VAIS_LOG_ENDPOINT</c> (with <c>?source=plugin&amp;id=&lt;plugin-name&gt;</c> appended).
+    /// The runtime also injects <c>VAIS_LOG_TOKEN</c> with a 24-hour HMAC token so log records
+    /// arrive authenticated. Set to null to disable structured-log injection.
+    /// </summary>
+    public string? LogEndpointUrl { get; set; }
 }
 
 /// <summary>

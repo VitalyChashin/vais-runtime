@@ -21,6 +21,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
     private readonly ILogger _logger;
     private readonly ICallTokenService? _callTokenService;
     private readonly string? _otlpEndpointUrl;
+    private readonly string? _logEndpointUrl;
 
     private ContainerPluginStatus _status = ContainerPluginStatus.Created;
     private string? _containerId;
@@ -43,7 +44,8 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         IDockerClient docker,
         ILogger logger,
         ICallTokenService? callTokenService = null,
-        string? otlpEndpointUrl = null)
+        string? otlpEndpointUrl = null,
+        string? logEndpointUrl = null)
     {
         _descriptor = descriptor;
         _docker = docker;
@@ -51,6 +53,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         _logger = logger;
         _callTokenService = callTokenService;
         _otlpEndpointUrl = otlpEndpointUrl;
+        _logEndpointUrl = logEndpointUrl;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -76,6 +79,16 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             envVars.Add("OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf");
             envVars.Add($"OTEL_EXPORTER_OTLP_HEADERS=Authorization=vais-plugin-token {otlpToken}");
             envVars.Add($"OTEL_RESOURCE_ATTRIBUTES=vais.agent_id={_descriptor.Name}");
+        }
+
+        if (_logEndpointUrl is not null && _callTokenService is not null)
+        {
+            var logToken = _callTokenService.Generate(
+                runId: _descriptor.Name, agentId: _descriptor.Name, timeoutSeconds: 86_400);
+            // Include the source discriminator in the URL; the Python SDK posts directly to this URL.
+            var fullLogUrl = $"{_logEndpointUrl}?source=plugin&id={Uri.EscapeDataString(_descriptor.Name)}";
+            envVars.Add($"VAIS_LOG_ENDPOINT={fullLogUrl}");
+            envVars.Add($"VAIS_LOG_TOKEN={logToken}");
         }
 
         var exposedPorts = new Dictionary<string, EmptyStruct>
