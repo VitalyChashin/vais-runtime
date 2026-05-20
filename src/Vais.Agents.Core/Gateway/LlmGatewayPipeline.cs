@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -10,6 +11,8 @@ namespace Vais.Agents.Core;
 /// Builds and executes an <see cref="LlmGatewayMiddleware"/> chain against a
 /// standalone provider. Used by transport endpoints (e.g. the OpenAI-compatible
 /// gateway) that invoke the chain outside of a <see cref="StatefulAiAgent"/>.
+/// Each middleware is wrapped in a child <c>vais.gateway.llm.middleware/&lt;Name&gt;</c>
+/// span parented under whatever activity is current when the pipeline runs.
 /// </summary>
 public static class LlmGatewayPipeline
 {
@@ -35,8 +38,24 @@ public static class LlmGatewayPipeline
         for (var i = filters.Count - 1; i >= 0; i--)
         {
             var filter = (IAgentFilter)filters[i];
+            var middlewareName = filters[i].GetType().Name;
             var inner = next;
-            next = (req, ct) => filter.InvokeAsync(req, inner, ct);
+            next = async (req, ct) =>
+            {
+                using var span = AgenticDiagnostics.ActivitySource
+                    .StartActivity($"vais.gateway.llm.middleware/{middlewareName}");
+                span?.SetTag("middleware.name", middlewareName);
+                span?.SetTag("middleware.kind", "builtin");
+                try
+                {
+                    return await filter.InvokeAsync(req, inner, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    span?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    throw;
+                }
+            };
         }
 
         return next(request, cancellationToken);
@@ -47,6 +66,8 @@ public static class LlmGatewayPipeline
     /// <paramref name="middleware"/> chain and yields <see cref="CompletionUpdate"/>s
     /// as the provider produces them. Fires <c>OnStreamDeltaAsync</c> on each
     /// middleware per delta and <c>OnStreamCompleteAsync</c> once after the stream ends.
+    /// Each middleware is wrapped in a child <c>vais.gateway.llm.middleware/&lt;Name&gt;</c>
+    /// span that lives for the duration of that middleware's stream enumeration.
     /// </summary>
     public static async IAsyncEnumerable<CompletionUpdate> StreamAsync(
         CompletionRequest request,
@@ -66,8 +87,13 @@ public static class LlmGatewayPipeline
         for (var i = filters.Count - 1; i >= 0; i--)
         {
             var filter = (IStreamingAgentFilter)filters[i];
+            var middlewareName = filters[i].GetType().Name;
             var inner = next;
-            next = (req, ct) => filter.InvokeAsync(req, inner, ct);
+            next = (req, ct) => SpannedStreamAsync(
+                filter.InvokeAsync(req, inner, ct),
+                $"vais.gateway.llm.middleware/{middlewareName}",
+                middlewareName,
+                ct);
         }
 
         var stream = next(request, cancellationToken);
@@ -104,5 +130,18 @@ public static class LlmGatewayPipeline
             await ((IStreamingAgentFilter)filter)
                 .OnStreamCompleteAsync(final, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static async IAsyncEnumerable<CompletionUpdate> SpannedStreamAsync(
+        IAsyncEnumerable<CompletionUpdate> inner,
+        string spanName,
+        string middlewareName,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        using var span = AgenticDiagnostics.ActivitySource.StartActivity(spanName);
+        span?.SetTag("middleware.name", middlewareName);
+        span?.SetTag("middleware.kind", "builtin");
+        await foreach (var item in inner.WithCancellation(ct).ConfigureAwait(false))
+            yield return item;
     }
 }
