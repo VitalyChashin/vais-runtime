@@ -83,6 +83,18 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lifecycle);
         ArgumentNullException.ThrowIfNull(checkpointer);
+        // Sequential-only by design: this orchestrator selects exactly one outgoing edge per
+        // super-step (first-match-wins) and has no fan-out/fan-in barrier. A manifest with
+        // concurrent edges would silently mis-execute (only the first branch runs), so reject it
+        // loudly rather than return wrong results. Use MafGraphOrchestrator for concurrent graphs.
+        if (manifest.Edges.Any(e => e.Concurrent))
+        {
+            throw new NotSupportedException(
+                $"InProcessGraphOrchestrator is sequential-only and does not support concurrent " +
+                $"(fan-out/fan-in) edges, but graph '{manifest.Id}' declares them. Use " +
+                $"MafGraphOrchestrator (Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework) for " +
+                $"concurrent execution.");
+        }
         _manifest = manifest;
         _registry = registry;
         _lifecycle = lifecycle;

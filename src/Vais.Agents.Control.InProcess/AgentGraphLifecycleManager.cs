@@ -487,12 +487,11 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             return _orchestratorFactory(effectiveManifest, runId);
 
         if (effectiveManifest.Edges.Any(e => e.Concurrent))
-            _logger.LogWarning(
-                "Graph '{GraphId}' has concurrent edges but no orchestratorFactory is configured. " +
-                "InProcessGraphOrchestrator does not support fan-out — concurrent branches execute " +
-                "sequentially and only the last branch's state is merged. Wire MafGraphOrchestrator " +
-                "via the orchestratorFactory parameter to enable concurrent execution.",
-                effectiveManifest.Id);
+            throw new InvalidOperationException(
+                $"Graph '{effectiveManifest.Id}' declares concurrent (fan-out/fan-in) edges, but no " +
+                "orchestratorFactory is configured. InProcessGraphOrchestrator is sequential-only and " +
+                "would mis-execute concurrent branches (only the first matching edge is followed). Wire " +
+                "MafGraphOrchestrator via the orchestratorFactory parameter to enable concurrent execution.");
 
         return new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
             effectiveManifest,

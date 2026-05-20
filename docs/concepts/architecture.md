@@ -186,7 +186,7 @@ Three styles live together:
 - **Handoff** — `Handoff` record (v0.4 data contract; consumer-authored control flow).
 - **Graph** — `IAgentGraph<TState>` (v0.9) with Pregel/BSP super-steps, declarative manifests, checkpointable interrupts.
 
-Graph ships two orchestrators: `InProcessGraphOrchestrator` in Core (zero-MAF-dep) and `MafGraphOrchestrator` in `Orchestration.Graph.MicrosoftAgentFramework` (translates to an MAF `Workflow`). See [graph orchestration](graph-orchestration.md).
+Graph ships two orchestrators: `InProcessGraphOrchestrator` in Core (zero-MAF-dep) and `MafGraphOrchestrator` in `Orchestration.Graph.MicrosoftAgentFramework` (translates to an MAF `Workflow`). They are semantically identical for sequential/conditional graphs, but **concurrent (fan-out/fan-in) edges require `MafGraphOrchestrator`** — `InProcessGraphOrchestrator` is sequential-only and rejects manifests with concurrent edges. The deployable runtime always wires `MafGraphOrchestrator` via the lifecycle manager's `orchestratorFactory`. See [graph orchestration](graph-orchestration.md).
 
 **Cross-runtime refs (v0.20).** A `kind: Agent` node in a graph manifest can carry `ref.runtimeUrl` — an absolute http/https URI pointing at a different runtime instance. The orchestrator routes that node's invocation to `HttpAgentRemoteInvoker` (in `Control.Http.Client`) rather than the local lifecycle manager. Bearer tokens are forwarded from the inbound HTTP context. See [cross-runtime graphs](cross-runtime-graphs.md).
 
@@ -383,9 +383,10 @@ Parallel to the agent control-plane — adds `AgentGraph` as a first-class manag
 │                                                                    │
 │  • IAgentGraphRegistry → OrleansAgentGraphRegistry               │
 │    (same `vais.agents` grain storage, versioned manifests)         │
-│  • Unary invoke  → InProcessGraphOrchestrator<JsonState>           │
-│  • Stream invoke → InProcessGraphOrchestrator.StreamAsync          │
-│    → SSE event serializer (same vais.agents/v1 event schema)       │
+│  • Invoke + stream → orchestratorFactory (MAF in the runtime);     │
+│    InProcessGraphOrchestrator is the sequential-only fallback —     │
+│    concurrent fan-out/fan-in edges require MAF.                     │
+│    → SSE event serializer (same vais.agents/v1 event schema)        │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
 ```
