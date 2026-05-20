@@ -14,10 +14,26 @@ var builder = WebApplication.CreateBuilder(args);
 var options = RuntimeOptions.FromEnvironment();
 options.EnsureValid();
 
+// Fail fast on wiring mistakes: validate the whole DI graph at build (every registered service
+// is constructable) and surface captive-dependency / scope violations instead of deferring them
+// to the first request. On by default in Development under WebApplicationBuilder; we enable it in
+// every environment so the production container catches latent misconfiguration at boot.
+builder.Host.UseDefaultServiceProvider((_, o) =>
+{
+    o.ValidateOnBuild = true;
+    o.ValidateScopes = true;
+});
+
 builder.Host.UseOrleans(silo => CompositionRoot.ConfigureSilo(silo, options));
 CompositionRoot.ConfigureServices(builder.Services, options, builder.Configuration);
 
 var app = builder.Build();
+
+// Startup self-check: resolve every always-on critical contract once so a missing registration
+// fails the boot with a clear message instead of a first-invoke ManifestInstantiationException.
+// Covers the service-located deps (IAgentRuntime, IBackgroundAgentTracker, …) resolved during
+// translation/activation that ValidateOnBuild cannot see.
+CriticalRuntimeContracts.Verify(app.Services);
 
 app.Logger.LogInformation(
     "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} persistence={Persistence} pubsub={PubSub} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests}",

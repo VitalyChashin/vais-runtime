@@ -37,28 +37,12 @@ public static class AgentManifestInstantiatorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddSingleton<ICompletionProviderPool>(sp =>
-            new CompletionProviderPool(
-                sp.GetServices<IModelProviderFactory>(),
-                sp.GetRequiredService<Vais.Agents.Control.ISecretResolver>()));
-
-        services.TryAddSingleton<IAgentManifestTranslator>(sp => new AgentManifestTranslator(
-            sp.GetRequiredService<IAgentRegistry>(),
-            sp.GetRequiredService<ICompletionProviderPool>(),
-            sp.GetServices<IGuardrailFactory>(),
-            sp,
-            sp.GetService<IStaticToolRegistry>(),
-            sp.GetService<IPromptTemplateRegistry>(),
-            sp.GetService<IPromptFileLoader>(),
-            sp.GetService<Vais.Agents.Runtime.Plugins.IPluginHandlerRegistry>(),
-            sp.GetService<Vais.Agents.Control.IManifestApplyDiagnosticsSink>(),
-            sp.GetServices<INamedToolSourceProvider>(),
-            sp.GetService<ILlmGatewayConfigRegistry>(),
-            sp.GetService<IMcpGatewayConfigRegistry>(),
-            sp.GetService<IMcpServerRegistry>(),
-            sp.GetService<ILlmGatewayMiddlewareFactory>(),
-            sp.GetService<IToolGatewayMiddlewareFactory>(),
-            sp.GetService<Microsoft.Extensions.Logging.ILogger<AgentManifestTranslator>>()));
+        // Type-registered (not factory-delegate) so the container constructs them and
+        // ValidateOnBuild validates their required ctor dependencies at startup. Both
+        // constructors take their required services as parameters and default every optional
+        // dependency to null; MS.DI honors those defaults when a service is not registered.
+        services.TryAddSingleton<ICompletionProviderPool, CompletionProviderPool>();
+        services.TryAddSingleton<IAgentManifestTranslator, AgentManifestTranslator>();
 
         // Alias — AgentLifecycleManager (Control.InProcess) depends on the narrower
         // IAgentManifestInvalidator contract; point it at the translator singleton
