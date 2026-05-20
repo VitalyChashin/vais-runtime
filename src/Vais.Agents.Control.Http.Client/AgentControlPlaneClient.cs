@@ -586,6 +586,18 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<ExtensionMetricsResponse?> GetExtensionMetricsAsync(
+        string extensionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(extensionId);
+        using var response = await _http.GetAsync(
+            $"/v1/extensions/{Uri.EscapeDataString(extensionId)}/metrics", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ExtensionMetricsResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<PluginSourcePushResponse> PushPluginSourceAsync(
         string pluginName, Stream sourceTarGz, CancellationToken cancellationToken = default)
     {

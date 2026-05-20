@@ -3231,6 +3231,14 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<AgentExtensionChainResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        // GET /extensions/{name}/metrics — rolling-window latency metrics (EXO-14)
+        extensions.MapGet("/extensions/{name}/metrics", GetExtensionMetricsAsync)
+            .WithName("Extensions.Metrics")
+            .WithSummary("Return p50/p95 latency metrics for all handlers of an extension (5-minute rolling window).")
+            .Produces<ExtensionMetricsResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
     }
 
@@ -3385,6 +3393,24 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
         return Task.FromResult(Results.Ok(
             new ExtensionQueryResponse(ToExtensionInfo(descriptor), descriptor.Manifest)));
+    }
+
+    private static Task<IResult> GetExtensionMetricsAsync(string name, HttpContext http, CancellationToken ct)
+    {
+        var metrics = http.RequestServices.GetService<IExtensionMetricsService>();
+        if (metrics is null)
+            return Task.FromResult(Results.Problem(
+                "Extension metrics service not registered.", statusCode: StatusCodes.Status503ServiceUnavailable));
+
+        var result = metrics.GetMetrics(name);
+        if (result is null)
+            return Task.FromResult(Results.NotFound(new { error = $"no metrics recorded for extension '{name}'" }));
+
+        var items = result.Handlers
+            .Select(h => new ExtensionHandlerMetricsItem(
+                h.HandlerId, h.Seam, h.P50Seconds, h.P95Seconds, h.ErrorRate, h.TotalInvocations))
+            .ToArray();
+        return Task.FromResult(Results.Ok(new ExtensionMetricsResponse(result.ExtensionId, items)));
     }
 
     private static Task<IResult> GetAgentExtensionsAsync(string id, HttpContext http, CancellationToken ct)

@@ -24,3 +24,15 @@ public sealed record HandlerBinding(
     int Priority,
     string FailureMode,
     object HandlerInstance);
+
+/// <summary>
+/// Immutable descriptor for telemetry — carried by both container and in-process
+/// handler paths so <see cref="ExtensionInvocationInstrumentation"/> can tag spans
+/// and metrics without re-accessing the parent <see cref="ExtensionDescriptor"/>.
+/// </summary>
+internal sealed record HandlerBindingDescriptor(
+    string ExtensionId,
+    string Version,
+    string HandlerId,
+    string Seam,
+    string Host);

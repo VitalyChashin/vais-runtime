@@ -1010,3 +1010,41 @@ static Vais.Agents.Control.Http.ExtensionListResponse.operator !=(Vais.Agents.Co
 static Vais.Agents.Control.Http.ExtensionListResponse.operator ==(Vais.Agents.Control.Http.ExtensionListResponse? left, Vais.Agents.Control.Http.ExtensionListResponse? right) -> bool
 static Vais.Agents.Control.Http.ExtensionQueryResponse.operator !=(Vais.Agents.Control.Http.ExtensionQueryResponse? left, Vais.Agents.Control.Http.ExtensionQueryResponse? right) -> bool
 static Vais.Agents.Control.Http.ExtensionQueryResponse.operator ==(Vais.Agents.Control.Http.ExtensionQueryResponse? left, Vais.Agents.Control.Http.ExtensionQueryResponse? right) -> bool
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.ExtensionHandlerMetricsItem(string! HandlerId, string! Seam, double P50Seconds, double P95Seconds, double ErrorRate, int TotalInvocations) -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.HandlerId.get -> string!
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.HandlerId.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.Seam.get -> string!
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.Seam.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.P50Seconds.get -> double
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.P50Seconds.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.P95Seconds.get -> double
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.P95Seconds.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.ErrorRate.get -> double
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.ErrorRate.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.TotalInvocations.get -> int
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.TotalInvocations.init -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.<Clone>$() -> Vais.Agents.Control.Http.ExtensionHandlerMetricsItem!
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.Deconstruct(out string! HandlerId, out string! Seam, out double P50Seconds, out double P95Seconds, out double ErrorRate, out int TotalInvocations) -> void
+Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.Equals(Vais.Agents.Control.Http.ExtensionHandlerMetricsItem? other) -> bool
+override Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.ToString() -> string!
+static Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.operator ==(Vais.Agents.Control.Http.ExtensionHandlerMetricsItem? left, Vais.Agents.Control.Http.ExtensionHandlerMetricsItem? right) -> bool
+static Vais.Agents.Control.Http.ExtensionHandlerMetricsItem.operator !=(Vais.Agents.Control.Http.ExtensionHandlerMetricsItem? left, Vais.Agents.Control.Http.ExtensionHandlerMetricsItem? right) -> bool
+Vais.Agents.Control.Http.ExtensionMetricsResponse
+Vais.Agents.Control.Http.ExtensionMetricsResponse.ExtensionMetricsResponse(string! ExtensionId, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerMetricsItem!>! Handlers) -> void
+Vais.Agents.Control.Http.ExtensionMetricsResponse.ExtensionId.get -> string!
+Vais.Agents.Control.Http.ExtensionMetricsResponse.ExtensionId.init -> void
+Vais.Agents.Control.Http.ExtensionMetricsResponse.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerMetricsItem!>!
+Vais.Agents.Control.Http.ExtensionMetricsResponse.Handlers.init -> void
+Vais.Agents.Control.Http.ExtensionMetricsResponse.<Clone>$() -> Vais.Agents.Control.Http.ExtensionMetricsResponse!
+Vais.Agents.Control.Http.ExtensionMetricsResponse.Deconstruct(out string! ExtensionId, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.ExtensionHandlerMetricsItem!>! Handlers) -> void
+Vais.Agents.Control.Http.ExtensionMetricsResponse.Equals(Vais.Agents.Control.Http.ExtensionMetricsResponse? other) -> bool
+override Vais.Agents.Control.Http.ExtensionMetricsResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.ExtensionMetricsResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.ExtensionMetricsResponse.ToString() -> string!
+static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator ==(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
+static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator !=(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetExtensionMetricsAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionMetricsResponse?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetExtensionMetricsAsync(string! extensionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.ExtensionMetricsResponse?>!

@@ -9,6 +9,7 @@ This guide covers:
 3. [Scope, priority, and failure modes](#3-scope-priority-and-failure-modes) — operator-visible knobs.
 4. [Hot-seam tradeoffs](#4-hot-seam-tradeoffs) — when `host: container` adds latency you can see.
 5. [Conformance testing](#5-conformance-testing) — run the shared suite against your extension.
+6. [Observability](#6-observability) — what the runtime emits automatically and how to add child spans.
 
 ---
 
@@ -361,3 +362,86 @@ public sealed class MyExtensionConformanceTests : ExtensionConformanceBase
 ```
 
 The base class provides 6 tests covering registration, scope, priority ordering, remove, and swap. All tests must pass before an extension host is considered conformant.
+
+---
+
+## 6. Observability
+
+### What the runtime emits automatically
+
+You do **not** need to instrument your extension to be observable. Every handler invocation — both `host: csharp` and `host: container` — is wrapped by the runtime in:
+
+- An OpenTelemetry span named `vais.extension.handler.invoke` with tags `vais.extension.id`, `vais.handler.id`, `vais.seam`, `vais.handler.host`, `vais.agent.id`, `vais.run.id`, `vais.handler.action` (`next` / `mutate` / `shortCircuit` / `skip` / `fail`).
+- A Prometheus histogram `vais_extension_handler_invoke_duration_seconds` and counter `vais_extension_handler_invoke_total` with labels `extension`, `version`, `handler`, `seam`, `host`, `action`.
+
+For container extensions the runtime also injects the W3C `traceparent` header on every `/pre` and `/post` request so the container's own spans parent correctly under the runtime invocation span.
+
+### Viewing metrics
+
+```bash
+vais ext metrics <extension-name>
+```
+
+Reports p50/p95 latency, error rate, and total invocations for each handler in the past 5 minutes.
+
+The Workbench **Extensions** panel shows the same data live at 10-second refresh.
+
+The default Grafana dashboard at `deploy/observability/grafana/dashboards/extensions.json` provides five panels: p50/p95 latency trend, invocations per minute, error rate, skip rate, and a top-5 slowest handlers table. Load it via Grafana's dashboard import or drop the file in the provisioning folder.
+
+### Emitting child spans from your extension
+
+#### C# in-process
+
+Use the shared `ActivitySource` from `ExtensionTelemetry`:
+
+```csharp
+using Vais.Agents.Runtime.Extensions;
+
+public override async Task InvokeAsync(AgentInputContext ctx, Func<Task> next, CancellationToken ct = default)
+{
+    using var span = ExtensionTelemetry.ActivitySource.StartActivity("my-ext.lookup");
+    span?.SetTag("store", "mem0");
+    var result = await _store.QueryAsync(ctx.AgentId, ctx.Message, ct);
+    span?.SetTag("result.count", result.Count);
+    ctx.Properties["mem0.memories"] = result;
+    await next();
+}
+```
+
+#### Container (Python, Go, or any language)
+
+The runtime sets `traceparent`, `tracestate`, `X-Vais-Run-Id`, and `X-Vais-Agent-Id` on every `/pre` and `/post` request. Extract the context and use your language's OTel SDK to emit child spans:
+
+**Python:**
+
+```python
+from opentelemetry import trace, propagate
+
+tracer = trace.get_tracer("my-extension")
+
+@app.post("/handlers/py-in/pre")
+async def pre(request: Request, body: PreRequest):
+    parent_ctx = propagate.extract(request.headers)
+    with tracer.start_as_current_span("my-ext.lookup", context=parent_ctx) as span:
+        span.set_attribute("vais.run.id", request.headers.get("X-Vais-Run-Id", ""))
+        result = await do_lookup(body.context.agentId, body.context.message)
+        span.set_attribute("result.count", len(result))
+    return {"action": "mutate", "contextPatch": {"memories": result}}
+```
+
+Configure the OTLP exporter to send spans to the runtime's receiver on port 5001:
+
+```python
+# In your container startup or via environment variable:
+# OTEL_EXPORTER_OTLP_ENDPOINT=http://<runtime>:5001/v1/traces
+# OTEL_SERVICE_NAME=vais-extension/<extension-id>
+#
+# The runtime injects these automatically when starting the container.
+# You only need to ensure `opentelemetry-exporter-otlp` is in your dependencies.
+```
+
+### Metric cardinality guidelines
+
+- **Do not add `agent_id` to custom metric labels.** Agent-level cost attribution is available through the trace stream (Langfuse or any OTel backend). Adding `agent_id` to a metric instrument creates one time series per agent per handler, which grows without bound as agents are created.
+- **Avoid adding `version` to custom histograms.** The runtime already tracks version in the invocation histogram. If you emit your own metrics, omit `version` or accept that hot-reload cycles create new time series.
+- For PromQL queries without version fan-out, sum over the `version` label: `sum without (version) (rate(vais_extension_handler_invoke_total[5m]))`.

@@ -12,8 +12,11 @@ namespace Vais.Agents.Runtime.Plugins.Container.Otlp;
 
 /// <summary>
 /// Maps the OTLP trace receiver endpoint on the internal port (5001).
-/// Container plugins send spans to <c>POST /v1/otlp/v1/traces</c> with
+/// Container plugins and extensions send spans to <c>POST /v1/otlp/v1/traces</c> with
 /// <c>Authorization: vais-plugin-token &lt;token&gt;</c>.
+/// Optional query parameters discriminate the source:
+/// <c>?source=extension&amp;id=&lt;extension-id&gt;</c> causes forwarded spans to be tagged
+/// <c>vais.span.source=extension_otlp</c> and <c>vais.extension.id=&lt;id&gt;</c>.
 /// The runtime validates the token, extracts the agent identity, and re-emits
 /// the spans as .NET <see cref="System.Diagnostics.Activity"/> objects so they
 /// flow through the existing OpenTelemetry pipeline.
@@ -75,9 +78,15 @@ public static class PluginOtlpEndpointRouteBuilderExtensions
                 return;
             }
 
+            // Optional URL discriminator: ?source=extension&id=<extension-id>
+            var source = ctx.Request.Query.TryGetValue("source", out var srcVal)
+                ? srcVal.ToString() : "plugin_otlp";
+            var extensionId = ctx.Request.Query.TryGetValue("id", out var idVal)
+                ? idVal.ToString() : (string?)null;
+
             try
             {
-                forwarder.Forward(spans, agentId);
+                forwarder.Forward(spans, agentId, source, extensionId);
             }
             catch (Exception ex)
             {

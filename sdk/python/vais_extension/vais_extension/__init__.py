@@ -37,6 +37,7 @@ from .wire import (
     HandlerAdvertisement,
     AdvertisedHandler,
 )
+from .telemetry import extract_parent_context, span
 
 __all__ = [
     "AgentInputMiddleware",
@@ -48,6 +49,8 @@ __all__ = [
     "PostResponse",
     "HandlerAdvertisement",
     "AdvertisedHandler",
+    "extract_parent_context",
+    "span",
 ]
 
 __version__ = "0.1.0"

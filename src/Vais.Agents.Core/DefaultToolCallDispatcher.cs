@@ -115,13 +115,30 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             request.ToolName, request.CallId, request.Arguments, context);
 
         // Build right-to-left middleware pipeline; innermost = InnerDispatchAsync.
+        // Each middleware is wrapped in a child vais.gateway.tool.middleware/<Name> span.
         Func<Task<ToolCallOutcome>> chain =
             () => InnerDispatchAsync(request, context, cancellationToken);
         for (var i = _gatewayMiddleware.Length - 1; i >= 0; i--)
         {
             var mw = _gatewayMiddleware[i];
+            var middlewareName = mw.GetType().Name;
             var prev = chain;
-            chain = () => mw.InvokeAsync(gwCtx, prev, cancellationToken);
+            chain = async () =>
+            {
+                using var span = AgenticDiagnostics.ActivitySource
+                    .StartActivity($"vais.gateway.tool.middleware/{middlewareName}");
+                span?.SetTag("middleware.name", middlewareName);
+                span?.SetTag("middleware.kind", "builtin");
+                try
+                {
+                    return await mw.InvokeAsync(gwCtx, prev, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    span?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    throw;
+                }
+            };
         }
 
         return await chain().ConfigureAwait(false);

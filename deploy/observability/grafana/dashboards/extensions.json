@@ -1,0 +1,201 @@
+{
+  "title": "Vais — Extension Handlers",
+  "uid": "vais-extensions",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "description": "Per-handler latency, throughput, error and skip rates for all registered Vais extension handlers. Metrics are emitted by ExtensionInvocationInstrumentation via vais_extension_handler_invoke_duration_seconds and vais_extension_handler_invoke_total.",
+  "tags": ["vais", "extensions", "observability"],
+  "templating": {
+    "list": [
+      {
+        "name": "extension",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "definition": "label_values(vais_extension_handler_invoke_total, extension)",
+        "label": "Extension",
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "seam",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "definition": "label_values(vais_extension_handler_invoke_total, seam)",
+        "label": "Seam",
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "host",
+        "type": "query",
+        "datasource": { "type": "prometheus" },
+        "definition": "label_values(vais_extension_handler_invoke_total, host)",
+        "label": "Host",
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Handler p95 Latency",
+      "description": "95th-percentile invocation duration per handler. For container extensions this includes the HTTP round-trip to the extension container. Spikes indicate slow container response or network congestion.",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le, extension, handler, seam) (rate(vais_extension_handler_invoke_duration_seconds_bucket{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m])))",
+          "legendFormat": "{{extension}} / {{handler}} ({{seam}}) p95"
+        },
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum by (le, extension, handler, seam) (rate(vais_extension_handler_invoke_duration_seconds_bucket{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m])))",
+          "legendFormat": "{{extension}} / {{handler}} ({{seam}}) p50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Invocations per Minute",
+      "description": "Handler invocation throughput. Drops indicate scope changes or extension removal. Unexpected spikes may indicate retry loops.",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (extension, handler, seam) (rate(vais_extension_handler_invoke_total{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[1m])) * 60",
+          "legendFormat": "{{extension}} / {{handler}} ({{seam}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Error Rate",
+      "description": "Rate of invocations that ended with action=fail. For failureMode=fail extensions this means the agent turn was aborted. High error rates here warrant investigation of the extension container logs.",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (extension, handler) (rate(vais_extension_handler_invoke_total{action=\"fail\",extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m])) / sum by (extension, handler) (rate(vais_extension_handler_invoke_total{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m]))",
+          "legendFormat": "{{extension}} / {{handler}} fail%"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Skip Rate",
+      "description": "Rate of invocations that ended with action=skip (failureMode=skip on an erroring handler). A rising skip rate means the handler is failing silently. Safe only for best-effort decorators.",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "sum by (extension, handler) (rate(vais_extension_handler_invoke_total{action=\"skip\",extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m])) / sum by (extension, handler) (rate(vais_extension_handler_invoke_total{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m]))",
+          "legendFormat": "{{extension}} / {{handler}} skip%"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "orange", "value": 0.2 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Top-5 Slowest Handlers (p95)",
+      "description": "Handlers ranked by p95 latency in the current time window. Use to identify which extensions most affect per-turn overhead. For container extensions, latency > 100 ms warrants a --accept-latency-cost review.",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 7 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus" },
+          "expr": "topk(5, histogram_quantile(0.95, sum by (le, extension, handler, seam, host) (rate(vais_extension_handler_invoke_duration_seconds_bucket{extension=~\"$extension\",seam=~\"$seam\",host=~\"$host\"}[5m]))))",
+          "legendFormat": "{{extension}} / {{handler}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        { "id": "sortBy", "options": { "fields": [{ "displayName": "Value", "desc": true }] } },
+        { "id": "limit", "options": { "limitCount": 5 } }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "extension" }, "properties": [{ "id": "displayName", "value": "Extension" }] },
+          { "matcher": { "id": "byName", "options": "handler" },   "properties": [{ "id": "displayName", "value": "Handler" }] },
+          { "matcher": { "id": "byName", "options": "seam" },      "properties": [{ "id": "displayName", "value": "Seam" }] },
+          { "matcher": { "id": "byName", "options": "host" },      "properties": [{ "id": "displayName", "value": "Host" }] },
+          { "matcher": { "id": "byName", "options": "Value" },     "properties": [{ "id": "displayName", "value": "p95 (s)" }] }
+        ]
+      }
+    }
+  ]
+}

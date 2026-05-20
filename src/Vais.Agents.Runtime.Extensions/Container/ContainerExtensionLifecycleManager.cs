@@ -120,7 +120,10 @@ internal sealed class ContainerExtensionLifecycleManager
             var preEndpoint  = adv.PreEndpoint  ?? $"/handlers/{handler.Id}/pre";
             var postEndpoint = adv.PostEndpoint ?? $"/handlers/{handler.Id}/post";
             var proxyHttp = new HttpClient { BaseAddress = baseUri };
-            var proxy = new HttpContainerHandlerProxy(proxyHttp, preEndpoint, postEndpoint, handler.FailureMode, _logger);
+            var bindingDescriptor = new HandlerBindingDescriptor(
+                manifest.Id, manifest.Version, handler.Id, handler.Seam, "container");
+            var proxy = new HttpContainerHandlerProxy(
+                proxyHttp, preEndpoint, postEndpoint, handler.FailureMode, bindingDescriptor, _logger);
 
             object instance = handler.Seam switch
             {

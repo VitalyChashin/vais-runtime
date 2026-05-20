@@ -6,11 +6,22 @@ import type {
   McpGatewayConfigManifest,
   McpServerManifest,
   PluginInfo,
+  ExtensionInfo,
+  ExtensionMetricsResponse,
   ListResponse,
   ValidateResult,
 } from './types'
 
 export const listPlugins = (c: VaisClient) => c.get<{ items: PluginInfo[] }>('/v1/plugins').then(r => r.items)
+
+export const listExtensions = (c: VaisClient) =>
+  c.get<{ items: ExtensionInfo[] }>('/v1/extensions').then(r => r.items)
+export const getExtension = (c: VaisClient, id: string) =>
+  c.get<{ extension: ExtensionInfo }>(`/v1/extensions/${encodeURIComponent(id)}`).then(r => r.extension)
+export const getExtensionMetrics = (c: VaisClient, id: string) =>
+  c.get<ExtensionMetricsResponse>(`/v1/extensions/${encodeURIComponent(id)}/metrics`)
+export const deleteExtension = (c: VaisClient, id: string) =>
+  c.delete(`/v1/extensions/${encodeURIComponent(id)}`)
 
 export const listAgents = (c: VaisClient) => c.get<ListResponse<AgentManifest>>('/v1/agents').then(r => r.items)
 export const getAgent = (c: VaisClient, id: string) => c.get<{ manifest: AgentManifest }>(`/v1/agents/${id}`).then(r => r.manifest)

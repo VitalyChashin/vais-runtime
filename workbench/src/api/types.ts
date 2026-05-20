@@ -5,7 +5,35 @@ export type ResourceKind =
   | 'mcp-gateways'
   | 'mcp-servers'
 
-export type SelectionKind = ResourceKind | 'plugins'
+export type SelectionKind = ResourceKind | 'plugins' | 'extensions'
+
+export interface ExtensionHandlerInfo {
+  handlerId: string
+  seam: string
+  priority: number
+  failureMode: string
+}
+
+export interface ExtensionInfo {
+  extensionId: string
+  version: string
+  host: string
+  handlers: ExtensionHandlerInfo[]
+}
+
+export interface ExtensionMetricsItem {
+  handlerId: string
+  seam: string
+  p50Seconds: number
+  p95Seconds: number
+  errorRate: number
+  totalInvocations: number
+}
+
+export interface ExtensionMetricsResponse {
+  extensionId: string
+  handlers: ExtensionMetricsItem[]
+}
 
 export interface PluginInfo {
   name: string

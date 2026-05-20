@@ -513,6 +513,13 @@ public interface IAgentControlPlaneClient
     Task<AgentExtensionChainResponse?> GetAgentExtensionsAsync(string agentId, CancellationToken cancellationToken = default)
         => Task.FromResult((AgentExtensionChainResponse?)null);
 
+    /// <summary>
+    /// GET /v1/extensions/{name}/metrics — rolling-window p50/p95 latency metrics.
+    /// Returns <see langword="null"/> when no samples have been recorded yet.
+    /// </summary>
+    Task<ExtensionMetricsResponse?> GetExtensionMetricsAsync(string extensionId, CancellationToken cancellationToken = default)
+        => Task.FromResult((ExtensionMetricsResponse?)null);
+
     /// <summary>GET /v1/diagnostics/spans — recent OTel spans from the in-process buffer. Default: empty (buffer not enabled).</summary>
     Task<DiagSpanListResponse> GetDiagSpansAsync(string? source = null, int limit = 100, CancellationToken cancellationToken = default)
         => Task.FromResult(new DiagSpanListResponse(Array.Empty<DiagSpanRecord>()));

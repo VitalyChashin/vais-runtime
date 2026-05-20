@@ -13,6 +13,7 @@ import { ProbeStub } from '../TestPane/ProbeStub'
 import { usePlugins } from '../../plugins/usePlugins'
 import { PluginTab } from '../../plugins/PluginTab'
 import { PluginDetail } from './PluginDetail'
+import { ExtensionDetail } from './ExtensionDetail'
 import { GraphTab } from './GraphTab'
 
 export function DetailPane() {
@@ -41,6 +42,10 @@ export function DetailPane() {
 
   if (kind === 'plugins') {
     return <PluginDetail pluginName={id} />
+  }
+
+  if (kind === 'extensions') {
+    return <ExtensionDetail extensionId={id} />
   }
 
   const matchingPlugins = plugins.filter(p => p.kind === kind)
