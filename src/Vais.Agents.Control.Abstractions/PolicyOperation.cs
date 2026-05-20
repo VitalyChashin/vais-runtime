@@ -4,10 +4,10 @@
 namespace Vais.Agents.Control;
 
 /// <summary>
-/// The seven universal lifecycle verbs the control plane routes through
-/// <see cref="IAgentPolicyEngine"/>. Mirrors the method set on
-/// <see cref="IAgentLifecycleManager"/>; extending that interface requires
-/// extending this enum in lock-step.
+/// The operations the control plane routes through <see cref="IAgentPolicyEngine"/> —
+/// the seven universal agent-lifecycle verbs (mirroring <see cref="IAgentLifecycleManager"/>)
+/// plus the graph, gateway-config, MCP-server, container-plugin, eval-suite, and extension
+/// verbs. Adding a control-plane operation requires extending this enum in lock-step.
 /// </summary>
 public enum PolicyOperation
 {

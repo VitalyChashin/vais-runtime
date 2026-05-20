@@ -1,119 +1,120 @@
 # Architecture
 
-Vais.Agents ships **32 packages** — 31 libraries plus the `Vais.Agents.Cli` dotnet tool. Each has one job. Consumers pick the subset that matches their scenario; dependencies between packages are strict — lower layers never reference higher ones.
+Vais.Agents ships as **56 projects** under `src/` — **54 NuGet packages** (52 libraries + the `Vais.Agents.Cli` dotnet tool + the `Vais.Plugin.Sdk` container-plugin SDK) plus 2 in-repo host projects that build container images rather than packages (`Vais.Agents.Runtime.Host`, `Vais.Agents.Control.KubernetesOperator.Host`, both `IsPackable=false`). Each package has one job; consumers pick the subset that matches their scenario. The dependency graph is a DAG — no cycles — but it is not a single linear stack: `Hosting.Orleans` and `Control.Http.Server` act as **aggregation layers** that reference the feature libraries the running host needs (eval, plugins, extensions, observability stores). The [packages reference](../reference/packages.md) is the authoritative per-package table.
 
 ## Package layering
 
 ```mermaid
 flowchart TD
-    subgraph Contracts
-        A[Vais.Agents.Abstractions]
-        CA[Vais.Agents.Control.Abstractions]
+    subgraph CONTRACTS["Contracts (2)"]
+        A[Abstractions]
+        CA[Control.Abstractions]
     end
-
-    subgraph Core
-        C[Vais.Agents.Core]
+    subgraph CORE["Core (2)"]
+        C[Core]
+        PFX[Core.PowerFx]
     end
-
-    subgraph Adapters
-        SK[Vais.Agents.Ai.SemanticKernel]
-        MAF[Vais.Agents.Ai.MicrosoftAgentFramework]
+    subgraph ADP["Adapters (2)"]
+        SK[Ai.SemanticKernel]
+        MAF[Ai.MicrosoftAgentFramework]
     end
-
-    subgraph Hosting
-        MEM[Vais.Agents.Hosting.InMemory]
-        ORL[Vais.Agents.Hosting.Orleans]
+    subgraph LLMGW["LLM gateway plugins (7)"]
+        GF[Fallback]
+        GSC[SemanticCache]
+        GG[Governance]
+        GSO[StructuredOutput]
+        GT[Testing]
+        GP[Prometheus]
+        GOAI[OpenAiCompat]
     end
-
-    subgraph Persistence
-        RED[Vais.Agents.Persistence.Redis]
-        PG[Vais.Agents.Persistence.Postgres]
-        VD[Vais.Agents.Persistence.VectorData]
+    subgraph MCPGW["MCP / tool gateway plugins (5)"]
+        GMR[McpReliability]
+        GMC[McpCache]
+        GMG[McpGovernance]
+        GMS[McpSecurity]
+        GMT[McpTransformation]
     end
-
-    subgraph Observability
-        OT[Vais.Agents.Observability.OpenTelemetry]
-        LF[Vais.Agents.Observability.Langfuse]
+    subgraph OBS["Observability (9)"]
+        OT[OpenTelemetry]
+        LF[Langfuse]
+        OPR[Prometheus]
+        ORS[RunStore]
+        OARS[AgentRunStore]
+        OAL[AgentLogs]
+        OGES[GatewayEventStore]
+        OMG[McpGatewayEventStore]
+        OME[McpEventStore]
     end
-
-    subgraph Protocols
-        MCP[Vais.Agents.Protocols.Mcp]
-        A2A[Vais.Agents.Protocols.A2A]
-        MCPS[Vais.Agents.Protocols.Mcp.Server]
-        A2AS[Vais.Agents.Protocols.A2A.Server]
+    subgraph PROT["Protocols (4) + Identity (1)"]
+        MCP[Protocols.Mcp]
+        A2A[Protocols.A2A]
+        MCPS[Protocols.Mcp.Server]
+        A2AS[Protocols.A2A.Server]
+        OID[Identity.Oidc]
     end
-
-    subgraph Orchestration
-        GMAF[Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework]
+    subgraph ORCH["Orchestration + Eval"]
+        GMAF[Orchestration.Graph.MAF]
+        EVAL[Eval]
     end
-
-    subgraph Control plane
-        CIP[Vais.Agents.Control.InProcess]
-        CMJ[Vais.Agents.Control.Manifests.Json]
-        CMY[Vais.Agents.Control.Manifests.Yaml]
-        CHS[Vais.Agents.Control.Http.Server]
-        CHC[Vais.Agents.Control.Http.Client]
-        CKO[Vais.Agents.Control.KubernetesOperator]
-        COP[Vais.Agents.Control.Policy.Opa]
+    subgraph CTL["Control plane (8)"]
+        CIP[InProcess]
+        CMJ[Manifests.Json]
+        CMY[Manifests.Yaml]
+        CHS[Http.Server]
+        CHC[Http.Client]
+        CKO[KubernetesOperator]
+        COP[Policy.Opa]
+        CMCP[Control.Mcp]
     end
-
-    subgraph Tools
-        CLI[Vais.Agents.Cli]
+    subgraph RT["Runtime tier (5)"]
+        RINST[Runtime.Instantiation]
+        RPL[Runtime.Plugins]
+        RPY[Runtime.Plugins.Python]
+        RCON[Runtime.Plugins.Container]
+        REXT[Runtime.Extensions]
     end
-
-    subgraph Runtime plugins
-        RPL[Vais.Agents.Runtime.Plugins]
+    subgraph HOST["Hosting (2)"]
+        MEM[Hosting.InMemory]
+        ORL[Hosting.Orleans]
     end
+    subgraph PERS["Persistence (3)"]
+        RED[Redis]
+        PG[Postgres]
+        VD[VectorData]
+    end
+    CLI[Vais.Agents.Cli]
+    PSDK[Vais.Plugin.Sdk]
 
-    C --> A
-    SK --> A
-    MAF --> A
-    MEM --> A
-    MEM --> C
-    ORL --> A
-    ORL --> C
-    RPL --> A
-    RPL --> C
-    RPL --> CA
-    RED --> ORL
-    PG --> ORL
-    VD --> A
-    OT --> A
-    OT --> C
-    LF --> A
-    LF --> C
-    MCP --> A
-    A2A --> A
-    MCPS --> A
-    MCPS --> C
-    A2AS --> A
-    A2AS --> C
-    GMAF --> A
-    GMAF --> C
-    CIP --> A
-    CIP --> CA
-    CMJ --> A
-    CMJ --> CA
-    CMY --> CMJ
-    CHS --> CIP
-    CHS --> CMJ
-    CHC --> CA
-    CKO --> CA
-    CKO --> CHC
-    COP --> CA
-    CLI --> CHC
-    CLI --> CMY
+    CORE --> CONTRACTS
+    ADP --> CONTRACTS
+    LLMGW --> CONTRACTS
+    MCPGW --> CONTRACTS
+    OBS --> CORE
+    PROT --> CONTRACTS
+    ORCH --> CORE
+    CTL --> CORE
+    RT --> CORE
+    HOST --> CORE
+    HOST --> RT
+    HOST --> ORCH
+    PERS --> HOST
+    CTL --> RT
+    CLI --> CTL
+    PSDK --> CONTRACTS
 ```
 
-The arrow `X → Y` means *X depends on Y*. A few notes on the shape:
+The arrow `X → Y` means *packages in group X depend on group Y*. Edges are drawn group-to-group; per-package edges (and a few intra-group ones) live in the [packages reference](../reference/packages.md). A few notes on the shape:
 
 - **Two contract layers.** `Abstractions` carries agent-shape records + provider contracts (no control-plane, no HTTP). `Control.Abstractions` adds the control-plane verb set — `IAgentLifecycleManager`, `IAgentPolicyEngine`, `IIdempotencyStore`, `AgentManifest`. Separating the two lets a consumer ship an in-process agent (needs only `Abstractions` + `Core`) without pulling in the control-plane surface.
-- **Core implements the default stateful agent** (`StatefulAiAgent`) + the in-process defaults (`InMemoryAgentSession`, `InMemoryMemoryStore`, `NoopHistoryReducer`, etc.). Adapters don't depend on Core; they implement `ICompletionProvider` against `Abstractions` only.
-- **Hosting.Orleans bridges** the agent runtime into Orleans grains. Persistence packages layer on top of Hosting.Orleans because they're Orleans-provider configuration helpers.
-- **Protocols** split into outbound (`Mcp` + `A2A` — depend on `Abstractions` only; surface as `ITool` / `IToolSource`) and inbound (`Mcp.Server` + `A2A.Server` — host agents as servers; depend on `Core` for the `StatefulAiAgent` hook-in).
-- **Graph orchestration** comes in two flavours — the zero-dep `InProcessGraphOrchestrator` in `Core` (so you don't need to reference the MAF package just to run a graph) and `Orchestration.Graph.MicrosoftAgentFramework` for the MAF-Workflows-native adapter.
-- **Control plane** is a self-contained stack: `Control.InProcess` is the zero-dep runtime; `Control.Manifests.{Json,Yaml}` are the wire-format loaders; `Control.Http.{Server,Client}` are the HTTP surface; `Control.KubernetesOperator` wraps the HTTP client with K8s reconcile; `Control.Policy.Opa` adapts an external OPA server to the `IAgentPolicyEngine` contract.
-- **CLI** sits above everything — `Vais.Agents.Cli` is a dotnet tool that uses `Control.Http.Client` for HTTP calls + `Control.Manifests.Yaml` for `apply -f` parsing.
+- **Core implements the default stateful agent** (`StatefulAiAgent`) + the in-process defaults (`InMemoryAgentSession`, `InMemoryMemoryStore`, `NoopHistoryReducer`, etc.) + the zero-MAF-dep `InProcessGraphOrchestrator`. Adapters don't depend on Core; they implement `ICompletionProvider` against `Abstractions` only. `Core.PowerFx` adds the PowerFx edge-predicate evaluator on top of Core.
+- **Gateway plugins** (12 total — 7 LLM + 5 MCP/tool) each depend only on `Abstractions`, with two exceptions: `Gateways.McpGovernance` reuses `Gateways.Governance`'s rate-limit store, and `Gateways.OpenAiCompat` also references `Core`. They compose into `StatefulAiAgent` via `GatewayMiddleware` / `ToolGatewayMiddleware`.
+- **Observability** is 9 packages: `OpenTelemetry` + `Langfuse` enrichment, plus seven grain-backed run/event stores (`RunStore`, `AgentRunStore`, `AgentLogs`, `GatewayEventStore`, `McpGatewayEventStore`, `McpEventStore`, and the standalone `Prometheus` exporter). The stores depend on `Abstractions`/`Core` and are hosted by `Hosting.Orleans` / `Control.Http.Server`.
+- **Protocols** split into outbound (`Mcp` + `A2A` — depend on `Abstractions`; surface as `ITool` / `IToolSource`) and inbound (`Mcp.Server` + `A2A.Server` — host agents as servers; depend on `Control.Abstractions`). `Identity.Oidc` rides alongside as the JWT/OIDC provider over `Control.Abstractions`.
+- **Graph orchestration** comes in two flavours — the zero-dep `InProcessGraphOrchestrator` in `Core` and `Orchestration.Graph.MicrosoftAgentFramework` for the MAF-Workflows-native adapter. `Eval` sits at the same low layer (only `Abstractions` + `Core`) despite its high-level name, which is why `Hosting.Orleans`, `Control.Http.Server`, `Control.Http.Client`, and `Persistence.Postgres` can all reference it to host/expose eval-run grains.
+- **Runtime tier (5).** `Runtime.Plugins` (assembly loader) → `Runtime.Instantiation` (manifest translator) → `Runtime.Plugins.Python` / `Runtime.Plugins.Container` (out-of-process plugin hosts); `Runtime.Extensions` is the seam-middleware loader. These are the libraries that turn stored manifests + plugin DLLs/images into running agents.
+- **Hosting is an aggregation layer.** `Hosting.InMemory` is the dev/test runtime (`Abstractions` + `Core` only); `Hosting.Orleans` bridges the runtime into grains **and** hosts the eval, plugin, and extension grains, so it references `Eval` + `Runtime.Plugins` + `Runtime.Extensions` directly. Persistence packages (`Redis`, `Postgres`) layer on top of `Hosting.Orleans`.
+- **Control plane** is 8 packages: `Control.InProcess` (reference runtime), `Control.Manifests.{Json,Yaml}` (wire-format loaders), `Control.Http.{Server,Client}` (HTTP surface), `Control.KubernetesOperator` (K8s reconcile over the HTTP client), `Control.Policy.Opa` (external-OPA adapter), and `Control.Mcp` (MCP-server registry + virtual-MCP binding). `Control.Http.Server` is the second aggregation layer — it mounts the plugin hosts and observability stores.
+- **CLI + SDK.** `Vais.Agents.Cli` sits on top — a dotnet tool over `Control.Http.Client` + `Control.Manifests.Yaml`. `Vais.Plugin.Sdk` is independent: it depends only on `Abstractions` and ships to external authors building container plugins.
 
 ## Abstractions — what lives there
 
@@ -134,7 +135,7 @@ Core contract families:
 | Tools | `ITool`, `IToolRegistry`, `IToolSource` |
 | Orchestration | `IAgentOrchestrator`, `AgentParticipant`, `OrchestrationStep`, `Handoff`, `ITerminationCondition` |
 | Graph orchestration (v0.9) | `IAgentGraph<TState>` / `IAgentGraph`, `IResumableAgentGraph<TState>`, `AgentGraphManifest`, `GraphNode`, `GraphEdge`, `GraphEdgePredicate`, `GraphPredicateOperator`, `GraphEdgeEffect`, `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` / `IGraphCheckpointer` |
-| Events | `AgentEvent` (10 subclasses — adds `RequestSectionsBuilt` to the v0.12 set), `AgentGraphEvent` (9 subclasses, v0.9), `IAgentEventBus` |
+| Events | `AgentEvent` (12 subclasses — adds `RequestSectionsBuilt` to the v0.12 set), `AgentGraphEvent` (10 subclasses, v0.9), `IAgentEventBus` |
 | Control plane (contract) | `AgentManifest` (+ sub-records — `Model`, `SystemPromptSpec`, `Guardrails`, `Budget`, `OutputSchema`, `SecretRefs`, …) |
 | Observability | `UsageRecord`, `IUsageSink`, `AgentContext`, `IAgentContextAccessor`, `IAgentFilter` |
 | RAG | `IKnowledgeRetriever`, `KnowledgeChunk` |
@@ -191,7 +192,7 @@ Graph ships two orchestrators: `InProcessGraphOrchestrator` in Core (zero-MAF-de
 
 ## Control plane
 
-Seven packages, one seam. `Control.Abstractions` is the contract; `Control.InProcess` is the reference runtime that wraps policy + idempotency + audit around the seven `IAgentLifecycleManager` verbs. `Control.Manifests.{Json,Yaml}` are the wire-format loaders. `Control.Http.{Server,Client}` are the HTTP surface — the server ships `MapAgentControlPlane`, `AddAgentControlPlaneIdempotency` (v0.11), `AddAgentControlPlaneOpenApi` (v0.11), and the v0.12 streaming-invoke route. `Control.KubernetesOperator` wraps `Control.Http.Client` with a KubeOps reconciler over a `vais.io/v1alpha1` CRD (v0.13). `Control.Policy.Opa` adapts an external OPA server to `IAgentPolicyEngine` (v0.14).
+Eight packages, one seam. `Control.Abstractions` is the contract; `Control.InProcess` is the reference runtime that wraps policy + idempotency + audit around the seven `IAgentLifecycleManager` verbs. `Control.Manifests.{Json,Yaml}` are the wire-format loaders. `Control.Http.{Server,Client}` are the HTTP surface — the server ships `MapAgentControlPlane`, `AddAgentControlPlaneIdempotency` (v0.11), `AddAgentControlPlaneOpenApi` (v0.11), and the v0.12 streaming-invoke route. `Control.KubernetesOperator` wraps `Control.Http.Client` with a KubeOps reconciler over a `vais.io/v1alpha1` CRD (v0.13). `Control.Policy.Opa` adapts an external OPA server to `IAgentPolicyEngine` (v0.14). `Control.Mcp` hosts the MCP-server registry (`IMcpServerRegistry`, `PhysicalMcpConnectionService`) and virtual-MCP binding for manifests that reference `mcp:<server>` tool sources.
 
 See [control plane concept](control-plane.md) + [Kubernetes operator concept](kubernetes-operator.md) + [OPA policy engine concept](opa-policy-engine.md).
 
@@ -210,7 +211,7 @@ Later pillars added their own activity sources + tag families — `Vais.Agents.P
 
 ## Runtime tier (v0.16)
 
-The 31 packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
+The 54 NuGet packages above are a **library**. They also ship as a **deployable runtime** — `Vais.Agents.Runtime.Host`, an in-repo composition project (not a NuGet) that builds the `vais-agents-runtime` container image. The host is the opinionated answer to "give me the runtime, I just want to run it"; the library stays stack-neutral for consumers who want to build their own host.
 
 ```
 ┌─ Runtime tier (deployable) ───────────────────────────────────┐
@@ -229,7 +230,7 @@ The 31 packages above are a **library**. They also ship as a **deployable runtim
         │ consumes
         ▼
    ┌────────────────────────────────────────────────────────┐
-   │          Library tier (26 NuGet packages)              │
+   │          Library tier (54 NuGet packages)              │
    │  Core, Hosting.Orleans, Control.*, Persistence.*,      │
    │  Observability.*, Protocols.*, Orchestration.*,        │
    │  Runtime.Plugins, CLI                                  │
@@ -437,7 +438,7 @@ Wired in three execution paths so the inbound shape is identical regardless of h
 
 See [agent input middleware extension guide](../extensions/agent-input-middleware.md) for authoring a custom middleware.
 
-## The 32 packages at a glance
+## The 54 packages at a glance
 
 See the [packages reference](../reference/packages.md) for the per-package description table with install guidance.
 

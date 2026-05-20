@@ -1,6 +1,6 @@
 # Reference: packages
 
-**55 projects** under `src/` — 53 ship as NuGet (51 libraries + `Vais.Agents.Cli` dotnet tool + `Vais.Plugin.Sdk` container plugin SDK) and 2 are **in-repo composition / host projects** (`Vais.Agents.Runtime.Host` and `Vais.Agents.Control.KubernetesOperator.Host`, both `IsPackable=false`, both shipping as container images rather than NuGet packages). Target framework: `net9.0`. Versions track preview tags — not yet published to nuget.org.
+**56 projects** under `src/` — 54 ship as NuGet (52 libraries + `Vais.Agents.Cli` dotnet tool + `Vais.Plugin.Sdk` container plugin SDK) and 2 are **in-repo composition / host projects** (`Vais.Agents.Runtime.Host` and `Vais.Agents.Control.KubernetesOperator.Host`, both `IsPackable=false`, both shipping as container images rather than NuGet packages). Target framework: `net9.0`. Versions track preview tags — not yet published to nuget.org.
 
 Sections below cover each tier. The runtime container is documented separately at [Runtime container](#runtime-container-v016); the K8s operator host at [Kubernetes-native deployment](#control-plane--kubernetes-v013).
 
@@ -166,11 +166,17 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 | `Vais.Agents.Runtime.Plugins.Container` *(IP-1..IP-7 + CP-1..CP-9)* | Container plugin supervisor + HTTP gateway protocol + OTLP receiver. Manages OCI-image plugins as Docker containers or Kubernetes Deployments; HMAC-token-authed inbound LLM/MCP/OTLP gateway on port 5001; Phase 1 sandbox hardening on every container, Phase 2 internal-network egress isolation opt-in. | `ContainerPluginManifest`, `ContainerPluginDescriptor`, `IContainerSupervisor`, `DockerContainerSupervisor`, `KubernetesContainerSupervisor`, `IContainerPluginHost`, `IContainerPluginReloader`, `OtlpSpanForwarder`, `HmacCallTokenService`, `ContainerPluginUrns` | Hosting OCI-image plugins. See [container-plugins concept](../concepts/container-plugins.md). |
 | `Vais.Plugin.Sdk` *(IP-1)* | SDK for building container plugins against the IP-1 HTTP protocol. ASP.NET Core minimal-API extensions for `/invoke`, gateway-client helpers, health endpoints. | `PluginEndpointRouteBuilderExtensions`, gateway-client types | Authoring a .NET container plugin. Python container plugins use the `vais-plugin` PyPI package (separately distributed). |
 
+## Extensions (v0.30)
+
+| Package | Purpose | Key entry points | Install when… |
+|---|---|---|---|
+| `Vais.Agents.Runtime.Extensions` | Extension loader for runtime seams. Loads seam middleware (`AgentInputMiddleware`, `AgentOutputMiddleware`, …) into **collectible** `AssemblyLoadContext`s and composes per-agent chains; bound to agents declaratively via the control plane and reloadable without a runtime restart. Phase A: C# host. | Extension loader + per-agent chain composition types, registration helpers | Hosting a runtime that accepts code-authored seam extensions bound to agents declaratively. See [extensions docs](../extensions/index.md). |
+
 ## CLI (v0.15+)
 
 | Package | Purpose | Key entry points | Install when… |
 |---|---|---|---|
-| `Vais.Agents.Cli` | `vais` dotnet-tool wrapping the HTTP control plane. ~29 top-level commands + 3 branches (`eval`, `diagnose`, `config`) for a total of 41 commands covering agents, graphs, gateways, plugins, eval, diagnostics, and config. Kubeconfig-style `~/.vais/config.yaml`. POSIX exit codes. | `vais apply` / `invoke` / `logs` / `signal` / `get` / `delete` / `cancel` / `init` / `version`; graph commands (`get-graphs`, `delete-graph`, `graph-validate`, `invoke-graph`, `graph-logs`, `get-runs`); plugin commands (`plugin-status`, `plugin-push`, `plugin-build`, `plugin-deploy`, `plugin-init`, `plugin-watch`); gateway / MCP server (`get-llm-gateways`, `get-mcp-gateways`, `get-mcp-servers`, `*-validate`); eval branch; diagnose branch; config branch | Interactive exploration + CI manifest apply + log tailing. Install with `dotnet tool install -g Vais.Agents.Cli`. Cannot be added as a library reference (NU1212) — use `Vais.Agents.Control.Http.Client` for in-process .NET callers. |
+| `Vais.Agents.Cli` | `vais` dotnet-tool wrapping the HTTP control plane. ~30 top-level commands + 5 branches (`eval`, `ext`, `agent`, `diagnose`, `config`) for a total of ~47 commands covering agents, graphs, gateways, plugins, extensions, eval, diagnostics, and config. Kubeconfig-style `~/.vais/config.yaml`. POSIX exit codes. | `vais apply` / `invoke` / `logs` / `signal` / `get` / `delete` / `cancel` / `init` / `version`; graph commands (`get-graphs`, `delete-graph`, `graph-validate`, `invoke-graph`, `graph-logs`, `get-runs`); plugin commands (`plugin-status`, `plugin-push`, `plugin-build`, `plugin-deploy`, `plugin-init`, `plugin-watch`, `plugin-import-existing`); gateway / MCP server (`get-llm-gateways`, `get-mcp-gateways`, `get-mcp-servers`, `*-validate`); eval branch; ext branch; agent branch; diagnose branch; config branch | Interactive exploration + CI manifest apply + log tailing. Install with `dotnet tool install -g Vais.Agents.Cli`. Cannot be added as a library reference (NU1212) — use `Vais.Agents.Control.Http.Client` for in-process .NET callers. |
 
 `Vais.Agents.Cli` ships with `<PackAsTool>true</PackAsTool>` + `<ToolCommandName>vais</ToolCommandName>`. Targets `net9.0`. The tool install resolves the binary under `~/.dotnet/tools/` (`%USERPROFILE%\.dotnet\tools\` on Windows). Full command catalogue: [cli-subcommands reference](cli-subcommands.md).
 
@@ -204,7 +210,7 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 - **Cross-runtime graph refs** *(v0.20)* — set `ref.runtimeUrl` on any `kind: Agent` node to dispatch it to a remote runtime. `IAgentRemoteInvoker` (`Control.Http.Client`) handles the HTTP forwarding + bearer-token propagation. Walk-through: [compose-a-graph-across-runtimes guide](../guides/compose-a-graph-across-runtimes.md).
 - **OpenAI-compatible gateway** — `Gateways.OpenAiCompat` + `Core` (ships `InMemoryModelRouter`, `PassThroughIdentityResolver`, `LlmGatewayPipeline`) + any provider adapter. Wire `AddOpenAiCompatGateway()` + `MapOpenAiCompat()` on `WebApplication`. Add other `Gateways.*` middleware for rate limiting, caching, fallback, etc. Guide: [expose-openai-compatible-gateway](../guides/expose-openai-compatible-gateway.md).
 - **Prometheus LLM metrics** — any gateway setup above + `Gateways.Prometheus`. `AddLlmPrometheusMiddleware()` registers `LlmPrometheusMiddleware` as the outermost middleware; `llm_requests_total`, `llm_request_duration_seconds`, and `llm_tokens_total` are automatically scraped.
-- **Everything** — all 53 NuGet packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
+- **Everything** — all 54 NuGet packages + the runtime container; see `artifacts/smoketest/` for what the full library stack looks like.
 
 ## Version pins (in `Directory.Packages.props`)
 

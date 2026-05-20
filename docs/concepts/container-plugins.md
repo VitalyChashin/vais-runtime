@@ -165,7 +165,7 @@ The built-in `vais-plugin` Helm chart applies:
 
 ## OTLP telemetry
 
-`OPENAI`-style trace data from a plugin would normally exit to a remote OTel collector. Container plugins re-route through the runtime: the plugin sends OTLP/protobuf to `POST /v1/otlp/v1/traces` (loopback or internal bridge), and `OtlpSpanForwarder` re-emits each span as a .NET `System.Diagnostics.Activity` under `ActivitySource("Vais.Agents.Runtime.Plugins.Container.Otlp")`. The runtime's own OTel pipeline picks them up — `AddAgenticInstrumentation()` subscribes the source automatically — so plugin spans land alongside the surrounding graph-node span in Langfuse, Tempo, or whichever backend the runtime targets.
+OpenTelemetry trace data from a plugin would normally exit to a remote OTel collector. Container plugins re-route through the runtime: the plugin sends OTLP/protobuf to `POST /v1/otlp/v1/traces` (loopback or internal bridge), and `OtlpSpanForwarder` re-emits each span as a .NET `System.Diagnostics.Activity` under `ActivitySource("Vais.Agents.Runtime.Plugins.Container.Otlp")`. The runtime's own OTel pipeline picks them up — `AddAgenticInstrumentation()` subscribes the source automatically — so plugin spans land alongside the surrounding graph-node span in Langfuse, Tempo, or whichever backend the runtime targets.
 
 The plugin never opens a direct connection to Langfuse / Tempo / Jaeger. The runtime is the single egress path for telemetry, exactly as it is for LLM and tool calls. See [observability concept](observability.md).
 

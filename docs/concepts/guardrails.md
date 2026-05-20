@@ -8,7 +8,7 @@ Each layer sees different context and has different failure modes:
 
 - **Input** — the built `CompletionRequest` right before `ICompletionProvider.CompleteAsync`. Sees the full prompt + history + tool advertisement. Good for "reject prompt injection attempts" / "block PII in user input".
 - **Output** — the `CompletionResponse` right after the provider returns, before the final assistant turn is appended. Sees the model's reply. Good for "strip PII from model output" / "block policy violations".
-- **Tool** — the `ToolCallRequest` right before `ITool.InvokeAsync`. Sees tool name + arguments. Good for "require approval before deleting" / "block destructive tools in read-only contexts".
+- **Tool** — the `ITool` plus its `JsonElement` arguments right before `ITool.InvokeAsync`. Sees tool name + arguments. Good for "require approval before deleting" / "block destructive tools in read-only contexts".
 
 Collapsing into one layer loses signal; scattering across filters loses uniformity. Three layers + one outcome shape is the MAF-derived design.
 
@@ -29,9 +29,9 @@ public sealed record GuardrailOutcome(GuardrailDecision Decision, string? Reason
         => new(GuardrailDecision.Interrupt, reason, payload);
 }
 
-public interface IInputGuardrail  { Task<GuardrailOutcome> EvaluateAsync(CompletionRequest request, AgentContext context, CancellationToken cancellationToken = default); }
-public interface IOutputGuardrail { Task<GuardrailOutcome> EvaluateAsync(CompletionResponse response, AgentContext context, CancellationToken cancellationToken = default); }
-public interface IToolGuardrail   { Task<GuardrailOutcome> BeforeInvokeAsync(ToolCallRequest call, AgentContext context, CancellationToken cancellationToken = default); }
+public interface IInputGuardrail  { ValueTask<GuardrailOutcome> EvaluateAsync(CompletionRequest request, AgentContext context, CancellationToken cancellationToken = default); }
+public interface IOutputGuardrail { ValueTask<GuardrailOutcome> EvaluateAsync(CompletionResponse response, AgentContext context, CancellationToken cancellationToken = default); }
+public interface IToolGuardrail   { ValueTask<GuardrailOutcome> BeforeInvokeAsync(ITool tool, JsonElement arguments, AgentContext context, CancellationToken cancellationToken = default); }
 
 public sealed class AgentGuardrailDeniedException : Exception
 {
@@ -80,17 +80,17 @@ All three lists default empty. `StatefulAiAgent` runs input guardrails every tur
 ```csharp
 sealed class DestructiveToolApprovalGuardrail : IToolGuardrail
 {
-    public Task<GuardrailOutcome> BeforeInvokeAsync(ToolCallRequest call, AgentContext ctx, CancellationToken ct)
+    public ValueTask<GuardrailOutcome> BeforeInvokeAsync(ITool tool, JsonElement arguments, AgentContext ctx, CancellationToken ct)
     {
-        if (!call.ToolName.StartsWith("delete_", StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(GuardrailOutcome.Pass);
+        if (!tool.Name.StartsWith("delete_", StringComparison.OrdinalIgnoreCase))
+            return ValueTask.FromResult(GuardrailOutcome.Pass);
 
         // Require HITL approval before deleting anything.
         var interrupt = new AgentInterrupt(
             InterruptId: Guid.NewGuid().ToString("N"),
-            Reason: $"Approval required to run destructive tool '{call.ToolName}'.",
-            Payload: call.Arguments);
-        return Task.FromResult(GuardrailOutcome.Interrupt(interrupt, reason: "destructive-tool-approval"));
+            Reason: $"Approval required to run destructive tool '{tool.Name}'.",
+            Payload: arguments);
+        return ValueTask.FromResult(GuardrailOutcome.Interrupt(interrupt, reason: "destructive-tool-approval"));
     }
 }
 ```

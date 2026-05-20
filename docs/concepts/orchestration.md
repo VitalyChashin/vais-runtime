@@ -24,7 +24,7 @@ public interface IAgentOrchestrator
 
 public interface ITerminationCondition
 {
-    Task<bool> ShouldTerminateAsync(IReadOnlyList<OrchestrationStep> steps, CancellationToken cancellationToken = default);
+    ValueTask<bool> ShouldTerminateAsync(IReadOnlyList<OrchestrationStep> steps, CancellationToken cancellationToken = default);
 }
 
 public sealed record Handoff(string FromAgent, string ToAgent, string? Message = null, IReadOnlyList<ChatTurn>? HistoryToCarry = null);
@@ -74,8 +74,8 @@ Preferred over the older `TerminationPredicate` delegate — it's async (good fo
 ```csharp
 sealed class LengthLimitTermination(int maxSteps) : ITerminationCondition
 {
-    public Task<bool> ShouldTerminateAsync(IReadOnlyList<OrchestrationStep> steps, CancellationToken ct)
-        => Task.FromResult(steps.Count >= maxSteps);
+    public ValueTask<bool> ShouldTerminateAsync(IReadOnlyList<OrchestrationStep> steps, CancellationToken ct)
+        => ValueTask.FromResult(steps.Count >= maxSteps);
 }
 ```
 

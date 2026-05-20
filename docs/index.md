@@ -16,10 +16,12 @@ Runtime for AI agents on .NET. Declarative manifests, Orleans-backed durability,
 
 One page per concept. Each explains what it is, the core types, how to wire it, extension points, and known limitations.
 
-- [Architecture](concepts/architecture.md) — the 32 packages, layered diagram, dependency rules.
+- [Architecture](concepts/architecture.md) — the 56 projects (54 NuGet packages), layered diagram, dependency rules.
 - [Declarative agents](concepts/declarative-agents.md) — manifest-driven instantiation; Model / SystemPromptSpec / Tools / Guardrails translation.
 - [Runtime plugins](concepts/runtime-plugins.md) — code-authored `IAiAgent` DLLs loaded at silo startup; plugin-branch in the translator.
 - [Polyglot plugins](concepts/polyglot-plugins.md) — Python MCP plugins spawned as subprocesses; tools contributed to the agent registry via `INamedToolSourceProvider`.
+- [Polyglot agents](concepts/polyglot-agents.md) — Python agents whose LLM loop runs entirely in Python (LangGraph / LangChain / custom), Orleans-durable and registry-activated; extends polyglot plugins from tool to agent level (v0.24).
+- [Container plugins](concepts/container-plugins.md) — plugins shipped as OCI images, supervised by the runtime over an HMAC-authed HTTP gateway with P12 sandbox hardening + optional OTLP.
 - [Session + memory](concepts/session.md) — `IAgentSession`, working vs session history, `IMemoryStore` scopes.
 - [Context](concepts/context.md) — `IContextProvider` chain, `IContextWindowPacker`, merge rules.
 - [Prompt](concepts/prompt.md) — `ISystemPromptComposer`, contributors, `IPromptTemplate`.
@@ -28,7 +30,10 @@ One page per concept. Each explains what it is, the core types, how to wire it, 
 - [Tools](concepts/tools.md) — `ITool`, `IToolRegistry`, `IToolSource`, `Tool.FromFunc`, schema generation.
 - [Orchestration](concepts/orchestration.md) — Sequential, RoundRobin, Handoff, `ITerminationCondition`.
 - [Graph orchestration](concepts/graph-orchestration.md) — `IAgentGraph<TState>`, Pregel/BSP super-steps, node/edge/predicate model, checkpoint + resume (v0.9).
+- [Graph as a first-class deployable](concepts/graph-as-deployable.md) — register and manage an `AgentGraph` like an `Agent`: durable registry, standard verbs, SSE streaming (v0.19).
+- [Cross-runtime graph refs](concepts/cross-runtime-graphs.md) — a graph node targets an agent on a different runtime via `ref.runtimeUrl`, invoked over HTTP (v0.20).
 - [Control plane](concepts/control-plane.md) — `AgentManifest`, `IAgentLifecycleManager`, `IAgentRegistry`.
+- [Gateway config control plane](concepts/gateway-config-control-plane.md) — named, versioned `LlmGatewayConfig` / `McpGatewayConfig` middleware pipelines applied to agents declaratively (v0.24).
 - [Kubernetes operator](concepts/kubernetes-operator.md) — `Agent` CRD, reconcile loop, phase state machine, projected SA-token auth (v0.13).
 - [OPA policy engine](concepts/opa-policy-engine.md) — Rego-backed `IAgentPolicyEngine`, v1 input schema, FailMode semantics, decision cache (v0.14).
 - [CLI](concepts/cli.md) — `vais` dotnet tool, subcommand map, kubectl-shape config, POSIX exit codes (v0.15).
@@ -38,7 +43,7 @@ One page per concept. Each explains what it is, the core types, how to wire it, 
 
 ## Reference
 
-- [Packages](reference/packages.md) — 27-package table with install guidance.
+- [Packages](reference/packages.md) — 54-package table with install guidance.
 - [Events](reference/events.md) — `AgentEvent` + `AgentGraphEvent` closed hierarchies.
 - [Budget](reference/budget.md) — `RunBudget` fields and enforcement points.
 - [Graph predicate operators](reference/graph-predicate-operators.md) — ten-operator matcher vocabulary + combinators (v0.9).

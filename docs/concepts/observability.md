@@ -80,16 +80,20 @@ Common dimensions: `gen_ai.system`, `gen_ai.response.model`, `gen_ai.operation.n
 
 ## `AgentEvent` bus
 
-Structured business events fired around the agent's lifecycle. Closed hierarchy — 8 sealed subclasses:
+Structured business events fired around the agent's lifecycle. Closed hierarchy — 12 sealed subclasses:
 
 - `TurnStarted(At, Context, UserMessage)`
 - `TurnCompleted(At, Context, AssistantText, ModelId?, PromptTokens?, CompletionTokens?, Duration)`
 - `TurnFailed(At, Context, ErrorType, ErrorMessage, Duration)`
 - `ToolCallStarted(At, Context, CallId, ToolName)`
 - `ToolCallCompleted(At, Context, CallId, ToolName, Succeeded, Error?, Duration)`
+- `ToolCallReplayed(At, Context, CallId, ToolName)` — journal-replay short-circuit (durable-execution path)
 - `GuardrailTriggered(At, Context, Layer, Decision, Reason?)`
 - `InterruptRaised(At, Context, InterruptId, Reason)`
 - `HandoffRequested(At, Context, Handoff)`
+- `CompletionDelta(At, Context, TextDelta, ModelId?, PromptTokens?, CompletionTokens?, ToolCalls?)` — streaming text delta (v0.12)
+- `RequestSectionsBuilt(At, Context, TurnIndex, Sections, Budget)` — per-section telemetry snapshot
+- `EvalRunProgress(At, Context, EvalRunId, ProgressKind, CaseId?, CaseStatus?)` — eval-run progress (SSE)
 
 See [events reference](../reference/events.md).
 

@@ -18,19 +18,19 @@ namespace Vais.Agents;
 
 public interface IAgentSession
 {
+    string SessionId { get; }   // never null, never empty
     string AgentId { get; }
-    string? SessionId { get; }
     IReadOnlyList<ChatTurn> History { get; }
-    Task AppendAsync(ChatTurn turn, CancellationToken cancellationToken = default);
-    Task ResetAsync(CancellationToken cancellationToken = default);
+    ValueTask AppendAsync(ChatTurn turn, CancellationToken cancellationToken = default);
+    ValueTask ResetAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IMemoryStore
 {
-    Task WriteAsync(MemoryScope scope, string key, MemoryItem item, CancellationToken cancellationToken = default);
-    Task<MemoryItem?> ReadAsync(MemoryScope scope, string key, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<MemorySearchResult>> SearchAsync(MemoryScope scope, string query, int topK = 10, CancellationToken cancellationToken = default);
-    Task DeleteAsync(MemoryScope scope, string key, CancellationToken cancellationToken = default);
+    ValueTask WriteAsync(MemoryScope scope, string key, MemoryItem item, CancellationToken cancellationToken = default);
+    ValueTask<MemoryItem?> ReadAsync(MemoryScope scope, string key, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<MemorySearchResult> SearchAsync(MemoryScope scope, string query, int topK = 5, CancellationToken cancellationToken = default);
+    ValueTask<bool> DeleteAsync(MemoryScope scope, string key, CancellationToken cancellationToken = default);
 }
 
 public sealed record MemoryScope(string? AgentId = null, string? SessionId = null, string? TenantId = null, MemoryDurability Durability = MemoryDurability.ShortTerm);

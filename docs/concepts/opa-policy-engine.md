@@ -22,7 +22,7 @@ POST {BaseUrl}/v1/data/{DataPath}
 
 { "input": {
     "schemaVersion": "1",
-    "operation":     "Create" | "Invoke" | "Signal" | "Query" | "Cancel" | "Update" | "Evict",
+    "operation":     "Create" | "Invoke" | … | "ExtensionEvict",   // one of 37 PolicyOperation values
     "principal":     { "id", "tenantId", "scopes"? } | null,
     "agent":         <full AgentManifest in camelCase> | null
 } }
@@ -51,11 +51,11 @@ Stable, versioned, contract-frozen. `OpaInputBuilder.SchemaVersion = "1"`. Every
 | Field | Shape | When null |
 |---|---|---|
 | `schemaVersion` | `"1"` | never |
-| `operation` | one of seven `PolicyOperation` enum values | never |
+| `operation` | one of the 37 `PolicyOperation` enum values | never |
 | `principal` | `{ id, tenantId, scopes? }` | anonymous caller (no `AgentPrincipal` resolved upstream) |
 | `agent` | full `AgentManifest` round-tripped to camelCase JSON | `Query` against an agent id not in the registry (there's no manifest to send) |
 
-Seven operations gated — `Create`, `Invoke`, `Signal`, `Query`, `Cancel`, `Update`, `Evict`. Every verb on `IAgentLifecycleManager` flows through. Rego policies branch on `input.operation` to gate different verbs differently — the shipped `tenant-scoped-allow.rego` gates Invoke/Signal/Query but leaves Create/Update/Evict allow-all so platform teams keep full control of manifest rollout.
+Thirty-seven operations gated across resource types — the seven agent-lifecycle verbs (`Create`, `Invoke`, `Signal`, `Query`, `Cancel`, `Update`, `Evict`) plus graph, LLM/MCP gateway-config, MCP-server, container-plugin, eval-suite, and extension verbs (`GraphCreate` … `ExtensionEvict`). Every mutating or reading verb the control plane exposes flows through `IAgentPolicyEngine`. Rego policies branch on `input.operation` to gate different verbs differently — the shipped `tenant-scoped-allow.rego` gates Invoke/Signal/Query but leaves Create/Update/Evict allow-all so platform teams keep full control of manifest rollout.
 
 ### Schema evolution
 

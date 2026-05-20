@@ -64,7 +64,7 @@ spec:
 
 ```toml
 [tool.vais.plugin]
-targetApiVersion = "0.23"
+targetApiVersion = "0.24"
 tools = ["decompose_task", "score_plan_completeness", "summarize_findings"]
 ```
 

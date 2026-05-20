@@ -12,7 +12,7 @@ Shipped in v0.20. A graph node can reference an agent deployed on a **different 
 
 ## The `runtimeUrl` / `a2aUrl` fields
 
-`GraphAgentRef` is the record that appears on `kind: Agent` graph nodes. It has four optional fields:
+`GraphAgentRef` is the record that appears on `kind: Agent` graph nodes — a required `Id` plus three optional fields:
 
 ```csharp
 public sealed record GraphAgentRef(

@@ -97,8 +97,6 @@ Optional `AddMcpAgentServerJwtAuth` fronts the HTTP transport with bearer auth (
 
 ## A2A — remote agent as a tool
 
-## A2A — remote agent as a tool
-
 `A2ARemoteAgentTool` implements `ITool` by wrapping an `IA2AClient` + an `AgentCard`. Static `CreateAsync(Uri)` factory resolves the remote's card via `A2ACardResolver`, builds the client, and constructs the tool.
 
 ```csharp

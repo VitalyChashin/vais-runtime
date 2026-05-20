@@ -105,7 +105,7 @@ Any Orleans-compatible stream provider works — the bus doesn't care about the 
 `Vais.Agents.Persistence.VectorData` provides:
 
 - **`VectorStoreKnowledgeRetriever<TKey, TRecord>`** — implements `IKnowledgeRetriever` over any `Microsoft.Extensions.VectorData` collection. Takes an `IEmbeddingGenerator<string, Embedding<float>>` for query embedding + a projection from `TRecord` → `KnowledgeChunk`.
-- **`KnowledgeRetrievalContextProvider`** — an `IContextProvider` that extracts the latest user turn, queries the retriever, and injects the top-K chunks as a `SystemPromptAddendum`. Uses a configurable template.
+- **`KnowledgeRetrievalContextProvider`** — an `IContextProvider` that extracts the latest user turn, queries the retriever, and injects the top-K chunks as a `retrieval.docs` system section. Uses a configurable template.
 
 ```csharp
 using Vais.Agents.Persistence.VectorData;
@@ -130,7 +130,7 @@ var agent = new StatefulAiAgent(
 
 ### Legacy filter (obsolete)
 
-`KnowledgeRetrievalFilter : IAgentFilter` shipped in v0.3 before the context-provider pillar existed. It's `[Obsolete(DiagnosticId="VAIS0001")]` since v0.4 and scheduled for removal in v0.5. New code uses `KnowledgeRetrievalContextProvider`.
+`KnowledgeRetrievalFilter : IAgentFilter` shipped in v0.3 before the context-provider pillar existed. It's `[Obsolete(DiagnosticId="VAIS0001")]` since v0.4 but still ships for backward compatibility (no firm removal version set). New code uses `KnowledgeRetrievalContextProvider`.
 
 ## Extension points
 
