@@ -5,8 +5,7 @@
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/download)
 [![NuGet status](https://img.shields.io/badge/NuGet-pre--alpha-orange.svg)](#)
 
-> **Status: pre-alpha private preview.** API unstable.
-> Trademark + NuGet-id clearance gate public release of the `Vais.Agents.*` package ids; not yet completed.
+> **Status: pre-alpha preview.** API unstable.
 
 Open-source runtime for AI agents and multi-agent graphs — durable, declarative, deployed on infrastructure you own. Declare them as YAML manifests, then publish them to a durable, Orleans-backed runtime with the `vais` CLI or a Kubernetes operator. Author agent code in C# (in-process DLL), Python (subprocess), or any container image speaking the plugin HTTP protocol. Microsoft Agent Framework and Semantic Kernel are first-class swappable AI stacks underneath — pick either via DI without rewriting the agent.
 
