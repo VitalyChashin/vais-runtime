@@ -53,7 +53,7 @@ public sealed record ToolCallOutcome(string CallId, string? Result, string? Erro
 
 public interface IToolCallDispatcher
 {
-    Task<ToolCallOutcome> DispatchAsync(ToolCallRequest request, AgentContext context, CancellationToken cancellationToken = default);
+    ValueTask<ToolCallOutcome> DispatchAsync(ToolCallRequest request, AgentContext context, CancellationToken cancellationToken = default);
 }
 
 public sealed record RunBudget(
@@ -70,7 +70,7 @@ public sealed class AgentBudgetExceededException : Exception
 {
     public string BudgetField { get; }
     public object Limit { get; }
-    public object Actual { get; }
+    public object Observed { get; }
 }
 
 public sealed record AgentInterrupt(string InterruptId, string Reason, JsonElement Payload);
@@ -210,7 +210,7 @@ var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
 
 ## Streaming Invoke over HTTP (v0.12)
 
-The HTTP control plane publishes `POST /v1/agents/{id}/invoke/stream` — a Server-Sent Events endpoint that carries the **full `AgentEvent` hierarchy** on the wire, not just text. Ten wire-event names, one per `AgentEvent` subtype. Clients get two shapes:
+The HTTP control plane publishes `POST /v1/agents/{id}/invoke/stream` — a Server-Sent Events endpoint that carries the **full `AgentEvent` hierarchy** on the wire, not just text. Twelve wire-event names, one per `AgentEvent` subtype. Clients get two shapes:
 
 - `InvokeStreamEventsAsync` → `IAsyncEnumerable<AgentEvent>` — full taxonomy.
 - `InvokeStreamAsync` → `IAsyncEnumerable<string>` — text-only projection, filtered client-side to `CompletionDelta.TextDelta`.

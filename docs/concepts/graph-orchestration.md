@@ -25,7 +25,7 @@ Both share the same runtime — `InProcessGraphOrchestrator<TState>` implements 
 | `AgentGraphManifest` | Declarative shape. `Id`, `Version`, `Entry` node id, `Nodes[]`, `Edges[]`, optional `StateSchema`, `MaxSteps`. |
 | `GraphNode` | `{Id, Kind, Ref?, HandlerRef?, StateBindings?, InterruptReason?}`. Four kinds: `Agent`, `Code`, `Interrupt`, `End`. |
 | `GraphEdge` | `{From, To, When?: GraphEdgePredicate, OnTraverse?: GraphEdgeEffect, Concurrent: bool}`. `Concurrent=true` opts an edge into fan-out / fan-in under `MafGraphOrchestrator` (ignored by `InProcessGraphOrchestrator`). |
-| `GraphEdgePredicate` | Closed hierarchy: `Always`, `PropertyMatcher`, `AllOf`, `AnyOf`, `Not`, `HandlerRef`. |
+| `GraphEdgePredicate` | Closed hierarchy: `Always`, `PropertyMatcher`, `AllOf`, `AnyOf`, `Not`, `HandlerRef`, `Expression` (inline PowerFx boolean, evaluated by a registered `IGraphExpressionEvaluator` from `Vais.Agents.Core.PowerFx`). |
 | `GraphPredicateOperator` | Ten operators (`Eq`, `NotEq`, `Gt`, `Gte`, `Lt`, `Lte`, `Contains`, `NotContains`, `Exists`, `NotExists`). See [reference](../reference/graph-predicate-operators.md). |
 | `GraphEdgeEffect` | `{Kind, Property, Value?, HandlerRef?}`. Effects: `Set`, `Increment`, `Append`, `HandlerRef`. |
 | `IGraphCodeNode` / `IGraphEdgePredicate` / `IGraphEdgeEffect` | DI hooks for `HandlerRef` escapes. |
@@ -85,6 +85,8 @@ Closed set; additional kinds land additively per-pillar.
 Edges from the same source node are evaluated **in manifest order**; first matching predicate wins. At least one always-true edge per source node is the convention for reachability of `End`.
 
 The predicate vocabulary is Kubernetes-style matchers — same idiom as `matchExpressions` on a `PodSelector`. Dotted paths address nested state; the well-known `lastMessage.text` and `lastMessage.role` paths read the most-recently-appended message from the `messages` state key (convention shared with LangGraph).
+
+For conditions the matcher vocabulary can't express, use the `Expression` predicate — an inline PowerFx boolean (`when: "=<expr>"` in YAML) evaluated against state by a registered `IGraphExpressionEvaluator` (`Vais.Agents.Core.PowerFx` ships one via `AddPowerFxExpressionEvaluator()`; the runtime container wires it automatically). See the [route-graph-edges-with-powerfx tutorial](../agent-developer/route-graph-edges-with-powerfx.md).
 
 YAML example (full 3-node graph, v0.6 envelope shape):
 

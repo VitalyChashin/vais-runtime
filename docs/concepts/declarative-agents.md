@@ -74,7 +74,7 @@ All three pass through the same `{{variable}}` substitution if `variables` is pr
 Four prefixes supported:
 
 - **`static:<name>`** — resolves through `IStaticToolRegistry`. Register at host startup via `services.AddStaticToolRegistry(b => b.Add("weather", sp => new WeatherTool(sp.GetRequiredService<IHttpClientFactory>())))`.
-- **`mcp:<server>`** — references a `McpServerRef` declared in `McpServers`. v0.17 validates declaration only; lazy `McpToolSource` materialization lands post-v0.17.
+- **`mcp:<server>`** — references a `McpServerRef` declared in `McpServers`. The translator materializes the tool through the MCP server registry at translate time — physical `transport: registered` servers via `PhysicalMcpConnectionService` (`Control.Mcp`), virtual servers via `VirtualMcpToolSource` — so the model calls it at runtime. A server named in a `mcp:<server>` tool entry is in explicit mode (only listed tools imported); other `transport: registered` servers import all their tools.
 - **`a2a:<agent>`** — references an `A2ARemoteAgentRef` declared in the `A2ARemoteAgents` manifest section. Validates declaration only in v0.17.
 - **`agent:<name>`** — references a `LocalAgentRef` declared in the `LocalAgents` manifest section (v0.18, closes P7 agent-as-tool). Resolves to a `LocalAgentTool` (Blocking mode, default) or `BackgroundLocalAgentTool` (Background mode); background mode additionally registers `list_background_agents` / `get_background_agent_result` / `cancel_background_agent` management tools. See [delegate-to-an-agent guide](../guides/delegate-to-an-agent.md).
 
@@ -93,7 +93,7 @@ Three ordered arrays: `input`, `output`, `tool`. Each entry is a `GuardrailRef(N
 
 Unknown guardrail name ⇒ `urn:vais-agents:guardrail-not-registered`. Malformed params ⇒ `urn:vais-agents:guardrail-params-invalid`. Custom factories register via `services.AddSingleton<IGuardrailFactory, MyFactory>()` — see [ship-a-guardrail](../guides/ship-a-guardrail.md).
 
-**Evaluation order.** Declaration order in the manifest. Input guardrails run before the completion provider; output guardrails run after the response returns; tool guardrails (not fully wired in v0.17) run around each tool invocation.
+**Evaluation order.** Declaration order in the manifest. Input guardrails run before the completion provider; output guardrails run after the response returns; tool guardrails run around each tool invocation in `DefaultToolCallDispatcher` (the manifest `tool[]` array is wired through the translator into `StatefulAgentOptions.ToolGuardrails`). No Tool-layer guardrail ships as a built-in factory — register a custom `IGuardrailFactory` for the Tool layer.
 
 **LLM-as-judge.** Nested `ModelSpec` builds a second `ICompletionProvider` via the same factory chain — and the `ICompletionProviderPool` memoises, so multiple judges against the same model share one SDK client. Watch for loops: using the agent's own model as its judge wastes tokens.
 

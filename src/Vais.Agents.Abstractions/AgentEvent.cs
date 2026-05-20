@@ -12,7 +12,7 @@ namespace Vais.Agents;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Closed hierarchy: the Abstractions package defines exactly these six concrete
+/// Closed hierarchy: the Abstractions package defines exactly these twelve concrete
 /// shapes. Consumers pattern-match on subtype; adding a new subtype is an
 /// <em>unshipped</em> addition to Abstractions, not a subclass in downstream code.
 /// Keeps wire serialisation (Orleans, Redis streams) deterministic.

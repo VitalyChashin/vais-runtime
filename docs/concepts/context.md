@@ -26,7 +26,7 @@ namespace Vais.Agents;
 
 public interface IContextProvider
 {
-    Task<ContextContribution> InvokeAsync(ContextInvocationContext context, CancellationToken cancellationToken = default);
+    ValueTask<ContextContribution> InvokeAsync(ContextInvocationContext context, CancellationToken cancellationToken = default);
 }
 
 public sealed record ContextContribution(IReadOnlyList<Section> Sections)
@@ -150,7 +150,7 @@ See the [wire-context-sections tutorial](../guides/wire-context-sections.md) for
 
 - **No provider-level caching contract.** Consumers cache inside their provider or wrap it. No cache-key convention baked in.
 - **Section truncation only on text-shaped kinds.** The default packer truncates `SystemSegment` and `Metadata` payloads to fit `SectionBudget.MaxChars`; turn-shaped sections (`UserMessage` / `AssistantMessage` / `ToolMessage`) are either kept whole or dropped — never internally truncated. Bring a custom `ISectionWindowPacker` if you need finer-grained policy.
-- **Legacy `KnowledgeRetrievalFilter`** (`Vais.Agents.Persistence.VectorData`) is `[Obsolete(DiagnosticId="VAIS0001")]` since v0.4 — it used the older `IAgentFilter` pipeline. New code uses `KnowledgeRetrievalContextProvider`. The obsolete filter stays for one release; removal is planned for v0.5.
+- **Legacy `KnowledgeRetrievalFilter`** (`Vais.Agents.Persistence.VectorData`) is `[Obsolete(DiagnosticId="VAIS0001")]` since v0.4 — it used the older `IAgentFilter` pipeline. New code uses `KnowledgeRetrievalContextProvider`. The obsolete filter still ships for backward compatibility (`KnowledgeRetrievalFilter.cs` is still present); no firm removal version is set.
 
 ## See also
 

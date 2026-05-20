@@ -213,4 +213,4 @@ Python agent plugins support hot-reload via the same `PythonPluginWatcherService
 - [Package a Python agent](../guides/package-a-python-agent.md) — step-by-step guide
 - [Polyglot plugins (v0.23)](polyglot-plugins.md) — tool-level Python plugins
 - [Runtime plugins](runtime-plugins.md) — the v0.18 .NET plugin baseline
-- [PluginAgentLangGraphResearcher sample](../../samples/PluginAgentLangGraphResearcher/README.md)
+- [PluginAgentLangGraphResearcherLive sample](../../samples/PluginAgentLangGraphResearcherLive/README.md)

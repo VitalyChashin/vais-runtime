@@ -88,8 +88,8 @@ spec:
 
 | Feature | Pillar | What it added |
 |---|---|---|
-| Graph orchestration | v0.10 | `IAgentGraphRunner`, in-process graph execution, node kinds, edge predicates |
-| Resumable graphs on Orleans | v0.12 | Orleans-backed durable state, interrupt / resume protocol |
+| Graph orchestration | v0.9 | `IAgentGraph<TState>`, `InProcessGraphOrchestrator`, node kinds, edge predicates |
+| Resumable graphs on Orleans | v0.9 | Orleans-backed durable state (`OrleansCheckpointer`), interrupt / resume protocol |
 | Kubernetes operator (agent) | v0.13 | `Agent` CRD, `AgentEntityController` |
 | **Graph as deployable** | **v0.19** | **`AgentGraph` control-plane API, `AgentGraph` CRD, `vais graph-*` CLI commands** |
 | **Cross-runtime graph refs** | **v0.20** | **`ref.runtimeUrl` field on `kind: Agent` nodes; `IAgentRemoteInvoker`; bearer forwarding** |

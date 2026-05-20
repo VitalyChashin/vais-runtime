@@ -17,7 +17,7 @@ One new library package — `Vais.Agents.Runtime.Plugins` — plus additions to 
 | `Vais.Agents.Runtime.Instantiation` | Translator plugin-branch + 2 new URNs (`plugin-factory-throw`, `handler-and-declarative-fields-both-set`). |
 | `Vais.Agents.Hosting.Orleans` | `AiAgentGrain.OnActivateAsync` prefers `supplied.Agent` over constructing `StatefulAiAgent`. |
 
-32 packages total (including the five `Vais.Agents.Gateways.*` plugin packages added in the LLM Gateway pillar).
+54 NuGet packages total (including the twelve `Vais.Agents.Gateways.*` plugin packages — 7 LLM + 5 MCP/tool — across the gateway pillars).
 
 ## The pipeline
 

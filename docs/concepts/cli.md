@@ -1,6 +1,6 @@
 # CLI
 
-`Vais.Agents.Cli` — a `dotnet tool` that wraps the HTTP control plane in a kubectl-shape command-line surface. Shipped in v0.15 as a preview; subsequent pillars (v0.18 plugins, v0.19 graphs, v0.20 cross-runtime refs, eval harness, gateway config) layered commands onto the same shape. Today: ~29 top-level commands plus three branches (`eval`, `diagnose`, `config`). POSIX exit codes. Kubeconfig-style `~/.vais/config.yaml` for context switching.
+`Vais.Agents.Cli` — a `dotnet tool` that wraps the HTTP control plane in a kubectl-shape command-line surface. Shipped in v0.15 as a preview; subsequent pillars (v0.18 plugins, v0.19 graphs, v0.20 cross-runtime refs, eval harness, gateway config) layered commands onto the same shape. Today: ~30 top-level commands plus five branches (`eval`, `ext`, `agent`, `diagnose`, `config`). POSIX exit codes. Kubeconfig-style `~/.vais/config.yaml` for context switching.
 
 Install: `dotnet tool install -g Vais.Agents.Cli` → `vais` on PATH. See [install the CLI](../devops/install-the-cli.md) for the bootstrap walkthrough.
 
@@ -21,7 +21,7 @@ Grouped by functional area. Every command targets the HTTP control plane unless 
 
 | Command | HTTP target |
 |---|---|
-| `vais apply -f <file> [--idempotency-key]` | `POST /v1/apply` — mixed-kind YAML (Agents, Graphs, LlmGateway, McpGateway, McpServer, ContainerPlugin, EvalSuite) applied in dependency order. |
+| `vais apply -f <file> [--idempotency-key]` | `POST /v1/apply` — mixed-kind YAML (Agents, Graphs, LlmGateway, McpGateway, McpServer, ContainerPlugin, EvalSuite, Extension) applied in dependency order. |
 | `vais get [name] [--version] [--label-prefix] [--limit]` *(alias `list`)* | `GET /v1/agents` or `GET /v1/agents/{id}` |
 | `vais delete <id> [--version] [--force]` | `DELETE /v1/agents/{id}` |
 | `vais cancel <id> [--version]` | `POST /v1/agents/{id}/cancel` |
@@ -59,6 +59,19 @@ Grouped by functional area. Every command targets the HTTP control plane unless 
 | `vais plugin-push` | Push a plugin to the runtime. Source mode packs `./src` and hot-reloads; image mode `docker push` + `POST /v1/plugins/{name}/image`. |
 | `vais plugin-deploy` | Deploy a container plugin to Kubernetes via the built-in Helm chart (`helm upgrade --install`). |
 | `vais plugin-watch` | Watch a Python plugin's source directory and hot-reload on every change. |
+| `vais plugin-import-existing` | Load (or hot-reload) a plugin whose DLL is already in the runtime's plugins directory. |
+
+### Extensions (`ext` + `agent` branches)
+
+| Command | Purpose |
+|---|---|
+| `vais ext list` | List loaded extensions with host, version, and handler/seam summary. |
+| `vais ext get <id>` | Fetch a single loaded extension (full manifest + handler details). |
+| `vais ext logs <id>` | Show container-extension logs (`host: container` only; redirects to docker/kubectl). |
+| `vais ext metrics <id>` | Per-handler latency metrics (p50/p95) for a loaded extension. |
+| `vais agent extensions <id>` | List extension handlers bound to an agent, with scope-match diagnostics. |
+
+Extensions are applied with `vais apply -f` (`kind: Extension`) and removed with `vais delete extensions/<id>`.
 
 ### Eval harness (`eval` branch)
 

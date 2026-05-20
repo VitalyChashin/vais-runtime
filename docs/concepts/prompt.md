@@ -17,18 +17,18 @@ namespace Vais.Agents;
 
 public interface IPromptTemplate
 {
-    Task<string> RenderAsync(string template, IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default);
+    ValueTask<string> RenderAsync(string template, IReadOnlyDictionary<string, object?> variables, CancellationToken cancellationToken = default);
 }
 
 public interface ISystemPromptComposer
 {
-    Task<string?> ComposeAsync(AgentContext context, CancellationToken cancellationToken = default);
+    ValueTask<string?> ComposeAsync(AgentContext context, CancellationToken cancellationToken = default);
 }
 
 public interface ISystemPromptContributor
 {
     int Priority { get; }
-    Task<string?> ContributeAsync(AgentContext context, CancellationToken cancellationToken = default);
+    ValueTask<string?> ContributeAsync(AgentContext context, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -67,14 +67,14 @@ Context providers' contributions still concatenate on top of the composer's resu
 sealed class PersonaContributor(string persona) : ISystemPromptContributor
 {
     public int Priority => 0;  // runs first
-    public Task<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
-        => Task.FromResult<string?>(persona);
+    public ValueTask<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
+        => ValueTask.FromResult<string?>(persona);
 }
 
 sealed class TenantPolicyContributor(ITenantPolicyStore store) : ISystemPromptContributor
 {
     public int Priority => 10;
-    public async Task<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
+    public async ValueTask<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
     {
         if (ctx.TenantId is null) return null;
         var policy = await store.GetPolicyAsync(ctx.TenantId, ct);
@@ -91,8 +91,8 @@ Priority is ascending — lower numbers run first. Null / empty returns are skip
 sealed class GreetingContributor(Vais.Agents.IPromptTemplate template) : ISystemPromptContributor
 {
     public int Priority => 5;
-    public Task<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
-        => template.RenderAsync(
+    public async ValueTask<string?> ContributeAsync(AgentContext ctx, CancellationToken ct)
+        => await template.RenderAsync(
             "You are assisting {user}. Today is {date}.",
             new Dictionary<string, object?>
             {

@@ -1,6 +1,6 @@
 # Control plane
 
-Managed cloud runtimes (Bedrock AgentCore, Temporal, Restate, Dapr, OpenAI Assistants) converge on a universal verb set for agent lifecycles: **Create / Invoke / Signal / Query / Cancel / Update / Evict**. Vais.Agents ships those verbs as `IAgentLifecycleManager` + a value-typed `AgentManifest` that describes an agent deployment. The library tier ships the contracts + an in-memory reference implementation; the runtime tier implements the verbs with an Orleans-backed lifecycle manager, HTTP control plane, Kubernetes operator, OPA policy engine, and Keycloak-backed identity provider.
+Managed cloud runtimes (Bedrock AgentCore, Temporal, Restate, Dapr, OpenAI Assistants) converge on a universal verb set for agent lifecycles: **Create / Invoke / Signal / Query / Cancel / Update / Evict**. Vais.Agents ships those verbs as `IAgentLifecycleManager` + a value-typed `AgentManifest` that describes an agent deployment. The library tier ships the contracts + an in-memory reference implementation; the runtime tier implements the verbs with an Orleans-backed lifecycle manager, HTTP control plane, Kubernetes operator, OPA policy engine, and a generic OIDC identity provider (Keycloak / Auth0 / Entra).
 
 ## Why contract-first
 
@@ -94,11 +94,11 @@ public interface IAgentIdentityProvider
 
 `IAgentRegistry` is read-only on purpose — write helpers (`Register`, `Remove`) live on the concrete implementations (e.g. `InMemoryAgentRegistry`), so a consumer can wire a git-backed or config-driven registry that exposes no mutation surface at all.
 
-## What ships in v0.4
+## What ships where
 
-Just `InMemoryAgentRegistry` in Core — a concurrent-dictionary-backed `IAgentRegistry` impl with `Register` / `Remove` helpers, label-prefix filter on `ListAsync`, and "null version → latest lexicographically" semantics on `GetAsync`. Useful for dev, tests, and as a reference implementation for the cloud runtime.
+`InMemoryAgentRegistry` ships in **Core** — a concurrent-dictionary-backed `IAgentRegistry` impl with `Register` / `Remove` helpers, label-prefix filter on `ListAsync`, and "null version → latest lexicographically" semantics on `GetAsync`. Useful for dev, tests, and as a reference implementation.
 
-No `IAgentLifecycleManager` impl. No `IAgentIdentityProvider` impl. Those are runtime-tier deliverables — see [`runtime-configuration`](../reference/runtime-configuration.md).
+The lifecycle, registry-persistence, and identity implementations live in separate packages: `AgentLifecycleManager` in **`Control.InProcess`** (wraps the seven verbs with policy + idempotency + audit), `OrleansAgentRegistry` in **`Hosting.Orleans`** (durable registry across pod roll), and `OidcAgentIdentityProvider` in **`Identity.Oidc`**. See [`runtime-configuration`](../reference/runtime-configuration.md).
 
 ## Using the registry
 
@@ -167,7 +167,7 @@ These are surveyed universals; every target runtime (Bedrock AgentCore / Tempora
 
 - **`IAgentRegistry`** — file-backed, HTTP-backed, Kubernetes-CRD-backed implementations all fit the contract. Consumers who want Git-ops-style declarative registries build on top.
 - **`IAgentLifecycleManager`** — the cloud runtime is one implementation; an Aspire-hosted local runtime is another valid one.
-- **`IAgentIdentityProvider`** — per-tenant identity resolution + outbound credential acquisition. The runtime ships a Keycloak-backed impl; others (Azure AD, Okta) on the roadmap.
+- **`IAgentIdentityProvider`** — per-tenant identity resolution + outbound credential acquisition. The runtime ships `OidcAgentIdentityProvider` (`Identity.Oidc`), a generic OIDC implementation that works with Keycloak, Auth0, Microsoft Entra, or any OIDC-compliant IdP via discovery + JWKS.
 
 ## Idempotency (v0.11)
 
@@ -198,7 +198,7 @@ Unary `POST /v1/agents/{id}/invoke` returns a single `AgentInvocationResult`. St
 |---|---|---|
 | Route | `POST /v1/agents/{id}/invoke` | `POST /v1/agents/{id}/invoke/stream` |
 | Content-type | `application/json` | `text/event-stream` |
-| Body | `AgentInvocationResult` | Sequence of `AgentEvent` SSE frames (ten event names) |
+| Body | `AgentInvocationResult` | Sequence of `AgentEvent` SSE frames (twelve event names) |
 | Idempotency middleware | Applies | Bypassed via `[StreamingEndpoint]` |
 | Cancellation | Request-bounded | `HttpContext.RequestAborted` propagates into `StreamAsync` |
 

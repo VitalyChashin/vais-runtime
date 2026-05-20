@@ -10,7 +10,24 @@
 
 Open-source runtime for AI agents and multi-agent graphs — durable, declarative, deployed on infrastructure you own. Declare them as YAML manifests, then publish them to a durable, Orleans-backed runtime with the `vais` CLI or a Kubernetes operator. Author agent code in C# (in-process DLL), Python (subprocess), or any container image speaking the plugin HTTP protocol. Microsoft Agent Framework and Semantic Kernel are first-class swappable AI stacks underneath — pick either via DI without rewriting the agent.
 
-> 🚀 **New here?** [**QUICKSTART.md**](QUICKSTART.md) takes you from `git clone` to a running multi-agent graph with MCP tools + observable LLM/MCP gateways in ~15 minutes.
+> **Start here:**
+> - **New to agents?** Follow the guided [Agent developer path](docs/agent-developer/index.md) — begin with [your first declarative agent](docs/agent-developer/your-first-declarative-agent.md) (~10 min, no C#), then layer on gateways, tools, Python, and graphs one tutorial at a time.
+> - **Want the full tour?** [QUICKSTART.md](QUICKSTART.md) takes you from `git clone` to a running multi-agent graph with MCP tools + observable LLM/MCP gateways in ~15 minutes.
+> - **Just want a taste?** The [First run](#first-run--declarative) section below is copy-paste from a clone to an invoked agent.
+
+## Why this exists
+
+The open-source agent landscape splits into two unsatisfying halves. **Agent frameworks** hand you the agent loop and stop — you wire your own observability, build your own durability story, and figure out how to ship it. **Durable-workflow runtimes** give you checkpoints, retries, and fan-out, but no agent — no conversation, no tool-calling loop, no LLM gateway — so you rebuild the agent on top of a workflow engine.
+
+Vais.Agents sits between them. The runtime ships ready to deploy as a service you own, the agent *is* the unit of durability inside it, and the gateways and middleware are declarative manifests — not separately-operated services. Bring the agent code; the runtime owns the rest.
+
+## Why Vais.Agents?
+
+- **Durable agents, not durable workflows.** Other runtimes give you durable workflow primitives and ask you to build the agent loop on top. Vais.Agents ships the agent as the unit — one Orleans grain per `(agent, session)`, with state, history, and opaque-blob round-tripping handled by the host.
+- **Declarative-first, code-aware.** YAML for the 80%: model, prompt, tools, guardrails, gateway middleware. Drop into C#, Python, or any container speaking the plugin HTTP protocol when YAML isn't enough — same `vais apply` operator surface either way.
+- **Gateway is the only LLM and tool path.** Logging, OTel, rate limit, fallback, policy, cost gating — all middleware, all declared in a manifest, all applied uniformly. Adding observability is a YAML edit, not a search-and-replace across agent code.
+- **Decoupled application lifecycle.** Ship agent updates without rebuilding the host application. The runtime is the operational unit; agents are content you publish into it. Same `vais apply -f` surface in Docker, Compose, and Kubernetes — the platform team operates one runtime, the agent teams iterate against it independently.
+- **Native .NET, not bolted on.** Orleans for durability, MEAI for the AI contract, ASP.NET Core for HTTP, KubeOps for the operator — no node-style sidecar proxies, no foreign concurrency model. Stack-neutral underneath, too: `Vais.Agents.Abstractions` references no SK or MAF, and adapters exercise each stack's native machinery (SK's `IChatCompletionService`, MAF's `ChatClientAgent`) — swap via DI, never reduced to a shared `IChatClient` pass-through.
 
 ## Deployment topology
 
@@ -33,14 +50,6 @@ Open-source runtime for AI agents and multi-agent graphs — durable, declarativ
 | Observability — OTel GenAI semantic conventions + Langfuse enrichment | `Vais.Agents.Observability.OpenTelemetry`, `Vais.Agents.Observability.Langfuse` |
 | Evaluation harness — `kind: EvalSuite` manifest; batch scoring with `ToolCallSequence` / `JudgeScore` / `ResponseRegex` / `NoTurnFailed` assertions; `vais eval run / results / diff` CLI | `Vais.Agents.Eval` |
 | Interop — MCP tool-source adapter, A2A remote-agent-as-tool adapter | `Vais.Agents.Protocols.Mcp`, `Vais.Agents.Protocols.A2A` |
-
-## Why Vais.Agents?
-
-- **Durable agents, not durable workflows.** Other runtimes give you durable workflow primitives and ask you to build the agent loop on top. Vais.Agents ships the agent as the unit — one Orleans grain per `(agent, session)`, with state, history, and opaque-blob round-tripping handled by the host.
-- **Declarative-first, code-aware.** YAML for the 80%: model, prompt, tools, guardrails, gateway middleware. Drop into C#, Python, or any container speaking the plugin HTTP protocol when YAML isn't enough — same `vais apply` operator surface either way.
-- **Gateway is the only LLM and tool path.** Logging, OTel, rate limit, fallback, policy, cost gating — all middleware, all declared in a manifest, all applied uniformly. Adding observability is a YAML edit, not a search-and-replace across agent code.
-- **Decoupled application lifecycle.** Ship agent updates without rebuilding the host application. The runtime is the operational unit; agents are content you publish into it. Same `vais apply -f` surface in Docker, Compose, and Kubernetes — the platform team operates one runtime, the agent teams iterate against it independently.
-- **Native .NET, not bolted on.** Orleans for durability, MEAI for the AI contract, ASP.NET Core for HTTP, KubeOps for the operator. No node-style sidecar proxies, no foreign concurrency model.
 
 ## First run — declarative
 
@@ -233,14 +242,6 @@ Full docs live under **[`docs/`](docs/index.md)**. Sections by audience:
 - **[Library mode](docs/library-mode/index.md)** — embed primitives in a .NET app.
 
 Plus [Concepts](docs/index.md#concepts) for the design model and [Reference](docs/index.md#reference) for lookup tables.
-
-## Design principles
-
-1. **Declarative first.** Every resource — agents, graphs, plugins, gateways, MCP servers — is publishable, updatable, and removable via `vais apply -f <manifest>.yaml` against a running runtime. No runtime restart, no filesystem drops, no `kubectl exec`.
-2. **Durable by default.** Every agent and every multi-agent run is an Orleans grain. Silo restart, pod roll, and clustered scale-out are handled by the host; the agent author writes no retry logic and no checkpoint plumbing.
-3. **Stack-neutral contracts, native code paths.** `Vais.Agents.Abstractions` references no SK, no MAF, no Orleans, no ASP.NET. Adapters exercise their stack's native machinery (SK's `IChatCompletionService`, MAF's `ChatClientAgent`) — never reduced to a shared `IChatClient` pass-through.
-4. **Gateway is the only LLM/tool path.** Observability, rate limiting, policy, fallback, and provider routing live in middleware — not scattered across agent code. Adding a new cross-cutting concern is a gateway middleware, not a search-and-replace.
-5. **Apache 2.0 across the stack** — library, runtime, operator, CLI.
 
 ## Built on / interoperates with
 
