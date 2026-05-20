@@ -73,6 +73,7 @@ LANGFUSE_HOST=$langfuseHost
 OTEL_EXPORTER_OTLP_HEADERS=$otelHeader
 OPENAI_API_KEY=$(Get-Secret 'OPENAI_API_KEY')
 TAVILY_API_KEY=$(Get-Secret 'TAVILY_API_KEY')
+VAIS_CALL_TOKEN_SECRET=$(Get-Secret 'VAIS_CALL_TOKEN_SECRET')
 "@ | Set-Content "$LocalDevDir/.env" -Encoding UTF8
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
