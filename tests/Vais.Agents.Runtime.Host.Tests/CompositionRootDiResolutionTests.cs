@@ -41,20 +41,12 @@ public sealed class CompositionRootDiResolutionTests
         return services;
     }
 
-    [Fact]
-    public void Composition_Registers_BackgroundAgentTracker()
-    {
-        // IBackgroundAgentTracker was missing from CompositionRoot on 2026-05-15.
-        // Result: ManifestInstantiationException on the first invoke of any Background-mode agent.
-        // This test is the CI anchor that prevents the same omission recurring.
-        var services = BuildBaseline();
-        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
-        using var sp = services.BuildServiceProvider();
-
-        // IBackgroundAgentTracker is in the Vais.Agents namespace (parent of this test namespace).
-        sp.GetRequiredService<IBackgroundAgentTracker>().Should().NotBeNull(
-            because: "Background-mode LocalAgentRef requires IBackgroundAgentTracker at manifest translation time");
-    }
+    // NOTE: the standalone Composition_Registers_BackgroundAgentTracker probe was folded into the
+    // shared CriticalRuntimeContracts.All list (CriticalRuntimeContracts.cs) and is now covered by
+    // CompositionRootTests.CriticalContracts_Verify_Passes_For_Full_CompositionRoot. Background-mode
+    // LocalAgentRef requires IBackgroundAgentTracker at translation time; it went missing from
+    // CompositionRoot on 2026-05-15 (ManifestInstantiationException on first invoke). The startup
+    // self-check now catches that whole class of omission at boot rather than first request.
 
     [Fact]
     public void CompositionRoot_Covers_All_InMemoryAgentRuntime_ServiceTypes()

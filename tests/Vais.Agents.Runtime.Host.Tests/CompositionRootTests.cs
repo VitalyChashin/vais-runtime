@@ -60,7 +60,53 @@ public class CompositionRootTests
         var store = sp.GetRequiredService<IIdempotencyStore>();
 
         store.Should().BeOfType<OrleansIdempotencyStore>(
-            because: "AddOrleansIdempotencyStore must run before AddAgentControlPlaneIdempotency so TryAddSingleton picks Orleans, not InMemory — the v0.11 ordering footgun lives here.");
+            because: "the host installs the durable Orleans store via services.Replace, so it wins over the in-memory control-plane default.");
+    }
+
+    [Fact]
+    public void Composition_Idempotency_OrleansStore_Wins_Over_PreRegistered_Default()
+    {
+        // M1 order-independence: even if a competing IIdempotencyStore is already in the
+        // container before ConfigureServices runs (the v0.11 footgun shape), services.Replace
+        // guarantees the durable Orleans store wins — registration order no longer matters.
+        var services = BuildBaseline();
+        services.AddSingleton<IIdempotencyStore>(Substitute.For<IIdempotencyStore>());
+
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IIdempotencyStore>().Should().BeOfType<OrleansIdempotencyStore>(
+            because: "services.Replace overrides any prior IIdempotencyStore registration regardless of order.");
+    }
+
+    [Fact]
+    public void CriticalContracts_Verify_Passes_For_Full_CompositionRoot()
+    {
+        // M3: the startup self-check must succeed against the fully-wired composition root —
+        // every always-on critical contract resolves.
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+        using var sp = services.BuildServiceProvider();
+
+        var act = () => CriticalRuntimeContracts.Verify(sp);
+
+        act.Should().NotThrow(
+            because: "ConfigureServices registers every contract in CriticalRuntimeContracts.All.");
+    }
+
+    [Fact]
+    public void CriticalContracts_Verify_Throws_Naming_Missing_Contracts()
+    {
+        // M3: if a critical contract is unregistered, the boot must fail with a message that
+        // names the offender — not defer to a first-invoke ManifestInstantiationException.
+        var services = BuildBaseline(); // baseline only — no runtime contracts registered
+        using var sp = services.BuildServiceProvider();
+
+        var act = () => CriticalRuntimeContracts.Verify(sp);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*IAgentManifestTranslator*",
+                because: "Verify must fail fast and name the missing critical contract(s).");
     }
 
     [Fact]
@@ -226,29 +272,12 @@ public class CompositionRootTests
         registry.Should().BeNull(because: "empty PluginsDirectory explicitly disables the plugin loader — translator sees no registry and skips the plugin branch.");
     }
 
-    [Fact]
-    public void Composition_Plugin_Registry_Registered_Before_Translator()
-    {
-        // Ordering lock: the translator's ctor calls sp.GetService<IPluginHandlerRegistry>()
-        // at build time (via AddAgentManifestInstantiator). If the registration order ever
-        // drifts such that AddAgentPlugins runs AFTER AddAgentManifestInstantiator, the
-        // translator factory captures the missing registry and the plugin branch stops firing
-        // even though the loader appears to be wired. This test asserts the registry reaches
-        // the translator.
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-plugins-test-{Guid.NewGuid():N}");
-        var services = BuildBaseline();
-        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PluginsDirectory = tempRoot });
-
-        using var sp = services.BuildServiceProvider();
-        var translator = sp.GetRequiredService<IAgentManifestTranslator>();
-        var registry = sp.GetRequiredService<IPluginHandlerRegistry>();
-
-        // We can't directly inspect the translator's captured registry, but we CAN assert
-        // that both are resolvable from the same root provider — the translator was built
-        // from sp which already knew about the registry.
-        translator.Should().NotBeNull();
-        registry.Should().NotBeNull();
-    }
+    // NOTE: the former Composition_Plugin_Registry_Registered_Before_Translator test was removed.
+    // It claimed to lock a registration ordering that is not actually load-bearing (the translator
+    // resolves IPluginHandlerRegistry lazily) and structurally could not observe what it asserted.
+    // Order-independence is now proven behaviorally by
+    // AgentManifestInstantiatorRegistrationTests.Translator_Uses_PluginRegistry_Registered_After_Instantiator;
+    // the registry-when-dir-set behavior is covered by Composition_Plugin_Registry_Registered_When_PluginsDirectory_Set.
 
     [Fact]
     public void Options_FromEnvironment_Unset_Uses_Default_PluginsDirectory()
@@ -453,7 +482,28 @@ public class CompositionRootTests
         using var sp = services.BuildServiceProvider();
 
         sp.GetRequiredService<IPrincipalMapper>().Should().BeOfType<ServiceAccountPrincipalMapper>(
-            because: "UseSaPrincipalMapper=true must register ServiceAccountPrincipalMapper before AddAgentControlPlaneJwtAuth so TryAddSingleton<DefaultPrincipalMapper> skips the default.");
+            because: "UseSaPrincipalMapper=true installs ServiceAccountPrincipalMapper via services.Replace, overriding the JWT-auth DefaultPrincipalMapper default.");
+    }
+
+    [Fact]
+    public void Composition_SaPrincipalMapper_Wins_Over_PreRegistered_Default()
+    {
+        // M1 order-independence: a competing IPrincipalMapper already in the container before
+        // ConfigureServices runs must not defeat the SA mapper — services.Replace overrides it.
+        var services = BuildBaseline();
+        services.AddSingleton<IPrincipalMapper>(Substitute.For<IPrincipalMapper>());
+
+        var options = new RuntimeOptions
+        {
+            JwtAuthority = "https://oidc.example.com/realms/test",
+            UseSaPrincipalMapper = true,
+        };
+
+        CompositionRoot.ConfigureServices(services, options);
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IPrincipalMapper>().Should().BeOfType<ServiceAccountPrincipalMapper>(
+            because: "services.Replace overrides any prior IPrincipalMapper registration regardless of order.");
     }
 
     [Fact]
@@ -470,27 +520,10 @@ public class CompositionRootTests
             because: "AddAgentControlPlaneJwtAuth must wire AsyncLocalAgentContextAccessor for the principal-mapping middleware to push principals onto.");
     }
 
-    [Fact]
-    public void Composition_INamedToolSourceProvider_Reaches_Translator()
-    {
-        // Ordering lock: AddPythonPlugins must run before AddAgentManifestInstantiator so the
-        // translator's sp.GetServices<INamedToolSourceProvider>() call at build time captures
-        // the registered provider. If the registration order ever drifts, mcp: tool refs stop
-        // resolving even though AddPythonPlugins appears to be wired.
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"vais-python-plugins-test-{Guid.NewGuid():N}");
-        var services = BuildBaseline();
-
-        CompositionRoot.ConfigureServices(services, new RuntimeOptions { PythonPluginsDirectory = tempRoot });
-
-        using var sp = services.BuildServiceProvider();
-        var translator = sp.GetRequiredService<IAgentManifestTranslator>();
-        var providers = sp.GetServices<INamedToolSourceProvider>().ToList();
-
-        translator.Should().NotBeNull();
-        providers.Should().ContainSingle(
-            p => p is IPythonPluginHost,
-            because: "the Python provider must resolve from the same root as the translator — confirms AddPythonPlugins preceded AddAgentManifestInstantiator.");
-    }
+    // NOTE: the former Composition_INamedToolSourceProvider_Reaches_Translator test was removed —
+    // same reason as the plugin-registry ordering test above (claimed an ordering it could not
+    // observe; order is irrelevant). Provider-when-dir-set behavior remains covered by
+    // Composition_INamedToolSourceProvider_Registered_When_PythonPluginsDirectory_Set.
 
     [Fact]
     public void Options_LocalhostPersistence_Postgres_Requires_PostgresConnection()

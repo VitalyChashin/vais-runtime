@@ -66,12 +66,12 @@ namespace Vais.Agents.Runtime.Host;
 /// optional observability, and optional OPA.
 /// </para>
 /// <para>
-/// <b>Ordering discipline.</b> The three durability sidecars
-/// (<c>OrleansTaskStore</c> / <c>OrleansCheckpointer</c> / <c>OrleansIdempotencyStore</c>) all
-/// use <c>TryAddSingleton</c> and must be registered <em>before</em> the generic control-plane
-/// wiring — otherwise the in-memory defaults in <c>AddAgentControlPlaneIdempotency</c> etc. win
-/// silently. <see cref="ConfigureServices"/> encodes the correct order; the composition-root
-/// unit tests lock it in.
+/// <b>Override discipline.</b> Two host registrations override an in-memory default that a
+/// referenced library registers via <c>TryAddSingleton</c>: <c>IIdempotencyStore</c>
+/// (vs <c>AddAgentControlPlaneIdempotency</c>) and <c>IPrincipalMapper</c>
+/// (vs <c>AddAgentControlPlaneJwtAuth</c>). Both use <c>services.Replace</c> so the durable
+/// implementation wins <em>regardless of registration order</em>; the composition-root unit
+/// tests lock this in. No other registration in this method is order-dependent.
 /// </para>
 /// </remarks>
 internal static class CompositionRoot
@@ -149,13 +149,13 @@ internal static class CompositionRoot
         ArgumentNullException.ThrowIfNull(options);
         options.EnsureValid();
 
-        // 1. Orleans durability sidecars — FIRST, before any control-plane wiring. All three
-        //    use TryAddSingleton; once AddAgentControlPlaneIdempotency runs with its InMemory
-        //    default, it is too late. See v0.11 findings for the ordering footgun.
+        // 1. Orleans durability sidecars. Task store + checkpointer have no competing default
+        //    wired in this host, so they are the sole ITaskStore / IGraphCheckpointer
+        //    registrations and registration order is irrelevant. (The idempotency store DOES
+        //    have a competing in-memory default from AddAgentControlPlaneIdempotency; it is
+        //    installed order-independently via services.Replace at the control-plane section.)
         services.AddOrleansA2ATaskStore();
         services.AddOrleansGraphCheckpointer();
-        if (options.IdempotencyEnabled)
-            services.AddOrleansIdempotencyStore();
 
         // IHttpClientFactory — required by plugin handlers that take IHttpClientFactory in
         // their constructor. AddHttpClient is idempotent; calling it here makes it available
@@ -180,16 +180,13 @@ internal static class CompositionRoot
         // share the same instance.
         services.AddSingleton<IAgentGraphEventBus, InMemoryAgentGraphEventBus>();
 
-        // 3. v0.17 Pillar B — swap InMemory registry for Orleans-backed (survives pod roll),
-        //    register the manifest translator + built-in model providers + built-in
-        //    guardrails, and point ConfigureAgentGrains at the translator so grain
-        //    activation yields options produced from the stored manifest.
-        //
-        //    Ordering discipline (locked by Composition_Translator_Registered_Before_ConfigureAgentGrains):
-        //    all three Add*Instantiator / Add*Providers / Add*Guardrails calls must
-        //    precede ConfigureAgentGrains. The lambda closes over sp.GetRequiredService
-        //    so the translator must be registered before the Func<string, options>
-        //    gets resolved at grain activation.
+        // 3. v0.17 Pillar B — Orleans-backed durable registries, the manifest translator,
+        //    built-in model providers + guardrails, and ConfigureAgentGrains pointed at the
+        //    translator so grain activation yields options from the stored manifest.
+        //    Registration order within this method does not matter: ConfigureAgentGrains installs
+        //    a Func that resolves the translator lazily at grain activation, and the translator
+        //    itself is constructed by the container from registrations that all exist by the time
+        //    the provider is built. See research/composition-root-ordering-coupling-2026-05-20.md.
         services.AddOrleansAgentRegistry();
         services.AddOrleansAgentGraphRegistry();
         services.AddOrleansLlmGatewayConfigRegistry();
@@ -203,12 +200,11 @@ internal static class CompositionRoot
         services.AddVaisExtensions();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
 
-        // v0.18 Pillar C — plugin loader. Must register BEFORE AddAgentManifestInstantiator
-        // because the translator constructor calls sp.GetService<IPluginHandlerRegistry>()
-        // lazily at build time; an absent registry → translator falls through to the v0.17
-        // declarative path. Empty / whitespace PluginsDirectory → skip wiring entirely
-        // (disabled mode). Non-existent directory is handled by the loader itself as a no-op
-        // with an empty registry.
+        // v0.18 Pillar C — plugin loader. The translator takes IPluginHandlerRegistry as an
+        // optional ctor dependency resolved at activation, so this may be wired before or after
+        // AddAgentManifestInstantiator; when no registry is present the translator falls through
+        // to the v0.17 declarative path. Empty / whitespace PluginsDirectory → skip wiring
+        // entirely (disabled mode). Non-existent directory is a loader no-op with an empty registry.
         if (!string.IsNullOrWhiteSpace(options.PluginsDirectory))
         {
             services.AddAgentPlugins(
@@ -220,8 +216,8 @@ internal static class CompositionRoot
                 });
         }
 
-        // v0.23 Python-plugins pillar — opt-in via VAIS_PYTHON_PLUGINS_DIRECTORY. Must register
-        // before AddAgentManifestInstantiator so INamedToolSourceProvider reaches the translator.
+        // v0.23 Python-plugins pillar — opt-in via VAIS_PYTHON_PLUGINS_DIRECTORY. Registers an
+        // INamedToolSourceProvider the translator resolves at activation (order-independent).
         if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory))
         {
             services.AddContainerGatewayCallToken();
@@ -281,7 +277,8 @@ internal static class CompositionRoot
         services.AddNamedToolGatewayMiddleware_ToolResultCache();
         services.AddNamedToolGatewayMiddleware_ToolJsonRepair();
         services.AddNamedToolGatewayMiddleware_ToolHtmlToMarkdown();
-        // Composite factories — resolve named registrations above via IEnumerable<> injection.
+        // Composite factories — resolve the named registrations via IEnumerable<> injection,
+        // which collects them regardless of registration order relative to these factories.
         services.AddDefaultLlmGatewayMiddlewareFactory();
         services.AddDefaultToolGatewayMiddlewareFactory();
 
@@ -386,21 +383,24 @@ internal static class CompositionRoot
         // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
         services.AddAgentControlPlane();
         if (options.IdempotencyEnabled)
+        {
+            // AddAgentControlPlaneIdempotency TryAdds an in-memory IIdempotencyStore default.
+            // Replace swaps in the durable Orleans store regardless of registration order —
+            // no "register Orleans first" footgun.
             services.AddAgentControlPlaneIdempotency();
+            services.Replace(ServiceDescriptor.Singleton<IIdempotencyStore>(
+                sp => new OrleansIdempotencyStore(
+                    sp.GetRequiredService<IGrainFactory>(),
+                    OrleansIdempotencyStore.DefaultTtl)));
+        }
         services.AddAgentControlPlaneOpenApi();
 
         // 4b. v0.30 JWT authentication + principal mapping. Off-by-default — existing localhost
         //     semantics unchanged. When VAIS_JWT_AUTHORITY is set the full bearer-token pipeline
-        //     is wired. VAIS_SA_PRINCIPAL_MAPPER=true must be registered BEFORE
-        //     AddAgentControlPlaneJwtAuth so TryAddSingleton<DefaultPrincipalMapper> inside it
-        //     sees an existing registration and skips the default.
+        //     is wired. AddAgentControlPlaneJwtAuth TryAdds DefaultPrincipalMapper; when the SA
+        //     mapper is opted in, services.Replace swaps it in order-independently.
         if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
         {
-            if (options.UseSaPrincipalMapper)
-            {
-                services.AddSingleton<IPrincipalMapper, ServiceAccountPrincipalMapper>();
-            }
-
             services.AddAgentControlPlaneJwtAuth(o =>
             {
                 o.Authority = options.JwtAuthority;
@@ -409,6 +409,11 @@ internal static class CompositionRoot
                     o.Audience = options.JwtAudience;
                 }
             });
+
+            if (options.UseSaPrincipalMapper)
+            {
+                services.Replace(ServiceDescriptor.Singleton<IPrincipalMapper, ServiceAccountPrincipalMapper>());
+            }
         }
 
         // 4c. OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.
