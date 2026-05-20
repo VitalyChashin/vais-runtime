@@ -1227,14 +1227,13 @@ public sealed class MafGraphOrchestratorTests
     }
 
     [Fact]
-    public async Task AgentGraphLifecycleManager_ConcurrentEdges_WithoutFactory_EmitsWarning()
+    public async Task AgentGraphLifecycleManager_ConcurrentEdges_WithoutFactory_Throws()
     {
         var (registry, lifecycle) = BuildHarness();
         await lifecycle.CreateAsync(ManifestFor("a-agent"));
         var graphRegistry = new InMemoryAgentGraphRegistry();
-        var logger = new CapturingLogger<AgentGraphLifecycleManager>();
         var manager = new AgentGraphLifecycleManager(
-            graphRegistry, registry, lifecycle, new InMemoryCheckpointer(), logger: logger);
+            graphRegistry, registry, lifecycle, new InMemoryCheckpointer());
 
         var manifest = new AgentGraphManifest(
             Id: "warn-test", Version: "1.0", Entry: "a",
@@ -1242,10 +1241,15 @@ public sealed class MafGraphOrchestratorTests
             Edges: new[] { new GraphEdge("a", "end", Concurrent: true) });
 
         var handle = await manager.CreateAsync(manifest);
-        await manager.InvokeAsync(handle, new GraphInvocationRequest(new Dictionary<string, JsonElement>()));
 
-        logger.Messages.Should().Contain(m => m.Contains("concurrent"),
-            "InProcessGraphOrchestrator fallback must warn when concurrent edges are present");
+        var act = async () => await manager.InvokeAsync(
+            handle, new GraphInvocationRequest(new Dictionary<string, JsonElement>()));
+
+        // Without an orchestratorFactory, concurrent edges must fail loudly rather than fall back
+        // to the sequential InProcessGraphOrchestrator and silently mis-execute the fan-out.
+        await act.Should().ThrowAsync<InvalidOperationException>(
+                because: "concurrent edges require MafGraphOrchestrator via orchestratorFactory")
+            .WithMessage("*concurrent*orchestratorFactory*");
     }
 
     // ---- helpers ----

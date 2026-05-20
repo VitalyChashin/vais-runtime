@@ -18,6 +18,37 @@ namespace Vais.Agents.Core.Tests;
 public sealed class InProcessGraphOrchestratorTests
 {
     [Fact]
+    public void Constructor_Throws_When_Manifest_Has_Concurrent_Edges()
+    {
+        // The in-process orchestrator is sequential-only — first-match-wins edge selection,
+        // no fan-out/fan-in barrier. A concurrent-edge manifest must fail loudly rather than
+        // silently run a single branch. (Fan-out/fan-in is MafGraphOrchestrator's job.)
+        var (registry, lifecycle) = BuildHarness(_ => new CompletionResponse("unused"));
+        var manifest = new AgentGraphManifest(
+            "fanout-graph", "1.0", "fork",
+            Nodes: new[]
+            {
+                new GraphNode("fork", "Agent", Ref: new GraphAgentRef("fork-agent")),
+                new GraphNode("a", "Agent", Ref: new GraphAgentRef("a-agent")),
+                new GraphNode("b", "Agent", Ref: new GraphAgentRef("b-agent")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[]
+            {
+                new GraphEdge("fork", "a", Concurrent: true),
+                new GraphEdge("fork", "b", Concurrent: true),
+                new GraphEdge("a", "end"),
+                new GraphEdge("b", "end"),
+            });
+
+        var act = () => new InProcessGraphOrchestrator(manifest, registry, lifecycle, new InMemoryCheckpointer());
+
+        act.Should().Throw<NotSupportedException>(
+                because: "concurrent fan-out/fan-in edges require MafGraphOrchestrator")
+            .WithMessage("*sequential-only*MafGraphOrchestrator*");
+    }
+
+    [Fact]
     public async Task Archetype_A_Routes_Refund_To_Billing()
     {
         // Triage agent replies with a fixed script; the graph's edge predicate
