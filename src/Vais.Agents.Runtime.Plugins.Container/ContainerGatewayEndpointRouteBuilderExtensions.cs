@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents;
 using Vais.Agents.Core;
 using Vais.Agents.Runtime.Instantiation;
+using Vais.Agents.Runtime.Plugins.Container.Otlp;
+using Vais.Agents.Runtime.Plugins.Container.StructuredLog;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
@@ -51,6 +53,11 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         group.MapPost("tools/invoke", HandleToolInvokeAsync);
         group.MapGet("tools/list", HandleToolsListAsync);
         group.MapPost("sections/build", HandleSectionsBuildAsync);
+
+        // Telemetry endpoints: OTLP spans + structured logs.
+        // Both self-validate the vais-plugin-token — no outer filter needed.
+        builder.MapPluginOtlpEndpoints();
+        builder.MapPluginStructuredLogEndpoints();
 
         return builder;
     }

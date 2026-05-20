@@ -27,6 +27,9 @@ Example::
     ).fastapi
 """
 
+from . import _log_handler as _log_handler_module
+_log_handler_module._configure_log_handler()
+
 from .middleware import AgentInputMiddleware, AgentOutputMiddleware
 from .host import Host
 from .wire import (

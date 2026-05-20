@@ -11,6 +11,15 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Plugin structured-log endpoint (P12 §3 optional outbound — SL-1..SL-14).** Closes the second half of the P12 zone-3 optional-outbound surface (the first half, OTLP spans, shipped in OTLP-1..17). Also closes the O-E gap for container extensions.
+  - **Runtime endpoint** `POST /v1/logs` — accepts `{ timestamp, severity, message, fields }` JSON with `Authorization: vais-plugin-token <token>`. Validates via `ICallTokenService.TryExtract`; fans each record out to the runtime's `ILogger` pipeline (docker-logs, ELK/Loki, Seq). Optional `?source=plugin|extension&id=<id>` discriminator stamps the source in the forwarded log entry.
+  - **`ContainerPluginLoaderOptions.LogEndpointUrl`** — new option. When set the Docker supervisor injects `VAIS_LOG_ENDPOINT` (full URL with discriminator) and `VAIS_LOG_TOKEN` (24 h HMAC) into container plugin env vars.
+  - **`PluginStructuredLogEndpointRouteBuilderExtensions.MapPluginStructuredLogEndpoints`** — extension method mapped automatically by `MapContainerGatewayEndpoints`.
+  - **Fixed: `MapPluginOtlpEndpoints` was not wired** — `MapContainerGatewayEndpoints` now calls both `MapPluginOtlpEndpoints` and `MapPluginStructuredLogEndpoints`.
+  - **`vais_plugin._log_handler`** — Python SDK module. `VaisLogHandler(logging.Handler)` posts records to `VAIS_LOG_ENDPOINT` authenticated with `VAIS_LOG_TOKEN`. Auto-installed on `logging.root` at import time when both env vars are set. No extra install required (`httpx` is a core dep).
+  - **`vais_extension._log_handler`** — O-E delta: same handler for container extensions. Auto-installed at `vais_extension` import time. `httpx` promoted from dev-dep to core dep in `vais-extension`.
+  - Guide: `docs/deep-development/plugin-structured-log-endpoint.md`.
+
 - **Extension handler contract — Phase B: container host (EXT-15..EXT-24).** Adds `host: container` support so extensions can be written in any language and communicate with the runtime over HTTP. Parallel type to the C# in-process path — no shared base, per OQ-2b.
   - `ContainerExtensionLifecycleManager` — starts the container via `IContainerExtensionHost`, calls `GET /v1/handlers` at startup to discover advertised handlers, cross-checks against the manifest, and registers `HandlerBinding`s whose `HandlerInstance` is an `HttpContainerHandlerProxy`.
   - `HttpContainerHandlerProxy` — generic proxy that translates each seam invocation into paired `POST /handlers/<id>/pre` and `POST /handlers/<id>/post` HTTP calls. Pre-response actions: `next` (continue chain), `shortCircuit` (stop chain), `mutate` (continue + apply `contextPatch` to `AgentInputContext.Properties`).

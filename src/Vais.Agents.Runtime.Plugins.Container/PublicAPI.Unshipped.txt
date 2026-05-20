@@ -15,8 +15,12 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.PluginNetwork.set -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.OtlpEndpointUrl.get -> string?
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.OtlpEndpointUrl.set -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.LogEndpointUrl.get -> string?
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginLoaderOptions.LogEndpointUrl.set -> void
 Vais.Agents.Runtime.Plugins.Container.Otlp.PluginOtlpEndpointRouteBuilderExtensions
 static Vais.Agents.Runtime.Plugins.Container.Otlp.PluginOtlpEndpointRouteBuilderExtensions.MapPluginOtlpEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Runtime.Plugins.Container.StructuredLog.PluginStructuredLogEndpointRouteBuilderExtensions
+static Vais.Agents.Runtime.Plugins.Container.StructuredLog.PluginStructuredLogEndpointRouteBuilderExtensions.MapPluginStructuredLogEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.ContainerPluginResourceBounds() -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxMemoryBytes.get -> long
