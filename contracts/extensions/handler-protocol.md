@@ -155,6 +155,33 @@ In Phase B, authentication is not enforced (runtime and extensions share a priva
 
 ---
 
+## Trace context
+
+The runtime injects W3C trace context and Vais run-identity headers on every `/pre` and `/post` request so that spans emitted by the extension container appear as children of the runtime's `vais.extension.handler.invoke` span.
+
+### Request headers
+
+| Header | MUST/MAY | Description |
+|---|---|---|
+| `traceparent` | MUST | W3C `traceparent` header; value is the invocation span's context. |
+| `tracestate` | MAY | W3C `tracestate` header when present in the ambient trace context. |
+| `X-Vais-Agent-Id` | MUST | The `agentId` of the agent this invocation is for. |
+| `X-Vais-Run-Id` | MAY | The `runId` when the invocation is part of a durable run; absent for stateless calls. |
+| `X-Vais-Node-Id` | MAY | The `nodeId` when invoked inside a graph node; absent for agent-level (non-graph) seams. |
+
+### Extension-emitted spans
+
+Container extensions MAY emit their own child spans. When doing so:
+
+- Use the Python SDK helper `vais_extension.telemetry.extract_parent_context(headers)` (Python) or `DistributedContextPropagator.Current.Extract()` (C#) to restore the parent context from the request headers before starting spans.
+- Export spans to the runtime OTLP receiver via the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable. For runtime-managed containers the runtime injects this variable automatically. The URL format is `http://<runtime-host>:5001/v1/otlp/v1/traces?source=extension&id=<extension-id>`. The `source` and `id` query parameters cause the receiver to tag forwarded spans with `vais.span.source=extension_otlp` and `vais.extension.id=<extension-id>`.
+- Set `OTEL_SERVICE_NAME=vais-extension/<extension-id>` so the resource appears correctly in Langfuse / Grafana Tempo.
+- Do NOT include `agent_id` in custom metric labels — record agent context on spans only, not metric series.
+
+Response headers MUST NOT include `traceparent` — the runtime owns the parent context.
+
+---
+
 ## Failure modes
 
 | Condition | HTTP status | Recovery |
@@ -171,4 +198,5 @@ In Phase B, authentication is not enforced (runtime and extensions share a priva
 
 | Version | Date | Change |
 |---|---|---|
+| 0.31 | 2026-05-20 | Added §Trace context: `traceparent`, `X-Vais-*` headers, OTLP URL discriminator format |
 | 0.30 | 2026-05-19 | Initial extension handler protocol (Phase B) |

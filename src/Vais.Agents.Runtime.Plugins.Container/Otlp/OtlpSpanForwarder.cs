@@ -19,13 +19,30 @@ internal sealed class OtlpSpanForwarder
 
     public OtlpSpanForwarder(ILogger logger) => _logger = logger;
 
-    public void Forward(IReadOnlyList<OtlpSpan> spans, string agentId)
+    /// <summary>
+    /// Forward a batch of OTLP spans.
+    /// </summary>
+    /// <param name="spans">Parsed spans.</param>
+    /// <param name="agentId">Authenticated caller identity (agent or extension id).</param>
+    /// <param name="source">
+    /// Value for the <c>vais.span.source</c> tag. Use <c>"plugin_otlp"</c> (default) for
+    /// container plugins and <c>"extension_otlp"</c> for container extensions.
+    /// </param>
+    /// <param name="extensionId">
+    /// When <paramref name="source"/> is <c>"extension_otlp"</c>, the extension id to stamp
+    /// on each span as <c>vais.extension.id</c>.
+    /// </param>
+    public void Forward(
+        IReadOnlyList<OtlpSpan> spans,
+        string agentId,
+        string source = "plugin_otlp",
+        string? extensionId = null)
     {
         foreach (var span in spans)
-            EmitSpan(span, agentId);
+            EmitSpan(span, agentId, source, extensionId);
     }
 
-    internal void EmitSpan(OtlpSpan span, string agentId)
+    internal void EmitSpan(OtlpSpan span, string agentId, string source = "plugin_otlp", string? extensionId = null)
     {
         if (span.TraceId.Length != 16 || span.SpanId.Length != 8)
         {
@@ -75,7 +92,9 @@ internal sealed class OtlpSpanForwarder
         activity.SetStartTime(startUtc);
 
         activity.SetTag("vais.agent_id", agentId);
-        activity.SetTag("vais.span.source", "plugin_otlp");
+        activity.SetTag("vais.span.source", source);
+        if (extensionId is not null)
+            activity.SetTag("vais.extension.id", extensionId);
 
         foreach (var (key, value) in span.Attributes)
             activity.SetTag(key, value);

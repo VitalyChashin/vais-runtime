@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -68,7 +69,8 @@ internal sealed class HttpContainerHandlerProxy
         HandlerPreResponse? preResp;
         try
         {
-            using var httpResp = await _http.PostAsJsonAsync(_preEndpoint, preReq, JsonOptions, ct).ConfigureAwait(false);
+            using var preMsg = CreateTracedRequest(_preEndpoint, preReq, ctx.AgentId, ctx.RunId, ctx.NodeId);
+            using var httpResp = await _http.SendAsync(preMsg, ct).ConfigureAwait(false);
             httpResp.EnsureSuccessStatusCode();
             preResp = await httpResp.Content.ReadFromJsonAsync<HandlerPreResponse>(JsonOptions, ct).ConfigureAwait(false);
         }
@@ -100,7 +102,8 @@ internal sealed class HttpContainerHandlerProxy
         var postReq = new AgentInputPostRequest(callId, preResp.ContinuationToken);
         try
         {
-            using var postResp = await _http.PostAsJsonAsync(_postEndpoint, postReq, JsonOptions, ct).ConfigureAwait(false);
+            using var postMsg = CreateTracedRequest(_postEndpoint, postReq, ctx.AgentId, ctx.RunId, ctx.NodeId);
+            using var postResp = await _http.SendAsync(postMsg, ct).ConfigureAwait(false);
             postResp.EnsureSuccessStatusCode();
             var postBody = await postResp.Content.ReadFromJsonAsync<HandlerPostResponse>(JsonOptions, ct).ConfigureAwait(false);
             if (postBody is { Action: var action } && string.Equals(action, "mutate", StringComparison.OrdinalIgnoreCase) && postBody.ContextPatch is { } pp)
@@ -129,7 +132,8 @@ internal sealed class HttpContainerHandlerProxy
         HandlerPreResponse? preResp;
         try
         {
-            using var httpResp = await _http.PostAsJsonAsync(_preEndpoint, preReq, JsonOptions, ct).ConfigureAwait(false);
+            using var preMsg = CreateTracedRequest(_preEndpoint, preReq, ctx.AgentId, ctx.RunId, nodeId: null);
+            using var httpResp = await _http.SendAsync(preMsg, ct).ConfigureAwait(false);
             httpResp.EnsureSuccessStatusCode();
             preResp = await httpResp.Content.ReadFromJsonAsync<HandlerPreResponse>(JsonOptions, ct).ConfigureAwait(false);
         }
@@ -153,7 +157,8 @@ internal sealed class HttpContainerHandlerProxy
         var postReq = new AgentOutputPostRequest(callId, preResp.ContinuationToken);
         try
         {
-            using var postResp = await _http.PostAsJsonAsync(_postEndpoint, postReq, JsonOptions, ct).ConfigureAwait(false);
+            using var postMsg = CreateTracedRequest(_postEndpoint, postReq, ctx.AgentId, ctx.RunId, nodeId: null);
+            using var postResp = await _http.SendAsync(postMsg, ct).ConfigureAwait(false);
             postResp.EnsureSuccessStatusCode();
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
@@ -183,6 +188,26 @@ internal sealed class HttpContainerHandlerProxy
             throw new ExtensionHandlerProxyException(_preEndpoint, ex);
 
         return HandlerOutcome.ShortCircuit();
+    }
+
+    private static HttpRequestMessage CreateTracedRequest<T>(
+        string endpoint, T body, string agentId, string? runId, string? nodeId)
+    {
+        var msg = new HttpRequestMessage(HttpMethod.Post, endpoint)
+        {
+            Content = JsonContent.Create(body, options: JsonOptions),
+        };
+        // Inject W3C traceparent/tracestate from Activity.Current (the invocation span).
+        DistributedContextPropagator.Current.Inject(
+            Activity.Current, msg,
+            static (carrier, name, value) =>
+                ((HttpRequestMessage)carrier!).Headers.TryAddWithoutValidation(name, value));
+        msg.Headers.TryAddWithoutValidation("X-Vais-Agent-Id", agentId);
+        if (runId is not null)
+            msg.Headers.TryAddWithoutValidation("X-Vais-Run-Id", runId);
+        if (nodeId is not null)
+            msg.Headers.TryAddWithoutValidation("X-Vais-Node-Id", nodeId);
+        return msg;
     }
 
     private static void ApplyPatch(IDictionary<string, object?> target, IReadOnlyDictionary<string, object?> patch)
