@@ -66,6 +66,12 @@ namespace Vais.Agents.Runtime.Host;
 /// optional observability, and optional OPA.
 /// </para>
 /// <para>
+/// <b>Structure.</b> <see cref="ConfigureServices"/> is a thin orchestrator over a set of
+/// cohesive per-concern <c>Configure*</c> helpers (runtime foundation, registries, plugins,
+/// gateway catalog, manifest pipeline, lifecycle managers, control plane, observability stores,
+/// host infrastructure). The helpers may run in any order — see the override-discipline note.
+/// </para>
+/// <para>
 /// <b>Override discipline.</b> Two host registrations override an in-memory default that a
 /// referenced library registers via <c>TryAddSingleton</c>: <c>IIdempotencyStore</c>
 /// (vs <c>AddAgentControlPlaneIdempotency</c>) and <c>IPrincipalMapper</c>
@@ -141,7 +147,8 @@ internal static class CompositionRoot
     /// <summary>
     /// Wire the top-level <see cref="IServiceCollection"/>. Caller is expected to have
     /// already set up Orleans via <c>builder.Host.UseOrleans(...)</c>; this method only
-    /// registers services that the ASP.NET Core host owns.
+    /// registers services that the ASP.NET Core host owns. A thin orchestrator over the
+    /// per-concern <c>Configure*</c> helpers below.
     /// </summary>
     public static void ConfigureServices(IServiceCollection services, RuntimeOptions options, IConfiguration? configuration = null)
     {
@@ -149,22 +156,45 @@ internal static class CompositionRoot
         ArgumentNullException.ThrowIfNull(options);
         options.EnsureValid();
 
-        // 1. Orleans durability sidecars. Task store + checkpointer have no competing default
-        //    wired in this host, so they are the sole ITaskStore / IGraphCheckpointer
-        //    registrations and registration order is irrelevant. (The idempotency store DOES
-        //    have a competing in-memory default from AddAgentControlPlaneIdempotency; it is
-        //    installed order-independently via services.Replace at the control-plane section.)
+        ConfigureDurability(services);
+        ConfigureRuntimeAndRegistries(services);
+        ConfigurePlugins(services, options);
+        ConfigureGatewayCatalog(services);
+        ConfigureManifestPipeline(services);
+        ConfigureLifecycleManagers(services, options, configuration);
+        ConfigureControlPlaneAndAuth(services, options);
+        ConfigureObservabilityStores(services, options);
+        ConfigureHostInfra(services, options);
+    }
+
+    /// <summary>
+    /// Orleans durability sidecars. Task store + checkpointer have no competing default
+    /// wired in this host, so they are the sole ITaskStore / IGraphCheckpointer registrations
+    /// and registration order is irrelevant. (The idempotency store DOES have a competing
+    /// in-memory default from AddAgentControlPlaneIdempotency; it is installed
+    /// order-independently via services.Replace in <see cref="ConfigureControlPlaneAndAuth"/>.)
+    /// </summary>
+    private static void ConfigureDurability(IServiceCollection services)
+    {
         services.AddOrleansA2ATaskStore();
         services.AddOrleansGraphCheckpointer();
+    }
 
+    /// <summary>
+    /// Orleans-backed agent runtime + event bus + background tracker, the in-process graph
+    /// event bus, and the durable registries (agent / graph / gateway configs / mcp server /
+    /// container plugin / eval) plus eval, extensions, and the secret resolver.
+    /// </summary>
+    private static void ConfigureRuntimeAndRegistries(IServiceCollection services)
+    {
         // IHttpClientFactory — required by plugin handlers that take IHttpClientFactory in
         // their constructor. AddHttpClient is idempotent; calling it here makes it available
         // in the plugin DI container without the plugin author having to register it manually.
         services.AddHttpClient();
 
-        // 2. Orleans-backed agent runtime (client-side) + stream-backed event bus. These
-        //    bind IAgentRuntime + IAgentContextAccessor + IAgentEventBus against IGrainFactory,
-        //    which the co-hosted silo exposes into the same DI container.
+        // Orleans-backed agent runtime (client-side) + stream-backed event bus. These
+        // bind IAgentRuntime + IAgentContextAccessor + IAgentEventBus against IGrainFactory,
+        // which the co-hosted silo exposes into the same DI container.
         services.AddOrleansAgentRuntime();
         services.AddOrleansAgentEventBus();
 
@@ -180,13 +210,9 @@ internal static class CompositionRoot
         // share the same instance.
         services.AddSingleton<IAgentGraphEventBus, InMemoryAgentGraphEventBus>();
 
-        // 3. v0.17 Pillar B — Orleans-backed durable registries, the manifest translator,
-        //    built-in model providers + guardrails, and ConfigureAgentGrains pointed at the
-        //    translator so grain activation yields options from the stored manifest.
-        //    Registration order within this method does not matter: ConfigureAgentGrains installs
-        //    a Func that resolves the translator lazily at grain activation, and the translator
-        //    itself is constructed by the container from registrations that all exist by the time
-        //    the provider is built. See research/composition-root-ordering-coupling-2026-05-20.md.
+        // v0.17 Pillar B — Orleans-backed durable registries so vais apply persists across
+        // silo restart. Eval + extensions + secret resolver round out the runtime services
+        // the translator and lifecycle managers depend on.
         services.AddOrleansAgentRegistry();
         services.AddOrleansAgentGraphRegistry();
         services.AddOrleansLlmGatewayConfigRegistry();
@@ -199,7 +225,15 @@ internal static class CompositionRoot
         services.TryAddSingleton<IEvalAssertionKindRegistry>(new PassthroughEvalAssertionKindRegistry());
         services.AddVaisExtensions();
         services.TryAddSingleton<ISecretResolver>(_ => CompositeSecretResolver.CreateDefault());
+    }
 
+    /// <summary>
+    /// Opt-in plugin loaders — assembly (v0.18), Python (v0.23), and container plugins. Each is
+    /// gated on its directory option. The translator resolves the resulting registries/providers
+    /// at activation, so this may run before or after <see cref="ConfigureManifestPipeline"/>.
+    /// </summary>
+    private static void ConfigurePlugins(IServiceCollection services, RuntimeOptions options)
+    {
         // v0.18 Pillar C — plugin loader. The translator takes IPluginHandlerRegistry as an
         // optional ctor dependency resolved at activation, so this may be wired before or after
         // AddAgentManifestInstantiator; when no registry is present the translator falls through
@@ -246,8 +280,15 @@ internal static class CompositionRoot
             });
             services.AddContainerMcpServers();
         }
+    }
 
-        // GCF-20/21 — named middleware registrations + composite factories.
+    /// <summary>
+    /// GCF-20/21 — the named LLM + tool gateway middleware catalog plus the composite factories
+    /// that resolve them. The factories collect the named registrations via IEnumerable&lt;&gt;
+    /// injection, so order relative to the named registrations is irrelevant.
+    /// </summary>
+    private static void ConfigureGatewayCatalog(IServiceCollection services)
+    {
         // Each AddNamed* call registers one NamedL*GatewayMiddlewareRegistration singleton;
         // the DefaultL*GatewayMiddlewareFactory collects them all via IEnumerable<> injection.
         // Core LLM middleware
@@ -281,7 +322,16 @@ internal static class CompositionRoot
         // which collects them regardless of registration order relative to these factories.
         services.AddDefaultLlmGatewayMiddlewareFactory();
         services.AddDefaultToolGatewayMiddlewareFactory();
+    }
 
+    /// <summary>
+    /// The manifest-instantiation pipeline: translator + provider pool, the plugin-reload and
+    /// MCP-connection invalidation hooks, physical MCP servers, the built-in model providers and
+    /// guardrails, and the <c>ConfigureAgentGrains</c> factory that drives translation at grain
+    /// activation.
+    /// </summary>
+    private static void ConfigureManifestPipeline(IServiceCollection services)
+    {
         services.AddAgentManifestInstantiator();
         services.AddGrainReactivationPluginReloadHook();
         services.AddPhysicalMcpServers();
@@ -290,7 +340,15 @@ internal static class CompositionRoot
 
         services.ConfigureAgentGrains(async (sp, id, ct) =>
             await sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id, ct).ConfigureAwait(false));
+    }
 
+    /// <summary>
+    /// Lifecycle managers (agent, graph, gateway configs, MCP server) + the audit log and the
+    /// cross-runtime invocation dependencies they need: HTTP context accessor, remote invoker
+    /// (v0.20, configured from <c>Vais:RemoteRuntimes</c>), A2A invoker, and the PowerFx evaluator.
+    /// </summary>
+    private static void ConfigureLifecycleManagers(IServiceCollection services, RuntimeOptions options, IConfiguration? configuration)
+    {
         services.AddSingleton<IAuditLog, LoggerAuditLog>();
         services.AddSingleton<IAgentLifecycleManager>(sp => new AgentLifecycleManager(
             sp.GetRequiredService<IAgentRegistry>(),
@@ -379,8 +437,16 @@ internal static class CompositionRoot
             audit: sp.GetService<IAuditLog>(),
             contextAccessor: sp.GetService<IAgentContextAccessor>(),
             logger: sp.GetService<ILogger<McpServerLifecycleManager>>()));
+    }
 
-        // 4. HTTP control plane (routes, idempotency middleware, OpenAPI doc).
+    /// <summary>
+    /// HTTP control plane (routes + idempotency middleware + OpenAPI), optional JWT auth +
+    /// principal mapping, and the OpenAI-compatible gateway. The durable idempotency store and
+    /// the ServiceAccount principal mapper are installed via <c>services.Replace</c> so they win
+    /// over the in-memory library defaults regardless of order.
+    /// </summary>
+    private static void ConfigureControlPlaneAndAuth(IServiceCollection services, RuntimeOptions options)
+    {
         services.AddAgentControlPlane();
         if (options.IdempotencyEnabled)
         {
@@ -395,10 +461,10 @@ internal static class CompositionRoot
         }
         services.AddAgentControlPlaneOpenApi();
 
-        // 4b. v0.30 JWT authentication + principal mapping. Off-by-default — existing localhost
-        //     semantics unchanged. When VAIS_JWT_AUTHORITY is set the full bearer-token pipeline
-        //     is wired. AddAgentControlPlaneJwtAuth TryAdds DefaultPrincipalMapper; when the SA
-        //     mapper is opted in, services.Replace swaps it in order-independently.
+        // v0.30 JWT authentication + principal mapping. Off-by-default — existing localhost
+        // semantics unchanged. When VAIS_JWT_AUTHORITY is set the full bearer-token pipeline
+        // is wired. AddAgentControlPlaneJwtAuth TryAdds DefaultPrincipalMapper; when the SA
+        // mapper is opted in, services.Replace swaps it in order-independently.
         if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
         {
             services.AddAgentControlPlaneJwtAuth(o =>
@@ -416,22 +482,30 @@ internal static class CompositionRoot
             }
         }
 
-        // 4c. OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.
-        //     PassThroughIdentityResolver accepts any bearer token (single-tenant / dev mode).
-        //     InMemoryModelRouter with no aliases means non-agent/graph model IDs return 404;
-        //     agent: and graph: prefixes are handled before the router is consulted.
+        // OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.
+        // PassThroughIdentityResolver accepts any bearer token (single-tenant / dev mode).
+        // InMemoryModelRouter with no aliases means non-agent/graph model IDs return 404;
+        // agent: and graph: prefixes are handled before the router is consulted.
         services.AddPassThroughIdentityResolver();
         services.AddInMemoryModelRouter(_ => { });
         services.AddOpenAiCompatGateway();
+    }
 
-        // 5. Agent log sink — in-memory ring buffer for agent grain and Python subprocess stdout.
-        //    Always registered; no connection string required. Buffer cap configurable via
-        //    VAIS_AGENT_LOG_BUFFER_LINES (default 500). HTTP endpoint returns entries from sink.
+    /// <summary>
+    /// The always-on in-memory agent log sink plus the optional Postgres-backed run / agent-run /
+    /// gateway-event / mcp-event / mcp-gateway-event stores. Each store is off-by-default (gated on
+    /// its connection string) and registers a matching <see cref="ISelfCheckProbe"/> when enabled.
+    /// </summary>
+    private static void ConfigureObservabilityStores(IServiceCollection services, RuntimeOptions options)
+    {
+        // Agent log sink — in-memory ring buffer for agent grain and Python subprocess stdout.
+        // Always registered; no connection string required. Buffer cap configurable via
+        // VAIS_AGENT_LOG_BUFFER_LINES (default 500). HTTP endpoint returns entries from sink.
         services.AddAgentLogSink(o => o.BufferLinesPerAgent = options.AgentLogBufferLines);
 
-        // 5. Optional run store — Postgres-backed graph run history. Off-by-default; set
-        //    VAIS_RUN_STORE_CONNECTION to an Npgsql connection string to enable. HTTP endpoints
-        //    return 503 when not configured. Schema is created on first run automatically.
+        // Optional run store — Postgres-backed graph run history. Off-by-default; set
+        // VAIS_RUN_STORE_CONNECTION to an Npgsql connection string to enable. HTTP endpoints
+        // return 503 when not configured. Schema is created on first run automatically.
         if (!string.IsNullOrWhiteSpace(options.RunStoreConnection))
         {
             services.AddRunStore(o => o.ConnectionString = options.RunStoreConnection);
@@ -486,12 +560,20 @@ internal static class CompositionRoot
                 "postgres-mcp-gateway-event-store", options.McpGatewayEventStoreConnection,
                 "SELECT COUNT(*) FROM vais_mcp_gateway_events LIMIT 1"));
         }
+    }
 
-        // 6. Diagnostics filter-status tracker (always; lightweight singleton).
+    /// <summary>
+    /// Host-level infrastructure: the diagnostics filter-status tracker, optional observability
+    /// (OTel + Langfuse), infrastructure self-check probes, optional OPA policy engine, health
+    /// checks, startup hosted services, and CORS.
+    /// </summary>
+    private static void ConfigureHostInfra(IServiceCollection services, RuntimeOptions options)
+    {
+        // Diagnostics filter-status tracker (always; lightweight singleton).
         services.AddSingleton<IFilterStatusTracker, FilterStatusTracker>();
 
-        // 7. Optional observability. Off unless the OTel endpoint, console-exporter toggle,
-        //    or the diagnostic span buffer is enabled; off-by-default keeps hello-world overhead zero.
+        // Optional observability. Off unless the OTel endpoint, console-exporter toggle,
+        // or the diagnostic span buffer is enabled; off-by-default keeps hello-world overhead zero.
         ConfigureObservability(services, options);
 
         // Self-check: infrastructure service probes registered after stores so all
@@ -517,10 +599,10 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new HttpSelfCheckProbe(
                 "langfuse", options.LangfuseHost.TrimEnd('/') + "/api/health"));
 
-        // 7. Optional OPA policy engine. Off-by-default → NullAgentPolicyEngine.Instance
-        //    (AllowAll) wins. AddOpaPolicyEngine uses TryAddSingleton<IAgentPolicyEngine>,
-        //    so it only binds when no prior registration exists — the startup log records
-        //    which engine is active so the default-open behaviour is never silent.
+        // Optional OPA policy engine. Off-by-default → NullAgentPolicyEngine.Instance
+        // (AllowAll) wins. AddOpaPolicyEngine uses TryAddSingleton<IAgentPolicyEngine>,
+        // so it only binds when no prior registration exists — the startup log records
+        // which engine is active so the default-open behaviour is never silent.
         if (!string.IsNullOrWhiteSpace(options.OpaBaseUrl))
         {
             services.AddOpaPolicyEngine(o =>
@@ -534,17 +616,17 @@ internal static class CompositionRoot
             });
         }
 
-        // 8. Health checks. Liveness (/healthz) maps to the default "catch-all" set; readiness
-        //    (/readyz) filters on the "ready" tag and gates on the co-hosted silo reaching
-        //    SiloStatus.Active. Probe tuning lives in the Helm chart (60s failure threshold).
+        // Health checks. Liveness (/healthz) maps to the default "catch-all" set; readiness
+        // (/readyz) filters on the "ready" tag and gates on the co-hosted silo reaching
+        // SiloStatus.Active. Probe tuning lives in the Helm chart (60s failure threshold).
         services.AddSingleton<SelfCheckResultsStore>();
         services.AddHealthChecks()
             .AddCheck<OrleansActiveHealthCheck>("orleans", tags: ["ready"])
             .AddCheck<SelfCheckHealthCheck>("self-check", tags: ["ready"]);
 
-        // 9. Startup hosted services — run once on StartAsync, after Orleans becomes active.
-        //    PluginManifestConsistencyCheck walks registered manifests and verifies handlers.
-        //    BootManifestApplyService applies manifest files from VAIS_BOOT_MANIFESTS_DIRECTORY.
+        // Startup hosted services — run once on StartAsync, after Orleans becomes active.
+        // PluginManifestConsistencyCheck walks registered manifests and verifies handlers.
+        // BootManifestApplyService applies manifest files from VAIS_BOOT_MANIFESTS_DIRECTORY.
         services.AddHostedService<PluginManifestConsistencyCheck>();
 
         if (!string.IsNullOrWhiteSpace(options.BootManifestsDirectory))
@@ -563,9 +645,9 @@ internal static class CompositionRoot
         // RuntimeSelfCheckService runs LAST — after all initializers have created their schemas.
         services.AddHostedService<RuntimeSelfCheckService>();
 
-        // 10. CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
-        //    any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.
-        //    Set VAIS_CORS_ORIGINS=disabled to opt out even in localhost mode.
+        // CORS — localhost mode: allow all local origins so the Workbench dev server (Vite,
+        // any port) connects without configuration. Explicit VAIS_CORS_ORIGINS overrides.
+        // Set VAIS_CORS_ORIGINS=disabled to opt out even in localhost mode.
         var corsDisabled = string.Equals(options.CorsOrigins, "disabled", StringComparison.OrdinalIgnoreCase);
         if (!corsDisabled && (options.Mode == "localhost" || !string.IsNullOrWhiteSpace(options.CorsOrigins)))
         {
@@ -669,7 +751,7 @@ internal static class CompositionRoot
     // Each pool entry in spec.Params is a full model spec — same shape as a top-level
     // spec.model block (provider, id, apiKeyRef, baseUrlRef, temperature, topP,
     // maxTokens, responseFormat). ICompletionProviderPool resolves and caches the
-    // provider instances. Called from ConfigureServices instead of
+    // provider instances. Called from ConfigureGatewayCatalog instead of
     // AddNamedLlmGatewayMiddleware_Fallback() so the factory can resolve
     // ICompletionProviderPool without the Fallback package needing a dependency on
     // Runtime.Instantiation.
