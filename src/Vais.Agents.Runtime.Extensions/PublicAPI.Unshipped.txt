@@ -142,3 +142,41 @@ Vais.Agents.Runtime.Extensions.Container.IContainerExtensionHost.StartAsync(Vais
 Vais.Agents.Runtime.Extensions.Container.IContainerExtensionHost.StopAsync(string! extensionId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Runtime.Extensions.Container.ExtensionHandlerProxyException
 Vais.Agents.Runtime.Extensions.Container.ExtensionHandlerProxyException.ExtensionHandlerProxyException(string! endpoint, System.Exception! inner) -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics
+Vais.Agents.Runtime.Extensions.HandlerMetrics.HandlerMetrics(string! HandlerId, string! Seam, double P50Seconds, double P95Seconds, double ErrorRate, int TotalInvocations) -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.HandlerId.get -> string!
+Vais.Agents.Runtime.Extensions.HandlerMetrics.HandlerId.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.Seam.get -> string!
+Vais.Agents.Runtime.Extensions.HandlerMetrics.Seam.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.P50Seconds.get -> double
+Vais.Agents.Runtime.Extensions.HandlerMetrics.P50Seconds.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.P95Seconds.get -> double
+Vais.Agents.Runtime.Extensions.HandlerMetrics.P95Seconds.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.ErrorRate.get -> double
+Vais.Agents.Runtime.Extensions.HandlerMetrics.ErrorRate.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.TotalInvocations.get -> int
+Vais.Agents.Runtime.Extensions.HandlerMetrics.TotalInvocations.init -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.<Clone>$() -> Vais.Agents.Runtime.Extensions.HandlerMetrics!
+Vais.Agents.Runtime.Extensions.HandlerMetrics.Deconstruct(out string! HandlerId, out string! Seam, out double P50Seconds, out double P95Seconds, out double ErrorRate, out int TotalInvocations) -> void
+Vais.Agents.Runtime.Extensions.HandlerMetrics.Equals(Vais.Agents.Runtime.Extensions.HandlerMetrics? other) -> bool
+override Vais.Agents.Runtime.Extensions.HandlerMetrics.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.HandlerMetrics.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.HandlerMetrics.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.HandlerMetrics.operator ==(Vais.Agents.Runtime.Extensions.HandlerMetrics? left, Vais.Agents.Runtime.Extensions.HandlerMetrics? right) -> bool
+static Vais.Agents.Runtime.Extensions.HandlerMetrics.operator !=(Vais.Agents.Runtime.Extensions.HandlerMetrics? left, Vais.Agents.Runtime.Extensions.HandlerMetrics? right) -> bool
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.ExtensionHandlerMetrics(string! ExtensionId, System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerMetrics!>! Handlers) -> void
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.ExtensionId.get -> string!
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.ExtensionId.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.Handlers.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerMetrics!>!
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.Handlers.init -> void
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.<Clone>$() -> Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics!
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.Deconstruct(out string! ExtensionId, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Runtime.Extensions.HandlerMetrics!>! Handlers) -> void
+Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.Equals(Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics? other) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.Equals(object? obj) -> bool
+override Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.GetHashCode() -> int
+override Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.ToString() -> string!
+static Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.operator ==(Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics? left, Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics? right) -> bool
+static Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics.operator !=(Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics? left, Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics? right) -> bool
+Vais.Agents.Runtime.Extensions.IExtensionMetricsService
+Vais.Agents.Runtime.Extensions.IExtensionMetricsService.GetMetrics(string! extensionId) -> Vais.Agents.Runtime.Extensions.ExtensionHandlerMetrics?

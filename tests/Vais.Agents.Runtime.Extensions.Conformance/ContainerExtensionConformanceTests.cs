@@ -29,7 +29,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
             preEndpoint:  "/handlers/h/pre",
             postEndpoint: "/handlers/h/post",
-            failureMode:  "log");
+            failureMode:  "log",
+            descriptor: new HandlerBindingDescriptor(extensionId, "1.0.0", $"{extensionId}-in", ExtensionSeams.AgentInput, "container"));
 
         var binding = new HandlerBinding(
             HandlerId: $"{extensionId}-in",
@@ -105,7 +106,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
             preEndpoint:  "/handlers/h-in/pre",
             postEndpoint: "/handlers/h-in/post",
-            failureMode:  "skip");
+            failureMode:  "skip",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-in", ExtensionSeams.AgentInput, "container"));
         var mw = new AgentInputHandlerProxy(proxy);
 
         bool nextCalled = false;
@@ -118,7 +120,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private static HttpContainerHandlerProxy MakeProxy(MockContainerServer server, string pre, string post) =>
-        new(new HttpClient { BaseAddress = server.BaseUri }, pre, post, failureMode: "fail");
+        new(new HttpClient { BaseAddress = server.BaseUri }, pre, post, failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h", ExtensionSeams.AgentInput, "container"));
 
     // ── Mock container server ──────────────────────────────────────────────
 

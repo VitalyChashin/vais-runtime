@@ -4,13 +4,13 @@
 using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Vais.Agents.Control.Http;
 
 namespace Vais.Agents.Cli.Commands;
 
 /// <summary>
-/// Shows per-handler latency metrics (p50/p95) for a loaded extension.
-/// Metrics collection requires an OTLP-compatible backend; direct CLI metrics
-/// are planned for a future release.
+/// Shows per-handler latency metrics (p50/p95) for a loaded extension
+/// via <c>GET /v1/extensions/{name}/metrics</c>.
 /// </summary>
 internal sealed class ExtMetricsCommand : AsyncCommand<ExtMetricsCommand.Settings>
 {
@@ -29,15 +29,52 @@ internal sealed class ExtMetricsCommand : AsyncCommand<ExtMetricsCommand.Setting
         public string? Token { get; init; }
     }
 
-    protected override Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
-        AnsiConsole.MarkupLine($"[yellow]Per-handler latency metrics (p50/p95) are not yet exposed via the CLI.[/]");
-        AnsiConsole.MarkupLine(string.Empty);
-        AnsiConsole.MarkupLine("Handler invocation timing is emitted as OTLP spans when the runtime");
-        AnsiConsole.MarkupLine("is configured with an OTLP exporter. Query your observability backend");
-        AnsiConsole.MarkupLine($"(Grafana, Jaeger, etc.) filtering on [dim]vais.extension.handler[/] spans.");
-        AnsiConsole.MarkupLine(string.Empty);
-        AnsiConsole.MarkupLine("In-process span buffer (for dev): [dim]vais diagnose spans[/]");
-        return Task.FromResult(ProblemDetailsParser.ExitSuccess);
+        var config = VaisConfigFile.LoadOrDefault();
+        var client = ClientFactory.Create(config, settings.Context, settings.Token);
+
+        try
+        {
+            var response = await client.GetExtensionMetricsAsync(settings.Name, cancellationToken);
+            if (response is null)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[yellow]No metrics recorded for extension '{Markup.Escape(settings.Name)}' in the current 5-minute window.[/]");
+                return ProblemDetailsParser.ExitSuccess;
+            }
+
+            RenderTable(response);
+            return ProblemDetailsParser.ExitSuccess;
+        }
+        catch (AgentControlPlaneException ex)
+        {
+            return ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
+        }
+    }
+
+    private static void RenderTable(ExtensionMetricsResponse response)
+    {
+        var table = new Table()
+            .Title(Markup.Escape($"Extension: {response.ExtensionId}  (5-minute window)"))
+            .AddColumn("HANDLER")
+            .AddColumn("SEAM")
+            .AddColumn("P50 (s)")
+            .AddColumn("P95 (s)")
+            .AddColumn("ERROR %")
+            .AddColumn("INVOCATIONS");
+
+        foreach (var h in response.Handlers)
+        {
+            table.AddRow(
+                Markup.Escape(h.HandlerId),
+                Markup.Escape(h.Seam),
+                h.P50Seconds.ToString("F3"),
+                h.P95Seconds.ToString("F3"),
+                (h.ErrorRate * 100).ToString("F1"),
+                h.TotalInvocations.ToString());
+        }
+
+        AnsiConsole.Write(table);
     }
 }

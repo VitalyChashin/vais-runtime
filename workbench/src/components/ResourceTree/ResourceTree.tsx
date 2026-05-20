@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ResourceSection } from './ResourceSection'
 import { PluginSection } from './PluginSection'
+import { ExtensionSection } from './ExtensionSection'
 import { useResourceList } from '../../hooks/useResourceList'
 import {
   listAgents,
@@ -9,6 +10,7 @@ import {
   listMcpGateways,
   listMcpServers,
   listPlugins,
+  listExtensions,
 } from '../../api/resources'
 import { useClient } from '../../api/useClient'
 
@@ -24,6 +26,11 @@ export function ResourceTree() {
     queryFn: () => listPlugins(client),
     refetchInterval: 5000,
   })
+  const extensionsQuery = useQuery({
+    queryKey: ['extensions', client.baseUrl],
+    queryFn: () => listExtensions(client),
+    refetchInterval: 5000,
+  })
 
   return (
     <nav>
@@ -36,6 +43,11 @@ export function ResourceTree() {
         data={Array.isArray(pluginsQuery.data) ? pluginsQuery.data : []}
         isLoading={pluginsQuery.isLoading}
         error={pluginsQuery.error as Error | null}
+      />
+      <ExtensionSection
+        data={Array.isArray(extensionsQuery.data) ? extensionsQuery.data : []}
+        isLoading={extensionsQuery.isLoading}
+        error={extensionsQuery.error as Error | null}
       />
     </nav>
   )

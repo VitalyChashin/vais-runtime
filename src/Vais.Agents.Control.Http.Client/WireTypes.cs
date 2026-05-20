@@ -358,3 +358,17 @@ public sealed record AgentExtensionEntry(
 public sealed record AgentExtensionChainResponse(
     string AgentId,
     IReadOnlyList<AgentExtensionEntry> Handlers);
+
+/// <summary>Client-side wire type for one row in the extension metrics response.</summary>
+public sealed record ExtensionHandlerMetricsItem(
+    string HandlerId,
+    string Seam,
+    double P50Seconds,
+    double P95Seconds,
+    double ErrorRate,
+    int TotalInvocations);
+
+/// <summary>Client-side wire type for <c>GET /v1/extensions/{name}/metrics</c>.</summary>
+public sealed record ExtensionMetricsResponse(
+    string ExtensionId,
+    IReadOnlyList<ExtensionHandlerMetricsItem> Handlers);

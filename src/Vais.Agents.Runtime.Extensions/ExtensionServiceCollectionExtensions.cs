@@ -44,6 +44,7 @@ public static class ExtensionServiceCollectionExtensions
             return new DefaultExtensionReloader(loader, registry, composer, loaderOptions, hooks, reloaderLogger);
         });
 
+        services.TryAddSingleton<IExtensionMetricsService, InMemoryExtensionMetricsService>();
         services.TryAddSingleton<HotSeamGuard>();
         services.TryAddSingleton<IContainerExtensionHost>(NullContainerExtensionHost.Instance);
         services.TryAddSingleton<ContainerExtensionLifecycleManager>(sp =>
