@@ -166,6 +166,17 @@ Two checkpointers ship:
 
 Register with `AddOrleansGraphCheckpointer()`. Runs across silo restart, node migration, and operator redeploy. See [run-resumable-graphs-on-orleans guide](../guides/run-resumable-graphs-on-orleans.md).
 
+## Run control across silos
+
+In a clustered deployment, run conflict detection and cancellation are cluster-wide via `IAgentGraphRunGrain` (one grain per `runId`), wired by `AddOrleansGraphRunCoordinator()`:
+
+- **Cancel from any silo.** `IAgentGraphLifecycleManager.CancelAsync(handle, runId)` routed to any silo signals the run grain; the silo executing the run observes the flag and stops cooperatively at the next super-step (≤ ~1 s plus the current node's duration — cancelling a node mid-LLM-call takes effect when the call returns).
+- **Duplicate-run rejection is cluster-wide.** A second `InvokeAsync` with an in-flight `runId` fails with `GraphRunConflictException` regardless of which silo receives it.
+
+Single-process and library hosts use the in-process default (`InProcessGraphRunCoordinator`); the runtime swaps in the grain-backed coordinator automatically.
+
+**Scaling contract (P5).** Per-run cancel and conflict detection are cluster-wide. The graph-level aggregate counters from `QueryAsync` (active / completed / pending-interrupt) are **per-silo and advisory** — they reset on restart and do not sum across the cluster. There is no transparent mid-run failover: if the silo executing a run dies, recover by resuming from the last checkpoint (above), not by automatic grain reactivation.
+
 ## Events
 
 `StreamAsync` yields the full `AgentGraphEvent` taxonomy — ten subtypes covering graph start, node start/invocation/end, edge traversal, state mutation, interrupt/resume, and terminal success/failure. Every event carries `{RunId, SuperStep}` so consumers correlate against the checkpoint timeline. `NodeAgentInvoked` appears after `NodeStarted` and before `NodeCompleted` for every `Agent`-kind node; it carries `InputText`, `OutputText`, and token counts. `StateUpdated` always follows `NodeCompleted`.
