@@ -97,10 +97,10 @@ The `grainidextensionstring` column carries the grain key (`{agentId}/{sessionId
 
 ## Streams — a known limitation
 
-`Microsoft.Orleans.Streaming.AdoNet` doesn't have a 10.x build (only 9.x alphas). The runtime's event bus stays on memory streams when clustering is Postgres-only — events fan out within a silo, not across. Two production paths:
+`Microsoft.Orleans.Streaming.AdoNet` doesn't have a 10.x build (only 9.x alphas). By default the runtime's event bus stays on memory streams when clustering is Postgres-only — events fan out within a silo, not across. Two production paths:
 
-- **Hybrid: Postgres for grain storage, Redis for streams.** Set `VAIS_POSTGRES_CONNECTION` for grain state and `VAIS_REDIS_CONNECTION` for streams; the runtime uses Postgres for `clustering.backend=postgres` and adds Redis streams independently. See [Concepts → Persistence](../concepts/persistence.md) for the cross-cutting wiring.
-- **Accept single-silo event scope.** If you don't need cross-silo events (most single-tenant deployments), the in-silo memory stream provider is fine.
+- **Hybrid: Postgres for grain storage, Redis for streams.** Set `VAIS_CLUSTERING_BACKEND=postgres` + `VAIS_POSTGRES_CONNECTION` for membership/grain state, then opt into cross-silo events with `VAIS_STREAMING_BACKEND=redis` + `VAIS_REDIS_CONNECTION`. The runtime keeps Postgres clustering/storage and uses the Redis stream provider for `OrleansAgentEventBus` / `OrleansAgentGraphEventBus`. (`Microsoft.Orleans.Streaming.Redis` is alpha — see [Add Redis persistence](add-redis-persistence.md).) The Azure-grade alternative is Event Hubs streams.
+- **Accept single-silo event scope.** Leave `VAIS_STREAMING_BACKEND` unset (defaults to memory streams under Postgres clustering). Fine if you don't need cross-silo events (most single-tenant deployments).
 
 ## Things that catch people
 

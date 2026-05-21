@@ -128,6 +128,9 @@ internal static class CompositionRoot
             var conn = options.RedisConnection!;
             silo.UseAgenticRedisClustering(conn);
             silo.AddAgenticRedisGrainStorage(conn);
+            // Orleans persistent streams need a grain storage named "PubSubStore" for the
+            // PubSub rendezvous grain; the Redis stream provider does not register one.
+            silo.AddMemoryGrainStorage("PubSubStore");
             silo.UseAgenticRedisStreaming(conn);
         }
         else // postgres
@@ -135,12 +138,21 @@ internal static class CompositionRoot
             var conn = options.PostgresConnection!;
             silo.UseAgenticPostgresClustering(conn);
             silo.AddAgenticPostgresGrainStorage(conn);
-            // Orleans 10.x has no production-grade Postgres stream provider
-            // (Streaming.AdoNet is not shipped), so we fall back to in-silo
-            // memory streams. OrleansAgentEventBus still works but does not
-            // fan out across silos. Documented in install-the-runtime-locally.md.
-            silo.AddMemoryGrainStorage("PubSubStore"); // required by AddMemoryStreams pub-sub
-            silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
+            silo.AddMemoryGrainStorage("PubSubStore"); // required by both stream providers below
+
+            if (options.EffectiveStreamingBackend == "redis")
+            {
+                // Postgres clustering paired with Redis streams gives cross-silo event fan-out
+                // without moving clustering to Redis. Orleans 10.x has no Postgres stream
+                // provider (Streaming.AdoNet is not shipped). Opt in: VAIS_STREAMING_BACKEND=redis.
+                silo.UseAgenticRedisStreaming(options.RedisConnection!);
+            }
+            else
+            {
+                // Default: in-silo memory streams — OrleansAgentEventBus still works but events
+                // fan out within a silo, not across. Documented in install-the-runtime-locally.md.
+                silo.AddMemoryStreams(OrleansAgentEventBus.StreamNamespace);
+            }
         }
     }
 
