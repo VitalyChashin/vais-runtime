@@ -87,6 +87,20 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Register <see cref="OrleansGraphRunCoordinator"/> as the singleton
+    /// <see cref="Vais.Agents.Control.IGraphRunCoordinator"/>, making graph-run conflict detection,
+    /// cancellation, and status reachable from any silo (P1). Graph-run sibling of the background
+    /// agent tracker.
+    /// </summary>
+    public static IServiceCollection AddOrleansGraphRunCoordinator(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<Vais.Agents.Control.IGraphRunCoordinator>(sp =>
+            new OrleansGraphRunCoordinator(sp.GetRequiredService<IGrainFactory>()));
+        return services;
+    }
+
+    /// <summary>
     /// Register the silo-side dependencies required by <see cref="AiAgentGrain"/>:
     /// a <see cref="Func{String, CancellationToken, ValueTask}"/> that produces per-agent options.
     /// Expects <see cref="ICompletionProvider"/> to be registered separately (consumers

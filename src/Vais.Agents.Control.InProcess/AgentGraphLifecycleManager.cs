@@ -57,6 +57,9 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     // the local orchestrator.
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _localCts = new(StringComparer.Ordinal);
 
+    // How often the executing host polls the coordinator for a cancel requested on another host.
+    private static readonly TimeSpan _cancelPollInterval = TimeSpan.FromSeconds(1);
+
     /// <summary>Shared error code consumers can match on to translate to HTTP 404 etc.</summary>
     public const string UnknownGraphErrorType = "GraphHandleNotFound";
 
@@ -202,6 +205,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         }
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _localCts[runId] = cts;
+        _ = WatchForCancellationAsync(runId, cts);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         string? errorType = null;
@@ -256,6 +260,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         }
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _localCts[runId] = cts;
+        _ = WatchForCancellationAsync(runId, cts);
 
         entry.RecordInvoke();
         bool completed = false;
@@ -293,6 +298,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         await _coordinator.MarkActiveAsync(request.RunId, handle.GraphId, handle.Version, ct).ConfigureAwait(false);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _localCts[request.RunId] = cts;
+        _ = WatchForCancellationAsync(request.RunId, cts);
 
         string? errorType = null;
         var outcome = GraphRunOutcome.Failed;
@@ -335,6 +341,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         await _coordinator.MarkActiveAsync(request.RunId, handle.GraphId, handle.Version, ct).ConfigureAwait(false);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _localCts[request.RunId] = cts;
+        _ = WatchForCancellationAsync(request.RunId, cts);
 
         entry.RecordResumeFromInterrupt();
         bool completed = false;
@@ -457,6 +464,36 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Background poll: while a run executes on this host, watch the coordinator for a cancel
+    /// requested elsewhere (another silo) and cancel the local token when observed. Same-host
+    /// cancels short-circuit via <see cref="CancelAsync"/> cancelling the token directly, which
+    /// also ends this loop (the linked token trips). Self-cleaning — exits when the run ends.
+    /// </summary>
+    private async Task WatchForCancellationAsync(string runId, CancellationTokenSource cts)
+    {
+        try
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                await Task.Delay(_cancelPollInterval, cts.Token).ConfigureAwait(false);
+                if (await _coordinator.IsCancelRequestedAsync(runId, cts.Token).ConfigureAwait(false))
+                {
+                    cts.Cancel();
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Run ended (token disposed/cancelled) — nothing to do.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Cancel watcher for run {RunId} ended with an error.", runId);
+        }
+    }
 
     private async ValueTask<(AgentGraphManifest Manifest, GraphEntry Entry, string RunId)> PrepareInvocationAsync(
         AgentGraphHandle handle, GraphInvocationRequest request, CancellationToken ct)
