@@ -43,6 +43,23 @@ internal sealed record RuntimeOptions
     public string? RedisConnection { get; init; }
     public string? PostgresConnection { get; init; }
 
+    /// <summary>
+    /// Orleans stream provider for the event buses (<see cref="Vais.Agents.IAgentEventBus"/> +
+    /// <c>IAgentGraphEventBus</c>): <c>memory</c> (same-silo only) or <c>redis</c> (cross-silo).
+    /// Null/unset resolves via <see cref="EffectiveStreamingBackend"/> to <c>redis</c> when
+    /// <see cref="ClusteringBackend"/> is redis, otherwise <c>memory</c>. Set
+    /// <c>VAIS_STREAMING_BACKEND=redis</c> (plus <see cref="RedisConnection"/>) on a
+    /// Postgres-clustered deployment to get cross-silo event fan-out without moving clustering to
+    /// Redis — Orleans 10.x ships no Postgres stream provider. Ignored in localhost mode.
+    /// </summary>
+    public string? StreamingBackend { get; init; }
+
+    /// <summary>Resolved stream provider after applying defaults: <c>memory</c> or <c>redis</c>.</summary>
+    public string EffectiveStreamingBackend =>
+        !string.IsNullOrWhiteSpace(StreamingBackend)
+            ? StreamingBackend.ToLowerInvariant()
+            : (Mode == "clustered" && ClusteringBackend == "redis" ? "redis" : "memory");
+
     public string? OtelEndpoint { get; init; }
     public string? OtelHeaders { get; init; }
     public bool OtelConsole { get; init; }
@@ -297,6 +314,7 @@ internal sealed record RuntimeOptions
             ClusteringBackend = Env("VAIS_CLUSTERING_BACKEND") ?? DefaultClusteringBackend,
             RedisConnection = Env("VAIS_REDIS_CONNECTION"),
             PostgresConnection = Env("VAIS_POSTGRES_CONNECTION"),
+            StreamingBackend = Env("VAIS_STREAMING_BACKEND"),
             OtelEndpoint = Env("OTEL_EXPORTER_OTLP_ENDPOINT"),
             OtelHeaders = Env("OTEL_EXPORTER_OTLP_HEADERS"),
             OtelConsole = string.Equals(Env("VAIS_OTEL_CONSOLE"), "true", StringComparison.OrdinalIgnoreCase),
@@ -416,6 +434,24 @@ internal sealed record RuntimeOptions
                 throw new InvalidOperationException(
                     "VAIS_POSTGRES_CONNECTION is required when VAIS_HOSTING_MODE=clustered and VAIS_CLUSTERING_BACKEND=postgres. "
                     + "Set it to an Npgsql connection string and retry.");
+            }
+
+            if (StreamingBackend is not null
+                && !string.Equals(StreamingBackend, "memory", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(StreamingBackend, "redis", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"VAIS_STREAMING_BACKEND must be 'memory' or 'redis'; got '{StreamingBackend}'.");
+            }
+
+            // A Redis stream provider needs a Redis connection — covers the default
+            // (redis clustering) and the opt-in Postgres-clustering + Redis-streams pairing.
+            if (EffectiveStreamingBackend == "redis" && string.IsNullOrWhiteSpace(RedisConnection))
+            {
+                throw new InvalidOperationException(
+                    "VAIS_REDIS_CONNECTION is required when the event-bus stream provider is Redis "
+                    + "(VAIS_STREAMING_BACKEND=redis, or the default when VAIS_CLUSTERING_BACKEND=redis). "
+                    + "Set it to a StackExchange.Redis connection string and retry.");
             }
         }
     }

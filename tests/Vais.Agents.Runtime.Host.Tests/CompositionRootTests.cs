@@ -167,6 +167,81 @@ public class CompositionRootTests
     }
 
     [Fact]
+    public void Options_EffectiveStreamingBackend_Resolves_Defaults()
+    {
+        // localhost + postgres-clustered default to memory streams; redis-clustered defaults to
+        // redis streams; an explicit StreamingBackend always wins (G1).
+        new RuntimeOptions { Mode = "localhost" }
+            .EffectiveStreamingBackend.Should().Be("memory");
+        new RuntimeOptions { Mode = "clustered", ClusteringBackend = "redis", RedisConnection = "r:6379" }
+            .EffectiveStreamingBackend.Should().Be("redis");
+        new RuntimeOptions { Mode = "clustered", ClusteringBackend = "postgres", PostgresConnection = "Host=p" }
+            .EffectiveStreamingBackend.Should().Be("memory");
+        new RuntimeOptions
+        {
+            Mode = "clustered", ClusteringBackend = "postgres", PostgresConnection = "Host=p",
+            RedisConnection = "r:6379", StreamingBackend = "redis",
+        }.EffectiveStreamingBackend.Should().Be("redis");
+        new RuntimeOptions
+        {
+            Mode = "clustered", ClusteringBackend = "redis", RedisConnection = "r:6379",
+            StreamingBackend = "memory",
+        }.EffectiveStreamingBackend.Should().Be("memory");
+    }
+
+    [Fact]
+    public void Options_Postgres_Clustering_With_Redis_Streaming_Requires_RedisConnection()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "clustered",
+            ClusteringBackend = "postgres",
+            PostgresConnection = "Host=pg;Database=vais",
+            StreamingBackend = "redis",
+            RedisConnection = null,
+        };
+
+        var act = () => options.EnsureValid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_REDIS_CONNECTION*required*stream*",
+                because: "Redis streams need a Redis connection even when clustering is Postgres.");
+    }
+
+    [Fact]
+    public void Options_Postgres_Clustering_With_Redis_Streaming_And_Connections_Is_Valid()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "clustered",
+            ClusteringBackend = "postgres",
+            PostgresConnection = "Host=pg;Database=vais",
+            StreamingBackend = "redis",
+            RedisConnection = "redis:6379",
+        };
+
+        options.EffectiveStreamingBackend.Should().Be("redis");
+        options.Invoking(o => o.EnsureValid()).Should().NotThrow();
+    }
+
+    [Fact]
+    public void Options_Invalid_StreamingBackend_Throws()
+    {
+        var options = new RuntimeOptions
+        {
+            Mode = "clustered",
+            ClusteringBackend = "postgres",
+            PostgresConnection = "Host=pg;Database=vais",
+            StreamingBackend = "kafka",
+        };
+
+        var act = () => options.EnsureValid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_STREAMING_BACKEND*memory*redis*");
+    }
+
+    [Fact]
     public void Composition_OpaEngine_Registered_When_BaseUrl_Set()
     {
         var services = BuildBaseline();
