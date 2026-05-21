@@ -146,7 +146,13 @@ public sealed record GraphCompleted(
     IReadOnlyDictionary<string, JsonElement>? FinalState = null)
     : AgentGraphEvent(At, Context, RunId, SuperStep);
 
-/// <summary>Emitted when the graph fails — unhandled exception, max-steps hit, manifest error.</summary>
+/// <summary>
+/// Emitted when the graph fails — unhandled exception, max-steps hit, manifest error.
+/// <see cref="FailedNodeId"/> carries the node whose execution failed when the failure is
+/// attributable to a specific node, and is <see langword="null"/> for graph-level failures
+/// with no single node (manifest errors, framework-level workflow errors). Populated per
+/// ADR 016 / P9 so consumers can pin the failure to a node from the event stream alone.
+/// </summary>
 public sealed record GraphFailed(
     DateTimeOffset At,
     AgentContext Context,
@@ -154,5 +160,6 @@ public sealed record GraphFailed(
     int SuperStep,
     string ErrorType,
     string ErrorMessage,
-    TimeSpan Duration)
+    TimeSpan Duration,
+    string? FailedNodeId = null)
     : AgentGraphEvent(At, Context, RunId, SuperStep);

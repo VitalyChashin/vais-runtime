@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Hosting.InMemory;
 using Xunit;
@@ -555,6 +556,64 @@ public sealed class InProcessGraphOrchestratorTests
     }
 
     // ---- helpers ----
+
+    // ---- P9 / ADR 016: node-boundary failure visibility ----
+
+    [Fact]
+    public async Task NodeFailure_EmitsGraphFailed_With_FailedNodeId_And_Logs_Error()
+    {
+        // A node whose agent throws must surface a GraphFailed carrying the failing node id,
+        // an ERROR log with run_id/node_id/node_kind, and the full stack in ErrorMessage.
+        var (registry, lifecycle) = BuildHarness(_ =>
+            throw new InvalidOperationException("boom in node"));
+        await lifecycle.CreateAsync(ManifestFor("work-agent"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "fail-graph", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Agent", Ref: new GraphAgentRef("work-agent")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var logger = new CapturingLogger();
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            runIdFactory: () => "run-fail", logger: logger);
+
+        var events = new List<AgentGraphEvent>();
+        var act = async () =>
+        {
+            await foreach (var e in orchestrator.StreamAsync(
+                new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        };
+
+        await act.Should().ThrowAsync<Exception>();
+
+        var failed = events.OfType<GraphFailed>().Should().ContainSingle().Subject;
+        failed.FailedNodeId.Should().Be("work");
+        // D2: ErrorMessage carries the full stack (ToString), not just the bare message.
+        failed.ErrorMessage.Should().Contain("Exception");
+
+        logger.Entries.Should().Contain(e =>
+            e.Level == LogLevel.Error &&
+            e.Message.Contains("run-fail") &&
+            e.Message.Contains("work"));
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, formatter(state, exception), exception));
+    }
 
     private static (InMemoryAgentRegistry registry, AgentLifecycleManager lifecycle) BuildHarness(
         Func<CompletionRequest, CompletionResponse>? provider = null)

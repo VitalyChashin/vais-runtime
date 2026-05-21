@@ -502,7 +502,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             remoteInvoker: _remoteInvoker,
             a2aInvoker: _a2aInvoker,
             bearerToken: _bearerTokenProvider?.Invoke(),
-            graphEventBus: _graphEventBus);
+            graphEventBus: _graphEventBus,
+            logger: _logger);
     }
 
     private static async ValueTask<GraphInvocationResult> DrainInvokeAsync(

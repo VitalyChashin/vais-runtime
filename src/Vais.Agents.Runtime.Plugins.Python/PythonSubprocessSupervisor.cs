@@ -89,6 +89,15 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
     }
 
     /// <summary>
+    /// Renders <see cref="LastErrorSnippet"/> as a suffix for exception/log messages so the
+    /// subprocess's stderr tail reaches <c>GraphFailed.ErrorMessage</c> (ADR 016 / P9).
+    /// </summary>
+    private string StderrSnippetForMessage() =>
+        LastErrorSnippet is { } snip
+            ? $"\nLast subprocess output:\n{snip}"
+            : " (no subprocess output captured)";
+
+    /// <summary>
     /// Completes (with <see langword="true"/> on success) when the current MCP handshake
     /// finishes — regardless of whether it succeeded or failed. Awaited by
     /// <see cref="PythonPluginHostService"/> during <c>StartAsync</c> to bound startup parallelism.
@@ -326,21 +335,23 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
+            var stderrSnippet = StderrSnippetForMessage();
             _logger.LogWarning(
-                "[{Urn}] Python agent '{Name}' invoke timed out after {Seconds}s.",
-                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds);
+                "[{Urn}] Python agent '{Name}' invoke timed out after {Seconds}s.{Stderr}",
+                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds, stderrSnippet);
             throw new TimeoutException(
                 $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_liveDescriptor.Name}' " +
-                $"invoke timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.");
+                $"invoke timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.{stderrSnippet}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            var stderrSnippet = StderrSnippetForMessage();
             _logger.LogWarning(ex,
-                "[{Urn}] Python agent '{Name}' invoke failed.",
-                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name);
+                "[{Urn}] Python agent '{Name}' invoke failed.{Stderr}",
+                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name, stderrSnippet);
             throw new InvalidOperationException(
                 $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
-                $"invoke failed: {ex.Message}", ex);
+                $"invoke failed: {ex.Message}{stderrSnippet}", ex);
         }
         finally
         {
@@ -405,9 +416,10 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
+            var stderrSnippet = StderrSnippetForMessage();
             _logger.LogWarning(
-                "[{Urn}] Python agent '{Name}' stream timed out after {Seconds}s.",
-                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds);
+                "[{Urn}] Python agent '{Name}' stream timed out after {Seconds}s.{Stderr}",
+                PythonPluginUrns.AgentInvokeTimeout, _liveDescriptor.Name, _liveDescriptor.InvokeTimeoutSeconds, stderrSnippet);
             if (Interlocked.Decrement(ref _activeInvokes) == 0)
             {
                 TaskCompletionSource? signal;
@@ -416,13 +428,14 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             }
             throw new TimeoutException(
                 $"[{PythonPluginUrns.AgentInvokeTimeout}] Python agent '{_liveDescriptor.Name}' " +
-                $"stream timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.");
+                $"stream timed out after {_liveDescriptor.InvokeTimeoutSeconds}s.{stderrSnippet}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            var stderrSnippet = StderrSnippetForMessage();
             _logger.LogWarning(ex,
-                "[{Urn}] Python agent '{Name}' stream failed.",
-                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name);
+                "[{Urn}] Python agent '{Name}' stream failed.{Stderr}",
+                PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name, stderrSnippet);
             if (Interlocked.Decrement(ref _activeInvokes) == 0)
             {
                 TaskCompletionSource? signal;
@@ -431,7 +444,7 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             }
             throw new InvalidOperationException(
                 $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
-                $"stream failed: {ex.Message}", ex);
+                $"stream failed: {ex.Message}{stderrSnippet}", ex);
         }
 
         if (Interlocked.Decrement(ref _activeInvokes) == 0)
