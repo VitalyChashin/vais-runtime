@@ -1,4 +1,58 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.AgentGraphRunGrainState() -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.Active.get -> bool
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.Active.set -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.GraphId.get -> string!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.GraphId.set -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.Version.get -> string!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.Version.set -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.StartedAt.set -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.CancelRequested.get -> bool
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.CancelRequested.set -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.GraphRunGrainSnapshot(string! GraphId, string! Version, System.DateTimeOffset StartedAt, bool CancelRequested) -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.GraphId.get -> string!
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.GraphId.init -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.Version.get -> string!
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.Version.init -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.StartedAt.init -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.CancelRequested.get -> bool
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.CancelRequested.init -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.Deconstruct(out string! GraphId, out string! Version, out System.DateTimeOffset StartedAt, out bool CancelRequested) -> void
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.Equals(Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot? other) -> bool
+Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.<Clone>$() -> Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot!
+override Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.Equals(object? obj) -> bool
+override Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.GetHashCode() -> int
+override Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.ToString() -> string!
+static Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.operator !=(Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot? left, Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot? right) -> bool
+static Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot.operator ==(Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot? left, Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot? right) -> bool
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.TryStartAsync(string! graphId, string! version) -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.MarkActiveAsync(string! graphId, string! version) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.RequestCancelAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.IsCancelRequestedAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.CompleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IAgentGraphRunGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot?>!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.AgentGraphRunGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.TryStartAsync(string! graphId, string! version) -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.MarkActiveAsync(string! graphId, string! version) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.RequestCancelAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.IsCancelRequestedAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.CompleteAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.AgentGraphRunGrain.GetAsync() -> System.Threading.Tasks.Task<Vais.Agents.Hosting.Orleans.GraphRunGrainSnapshot?>!
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.OrleansGraphRunCoordinator(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.TryStartAsync(string! runId, string! graphId, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.MarkActiveAsync(string! runId, string! graphId, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.RequestCancelAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.IsCancelRequestedAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.CompleteAsync(string! runId, Vais.Agents.Control.GraphRunOutcome outcome, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansGraphRunCoordinator.GetAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.GraphRunSnapshot?>
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansGraphRunCoordinator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Hosting.Orleans.AgentGraphEventKind
 Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Started = 0 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
 Vais.Agents.Hosting.Orleans.AgentGraphEventKind.NodeStarted = 1 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind

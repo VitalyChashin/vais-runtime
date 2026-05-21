@@ -45,11 +45,20 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     private readonly IAgentGraphEventBus? _graphEventBus;
     private readonly Func<AgentGraphManifest, string, IAgentGraph<IDictionary<string, JsonElement>>>? _orchestratorFactory;
 
-    // Per-graph state: manifest-keyed counters + run-id-keyed CTS map.
+    // Per-graph counters, manifest-keyed (advisory; in-process — see class remarks).
     private readonly ConcurrentDictionary<(string Id, string Version), GraphEntry> _graphs = new();
 
-    // Per-run state keyed by RunId for conflict detection + cancel.
-    private readonly ConcurrentDictionary<string, RunEntry> _runs = new();
+    // Cross-host run registry: conflict detection, cancel signalling, status. In-process by
+    // default; the runtime swaps in a grain-backed coordinator so cancel/status work cluster-wide.
+    private readonly IGraphRunCoordinator _coordinator;
+
+    // Cancellation tokens for runs executing on THIS host, keyed by run id. The coordinator carries
+    // the durable cancel flag cluster-wide; this map turns an observed cancel into an actual stop of
+    // the local orchestrator.
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _localCts = new(StringComparer.Ordinal);
+
+    // How often the executing host polls the coordinator for a cancel requested on another host.
+    private static readonly TimeSpan _cancelPollInterval = TimeSpan.FromSeconds(1);
 
     /// <summary>Shared error code consumers can match on to translate to HTTP 404 etc.</summary>
     public const string UnknownGraphErrorType = "GraphHandleNotFound";
@@ -72,6 +81,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     /// Receives the effective manifest (maxSteps already applied) and the run id; returns the orchestrator to use.
     /// Use this to wire in <c>MafGraphOrchestrator</c> for graphs that require concurrent-edge support.
     /// </param>
+    /// <param name="coordinator">Run registry for conflict detection, cancellation signalling, and status. Null uses an in-process coordinator (single-host only).</param>
     public AgentGraphLifecycleManager(
         IAgentGraphRegistry graphRegistry,
         IAgentRegistry agentRegistry,
@@ -85,12 +95,14 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         IA2AGraphNodeInvoker? a2aInvoker = null,
         Func<string?>? bearerTokenProvider = null,
         IAgentGraphEventBus? graphEventBus = null,
-        Func<AgentGraphManifest, string, IAgentGraph<IDictionary<string, JsonElement>>>? orchestratorFactory = null)
+        Func<AgentGraphManifest, string, IAgentGraph<IDictionary<string, JsonElement>>>? orchestratorFactory = null,
+        IGraphRunCoordinator? coordinator = null)
     {
         ArgumentNullException.ThrowIfNull(graphRegistry);
         ArgumentNullException.ThrowIfNull(agentRegistry);
         ArgumentNullException.ThrowIfNull(agentLifecycle);
         ArgumentNullException.ThrowIfNull(checkpointer);
+        _coordinator = coordinator ?? new InProcessGraphRunCoordinator();
         _graphRegistry = graphRegistry;
         _agentRegistry = agentRegistry;
         _agentLifecycle = agentLifecycle;
@@ -187,15 +199,17 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ArgumentNullException.ThrowIfNull(request);
 
         var (manifest, entry, runId) = await PrepareInvocationAsync(handle, request, ct).ConfigureAwait(false);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var runEntry = new RunEntry(handle.GraphId, cts);
-        if (!_runs.TryAdd(runId, runEntry))
+        if (!await _coordinator.TryStartAsync(runId, handle.GraphId, handle.Version, ct).ConfigureAwait(false))
         {
             throw new GraphRunConflictException(handle.GraphId, runId);
         }
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _localCts[runId] = cts;
+        _ = WatchForCancellationAsync(runId, cts);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         string? errorType = null;
+        var outcome = GraphRunOutcome.Failed;
         try
         {
             entry.RecordInvoke();
@@ -206,10 +220,12 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             if (result.IsComplete)
             {
                 entry.RecordComplete();
+                outcome = GraphRunOutcome.Completed;
             }
             else
             {
                 entry.RecordInterrupt();
+                outcome = GraphRunOutcome.Interrupted;
             }
             return result;
         }
@@ -221,7 +237,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         finally
         {
             sw.Stop();
-            _runs.TryRemove(runId, out _);
+            _localCts.TryRemove(runId, out _);
+            await _coordinator.CompleteAsync(runId, outcome, CancellationToken.None).ConfigureAwait(false);
             if (errorType is not null) entry.RecordError();
             await AuditAsync(PolicyOperation.GraphInvoke, handle.GraphId, handle.Version, SynthesizePrincipal(), allowed: true, denyReason: null, errorType).ConfigureAwait(false);
         }
@@ -237,11 +254,13 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ArgumentNullException.ThrowIfNull(request);
 
         var (manifest, entry, runId) = await PrepareInvocationAsync(handle, request, ct).ConfigureAwait(false);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        if (!_runs.TryAdd(runId, new RunEntry(handle.GraphId, cts)))
+        if (!await _coordinator.TryStartAsync(runId, handle.GraphId, handle.Version, ct).ConfigureAwait(false))
         {
             throw new GraphRunConflictException(handle.GraphId, runId);
         }
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _localCts[runId] = cts;
+        _ = WatchForCancellationAsync(runId, cts);
 
         entry.RecordInvoke();
         bool completed = false;
@@ -259,7 +278,10 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         }
         finally
         {
-            _runs.TryRemove(runId, out _);
+            _localCts.TryRemove(runId, out _);
+            await _coordinator.CompleteAsync(runId,
+                completed ? GraphRunOutcome.Completed : interrupted ? GraphRunOutcome.Interrupted : GraphRunOutcome.Failed,
+                CancellationToken.None).ConfigureAwait(false);
             if (completed) entry.RecordComplete();
             else if (interrupted) entry.RecordInterrupt();
             await AuditAsync(PolicyOperation.GraphInvoke, handle.GraphId, handle.Version, SynthesizePrincipal(), allowed: true, denyReason: null, errorType: null).ConfigureAwait(false);
@@ -273,11 +295,13 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ArgumentNullException.ThrowIfNull(request);
 
         var (manifest, entry, checkpoint) = await PrepareResumeAsync(handle, request, ct).ConfigureAwait(false);
+        await _coordinator.MarkActiveAsync(request.RunId, handle.GraphId, handle.Version, ct).ConfigureAwait(false);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var runEntry = new RunEntry(handle.GraphId, cts);
-        _runs[request.RunId] = runEntry;
+        _localCts[request.RunId] = cts;
+        _ = WatchForCancellationAsync(request.RunId, cts);
 
         string? errorType = null;
+        var outcome = GraphRunOutcome.Failed;
         try
         {
             entry.RecordResumeFromInterrupt();
@@ -286,8 +310,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             var payload = request.ResumePayload;
             GraphInvocationResult result = await DrainResumeAsync(orchestrator, checkpoint, payload, context, request.RunId, cts.Token).ConfigureAwait(false);
 
-            if (result.IsComplete) entry.RecordComplete();
-            else entry.RecordInterrupt();
+            if (result.IsComplete) { entry.RecordComplete(); outcome = GraphRunOutcome.Completed; }
+            else { entry.RecordInterrupt(); outcome = GraphRunOutcome.Interrupted; }
             return result;
         }
         catch (Exception ex)
@@ -297,7 +321,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         }
         finally
         {
-            _runs.TryRemove(request.RunId, out _);
+            _localCts.TryRemove(request.RunId, out _);
+            await _coordinator.CompleteAsync(request.RunId, outcome, CancellationToken.None).ConfigureAwait(false);
             if (errorType is not null) entry.RecordError();
             await AuditAsync(PolicyOperation.GraphResume, handle.GraphId, handle.Version, SynthesizePrincipal(), allowed: true, denyReason: null, errorType).ConfigureAwait(false);
         }
@@ -313,8 +338,10 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ArgumentNullException.ThrowIfNull(request);
 
         var (manifest, entry, checkpoint) = await PrepareResumeAsync(handle, request, ct).ConfigureAwait(false);
+        await _coordinator.MarkActiveAsync(request.RunId, handle.GraphId, handle.Version, ct).ConfigureAwait(false);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _runs[request.RunId] = new RunEntry(handle.GraphId, cts);
+        _localCts[request.RunId] = cts;
+        _ = WatchForCancellationAsync(request.RunId, cts);
 
         entry.RecordResumeFromInterrupt();
         bool completed = false;
@@ -347,7 +374,10 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         }
         finally
         {
-            _runs.TryRemove(request.RunId, out _);
+            _localCts.TryRemove(request.RunId, out _);
+            await _coordinator.CompleteAsync(request.RunId,
+                completed ? GraphRunOutcome.Completed : interrupted ? GraphRunOutcome.Interrupted : GraphRunOutcome.Failed,
+                CancellationToken.None).ConfigureAwait(false);
             if (completed) entry.RecordComplete();
             else if (interrupted) entry.RecordInterrupt();
             await AuditAsync(PolicyOperation.GraphResume, handle.GraphId, handle.Version, SynthesizePrincipal(), allowed: true, denyReason: null, errorType: null).ConfigureAwait(false);
@@ -370,21 +400,34 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         try
         {
-            if (!_runs.TryGetValue(runId, out var runEntry))
+            // Signal cancellation cluster-wide (durable; reachable from any host).
+            await _coordinator.RequestCancelAsync(runId, ct).ConfigureAwait(false);
+
+            // Fast path: the run executes on this host — stop its orchestrator immediately.
+            if (_localCts.TryGetValue(runId, out var cts))
             {
-                // Check checkpoint to see if it completed; if no checkpoint at all → not-found
-                var checkpoint = await _checkpointer.LoadAsync(runId, ct).ConfigureAwait(false);
-                if (checkpoint is null)
-                {
-                    throw new GraphRunNotFoundException(handle.GraphId, runId);
-                }
-                if (checkpoint.IsComplete)
-                {
-                    throw new GraphAlreadyCompleteException(runId);
-                }
-                return; // already not in-flight but not complete — no-op
+                cts.Cancel();
+                return;
             }
-            runEntry.Cancel();
+
+            // Not on this host. If the coordinator still tracks it, the owning host will observe
+            // the cancel flag and stop cooperatively. Otherwise fall back to the checkpoint to
+            // distinguish already-complete / no-op / not-found.
+            if (await _coordinator.GetAsync(runId, ct).ConfigureAwait(false) is not null)
+            {
+                return;
+            }
+
+            var checkpoint = await _checkpointer.LoadAsync(runId, ct).ConfigureAwait(false);
+            if (checkpoint is null)
+            {
+                throw new GraphRunNotFoundException(handle.GraphId, runId);
+            }
+            if (checkpoint.IsComplete)
+            {
+                throw new GraphAlreadyCompleteException(runId);
+            }
+            // not in-flight but not complete — no-op
         }
         finally
         {
@@ -402,11 +445,16 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         try
         {
-            if (!_graphs.TryRemove((handle.GraphId, handle.Version), out var entry))
+            if (!_graphs.TryRemove((handle.GraphId, handle.Version), out _))
             {
                 throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
             }
-            entry.CancelAllRuns(_runs);
+            // Stop any runs executing on this host. (Cross-host runs stop cooperatively when the
+            // owning host next checks the coordinator's cancel flag.)
+            foreach (var cts in _localCts.Values)
+            {
+                try { cts.Cancel(); } catch { /* best-effort */ }
+            }
             RemoveManifest(handle.GraphId, handle.Version);
         }
         finally
@@ -416,6 +464,36 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Background poll: while a run executes on this host, watch the coordinator for a cancel
+    /// requested elsewhere (another silo) and cancel the local token when observed. Same-host
+    /// cancels short-circuit via <see cref="CancelAsync"/> cancelling the token directly, which
+    /// also ends this loop (the linked token trips). Self-cleaning — exits when the run ends.
+    /// </summary>
+    private async Task WatchForCancellationAsync(string runId, CancellationTokenSource cts)
+    {
+        try
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                await Task.Delay(_cancelPollInterval, cts.Token).ConfigureAwait(false);
+                if (await _coordinator.IsCancelRequestedAsync(runId, cts.Token).ConfigureAwait(false))
+                {
+                    cts.Cancel();
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Run ended (token disposed/cancelled) — nothing to do.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Cancel watcher for run {RunId} ended with an error.", runId);
+        }
+    }
 
     private async ValueTask<(AgentGraphManifest Manifest, GraphEntry Entry, string RunId)> PrepareInvocationAsync(
         AgentGraphHandle handle, GraphInvocationRequest request, CancellationToken ct)
@@ -434,10 +512,8 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         var runId = string.IsNullOrWhiteSpace(request.RunId)
             ? Guid.NewGuid().ToString("N")
             : request.RunId!;
-        if (_runs.ContainsKey(runId))
-        {
-            throw new GraphRunConflictException(handle.GraphId, runId);
-        }
+        // Authoritative conflict detection happens at IGraphRunCoordinator.TryStartAsync (atomic,
+        // cluster-wide). No pre-check here.
         return (manifest, entry, runId);
     }
 
@@ -717,14 +793,6 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             Interlocked.Decrement(ref _active);
         }
 
-        public void CancelAllRuns(ConcurrentDictionary<string, RunEntry> runs)
-        {
-            foreach (var run in runs.Values)
-            {
-                try { run.Cancel(); } catch { /* ignore */ }
-            }
-        }
-
         public AgentGraphStatus ToStatus(string graphId, string version)
         {
             lock (_gate)
@@ -738,13 +806,6 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
                     LastInvokedAt: _lastInvokedAt);
             }
         }
-    }
-
-    private sealed class RunEntry(string graphId, CancellationTokenSource cts)
-    {
-        public string GraphId { get; } = graphId;
-
-        public void Cancel() => cts.Cancel();
     }
 
     /// <summary>Minimal context accessor fallback returning <see cref="AgentContext.Empty"/>.</summary>
