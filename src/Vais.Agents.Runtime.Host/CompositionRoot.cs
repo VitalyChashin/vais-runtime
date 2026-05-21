@@ -168,7 +168,7 @@ internal static class CompositionRoot
         ArgumentNullException.ThrowIfNull(options);
         options.EnsureValid();
 
-        ConfigureDurability(services);
+        ConfigureDurability(services, options);
         ConfigureRuntimeAndRegistries(services);
         ConfigurePlugins(services, options);
         ConfigureGatewayCatalog(services);
@@ -186,10 +186,25 @@ internal static class CompositionRoot
     /// in-memory default from AddAgentControlPlaneIdempotency; it is installed
     /// order-independently via services.Replace in <see cref="ConfigureControlPlaneAndAuth"/>.)
     /// </summary>
-    private static void ConfigureDurability(IServiceCollection services)
+    private static void ConfigureDurability(IServiceCollection services, RuntimeOptions options)
     {
         services.AddOrleansA2ATaskStore();
-        services.AddOrleansGraphCheckpointer();
+
+        // Checkpointer backend selection. Default: Orleans-grain-backed (durable, no extra config).
+        // VAIS_CHECKPOINTER_CONNECTION opts into a Postgres-direct checkpointer instead — a simpler,
+        // queryable store (schema auto-created on first use). Exactly one IGraphCheckpointer is
+        // registered either way, so this is order-independent (no services.Replace needed).
+        if (!string.IsNullOrWhiteSpace(options.CheckpointerConnection))
+        {
+            var dataSource = Npgsql.NpgsqlDataSource.Create(options.CheckpointerConnection!);
+            services.AddSingleton<IGraphCheckpointer>(new PostgresGraphCheckpointer(dataSource));
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-checkpointer", options.CheckpointerConnection, "SELECT 1"));
+        }
+        else
+        {
+            services.AddOrleansGraphCheckpointer();
+        }
     }
 
     /// <summary>

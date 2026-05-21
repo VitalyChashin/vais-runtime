@@ -192,6 +192,14 @@ internal sealed record RuntimeOptions
     public string? AgentRunStoreConnection { get; init; }
 
     /// <summary>
+    /// Postgres connection string for the graph checkpointer. When set, the runtime persists graph-run
+    /// checkpoints directly to Postgres (<c>PostgresGraphCheckpointer</c>) instead of the default
+    /// Orleans-grain-backed checkpointer — a simpler, queryable storage option. Null ⇒ Orleans checkpointer
+    /// (unchanged). Set via <c>VAIS_CHECKPOINTER_CONNECTION</c>.
+    /// </summary>
+    public string? CheckpointerConnection { get; init; }
+
+    /// <summary>
     /// Postgres connection string for the gateway event store. When set, LLM completion events
     /// are persisted and exposed via <c>GET /v1/llm-gateways/{id}/events</c>.
     /// Null ⇒ store disabled (endpoint returns 503).
@@ -337,6 +345,7 @@ internal sealed record RuntimeOptions
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
             AgentRunStoreConnection = Env("VAIS_AGENT_RUN_STORE_CONNECTION"),
+            CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
             GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),
             GatewayId = Env("VAIS_GATEWAY_ID"),
             McpEventStoreConnection = Env("VAIS_MCP_EVENT_STORE_CONNECTION"),

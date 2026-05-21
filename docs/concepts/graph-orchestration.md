@@ -159,12 +159,13 @@ var final = await resumable.ResumeAsync(
 
 The interrupt node itself does not re-fire on resume — the orchestrator walks its outgoing edges against the rehydrated-plus-merged state.
 
-Two checkpointers ship:
+Three checkpointers ship:
 
 - **`InMemoryCheckpointer`** — `Vais.Agents.Core`. Dev + tests. `ConcurrentDictionary`-backed.
-- **`OrleansCheckpointer`** — `Vais.Agents.Hosting.Orleans`. Production. Serialises checkpoints to `GraphRunCheckpointGrain` keyed by `runId`. Persistence flows through the configured Redis / Postgres provider.
+- **`OrleansCheckpointer`** — `Vais.Agents.Hosting.Orleans`. Production default in the runtime. Serialises checkpoints to a per-`runId` grain; persistence flows through the configured Redis / Postgres grain-storage provider. Register with `AddOrleansGraphCheckpointer()`. Runs across silo restart, node migration, and operator redeploy.
+- **`PostgresGraphCheckpointer`** — `Vais.Agents.Persistence.Postgres`. Silo-free Postgres-direct store for hosts that run the orchestrator **without** an Orleans grain backing (the "won't grain-host" case), and a simpler/queryable option. Latest-only `jsonb` row per `runId` in `vais_graph_checkpoints` (schema auto-created on first use). Library hosts call `AddPostgresGraphCheckpointer(connectionString)`; in the runtime, set `VAIS_CHECKPOINTER_CONNECTION` to swap the backend from Orleans to Postgres.
 
-Register with `AddOrleansGraphCheckpointer()`. Runs across silo restart, node migration, and operator redeploy. See [run-resumable-graphs-on-orleans guide](../guides/run-resumable-graphs-on-orleans.md).
+See the [run-resumable-graphs-on-orleans guide](../guides/run-resumable-graphs-on-orleans.md).
 
 ## Run control across silos
 
