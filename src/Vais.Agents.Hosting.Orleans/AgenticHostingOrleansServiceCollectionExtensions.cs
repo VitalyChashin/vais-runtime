@@ -63,6 +63,30 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Register <see cref="OrleansAgentGraphEventBus"/> as a singleton <see cref="IAgentGraphEventBus"/>
+    /// backed by an Orleans stream provider — the graph-scoped sibling of
+    /// <see cref="AddOrleansAgentEventBus"/>. The stream provider must already be configured on the
+    /// host (e.g. <c>siloBuilder.AddMemoryStreams(name)</c>); this wires the bus that publishes and
+    /// subscribes against it.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    /// <param name="streamProviderName">
+    /// Name of the already-registered Orleans stream provider. Defaults to
+    /// <see cref="OrleansAgentEventBus.StreamNamespace"/> — the provider both buses share.
+    /// </param>
+    public static IServiceCollection AddOrleansAgentGraphEventBus(
+        this IServiceCollection services,
+        string streamProviderName = OrleansAgentEventBus.StreamNamespace)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(streamProviderName);
+
+        services.TryAddSingleton<IAgentGraphEventBus>(sp =>
+            new OrleansAgentGraphEventBus(sp.GetRequiredService<IClusterClient>(), streamProviderName));
+        return services;
+    }
+
+    /// <summary>
     /// Register the silo-side dependencies required by <see cref="AiAgentGrain"/>:
     /// a <see cref="Func{String, CancellationToken, ValueTask}"/> that produces per-agent options.
     /// Expects <see cref="ICompletionProvider"/> to be registered separately (consumers

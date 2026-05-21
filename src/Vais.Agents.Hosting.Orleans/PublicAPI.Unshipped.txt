@@ -1,4 +1,96 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Started = 0 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.NodeStarted = 1 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.NodeAgentInvoked = 2 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.NodeCompleted = 3 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.EdgeTraversed = 4 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.StateUpdated = 5 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Interrupted = 6 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Resumed = 7 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Completed = 8 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventKind.Failed = 9 -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.AgentGraphEventSurrogate() -> void
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.Kind -> Vais.Agents.Hosting.Orleans.AgentGraphEventKind
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.At -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.Context -> Vais.Agents.Hosting.Orleans.AgentContextSurrogate
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.RunId -> string!
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.SuperStep -> int
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.GraphId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.GraphVersion -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.EntryNodeId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.NodeId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.NodeKind -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.AgentId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.InputText -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.OutputText -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.InputTokens -> int?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.OutputTokens -> int?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.Duration -> System.TimeSpan?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.From -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.To -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.ChangedKeys -> string![]?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.InterruptId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.Reason -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.CurrentStateJson -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.ResumedFromNodeId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.FinalNodeId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.FinalStateJson -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.ErrorType -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.ErrorMessage -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate.FailedNodeId -> string?
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogateConverter
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogateConverter.AgentGraphEventSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.AgentGraphEvent!
+Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogateConverter.ConvertToSurrogate(in Vais.Agents.AgentGraphEvent! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.GraphStartedSurrogateConverter
+Vais.Agents.Hosting.Orleans.GraphStartedSurrogateConverter.GraphStartedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.GraphStartedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.GraphStarted!
+Vais.Agents.Hosting.Orleans.GraphStartedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GraphStarted! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.NodeStartedSurrogateConverter
+Vais.Agents.Hosting.Orleans.NodeStartedSurrogateConverter.NodeStartedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.NodeStartedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.NodeStarted!
+Vais.Agents.Hosting.Orleans.NodeStartedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.NodeStarted! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.NodeAgentInvokedSurrogateConverter
+Vais.Agents.Hosting.Orleans.NodeAgentInvokedSurrogateConverter.NodeAgentInvokedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.NodeAgentInvokedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.NodeAgentInvoked!
+Vais.Agents.Hosting.Orleans.NodeAgentInvokedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.NodeAgentInvoked! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.NodeCompletedSurrogateConverter
+Vais.Agents.Hosting.Orleans.NodeCompletedSurrogateConverter.NodeCompletedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.NodeCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.NodeCompleted!
+Vais.Agents.Hosting.Orleans.NodeCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.NodeCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.EdgeTraversedSurrogateConverter
+Vais.Agents.Hosting.Orleans.EdgeTraversedSurrogateConverter.EdgeTraversedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.EdgeTraversedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.EdgeTraversed!
+Vais.Agents.Hosting.Orleans.EdgeTraversedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.EdgeTraversed! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.StateUpdatedSurrogateConverter
+Vais.Agents.Hosting.Orleans.StateUpdatedSurrogateConverter.StateUpdatedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.StateUpdatedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.StateUpdated!
+Vais.Agents.Hosting.Orleans.StateUpdatedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.StateUpdated! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.GraphInterruptedSurrogateConverter
+Vais.Agents.Hosting.Orleans.GraphInterruptedSurrogateConverter.GraphInterruptedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.GraphInterruptedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.GraphInterrupted!
+Vais.Agents.Hosting.Orleans.GraphInterruptedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GraphInterrupted! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.GraphResumedSurrogateConverter
+Vais.Agents.Hosting.Orleans.GraphResumedSurrogateConverter.GraphResumedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.GraphResumedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.GraphResumed!
+Vais.Agents.Hosting.Orleans.GraphResumedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GraphResumed! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.GraphCompletedSurrogateConverter
+Vais.Agents.Hosting.Orleans.GraphCompletedSurrogateConverter.GraphCompletedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.GraphCompletedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.GraphCompleted!
+Vais.Agents.Hosting.Orleans.GraphCompletedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GraphCompleted! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.GraphFailedSurrogateConverter
+Vais.Agents.Hosting.Orleans.GraphFailedSurrogateConverter.GraphFailedSurrogateConverter() -> void
+Vais.Agents.Hosting.Orleans.GraphFailedSurrogateConverter.ConvertFromSurrogate(in Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate surrogate) -> Vais.Agents.GraphFailed!
+Vais.Agents.Hosting.Orleans.GraphFailedSurrogateConverter.ConvertToSurrogate(in Vais.Agents.GraphFailed! value) -> Vais.Agents.Hosting.Orleans.AgentGraphEventSurrogate
+Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus
+Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus.OrleansAgentGraphEventBus(Orleans.IClusterClient! clusterClient, string! streamProviderName) -> void
+Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus.PublishAsync(Vais.Agents.AgentGraphEvent! event, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus.Subscribe(System.Func<Vais.Agents.AgentGraphEvent!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>! handler) -> System.IDisposable!
+const Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus.StreamNamespace = "vais.agents.graph.events" -> string!
+static readonly Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus.StreamKey -> System.Guid
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansAgentGraphEventBus(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! streamProviderName = "vais.agents.events") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.GetOrCreateForSession(string! agentId, string! sessionId) -> Vais.Agents.IAiAgent!
 Vais.Agents.Hosting.Orleans.OrleansAgentRuntime.RemoveSession(string! agentId, string! sessionId) -> bool
 Vais.Agents.Hosting.Orleans.AgentEventKind.CompletionDelta = 9 -> Vais.Agents.Hosting.Orleans.AgentEventKind
