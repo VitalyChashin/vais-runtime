@@ -14,9 +14,11 @@ namespace Vais.Agents.Hosting.InMemory;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Not durable, not cross-process: for that, use the Orleans-streams-backed bus
-/// shipped in <c>Vais.Agents.Persistence.Redis</c>. This bus suits samples, tests,
-/// and single-process hosts that just want in-process reactions to graph lifecycle events.
+/// Not durable, not cross-process: for cross-silo fan-out use
+/// <c>Vais.Agents.Hosting.Orleans.OrleansAgentGraphEventBus</c> (register via
+/// <c>AddOrleansAgentGraphEventBus()</c>), which goes through the host's Orleans stream
+/// provider. This bus suits samples, tests, and single-process hosts that just want
+/// in-process reactions to graph lifecycle events.
 /// </para>
 /// <para>
 /// Thread safety: <see cref="Subscribe"/> and <see cref="PublishAsync"/> are safe

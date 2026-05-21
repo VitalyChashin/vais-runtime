@@ -197,6 +197,7 @@ internal static class CompositionRoot
         // which the co-hosted silo exposes into the same DI container.
         services.AddOrleansAgentRuntime();
         services.AddOrleansAgentEventBus();
+        services.AddOrleansAgentGraphEventBus();
 
         // Background agent-as-tool tracker — durable, grain-backed, cluster-wide.
         // Required by AgentManifestTranslator when any localAgents entry sets
@@ -205,10 +206,11 @@ internal static class CompositionRoot
         services.TryAddSingleton<IBackgroundAgentTracker>(sp =>
             new OrleansBackgroundAgentTracker(sp.GetRequiredService<IGrainFactory>()));
 
-        // IAgentGraphEventBus — in-process fan-out bus shared by AgentGraphLifecycleManager
-        // (publishes events) and RunStoreSubscriber (persists them). Singleton so all components
-        // share the same instance.
-        services.AddSingleton<IAgentGraphEventBus, InMemoryAgentGraphEventBus>();
+        // IAgentGraphEventBus — Orleans-streams-backed in the runtime (registered above via
+        // AddOrleansAgentGraphEventBus). This TryAdd is the in-process fallback for hosts that did
+        // not register the Orleans bus. Shared by AgentGraphLifecycleManager (publishes) and
+        // RunStoreSubscriber (persists) — both resolve the same singleton.
+        services.TryAddSingleton<IAgentGraphEventBus, InMemoryAgentGraphEventBus>();
 
         // v0.17 Pillar B — Orleans-backed durable registries so vais apply persists across
         // silo restart. Eval + extensions + secret resolver round out the runtime services
