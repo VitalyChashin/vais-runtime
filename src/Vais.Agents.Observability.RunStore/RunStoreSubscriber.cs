@@ -7,6 +7,19 @@ using Microsoft.Extensions.Options;
 
 namespace Vais.Agents.Observability.RunStore;
 
+/// <summary>
+/// Hosted service that subscribes to <see cref="Vais.Agents.IAgentGraphEventBus"/> and persists
+/// each graph event to <see cref="IRunStore"/>.
+/// </summary>
+/// <remarks>
+/// Runs on <b>every</b> silo. On a cross-silo stream provider the bus is best-effort
+/// at-least-once (ADR 019), so every silo's subscriber receives every event — i.e. each event
+/// reaches <see cref="IRunStore"/> once per silo. The store's writes must therefore be
+/// idempotent under duplicate delivery (they are: run/node rows use PK + INSERT…ON CONFLICT /
+/// UPDATE; edge appends are append-if-absent). Do not add a non-idempotent write here without
+/// a matching dedup, or revisit the single-consumer option in
+/// <c>plans/runstore-duplicate-persistence-gap-2026-05-21.md</c>.
+/// </remarks>
 internal sealed class RunStoreSubscriber : IHostedService
 {
     private readonly IRunStore _store;
