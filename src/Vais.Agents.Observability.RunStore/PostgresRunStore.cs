@@ -174,9 +174,19 @@ internal sealed class PostgresRunStore : IRunStore
     {
         await using var conn = await OpenAsync(ct).ConfigureAwait(false);
         await using var cmd = conn.CreateCommand();
+        // Append-if-absent (not array_append): the event bus is best-effort at-least-once
+        // (ADR 019) and, on a cross-silo stream provider, every silo's RunStoreSubscriber
+        // receives every event — so this write must be idempotent or a duplicate delivery
+        // would append the same edge target N times. The other writes converge naturally
+        // (PK + INSERT…ON CONFLICT / UPDATE); only this array append needed guarding.
+        // Trade-off: edges_taken becomes the set of distinct targets out of this node, not a
+        // multiset — loop repeats collapse, which is acceptable for a display/debug field.
         cmd.CommandText = """
             UPDATE vais_graph_run_nodes
-            SET edges_taken = array_append(COALESCE(edges_taken, '{}'), $3)
+            SET edges_taken = CASE
+                WHEN $3 = ANY(COALESCE(edges_taken, '{}')) THEN edges_taken
+                ELSE array_append(COALESCE(edges_taken, '{}'), $3)
+            END
             WHERE run_id = $1 AND node_id = $2
             """;
         cmd.Parameters.AddWithValue(runId);
