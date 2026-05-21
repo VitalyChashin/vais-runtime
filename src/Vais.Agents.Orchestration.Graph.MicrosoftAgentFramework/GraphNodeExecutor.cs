@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
@@ -48,6 +50,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
     private readonly bool _isForkSource;
     private readonly ActivityContext _graphContext;
     private readonly AgentInputMiddleware[]? _inputMiddleware;
+    private readonly ILogger _logger;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -69,7 +72,8 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         string? executorId = null,
         string? hitlPortId = null,
         bool isForkSource = false,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
         : base(id: executorId ?? node.Id)
     {
         _node = node;
@@ -90,6 +94,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         _isForkSource = isForkSource;
         _graphContext = Activity.Current?.Context ?? default;
         _inputMiddleware = inputMiddleware is { Count: > 0 } ? inputMiddleware.ToArray() : null;
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>Exposes the manifest node's kind for <see cref="MafGraphBuilder"/>'s output-binding filter.</summary>
@@ -200,7 +205,10 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
                 }
 
                 nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
-                nodeOutput = await ExecuteAgentNodeAsync(filteredInput, prompt, message.RunId, context, cancellationToken).ConfigureAwait(false);
+                nodeOutput = await GraphNodeRetry.ExecuteAsync(
+                    _node.RetryPolicy, message.RunId, _node.Id,
+                    (_, ct) => ExecuteAgentNodeAsync(filteredInput, prompt, message.RunId, context, ct),
+                    _logger, cancellationToken).ConfigureAwait(false);
                 if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
                     nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
             }
@@ -212,7 +220,10 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
                 }
                 var handler = _codeNodeResolver(_node.HandlerRef);
                 var input = FilterByInputBinding(state, _node.StateBindings);
-                nodeOutput = await handler.ExecuteAsync(input, _context, cancellationToken).ConfigureAwait(false);
+                nodeOutput = await GraphNodeRetry.ExecuteAsync(
+                    _node.RetryPolicy, message.RunId, _node.Id,
+                    (_, ct) => handler.ExecuteAsync(input, _context, ct),
+                    _logger, cancellationToken).ConfigureAwait(false);
             }
             else
             {

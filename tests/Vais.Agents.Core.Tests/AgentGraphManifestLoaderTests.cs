@@ -1458,4 +1458,91 @@ public sealed class AgentGraphManifestLoaderTests
         await act.Should().ThrowAsync<AgentManifestValidationException>()
             .WithMessage("*'=' (PowerFx expression)*");
     }
+
+    // ── §1d: node retry policy ───────────────────────────────────────────
+
+    [Fact]
+    public async Task RetryPolicy_Parses_From_Yaml()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: retry-graph, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: flaky-agent, version: "1.0" }
+                  retryPolicy:
+                    maxAttempts: 4
+                    initialBackoffSeconds: 0.25
+                    backoffMultiplier: 3
+                    maxBackoffSeconds: 10
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var graphs = await loader.LoadFromStringAsync(yaml);
+
+        var policy = graphs[0].Nodes.Single(n => n.Id == "step").RetryPolicy;
+        policy.Should().NotBeNull();
+        policy!.MaxAttempts.Should().Be(4);
+        policy.InitialBackoffSeconds.Should().Be(0.25);
+        policy.BackoffMultiplier.Should().Be(3);
+        policy.MaxBackoffSeconds.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task Envelope_RoundTrip_Preserves_RetryPolicy()
+    {
+        var original = new AgentGraphManifest(
+            Id: "retry-round-trip", Version: "1.0", Entry: "step",
+            Nodes: new[]
+            {
+                new GraphNode("step", "Agent",
+                    Ref: new GraphAgentRef("flaky-agent", "1.0"),
+                    RetryPolicy: new GraphNodeRetryPolicy(3, 0.5, 2.0, 30.0)),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("step", "end") });
+
+        var envelope = AgentGraphManifestEnvelope.Serialize(original);
+        var loader = new JsonAgentGraphManifestLoader();
+        var roundTripped = await loader.LoadFromStringAsync(envelope);
+
+        var policy = roundTripped[0].Nodes.Single(n => n.Id == "step").RetryPolicy;
+        policy.Should().Be(new GraphNodeRetryPolicy(3, 0.5, 2.0, 30.0));
+    }
+
+    [Fact]
+    public async Task RetryPolicy_InvalidMaxAttempts_Throws_Validation()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: AgentGraph
+            metadata: { id: bad-retry, version: "1.0" }
+            spec:
+              entry: step
+              nodes:
+                - id: step
+                  kind: Agent
+                  ref: { id: a, version: "1.0" }
+                  retryPolicy: { maxAttempts: 0 }
+                - id: end
+                  kind: End
+              edges:
+                - from: step
+                  to: end
+            """;
+
+        var loader = new YamlAgentGraphManifestLoader();
+        var act = async () => await loader.LoadFromStringAsync(yaml);
+        await act.Should().ThrowAsync<AgentManifestValidationException>()
+            .WithMessage("*maxAttempts*");
+    }
 }

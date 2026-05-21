@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
@@ -48,6 +49,7 @@ public static class MafGraphBuilder
     /// saves (identical to v0.9 behaviour). Required for <see cref="IResumableAgentGraph{TState}"/>.
     /// </param>
     /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
+    /// <param name="logger">Optional logger for per-attempt node-retry WARN lines (see <see cref="GraphNodeRetryPolicy"/>). Null disables retry logging.</param>
     public static Workflow Build(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -63,7 +65,8 @@ public static class MafGraphBuilder
         IGraphExpressionEvaluator? expressionEvaluator = null,
         string? startNodeId = null,
         IGraphCheckpointer? checkpointer = null,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -80,7 +83,7 @@ public static class MafGraphBuilder
                 reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                 expressionEvaluator: expressionEvaluator,
                 isForkSource: IsForkSource(node.Id, manifest),
-                inputMiddleware: inputMiddleware);
+                inputMiddleware: inputMiddleware, logger: logger);
         }
 
         // FO-3c: replace join-node entries with GraphJoinNodeExecutor so the accumulator
@@ -98,7 +101,7 @@ public static class MafGraphBuilder
                 predicateResolver, effectResolver, codeNodeResolver,
                 reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                 incomingBranchCount: group.Count(),
-                inputMiddleware: inputMiddleware);
+                inputMiddleware: inputMiddleware, logger: logger);
         }
 
         var effectiveStart = startNodeId ?? manifest.Entry;
@@ -205,6 +208,7 @@ public static class MafGraphBuilder
     /// <param name="expressionEvaluator">Evaluator for expression predicates. Null means expression predicates throw.</param>
     /// <param name="checkpointer">Checkpointer wired into each executor. Null skips checkpoint saves.</param>
     /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
+    /// <param name="logger">Optional logger for per-attempt node-retry WARN lines (see <see cref="GraphNodeRetryPolicy"/>). Null disables retry logging.</param>
     public static MafGraphBuildResult BuildForHitl(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -219,7 +223,8 @@ public static class MafGraphBuilder
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
         IGraphCheckpointer? checkpointer = null,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -245,7 +250,7 @@ public static class MafGraphBuilder
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                     expressionEvaluator: expressionEvaluator,
                     hitlPortId: portId,
-                    inputMiddleware: inputMiddleware);
+                    inputMiddleware: inputMiddleware, logger: logger);
 
                 var port = RequestPort.Create<GraphMessage, GraphMessage>(portId);
                 hitlPorts[node.Id] = port;
@@ -257,7 +262,7 @@ public static class MafGraphBuilder
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                     expressionEvaluator: expressionEvaluator,
                     executorId: resumeId,
-                    inputMiddleware: inputMiddleware);
+                    inputMiddleware: inputMiddleware, logger: logger);
             }
             else
             {
@@ -266,7 +271,7 @@ public static class MafGraphBuilder
                     predicateResolver, effectResolver, codeNodeResolver,
                     reducerResolver, context, remoteInvoker, a2aInvoker, bearerToken, checkpointer,
                     expressionEvaluator: expressionEvaluator,
-                    inputMiddleware: inputMiddleware);
+                    inputMiddleware: inputMiddleware, logger: logger);
             }
         }
 
