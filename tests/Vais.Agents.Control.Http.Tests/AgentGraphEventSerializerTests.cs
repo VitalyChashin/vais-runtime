@@ -92,6 +92,39 @@ public sealed class AgentGraphEventSerializerTests
         act.Should().NotThrow();
     }
 
+    // ---- 7: GraphFailed → "graph.failed", JSON contains FailedNodeId (P9 / ADR 016) ----
+
+    [Fact]
+    public void GraphFailed_Yields_Correct_EventName_And_FailedNodeId()
+    {
+        var evt = new GraphFailed(_at, _ctx, RunId, 3, "InvalidOperationException", "boom",
+            TimeSpan.FromSeconds(1), FailedNodeId: "bad-node");
+
+        var (eventName, dataJson) = AgentGraphEventSerializer.Serialize(evt);
+
+        eventName.Should().Be("graph.failed");
+        var doc = JsonDocument.Parse(dataJson);
+        doc.RootElement.GetProperty("failedNodeId").GetString().Should().Be("bad-node");
+    }
+
+    // ---- 8: Legacy graph.failed payload without failedNodeId deserialises to null (back-compat) ----
+
+    [Fact]
+    public void GraphFailed_LegacyPayload_Without_FailedNodeId_Deserialises_To_Null()
+    {
+        // A pre-P9 SSE payload carries no failedNodeId field; back-compat requires it to
+        // round-trip to null rather than fail deserialisation.
+        const string legacyJson =
+            """{"at":"2026-01-01T00:00:00+00:00","runId":"run-abc","superStep":2,"errorType":"SomeError","errorMessage":"older payload","duration":"00:00:01"}""";
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        var evt = JsonSerializer.Deserialize<GraphFailed>(legacyJson, options);
+
+        evt.Should().NotBeNull();
+        evt!.FailedNodeId.Should().BeNull();
+        evt.ErrorType.Should().Be("SomeError");
+    }
+
     // ---- 6: Unknown subtype throws ArgumentException ----
 
     [Fact]

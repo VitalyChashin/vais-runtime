@@ -694,6 +694,63 @@ public sealed class MafGraphOrchestratorTests
         failed.ErrorType.Should().Be(nameof(GraphHitlAbortedException));
     }
 
+    // ---- P9 / ADR 016: node-boundary failure visibility (MAF path) ----
+
+    [Fact]
+    public async Task NodeFailure_EmitsGraphFailed_With_FailedNodeId_And_Logs_Error()
+    {
+        // A node whose agent throws surfaces a MAF ExecutorFailedEvent; the orchestrator
+        // must translate it into a GraphFailed carrying the failing node id and emit an
+        // ERROR log with run_id/node_id/node_kind.
+        var (registry, lifecycle) = BuildHarness(_ =>
+            throw new InvalidOperationException("boom in maf node"));
+        await lifecycle.CreateAsync(ManifestFor("work"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-fail", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Agent", Ref: new GraphAgentRef("work")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var logger = new CapturingLogger();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, logger: logger);
+
+        var events = new List<AgentGraphEvent>();
+        try
+        {
+            await foreach (var e in orchestrator.StreamAsync(
+                new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        }
+        catch
+        {
+            // MAF may also surface the executor failure as an exception; the GraphFailed
+            // event is emitted regardless, which is what this test asserts.
+        }
+
+        // MAF surfaces both an ExecutorFailedEvent (node-attributable) and a
+        // WorkflowErrorEvent (framework-level); the node failure must carry the node id.
+        events.OfType<GraphFailed>().Should().Contain(f => f.FailedNodeId == "work");
+
+        logger.Entries.Should().Contain(e =>
+            e.Level == LogLevel.Error && e.Message.Contains("work"));
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, formatter(state, exception), exception));
+    }
+
     [Fact]
     public async Task Hitl_Parity_With_InProcess_Same_FinalState_And_Interrupt_Sequence()
     {

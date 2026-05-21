@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
@@ -72,6 +74,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly string? _bearerToken;
     private readonly IGraphExpressionEvaluator? _expressionEvaluator;
     private readonly IReadOnlyList<AgentInputMiddleware>? _inputMiddleware;
+    private readonly ILogger _logger;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
 
@@ -98,6 +101,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
+    /// <param name="logger">Logger for node-boundary ERROR records (ADR 016 / P9). Null uses a no-op logger.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -113,7 +117,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -133,6 +138,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _bearerToken = bearerToken;
         _expressionEvaluator = expressionEvaluator;
         _inputMiddleware = inputMiddleware;
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <inheritdoc />
@@ -340,7 +346,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                     var abortExc = new GraphHitlAbortedException(hitlNodeId);
                     var failEvt = new GraphFailed(
                         DateTimeOffset.UtcNow, context, runId, superStep,
-                        nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed);
+                        nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed,
+                        FailedNodeId: hitlNodeId);
                     await _graphEventBus.PublishAsync(failEvt, cancellationToken).ConfigureAwait(false);
                     yield return failEvt;
                     throw abortExc;
@@ -519,7 +526,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         }
     }
 
-    private static IEnumerable<AgentGraphEvent> TranslateEvent(
+    private IEnumerable<AgentGraphEvent> TranslateEvent(
         WorkflowEvent wfEvent,
         AgentContext context,
         string runId,
@@ -550,12 +557,17 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 {
                     recursionFailure = gre;
                 }
+                var failedNodeKind = _manifest.Nodes
+                    .FirstOrDefault(n => string.Equals(n.Id, failed.ExecutorId, StringComparison.Ordinal))?.Kind;
+                _logger.LogError(failed.Data as Exception,
+                    "Graph node failed. run_id={RunId} node_id={NodeId} node_kind={NodeKind}",
+                    runId, failed.ExecutorId, failedNodeKind);
                 return new AgentGraphEvent[]
                 {
                     new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
                         failed.Data?.GetType().Name ?? "UnknownError",
                         failed.Data?.ToString() ?? "Graph failed in MAF executor.",
-                        TimeSpan.Zero),
+                        TimeSpan.Zero, FailedNodeId: failed.ExecutorId),
                 };
 
             case WorkflowOutputEvent output when output.Data is GraphMessage msg:
@@ -563,6 +575,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 return Array.Empty<AgentGraphEvent>();
 
             case WorkflowErrorEvent error:
+                _logger.LogError(error.Data as Exception,
+                    "Graph workflow error. run_id={RunId}", runId);
                 return new AgentGraphEvent[]
                 {
                     new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
@@ -627,8 +641,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware, logger)
     {
     }
 }

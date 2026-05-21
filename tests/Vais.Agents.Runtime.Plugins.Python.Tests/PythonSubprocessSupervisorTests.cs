@@ -459,6 +459,50 @@ public sealed class PythonSubprocessSupervisorTests
     }
 
     [Fact]
+    public async Task InvokeAgentAsync_Timeout_IncludesStderrTailInException()
+    {
+        // P9 / ADR 016: when an agent invoke times out, the thrown exception must carry the
+        // subprocess stderr tail so the root cause reaches GraphFailed.ErrorMessage.
+        var pipes = MakePipes();
+        var handle = new FakeSubprocessHandle(
+            pipes.SupervisorInput, pipes.SupervisorOutput, pid: 10,
+            stderrLines: "Traceback (most recent call last):\nValueError: kaboom");
+
+        using var responderCts = new CancellationTokenSource();
+        // Responder blocks the invoke forever so the supervisor's invoke-timeout fires.
+        var responder = new AgentMockMcpResponder(pipes.ResponderInput, pipes.ResponderOutput, _ =>
+        {
+            Task.Delay(Timeout.Infinite).GetAwaiter().GetResult();
+            return new AgentInvokeResponse("never", null, null, null);
+        });
+        _ = Task.Run(() => responder.RunAsync(responderCts.Token));
+
+        var supervisor = new PythonSubprocessSupervisor(
+            MakeDescriptor(handlerTypeName: "MyAgent") with { InvokeTimeoutSeconds = 1 },
+            NullLoggerFactory.Instance,
+            _ => handle,
+            FastBackoff);
+
+        supervisor.Start();
+        (await supervisor.InitialHandshakeTask).Should().BeTrue();
+
+        // Ensure the seeded stderr is buffered before invoking (avoids a read race).
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (supervisor.LastErrorSnippet is null && DateTime.UtcNow < deadline)
+            await Task.Delay(10);
+        supervisor.LastErrorSnippet.Should().NotBeNull("seeded stderr should be buffered before invoke");
+
+        var request = new AgentInvokeRequest("agent1", "session1", "hello", null, 60, null);
+        var act = async () => await supervisor.InvokeAgentAsync(request, default);
+
+        (await act.Should().ThrowAsync<TimeoutException>())
+            .Which.Message.Should().Contain("kaboom", "the stderr tail must be appended to the timeout message");
+
+        await responderCts.CancelAsync();
+        await supervisor.StopAsync();
+    }
+
+    [Fact]
     public async Task DrainAndRestart_DrainTimeout_ProceedsAfterTimeout()
     {
         var pipes1 = MakePipes();

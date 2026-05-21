@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Vais.Agents.Core;
 
@@ -47,6 +49,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     private readonly string? _bearerToken;
     private readonly IAgentGraphEventBus _graphEventBus;
     private readonly IGraphExpressionEvaluator? _expressionEvaluator;
+    private readonly ILogger _logger;
 
     /// <summary>Construct the orchestrator.</summary>
     /// <param name="manifest">Graph to run. Validated eagerly on first invocation.</param>
@@ -63,6 +66,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation. Typically extracted from the inbound HTTP request by the caller.</param>
     /// <param name="graphEventBus">Bus to fan out graph lifecycle events to. Null uses <see cref="NullAgentGraphEventBus"/>.</param>
     /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
+    /// <param name="logger">Logger for node-boundary ERROR records (ADR 016 / P9). Null uses a no-op logger.</param>
     public InProcessGraphOrchestrator(
         AgentGraphManifest manifest,
         IAgentRegistry registry,
@@ -77,7 +81,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IAgentGraphEventBus? graphEventBus = null,
-        IGraphExpressionEvaluator? expressionEvaluator = null)
+        IGraphExpressionEvaluator? expressionEvaluator = null,
+        ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(registry);
@@ -109,6 +114,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
         _bearerToken = bearerToken;
         _graphEventBus = graphEventBus ?? NullAgentGraphEventBus.Instance;
         _expressionEvaluator = expressionEvaluator;
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <inheritdoc />
@@ -331,7 +337,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 var ex = new GraphRecursionException(_manifest.Id, maxSteps);
                 graphActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 var recursionEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                    ex.GetType().Name, ex.Message, watch.Elapsed);
+                    ex.GetType().Name, ex.Message, watch.Elapsed, FailedNodeId: currentNodeId);
                 await _graphEventBus.PublishAsync(recursionEvt, cancellationToken).ConfigureAwait(false);
                 yield return recursionEvt;
                 throw ex;
@@ -342,7 +348,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 var err = new InvalidOperationException($"Graph references unknown node '{currentNodeId}'.");
                 graphActivity?.SetStatus(ActivityStatusCode.Error, err.Message);
                 var unknownNodeEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                    err.GetType().Name, err.Message, watch.Elapsed);
+                    err.GetType().Name, err.Message, watch.Elapsed, FailedNodeId: currentNodeId);
                 await _graphEventBus.PublishAsync(unknownNodeEvt, cancellationToken).ConfigureAwait(false);
                 yield return unknownNodeEvt;
                 throw err;
@@ -387,7 +393,7 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     {
                         var abortEx = new GraphHitlAbortedException(currentNodeId);
                         var failedEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                            abortEx.GetType().Name, abortEx.Message, watch.Elapsed);
+                            abortEx.GetType().Name, abortEx.Message, watch.Elapsed, FailedNodeId: currentNodeId);
                         await _graphEventBus.PublishAsync(failedEvt, cancellationToken).ConfigureAwait(false);
                         yield return failedEvt;
                         throw abortEx;
@@ -462,10 +468,13 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 }
                 if (nodeFailure is not null)
                 {
+                    _logger.LogError(nodeFailure,
+                        "Graph node failed. run_id={RunId} node_id={NodeId} node_kind={NodeKind}",
+                        runId, currentNodeId, node.Kind);
                     nodeActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
                     graphActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
                     var nodeFailEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                        nodeFailure.GetType().Name, nodeFailure.Message, watch.Elapsed);
+                        nodeFailure.GetType().Name, nodeFailure.ToString(), watch.Elapsed, FailedNodeId: currentNodeId);
                     await _graphEventBus.PublishAsync(nodeFailEvt, cancellationToken).ConfigureAwait(false);
                     yield return nodeFailEvt;
                     throw nodeFailure;
@@ -881,8 +890,9 @@ public sealed class InProcessGraphOrchestrator : InProcessGraphOrchestrator<IDic
         IA2AGraphNodeInvoker? a2aInvoker = null,
         string? bearerToken = null,
         IAgentGraphEventBus? graphEventBus = null,
-        IGraphExpressionEvaluator? expressionEvaluator = null)
-        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken, graphEventBus, expressionEvaluator)
+        IGraphExpressionEvaluator? expressionEvaluator = null,
+        ILogger? logger = null)
+        : base(manifest, registry, lifecycle, checkpointer, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, remoteInvoker, a2aInvoker, bearerToken, graphEventBus, expressionEvaluator, logger)
     {
     }
 }

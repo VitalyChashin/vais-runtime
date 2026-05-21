@@ -415,7 +415,8 @@ internal static class CompositionRoot
                         bearerToken: accessor?.HttpContext?.Request.Headers.Authorization.ToString() is string authHeader
                             && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
                             ? authHeader[7..] : null,
-                        expressionEvaluator: sp.GetService<IGraphExpressionEvaluator>()));
+                        expressionEvaluator: sp.GetService<IGraphExpressionEvaluator>(),
+                        logger: sp.GetService<ILogger<MafGraphOrchestrator<IDictionary<string, JsonElement>>>>()));
         });
 
         // v0.20 Gateway config lifecycle managers (GCF-17).

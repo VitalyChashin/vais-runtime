@@ -1,4 +1,10 @@
 #nullable enable
+Vais.Agents.GraphFailed.FailedNodeId.get -> string?
+Vais.Agents.GraphFailed.FailedNodeId.init -> void
+Vais.Agents.GraphFailed.GraphFailed(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! ErrorType, string! ErrorMessage, System.TimeSpan Duration, string? FailedNodeId = null) -> void
+Vais.Agents.GraphFailed.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! ErrorType, out string! ErrorMessage, out System.TimeSpan Duration, out string? FailedNodeId) -> void
+*REMOVED*Vais.Agents.GraphFailed.GraphFailed(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! ErrorType, string! ErrorMessage, System.TimeSpan Duration) -> void
+*REMOVED*Vais.Agents.GraphFailed.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out string! RunId, out int SuperStep, out string! ErrorType, out string! ErrorMessage, out System.TimeSpan Duration) -> void
 Vais.Agents.UsageRecord.Deconstruct(out string! ProviderName, out string! ModelId, out int? PromptTokens, out int? CompletionTokens, out System.TimeSpan Duration, out System.DateTimeOffset StartedAt, out bool Succeeded, out string? AgentName, out string? UserId, out string? TenantId, out string? CorrelationId, out string? ErrorType, out string? WorkspaceId) -> void
 Vais.Agents.UsageRecord.UsageRecord(string! ProviderName, string! ModelId, int? PromptTokens, int? CompletionTokens, System.TimeSpan Duration, System.DateTimeOffset StartedAt, bool Succeeded, string? AgentName = null, string? UserId = null, string? TenantId = null, string? CorrelationId = null, string? ErrorType = null, string? WorkspaceId = null) -> void
 Vais.Agents.UsageRecord.WorkspaceId.get -> string?
