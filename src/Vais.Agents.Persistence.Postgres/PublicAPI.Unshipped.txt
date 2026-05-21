@@ -1,6 +1,13 @@
 #nullable enable
 static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddAgenticPostgresGrainStorage(this Orleans.Hosting.ISiloBuilder! siloBuilder, string! name, string! connectionString) -> Orleans.Hosting.ISiloBuilder!
 static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddPostgresEvalResultStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Persistence.Postgres.AgenticPostgresPersistenceExtensions.AddPostgresGraphCheckpointer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer.PostgresGraphCheckpointer(Npgsql.NpgsqlDataSource! dataSource) -> void
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer.SaveAsync(Vais.Agents.GraphCheckpoint! checkpoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer.LoadAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.GraphCheckpoint?>
+Vais.Agents.Persistence.Postgres.PostgresGraphCheckpointer.DeleteAsync(string! runId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Persistence.Postgres.PostgresEvalResultStore
 Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.PostgresEvalResultStore(Npgsql.NpgsqlDataSource! dataSource) -> void
 Vais.Agents.Persistence.Postgres.PostgresEvalResultStore.AppendRunAsync(Vais.Agents.Eval.EvalRunSummary! run, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

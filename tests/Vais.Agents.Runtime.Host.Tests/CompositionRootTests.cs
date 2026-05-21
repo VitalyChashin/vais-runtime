@@ -14,6 +14,7 @@ using Vais.Agents.Control.InProcess;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.Orleans;
+using Vais.Agents.Persistence.Postgres;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
@@ -119,6 +120,20 @@ public class CompositionRootTests
         var checkpointer = sp.GetRequiredService<IGraphCheckpointer>();
 
         checkpointer.Should().BeOfType<OrleansCheckpointer>();
+    }
+
+    [Fact]
+    public void Composition_With_CheckpointerConnection_Uses_PostgresCheckpointer()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions
+        {
+            CheckpointerConnection = "Host=localhost;Database=t;Username=u;Password=p",
+        });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IGraphCheckpointer>().Should().BeOfType<PostgresGraphCheckpointer>(
+            "VAIS_CHECKPOINTER_CONNECTION swaps the checkpointer backend to Postgres");
     }
 
     [Fact]

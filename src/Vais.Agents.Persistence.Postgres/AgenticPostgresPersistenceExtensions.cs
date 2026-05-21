@@ -138,4 +138,25 @@ public static class AgenticPostgresPersistenceExtensions
         services.TryAddSingleton<IEvalResultStore>(new PostgresEvalResultStore(ds));
         return services;
     }
+
+    /// <summary>
+    /// Register <see cref="PostgresGraphCheckpointer"/> as the singleton <see cref="IGraphCheckpointer"/> —
+    /// a silo-free, Postgres-direct alternative to <c>OrleansCheckpointer</c> for hosts that run the graph
+    /// orchestrator without an Orleans grain backing. Schema is applied automatically on first use.
+    /// Uses <c>TryAddSingleton</c>; in a host that already registers an <see cref="IGraphCheckpointer"/>
+    /// (e.g. the runtime's Orleans one), use <c>services.Replace(...)</c> instead to override it.
+    /// </summary>
+    /// <param name="services">The host's DI container.</param>
+    /// <param name="connectionString">Postgres connection string.</param>
+    public static IServiceCollection AddPostgresGraphCheckpointer(
+        this IServiceCollection services,
+        string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        var ds = NpgsqlDataSource.Create(connectionString);
+        services.TryAddSingleton<IGraphCheckpointer>(new PostgresGraphCheckpointer(ds));
+        return services;
+    }
 }
