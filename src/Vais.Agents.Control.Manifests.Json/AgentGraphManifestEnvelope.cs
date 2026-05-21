@@ -86,6 +86,7 @@ public static class AgentGraphManifestEnvelope
                 var refObj = new JsonObject { ["id"] = aRef.Id };
                 if (aRef.Version is not null) refObj["version"] = aRef.Version;
                 if (aRef.RuntimeUrl is not null) refObj["runtimeUrl"] = aRef.RuntimeUrl;
+                if (aRef.A2AUrl is not null) refObj["a2aUrl"] = aRef.A2AUrl;
                 obj["ref"] = refObj;
             }
             if (node.HandlerRef is { } hRef)

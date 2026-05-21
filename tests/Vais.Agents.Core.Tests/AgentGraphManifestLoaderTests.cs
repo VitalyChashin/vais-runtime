@@ -471,6 +471,27 @@ public sealed class AgentGraphManifestLoaderTests
             .Should().Be("https://runtime-b.svc");
     }
 
+    [Fact]
+    public async Task Envelope_RoundTrip_Preserves_A2AUrl()
+    {
+        var original = new AgentGraphManifest(
+            Id: "a2a-round-trip", Version: "1.0", Entry: "step",
+            Nodes: new[]
+            {
+                new GraphNode("step", "Agent", Ref: new GraphAgentRef("external-agent", "1.0", A2AUrl: "https://enricher.vendor-a.com")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("step", "end") });
+
+        var envelope = AgentGraphManifestEnvelope.Serialize(original);
+        var loader = new JsonAgentGraphManifestLoader();
+        var roundTripped = await loader.LoadFromStringAsync(envelope);
+
+        var step = roundTripped.Single().Nodes.Single(n => n.Id == "step");
+        step.Ref!.A2AUrl.Should().Be("https://enricher.vendor-a.com");
+        step.Ref.RuntimeUrl.Should().BeNull();
+    }
+
     // ── v0.21: a2aUrl in ref ─────────────────────────────────────────────
 
     [Fact]
