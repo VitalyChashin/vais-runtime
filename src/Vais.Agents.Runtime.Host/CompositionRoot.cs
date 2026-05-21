@@ -395,6 +395,9 @@ internal static class CompositionRoot
             services.AddA2AGraphNodeInvoker();
         if (options.PowerFxEnabled)
             services.AddPowerFxExpressionEvaluator();
+        // Graph run registry — in-process by default; a clustered deployment can register an
+        // Orleans-backed IGraphRunCoordinator earlier so cancel/status work cluster-wide (P1).
+        services.TryAddSingleton<IGraphRunCoordinator, InProcessGraphRunCoordinator>();
         services.AddSingleton<IAgentGraphLifecycleManager>(sp =>
         {
             var accessor = sp.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
@@ -430,7 +433,8 @@ internal static class CompositionRoot
                             && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
                             ? authHeader[7..] : null,
                         expressionEvaluator: sp.GetService<IGraphExpressionEvaluator>(),
-                        logger: sp.GetService<ILogger<MafGraphOrchestrator<IDictionary<string, JsonElement>>>>()));
+                        logger: sp.GetService<ILogger<MafGraphOrchestrator<IDictionary<string, JsonElement>>>>()),
+                coordinator: sp.GetService<IGraphRunCoordinator>());
         });
 
         // v0.20 Gateway config lifecycle managers (GCF-17).

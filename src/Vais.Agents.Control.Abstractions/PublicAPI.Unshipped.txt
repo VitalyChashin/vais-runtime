@@ -1,4 +1,36 @@
 #nullable enable
+Vais.Agents.Control.GraphRunOutcome
+Vais.Agents.Control.GraphRunOutcome.Completed = 0 -> Vais.Agents.Control.GraphRunOutcome
+Vais.Agents.Control.GraphRunOutcome.Interrupted = 1 -> Vais.Agents.Control.GraphRunOutcome
+Vais.Agents.Control.GraphRunOutcome.Failed = 2 -> Vais.Agents.Control.GraphRunOutcome
+Vais.Agents.Control.GraphRunOutcome.Cancelled = 3 -> Vais.Agents.Control.GraphRunOutcome
+Vais.Agents.Control.GraphRunSnapshot
+Vais.Agents.Control.GraphRunSnapshot.GraphRunSnapshot(string! RunId, string! GraphId, string! Version, System.DateTimeOffset StartedAt, bool CancelRequested) -> void
+Vais.Agents.Control.GraphRunSnapshot.RunId.get -> string!
+Vais.Agents.Control.GraphRunSnapshot.RunId.init -> void
+Vais.Agents.Control.GraphRunSnapshot.GraphId.get -> string!
+Vais.Agents.Control.GraphRunSnapshot.GraphId.init -> void
+Vais.Agents.Control.GraphRunSnapshot.Version.get -> string!
+Vais.Agents.Control.GraphRunSnapshot.Version.init -> void
+Vais.Agents.Control.GraphRunSnapshot.StartedAt.get -> System.DateTimeOffset
+Vais.Agents.Control.GraphRunSnapshot.StartedAt.init -> void
+Vais.Agents.Control.GraphRunSnapshot.CancelRequested.get -> bool
+Vais.Agents.Control.GraphRunSnapshot.CancelRequested.init -> void
+Vais.Agents.Control.GraphRunSnapshot.Deconstruct(out string! RunId, out string! GraphId, out string! Version, out System.DateTimeOffset StartedAt, out bool CancelRequested) -> void
+Vais.Agents.Control.GraphRunSnapshot.Equals(Vais.Agents.Control.GraphRunSnapshot? other) -> bool
+Vais.Agents.Control.GraphRunSnapshot.<Clone>$() -> Vais.Agents.Control.GraphRunSnapshot!
+override Vais.Agents.Control.GraphRunSnapshot.Equals(object? obj) -> bool
+override Vais.Agents.Control.GraphRunSnapshot.GetHashCode() -> int
+override Vais.Agents.Control.GraphRunSnapshot.ToString() -> string!
+static Vais.Agents.Control.GraphRunSnapshot.operator !=(Vais.Agents.Control.GraphRunSnapshot? left, Vais.Agents.Control.GraphRunSnapshot? right) -> bool
+static Vais.Agents.Control.GraphRunSnapshot.operator ==(Vais.Agents.Control.GraphRunSnapshot? left, Vais.Agents.Control.GraphRunSnapshot? right) -> bool
+Vais.Agents.Control.IGraphRunCoordinator
+Vais.Agents.Control.IGraphRunCoordinator.TryStartAsync(string! runId, string! graphId, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Control.IGraphRunCoordinator.MarkActiveAsync(string! runId, string! graphId, string! version, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IGraphRunCoordinator.RequestCancelAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IGraphRunCoordinator.IsCancelRequestedAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Control.IGraphRunCoordinator.CompleteAsync(string! runId, Vais.Agents.Control.GraphRunOutcome outcome, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.IGraphRunCoordinator.GetAsync(string! runId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.GraphRunSnapshot?>
 Vais.Agents.Control.IRemoteRuntimeTopology
 Vais.Agents.Control.IRemoteRuntimeTopology.GetEntries() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.RemoteRuntimeEntry!>!
 Vais.Agents.Control.RemoteRuntimeEntry
