@@ -278,7 +278,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             bearerToken: _bearerToken,
             expressionEvaluator: _expressionEvaluator,
             checkpointer: _checkpointer,
-            inputMiddleware: _inputMiddleware);
+            inputMiddleware: _inputMiddleware,
+            logger: _logger);
         var workflow = buildResult.Workflow;
         var portIdToNodeId = buildResult.PortIdToNodeId;
 
@@ -441,7 +442,8 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             expressionEvaluator: _expressionEvaluator,
             startNodeId: resumeFromNodeId,
             checkpointer: _checkpointer,
-            inputMiddleware: _inputMiddleware);
+            inputMiddleware: _inputMiddleware,
+            logger: _logger);
 
         var watch = Stopwatch.StartNew();
 

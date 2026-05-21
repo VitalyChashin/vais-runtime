@@ -1,4 +1,28 @@
 #nullable enable
+*REMOVED*Vais.Agents.GraphNode.Deconstruct(out string! Id, out string! Kind, out Vais.Agents.GraphAgentRef? Ref, out Vais.Agents.GraphHandlerRef? HandlerRef, out Vais.Agents.GraphStateBindings? StateBindings, out string? InterruptReason) -> void
+*REMOVED*Vais.Agents.GraphNode.GraphNode(string! Id, string! Kind, Vais.Agents.GraphAgentRef? Ref = null, Vais.Agents.GraphHandlerRef? HandlerRef = null, Vais.Agents.GraphStateBindings? StateBindings = null, string? InterruptReason = null) -> void
+Vais.Agents.GraphNode.Deconstruct(out string! Id, out string! Kind, out Vais.Agents.GraphAgentRef? Ref, out Vais.Agents.GraphHandlerRef? HandlerRef, out Vais.Agents.GraphStateBindings? StateBindings, out string? InterruptReason, out Vais.Agents.GraphNodeRetryPolicy? RetryPolicy) -> void
+Vais.Agents.GraphNode.GraphNode(string! Id, string! Kind, Vais.Agents.GraphAgentRef? Ref = null, Vais.Agents.GraphHandlerRef? HandlerRef = null, Vais.Agents.GraphStateBindings? StateBindings = null, string? InterruptReason = null, Vais.Agents.GraphNodeRetryPolicy? RetryPolicy = null) -> void
+Vais.Agents.GraphNode.RetryPolicy.get -> Vais.Agents.GraphNodeRetryPolicy?
+Vais.Agents.GraphNode.RetryPolicy.init -> void
+Vais.Agents.GraphNodeRetryPolicy
+Vais.Agents.GraphNodeRetryPolicy.GraphNodeRetryPolicy(int MaxAttempts, double InitialBackoffSeconds = 0.5, double BackoffMultiplier = 2, double MaxBackoffSeconds = 30) -> void
+Vais.Agents.GraphNodeRetryPolicy.MaxAttempts.get -> int
+Vais.Agents.GraphNodeRetryPolicy.MaxAttempts.init -> void
+Vais.Agents.GraphNodeRetryPolicy.InitialBackoffSeconds.get -> double
+Vais.Agents.GraphNodeRetryPolicy.InitialBackoffSeconds.init -> void
+Vais.Agents.GraphNodeRetryPolicy.BackoffMultiplier.get -> double
+Vais.Agents.GraphNodeRetryPolicy.BackoffMultiplier.init -> void
+Vais.Agents.GraphNodeRetryPolicy.MaxBackoffSeconds.get -> double
+Vais.Agents.GraphNodeRetryPolicy.MaxBackoffSeconds.init -> void
+Vais.Agents.GraphNodeRetryPolicy.Deconstruct(out int MaxAttempts, out double InitialBackoffSeconds, out double BackoffMultiplier, out double MaxBackoffSeconds) -> void
+Vais.Agents.GraphNodeRetryPolicy.Equals(Vais.Agents.GraphNodeRetryPolicy? other) -> bool
+Vais.Agents.GraphNodeRetryPolicy.<Clone>$() -> Vais.Agents.GraphNodeRetryPolicy!
+override Vais.Agents.GraphNodeRetryPolicy.Equals(object? obj) -> bool
+override Vais.Agents.GraphNodeRetryPolicy.GetHashCode() -> int
+override Vais.Agents.GraphNodeRetryPolicy.ToString() -> string!
+static Vais.Agents.GraphNodeRetryPolicy.operator !=(Vais.Agents.GraphNodeRetryPolicy? left, Vais.Agents.GraphNodeRetryPolicy? right) -> bool
+static Vais.Agents.GraphNodeRetryPolicy.operator ==(Vais.Agents.GraphNodeRetryPolicy? left, Vais.Agents.GraphNodeRetryPolicy? right) -> bool
 Vais.Agents.GraphFailed.FailedNodeId.get -> string?
 Vais.Agents.GraphFailed.FailedNodeId.init -> void
 Vais.Agents.GraphFailed.GraphFailed(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, string! RunId, int SuperStep, string! ErrorType, string! ErrorMessage, System.TimeSpan Duration, string? FailedNodeId = null) -> void

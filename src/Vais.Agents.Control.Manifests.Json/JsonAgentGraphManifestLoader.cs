@@ -388,7 +388,17 @@ public sealed class JsonAgentGraphManifestLoader
 
             var interruptReason = item.TryGetProperty("interruptReason", out var irEl) ? irEl.GetString() : null;
 
-            list.Add(new GraphNode(nodeId!, kind!, agentRef, handlerRef, bindings, interruptReason));
+            GraphNodeRetryPolicy? retryPolicy = null;
+            if (item.TryGetProperty("retryPolicy", out var rpEl) && rpEl.ValueKind == JsonValueKind.Object)
+            {
+                var maxAttempts = rpEl.TryGetProperty("maxAttempts", out var maEl) && maEl.TryGetInt32(out var ma) ? ma : 1;
+                var initialBackoff = rpEl.TryGetProperty("initialBackoffSeconds", out var ibEl) && ibEl.TryGetDouble(out var ib) ? ib : 0.5;
+                var multiplier = rpEl.TryGetProperty("backoffMultiplier", out var bmEl) && bmEl.TryGetDouble(out var bm) ? bm : 2.0;
+                var maxBackoff = rpEl.TryGetProperty("maxBackoffSeconds", out var mbEl) && mbEl.TryGetDouble(out var mb) ? mb : 30.0;
+                retryPolicy = new GraphNodeRetryPolicy(maxAttempts, initialBackoff, multiplier, maxBackoff);
+            }
+
+            list.Add(new GraphNode(nodeId!, kind!, agentRef, handlerRef, bindings, interruptReason, retryPolicy));
             index++;
         }
         return list;

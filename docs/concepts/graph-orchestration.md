@@ -177,6 +177,29 @@ Single-process and library hosts use the in-process default (`InProcessGraphRunC
 
 **Scaling contract (P5).** Per-run cancel and conflict detection are cluster-wide. The graph-level aggregate counters from `QueryAsync` (active / completed / pending-interrupt) are **per-silo and advisory** — they reset on restart and do not sum across the cluster. There is no transparent mid-run failover: if the silo executing a run dies, recover by resuming from the last checkpoint (above), not by automatic grain reactivation.
 
+## Node retry
+
+Any node can declare an optional `retryPolicy`. When set, the node body (the agent / handler / code invocation) is retried on failure with exponential backoff; with no `retryPolicy` the node runs once (the default — unchanged behavior).
+
+```yaml
+nodes:
+  - id: analyze
+    kind: Agent
+    ref: { id: analyst }
+    retryPolicy:
+      maxAttempts: 3             # total attempts incl. the first; >= 1
+      initialBackoffSeconds: 0.5 # delay before attempt 2
+      backoffMultiplier: 2.0     # exponential growth per attempt
+      maxBackoffSeconds: 30      # cap on any single delay
+```
+
+- **What's retried.** Every failure *except* the terminal set — cancellation, guardrail denial, budget exhaustion, and interrupts are never retried. There is no exception-type allowlist: a transient LLM/tool/code error is retried; a deliberate stop is not.
+- **Boundary.** Retry wraps the node body only — input middleware and state projection run once, before the first attempt. Output merges into graph state only on a *successful* attempt, so a failed attempt leaves no partial state.
+- **Agent nodes.** `Agent`-kind nodes already retry the LLM call inside their own resilience pipeline; a node `retryPolicy` is an **outer** net that re-runs the whole node (fresh LLM call + tools) after the inner pipeline is exhausted. If you set both, the effective attempt count multiplies — keep one of them low.
+- **Idempotency.** A retried node re-runs its work, including MCP tool calls. Opt into retry only where re-execution is safe (idempotent or side-effect-tolerant).
+- **Observability.** Each retry logs a WARN with `run_id`, `node_id`, attempt number, and error type. After `maxAttempts` is exhausted the run fails normally — `GraphFailed` carries the `FailedNodeId`.
+- **Both paths.** Identical semantics in the in-process and MAF orchestrators (one shared retry helper wraps each node-body call site).
+
 ## Events
 
 `StreamAsync` yields the full `AgentGraphEvent` taxonomy — ten subtypes covering graph start, node start/invocation/end, edge traversal, state mutation, interrupt/resume, and terminal success/failure. Every event carries `{RunId, SuperStep}` so consumers correlate against the checkpoint timeline. `NodeAgentInvoked` appears after `NodeStarted` and before `NodeCompleted` for every `Agent`-kind node; it carries `InputText`, `OutputText`, and token counts. `StateUpdated` always follows `NodeCompleted`.

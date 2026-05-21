@@ -460,7 +460,10 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                 Exception? nodeFailure = null;
                 try
                 {
-                    (nodeOutput, agentInvokedEvt) = await ExecuteNodeAsync(node, state, context, runId, superStep, cancellationToken).ConfigureAwait(false);
+                    (nodeOutput, agentInvokedEvt) = await GraphNodeRetry.ExecuteAsync(
+                        node.RetryPolicy, runId, node.Id,
+                        (_, ct) => ExecuteNodeAsync(node, state, context, runId, superStep, ct),
+                        _logger, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

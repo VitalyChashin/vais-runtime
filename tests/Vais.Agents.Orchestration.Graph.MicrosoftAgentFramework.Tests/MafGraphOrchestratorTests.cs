@@ -741,6 +741,89 @@ public sealed class MafGraphOrchestratorTests
             e.Level == LogLevel.Error && e.Message.Contains("work"));
     }
 
+    // ---- §1d: node-level retry policy ----
+
+    private sealed class CountingCodeNode : IGraphCodeNode
+    {
+        private readonly int _failTimes;
+        public int Calls { get; private set; }
+        public CountingCodeNode(int failTimes) => _failTimes = failTimes;
+        public ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAsync(
+            IReadOnlyDictionary<string, JsonElement> input, AgentContext context, CancellationToken cancellationToken)
+        {
+            Calls++;
+            if (Calls <= _failTimes) throw new InvalidOperationException($"transient #{Calls}");
+            return ValueTask.FromResult<IReadOnlyDictionary<string, JsonElement>>(new Dictionary<string, JsonElement>());
+        }
+    }
+
+    [Fact]
+    public async Task Code_Node_RetryPolicy_Succeeds_After_Transient_Failures()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var handler = new CountingCodeNode(failTimes: 2);
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-retry-ok", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("counting"),
+                    RetryPolicy: new GraphNodeRetryPolicy(3, 0.001, 1.0, 0.001)),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var logger = new CapturingLogger();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle,
+            codeNodeResolver: _ => handler, logger: logger);
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            events.Add(e);
+        }
+
+        handler.Calls.Should().Be(3, "two transient failures then success");
+        events.OfType<GraphFailed>().Should().BeEmpty();
+        events.OfType<GraphCompleted>().Should().ContainSingle();
+        logger.Entries.Count(e => e.Level == LogLevel.Warning && e.Message.Contains("retry")).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Code_Node_RetryPolicy_Exhausted_Emits_GraphFailed()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var handler = new CountingCodeNode(failTimes: 99); // always fails
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-retry-exhaust", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("counting"),
+                    RetryPolicy: new GraphNodeRetryPolicy(2, 0.001, 1.0, 0.001)),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, codeNodeResolver: _ => handler);
+
+        var events = new List<AgentGraphEvent>();
+        try
+        {
+            await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        }
+        catch
+        {
+            // MAF may also surface the failure as an exception; GraphFailed is asserted below.
+        }
+
+        handler.Calls.Should().Be(2, "maxAttempts=2 exhausted");
+        events.OfType<GraphFailed>().Should().Contain(f => f.FailedNodeId == "work");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();

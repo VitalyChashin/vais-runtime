@@ -81,13 +81,31 @@ public sealed record AgentGraphManifest(
 /// <param name="HandlerRef">Reference to a DI-resolved code handler, for <c>Code</c>-kind nodes.</param>
 /// <param name="StateBindings">Describes how graph state projects into/out of this node's invocation.</param>
 /// <param name="InterruptReason">Operator-readable reason surfaced on <see cref="GraphInterrupted.Reason"/>; optional for <c>Interrupt</c>-kind nodes.</param>
+/// <param name="RetryPolicy">Optional per-node retry policy. Null (default) = no retry; the node body runs once and any failure propagates. See <see cref="GraphNodeRetryPolicy"/>.</param>
 public sealed record GraphNode(
     string Id,
     string Kind,
     GraphAgentRef? Ref = null,
     GraphHandlerRef? HandlerRef = null,
     GraphStateBindings? StateBindings = null,
-    string? InterruptReason = null);
+    string? InterruptReason = null,
+    GraphNodeRetryPolicy? RetryPolicy = null);
+
+/// <summary>
+/// Per-node retry policy. When set, the node body (the agent/handler/code invocation) is retried on
+/// failure with exponential backoff. Retries every failure except the terminal set — cancellation,
+/// guardrail denial, budget exhaustion, and interrupts are never retried. Applies to all node kinds;
+/// for <c>Agent</c> nodes it is an outer net stacking above the agent's own resilience pipeline.
+/// </summary>
+/// <param name="MaxAttempts">Total attempts including the first. Must be ≥ 1; 1 = no retry.</param>
+/// <param name="InitialBackoffSeconds">Delay before the second attempt. Must be ≥ 0.</param>
+/// <param name="BackoffMultiplier">Exponential growth factor applied per attempt. Must be ≥ 1.</param>
+/// <param name="MaxBackoffSeconds">Upper bound on any single backoff delay. Must be ≥ <paramref name="InitialBackoffSeconds"/>.</param>
+public sealed record GraphNodeRetryPolicy(
+    int MaxAttempts,
+    double InitialBackoffSeconds = 0.5,
+    double BackoffMultiplier = 2.0,
+    double MaxBackoffSeconds = 30.0);
 
 /// <summary>Reference to an agent in <see cref="IAgentRegistry"/> for <c>Agent</c>-kind nodes.</summary>
 /// <param name="Id">Agent id.</param>

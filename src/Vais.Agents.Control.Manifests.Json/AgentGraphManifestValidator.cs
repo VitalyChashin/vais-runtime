@@ -67,6 +67,7 @@ public static class AgentGraphManifestValidator
             }
 
             ValidateNodeKind(node, errors, prefix);
+            ValidateRetryPolicy(node, errors, prefix);
         }
 
         if (!nodeById.ContainsKey(manifest.Entry))
@@ -276,6 +277,20 @@ public static class AgentGraphManifestValidator
                 errors.Add($"{prefix}node '{node.Id}' has unknown kind '{node.Kind}' (expected Agent | Code | Interrupt | End)");
                 break;
         }
+    }
+
+    private static void ValidateRetryPolicy(GraphNode node, List<string> errors, string prefix)
+    {
+        if (node.RetryPolicy is not { } rp) return;
+
+        if (rp.MaxAttempts < 1)
+            errors.Add($"{prefix}node '{node.Id}' retryPolicy.maxAttempts must be >= 1");
+        if (rp.InitialBackoffSeconds < 0)
+            errors.Add($"{prefix}node '{node.Id}' retryPolicy.initialBackoffSeconds must be >= 0");
+        if (rp.BackoffMultiplier < 1)
+            errors.Add($"{prefix}node '{node.Id}' retryPolicy.backoffMultiplier must be >= 1");
+        if (rp.MaxBackoffSeconds < rp.InitialBackoffSeconds)
+            errors.Add($"{prefix}node '{node.Id}' retryPolicy.maxBackoffSeconds must be >= initialBackoffSeconds");
     }
 
     private static void ValidateConcurrentEdges(

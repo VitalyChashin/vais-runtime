@@ -605,6 +605,91 @@ public sealed class InProcessGraphOrchestratorTests
             e.Message.Contains("work"));
     }
 
+    // ---- §1d: node-level retry policy ----
+
+    private sealed class CountingCodeNode : IGraphCodeNode
+    {
+        private readonly int _failTimes;
+        public int Calls { get; private set; }
+        public CountingCodeNode(int failTimes) => _failTimes = failTimes;
+        public ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAsync(
+            IReadOnlyDictionary<string, JsonElement> input, AgentContext context, CancellationToken cancellationToken)
+        {
+            Calls++;
+            if (Calls <= _failTimes) throw new InvalidOperationException($"transient #{Calls}");
+            return ValueTask.FromResult<IReadOnlyDictionary<string, JsonElement>>(new Dictionary<string, JsonElement>());
+        }
+    }
+
+    [Fact]
+    public async Task Code_Node_RetryPolicy_Succeeds_After_Transient_Failures()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var handler = new CountingCodeNode(failTimes: 2);
+
+        var manifest = new AgentGraphManifest(
+            Id: "retry-ok", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code",
+                    HandlerRef: new GraphHandlerRef("counting"),
+                    RetryPolicy: new GraphNodeRetryPolicy(3, 0.001, 1.0, 0.001)),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var logger = new CapturingLogger();
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            codeNodeResolver: _ => handler, runIdFactory: () => "run-retry-ok", logger: logger);
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+            events.Add(e);
+        }
+
+        handler.Calls.Should().Be(3, "two transient failures then success");
+        events.OfType<GraphFailed>().Should().BeEmpty();
+        events.OfType<GraphCompleted>().Should().ContainSingle();
+        logger.Entries.Count(e => e.Level == LogLevel.Warning && e.Message.Contains("retry")).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Code_Node_RetryPolicy_Exhausted_Emits_GraphFailed_With_FailedNodeId()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var handler = new CountingCodeNode(failTimes: 99); // always fails
+
+        var manifest = new AgentGraphManifest(
+            Id: "retry-exhaust", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code",
+                    HandlerRef: new GraphHandlerRef("counting"),
+                    RetryPolicy: new GraphNodeRetryPolicy(2, 0.001, 1.0, 0.001)),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            codeNodeResolver: _ => handler, runIdFactory: () => "run-retry-exhaust");
+
+        var events = new List<AgentGraphEvent>();
+        var act = async () =>
+        {
+            await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        };
+
+        await act.Should().ThrowAsync<Exception>();
+        handler.Calls.Should().Be(2, "maxAttempts=2 exhausted");
+        events.OfType<GraphFailed>().Should().ContainSingle().Which.FailedNodeId.Should().Be("work");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();

@@ -100,6 +100,16 @@ public static class AgentGraphManifestEnvelope
                 if (bObj.Count > 0) obj["stateBindings"] = bObj;
             }
             if (node.InterruptReason is not null) obj["interruptReason"] = node.InterruptReason;
+            if (node.RetryPolicy is { } rp)
+            {
+                obj["retryPolicy"] = new JsonObject
+                {
+                    ["maxAttempts"] = rp.MaxAttempts,
+                    ["initialBackoffSeconds"] = rp.InitialBackoffSeconds,
+                    ["backoffMultiplier"] = rp.BackoffMultiplier,
+                    ["maxBackoffSeconds"] = rp.MaxBackoffSeconds,
+                };
+            }
             arr.Add(obj);
         }
         return arr;

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.Logging;
 using Vais.Agents.Core;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
@@ -39,10 +40,11 @@ internal sealed class GraphJoinNodeExecutor : GraphNodeExecutor
         string? bearerToken,
         IGraphCheckpointer? checkpointer,
         int incomingBranchCount,
-        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null)
+        IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        ILogger? logger = null)
         : base(node, manifest, registry, lifecycle, predicateResolver, effectResolver,
                codeNodeResolver, reducerResolver, context, remoteInvoker, a2aInvoker,
-               bearerToken, checkpointer, inputMiddleware: inputMiddleware)
+               bearerToken, checkpointer, inputMiddleware: inputMiddleware, logger: logger)
     {
         _incomingBranchCount = incomingBranchCount;
         _joinManifest = manifest;
