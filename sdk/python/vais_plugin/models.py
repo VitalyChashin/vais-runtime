@@ -70,6 +70,31 @@ class OpaqueStateDeserializationError(Exception):
     """
 
 
+class PluginError(Exception):
+    """Base for plugin errors the SDK maps to a distinct HTTP status code.
+
+    The ``/v1/invoke`` and ``/v1/stream`` handlers catch each subclass and emit the matching error
+    response. Plugin authors may raise them directly; the gateway clients also raise
+    :class:`LlmGatewayError` and :class:`ToolError` automatically.
+    """
+
+
+class LlmGatewayError(PluginError):
+    """LLM gateway middleware chain failed (HTTP 502). Auto-raised by ``AsyncLlmClient`` on an upstream
+    non-2xx; may also be raised manually."""
+
+
+class ToolError(PluginError):
+    """Tool-layer failure surfaced to the runtime (HTTP 503). Auto-raised by ``AsyncToolClient`` when a
+    tool call cannot be dispatched (non-2xx from the tool gateway). Raise manually to give up on a tool
+    that returned an error result."""
+
+
+class Timeout(PluginError):
+    """Invocation exceeded its ``timeoutSeconds`` budget (HTTP 504). Auto-raised by the SDK when the
+    budget elapses; may also be raised manually."""
+
+
 @dataclass
 class InvokeRequest:
     """Request sent by the runtime shim to ``POST /v1/invoke`` and ``POST /v1/stream``."""
