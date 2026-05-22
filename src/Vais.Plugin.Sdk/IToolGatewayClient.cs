@@ -57,7 +57,12 @@ internal sealed class DefaultToolGatewayClient : IToolGatewayClient
             arguments = toolCall.Arguments,
         });
         using var response = await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (body.Length > 500) body = body[..500];
+            throw new ToolException($"Tool gateway returned HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content
             .ReadFromJsonAsync<ToolResult>(PluginJsonOptions.Default, cancellationToken)
             .ConfigureAwait(false)

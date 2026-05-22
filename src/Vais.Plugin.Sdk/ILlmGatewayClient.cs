@@ -83,7 +83,12 @@ internal sealed class DefaultLlmGatewayClient : ILlmGatewayClient
             options = options is null ? null : new { options.Temperature, options.MaxTokens },
         });
         using var response = await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (body.Length > 500) body = body[..500];
+            throw new LlmGatewayException($"LLM gateway returned HTTP {(int)response.StatusCode}: {body}");
+        }
         var gateway = await response.Content
             .ReadFromJsonAsync<GatewayLlmResponse>(PluginJsonOptions.Default, cancellationToken)
             .ConfigureAwait(false)
