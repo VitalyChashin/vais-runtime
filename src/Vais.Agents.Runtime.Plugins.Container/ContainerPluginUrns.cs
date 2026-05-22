@@ -11,6 +11,9 @@ internal static class ContainerPluginUrns
     public const string InvokeFailed = "urn:vais:container:invoke-failed";
     public const string HealthCheckFailed = "urn:vais:container:health-check-failed";
     public const string OpaqueStateDeserializationError = "urn:vais:container:opaque-state-deserialization-error";
+    public const string LlmGatewayError = "urn:vais:container:llm-gateway-error";
+    public const string ToolError = "urn:vais:container:tool-error";
+    public const string Timeout = "urn:vais:container:timeout";
     public const string SystemPromptResolutionFailed = "urn:vais:container:system-prompt-resolution-failed";
     public const string NoSupervisor = "urn:vais:container:no-supervisor";
     public const string HandlerTypeNameChanged = "urn:vais:container:handler-type-name-changed";

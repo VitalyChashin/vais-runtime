@@ -567,7 +567,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 return new AgentGraphEvent[]
                 {
                     new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                        failed.Data?.GetType().Name ?? "UnknownError",
+                        (failed.Data as IClassifiedAgentError)?.ErrorType ?? failed.Data?.GetType().Name ?? "UnknownError",
                         failed.Data?.ToString() ?? "Graph failed in MAF executor.",
                         TimeSpan.Zero, FailedNodeId: failed.ExecutorId),
                 };
