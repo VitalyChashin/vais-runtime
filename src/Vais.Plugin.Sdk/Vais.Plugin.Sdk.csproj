@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Plugin.Sdk.Tests" />
+  </ItemGroup>
+
 </Project>

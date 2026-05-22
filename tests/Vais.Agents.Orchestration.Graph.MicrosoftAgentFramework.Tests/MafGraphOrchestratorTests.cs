@@ -824,6 +824,55 @@ public sealed class MafGraphOrchestratorTests
         events.OfType<GraphFailed>().Should().Contain(f => f.FailedNodeId == "work");
     }
 
+    // ---- EC-14 / EC-21: classified-error errorType propagation ----
+
+    private sealed class ClassifiedError : Exception, IClassifiedAgentError
+    {
+        public string ErrorType => "Timeout";
+        public bool IsTransient => false;
+    }
+
+    private sealed class ClassifiedCodeNode : IGraphCodeNode
+    {
+        public ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAsync(
+            IReadOnlyDictionary<string, JsonElement> input, AgentContext context, CancellationToken cancellationToken)
+            => throw new ClassifiedError();
+    }
+
+    [Fact]
+    public async Task ClassifiedError_PropagatesErrorType_To_GraphFailed()
+    {
+        var (registry, lifecycle) = BuildHarness();
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-classified", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("counting")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, codeNodeResolver: _ => new ClassifiedCodeNode());
+
+        var events = new List<AgentGraphEvent>();
+        try
+        {
+            await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        }
+        catch
+        {
+            // MAF may also surface the failure as an exception; GraphFailed is asserted below.
+        }
+
+        events.OfType<GraphFailed>().Should()
+            .Contain(f => f.FailedNodeId == "work" && f.ErrorType == "Timeout",
+                "the plugin's semantic errorType propagates instead of the .NET exception type name");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
