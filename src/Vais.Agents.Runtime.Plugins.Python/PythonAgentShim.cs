@@ -220,7 +220,8 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         if (streamError is not null)
         {
             yield return new TurnFailed(DateTimeOffset.UtcNow, context,
-                streamError.GetType().Name, streamError.Message, DateTimeOffset.UtcNow - start);
+                (streamError as IClassifiedAgentError)?.ErrorType ?? streamError.GetType().Name,
+                streamError.Message, DateTimeOffset.UtcNow - start);
             yield break;
         }
 

@@ -159,7 +159,7 @@ async def test_invoke_user_exception_returns_json_rpc_error(monkeypatch):
 
     resp = json.loads(lines[0])
     assert "error" in resp
-    assert "python-agent-invoke-failed" in resp["error"]["message"]
+    assert resp["error"]["data"]["errorType"] == "InternalError"
     assert "ValueError" in resp["error"]["message"]
 
 

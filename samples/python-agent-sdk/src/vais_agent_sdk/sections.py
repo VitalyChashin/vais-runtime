@@ -19,6 +19,8 @@ from typing import Any, Optional
 import httpx
 from pydantic import BaseModel, Field
 
+from vais_agent_sdk._errors import LlmGatewayError
+
 
 class SectionBudget(BaseModel):
     """Optional per-section budget hint. Priority 0 = critical, 10 = drop first."""
@@ -146,7 +148,8 @@ async def build_sections(
     else:
         resp = await client.post(url, headers=headers, json=payload, timeout=timeout_seconds)
 
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise LlmGatewayError(f"LLM gateway sections/build returned HTTP {resp.status_code}: {resp.text[:500]}")
     return RequestSections.model_validate(resp.json())
 
 
@@ -255,5 +258,6 @@ async def complete_from_sections(
     else:
         resp = await client.post(url, headers=headers, json=body, timeout=timeout_seconds)
 
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise LlmGatewayError(f"LLM gateway llm/complete returned HTTP {resp.status_code}: {resp.text[:500]}")
     return CompletionResult.model_validate(resp.json())
