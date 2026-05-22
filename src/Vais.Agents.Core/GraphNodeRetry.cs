@@ -51,12 +51,26 @@ internal static class GraphNodeRetry
         }
     }
 
-    /// <summary>Everything is retryable except the terminal set (mirrors <c>StatefulAiAgent</c>'s exclusions).</summary>
-    internal static bool IsRetryable(Exception ex) =>
-        ex is not (OperationCanceledException
+    /// <summary>
+    /// Retryable unless in the terminal set (mirrors <c>StatefulAiAgent</c>'s exclusions). A classified
+    /// error (<see cref="IClassifiedAgentError"/>, e.g. a container plugin failure) defers to its own
+    /// transient flag, so gateway/tool/timeout failures retry while internal errors fail the node.
+    /// </summary>
+    internal static bool IsRetryable(Exception ex)
+    {
+        if (ex is OperationCanceledException
             or AgentGuardrailDeniedException
             or AgentBudgetExceededException
-            or AgentInterruptedException);
+            or AgentInterruptedException)
+        {
+            return false;
+        }
+        if (ex is IClassifiedAgentError classified)
+        {
+            return classified.IsTransient;
+        }
+        return true;
+    }
 
     /// <summary>Exponential backoff for the delay before attempt <paramref name="attempt"/>+1, capped.</summary>
     internal static TimeSpan ComputeBackoff(GraphNodeRetryPolicy policy, int attempt)
