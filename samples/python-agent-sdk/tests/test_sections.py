@@ -16,7 +16,6 @@ import pytest
 from vais_agent_sdk import LlmGatewayError
 from vais_agent_sdk.sections import (
     RequestSections,
-    Section,
     SectionPayload,
     build_sections,
     complete_from_sections,
