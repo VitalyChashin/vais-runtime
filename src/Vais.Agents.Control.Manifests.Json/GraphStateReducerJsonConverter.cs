@@ -5,14 +5,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace Vais.Agents.Control.Http;
+namespace Vais.Agents.Control.Manifests;
 
 /// <summary>
 /// System.Text.Json converter for the <see cref="GraphStateReducer"/> closed hierarchy,
-/// mirroring the wire form <c>JsonAgentGraphManifestLoader</c> accepts
+/// mirroring the wire form <see cref="JsonAgentGraphManifestLoader"/> accepts
 /// (<c>"lastWriteWins"</c> / <c>"firstWriteWins"</c> / <c>"append"</c> /
-/// <c>{ handlerRef: { … } }</c>). Registered on <see cref="EnvelopeCodec"/>'s options
-/// (scoped, not a type attribute) so the codec emits reducers in the loader's form.
+/// <c>{ handlerRef: { … } }</c>). Registered on <see cref="EnvelopeCodec"/>'s options.
 /// </summary>
 internal sealed class GraphStateReducerJsonConverter : JsonConverter<GraphStateReducer>
 {

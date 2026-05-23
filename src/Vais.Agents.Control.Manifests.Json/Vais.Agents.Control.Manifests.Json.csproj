@@ -24,4 +24,8 @@
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Control.Http.Client" />
+  </ItemGroup>
+
 </Project>
