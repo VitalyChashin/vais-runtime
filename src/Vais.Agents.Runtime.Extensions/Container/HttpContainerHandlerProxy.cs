@@ -244,6 +244,136 @@ internal sealed class HttpContainerHandlerProxy
         return (denied, HandlerOutcome.ShortCircuit());
     }
 
+    // ── llmGatewayMiddleware (non-streaming) ──────────────────────────────────
+    // No self-instrumentation here: the composer's InstrumentedLlmMiddleware emits the
+    // vais.extension.handler.invoke span with the build-time agentId (which the proxy lacks).
+
+    internal async Task<CompletionResponse> InvokeLlmAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+        CancellationToken ct)
+    {
+        var callId = Guid.NewGuid().ToString("N");
+        var preReq = new LlmGatewayPreRequest(callId, ToRequestWire(request));
+
+        LlmGatewayPreResponse? preResp;
+        try
+        {
+            preResp = await SendPreAsync<LlmGatewayPreRequest, LlmGatewayPreResponse>(
+                preReq, agentId: "", runId: null, nodeId: null, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            return await HandleLlmFailureAsync(request, next, ex, ct).ConfigureAwait(false);
+        }
+
+        if (preResp is null)
+        {
+            _logger.LogWarning("llm pre-response null from {Endpoint}; failureMode={Mode}", _preEndpoint, _failureMode);
+            return await HandleLlmFailureAsync(request, next, null, ct).ConfigureAwait(false);
+        }
+
+        if (string.Equals(preResp.Action, "shortCircuit", StringComparison.OrdinalIgnoreCase))
+            return ToResponse(preResp.Response);
+
+        var effective = string.Equals(preResp.Action, "mutate", StringComparison.OrdinalIgnoreCase) && preResp.Request is not null
+            ? ApplyRequestMutation(request, preResp.Request)
+            : request;
+
+        var response = await next(effective, ct).ConfigureAwait(false);
+
+        var postReq = new LlmGatewayPostRequest(callId, preResp.ContinuationToken, ToResponseWire(response));
+        var postResp = await TrySendPostAsync<LlmGatewayPostRequest, LlmGatewayPostResponse>(
+            postReq, agentId: "", runId: null, nodeId: null, ct).ConfigureAwait(false);
+
+        if (postResp is { Response: not null } && string.Equals(postResp.Action, "mutate", StringComparison.OrdinalIgnoreCase))
+            return ApplyResponseMutation(response, postResp.Response);
+
+        return response;
+    }
+
+    private async Task<CompletionResponse> HandleLlmFailureAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+        Exception? ex, CancellationToken ct)
+    {
+        if (ex is not null)
+            _logger.LogWarning(ex, "llm handler proxy {Endpoint} failed; failureMode={Mode}", _preEndpoint, _failureMode);
+
+        // failureMode=skip, or a null pre-response: behave as if the handler were absent (call the model).
+        // Failing closed on the LLM path would break the agent turn; only an explicit fail + transport
+        // error propagates.
+        if (ex is not null && !string.Equals(_failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+            throw new ExtensionHandlerProxyException(_preEndpoint, ex);
+
+        return await next(request, ct).ConfigureAwait(false);
+    }
+
+    // ── LLM wire mapping (tools are read-only; ITool cannot round-trip back into the request) ──
+
+    private static LlmRequestWire ToRequestWire(CompletionRequest r) => new(
+        Messages: r.History.Select(ToMessageWire).ToArray(),
+        SystemPrompt: r.SystemPrompt,
+        Temperature: r.Temperature,
+        MaxTokens: r.MaxTokens,
+        Tools: r.Tools?.Select(t => new LlmToolDeclWire(t.Name, t.Description, t.ParametersSchema)).ToArray(),
+        ResponseFormat: r.ResponseFormat is null
+            ? null
+            : new LlmResponseFormatWire(r.ResponseFormat.Schema, r.ResponseFormat.SchemaName, r.ResponseFormat.Strict),
+        AgentId: "",
+        RunId: null);
+
+    private static LlmMessageWire ToMessageWire(ChatTurn t) => new(
+        Role: RoleToWire(t.Role),
+        Content: t.Text,
+        ToolCalls: t.ToolCalls?.Select(tc => new LlmToolCallWire(tc.CallId, tc.ToolName, tc.Arguments)).ToArray(),
+        ToolCallId: t.ToolCallId);
+
+    private static ChatTurn WireToTurn(LlmMessageWire m) => new(
+        RoleFromWire(m.Role),
+        m.Content ?? "",
+        ToolCalls: m.ToolCalls?.Select(tc => new ToolCallRequest(tc.Name, tc.Arguments, tc.Id)).ToArray(),
+        ToolCallId: m.ToolCallId);
+
+    private static CompletionRequest ApplyRequestMutation(CompletionRequest original, LlmRequestWire w) => original with
+    {
+        History = w.Messages.Select(WireToTurn).ToArray(),
+        SystemPrompt = w.SystemPrompt,
+        Temperature = (float?)w.Temperature,
+        MaxTokens = w.MaxTokens,
+        ResponseFormat = w.ResponseFormat is null
+            ? original.ResponseFormat
+            : new ResponseFormatSpec(w.ResponseFormat.Schema, w.ResponseFormat.Name, w.ResponseFormat.Strict),
+        // Tools intentionally preserved from the original — ITool cannot round-trip.
+    };
+
+    private static LlmResponseWire ToResponseWire(CompletionResponse r) =>
+        new(r.Text, r.PromptTokens, r.CompletionTokens);
+
+    private static CompletionResponse ToResponse(LlmResponseWire? w) =>
+        w is null
+            ? new CompletionResponse(string.Empty)
+            : new CompletionResponse(w.Text, PromptTokens: w.PromptTokens, CompletionTokens: w.CompletionTokens);
+
+    private static CompletionResponse ApplyResponseMutation(CompletionResponse original, LlmResponseWire w) =>
+        original with { Text = w.Text, PromptTokens = w.PromptTokens, CompletionTokens = w.CompletionTokens };
+
+    private static string RoleToWire(AgentChatRole role) => role switch
+    {
+        AgentChatRole.System    => "system",
+        AgentChatRole.Assistant => "assistant",
+        AgentChatRole.Tool      => "tool",
+        _                       => "user",
+    };
+
+    private static AgentChatRole RoleFromWire(string role) => role switch
+    {
+        "system"    => AgentChatRole.System,
+        "assistant" => AgentChatRole.Assistant,
+        "tool"      => AgentChatRole.Tool,
+        _           => AgentChatRole.User,
+    };
+
     // ── Shared /pre + /post envelope ──────────────────────────────────────────
 
     /// <summary>
@@ -378,4 +508,30 @@ internal sealed class ToolGatewayHandlerProxy : ToolGatewayMiddleware
     /// <inheritdoc />
     public override Task<ToolCallOutcome> InvokeAsync(ToolGatewayContext ctx, Func<Task<ToolCallOutcome>> next, CancellationToken ct = default)
         => _proxy.InvokeToolAsync(ctx, next, ct);
+}
+
+/// <summary>
+/// <see cref="LlmGatewayMiddleware"/> adapter that delegates the non-streaming path to an
+/// <see cref="HttpContainerHandlerProxy"/>. Streaming passes through unchanged (the pre/post
+/// HTTP protocol cannot express a streaming call).
+/// </summary>
+internal sealed class LlmGatewayHandlerProxy : LlmGatewayMiddleware
+{
+    private readonly HttpContainerHandlerProxy _proxy;
+
+    internal LlmGatewayHandlerProxy(HttpContainerHandlerProxy proxy) => _proxy = proxy;
+
+    /// <inheritdoc />
+    protected override Task<CompletionResponse> InvokeAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+        CancellationToken cancellationToken)
+        => _proxy.InvokeLlmAsync(request, next, cancellationToken);
+
+    /// <inheritdoc />
+    protected override IAsyncEnumerable<CompletionUpdate> InvokeStreamAsync(
+        CompletionRequest request,
+        Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+        CancellationToken cancellationToken)
+        => next(request, cancellationToken);
 }

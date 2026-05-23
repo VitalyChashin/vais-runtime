@@ -61,6 +61,15 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<LlmGatewayMiddleware>(ExtensionSeams.LlmGatewayMiddleware);
+    }
+
+    /// <inheritdoc />
     public void InvalidateAgent(string agentId) => _cache.TryRemove(agentId, out _);
 
     /// <inheritdoc />
@@ -96,6 +105,10 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 snapshot, manifest, agentId, ExtensionSeams.ToolGatewayMiddleware,
                 (inst, desc, fm) => inst is ToolGatewayMiddleware mw
                     ? new InstrumentedToolMiddleware(mw, desc, fm) : null),
+            [ExtensionSeams.LlmGatewayMiddleware] = BuildChain<LlmGatewayMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.LlmGatewayMiddleware,
+                (inst, desc, fm) => inst is LlmGatewayMiddleware mw
+                    ? new InstrumentedLlmMiddleware(mw, desc, fm, agentId) : null),
         };
 
         var built = new CachedChains(chains);
@@ -260,6 +273,73 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 ct).ConfigureAwait(false);
             return captured!;
         }
+    }
+
+    private sealed class InstrumentedLlmMiddleware(
+        LlmGatewayMiddleware inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode,
+        string agentId) : LlmGatewayMiddleware
+    {
+        // Non-streaming path: instrumented with the per-call span (capture pattern). runId is not
+        // available here (CompletionRequest carries no run identity), so the span is tagged with the
+        // build-time agentId only.
+        protected override async Task<CompletionResponse> InvokeAsync(
+            CompletionRequest request,
+            Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+            CancellationToken cancellationToken)
+        {
+            CompletionResponse? captured = null;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor, agentId, runId: null, nodeId: null,
+                async () =>
+                {
+                    var nextCalled = false;
+                    CompletionResponse nextResult = default!;
+                    async Task<CompletionResponse> TrackingNext(CompletionRequest req, CancellationToken ct)
+                    {
+                        nextCalled = true;
+                        nextResult = await next(req, ct).ConfigureAwait(false);
+                        return nextResult;
+                    }
+
+                    if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            captured = await ((IAgentFilter)inner).InvokeAsync(request, TrackingNext, cancellationToken).ConfigureAwait(false);
+                            return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+                        }
+                        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                        {
+                            captured = nextCalled ? nextResult : await next(request, cancellationToken).ConfigureAwait(false);
+                            return HandlerOutcome.Skip(ex);
+                        }
+                    }
+
+                    captured = await ((IAgentFilter)inner).InvokeAsync(request, TrackingNext, cancellationToken).ConfigureAwait(false);
+                    return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+                },
+                cancellationToken).ConfigureAwait(false);
+            return captured!;
+        }
+
+        // Streaming + observation hooks: delegate to the inner handler to preserve its behavior. The
+        // per-call span covers the non-streaming path; the Task-based instrumentation helper does not
+        // model an enumerable's lifetime, so streaming extension middleware runs uninstrumented.
+        protected override IAsyncEnumerable<CompletionUpdate> InvokeStreamAsync(
+            CompletionRequest request,
+            Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+            CancellationToken cancellationToken)
+            => ((IStreamingAgentFilter)inner).InvokeAsync(request, next, cancellationToken);
+
+        protected override ValueTask<CompletionUpdate> OnDeltaAsync(
+            CompletionUpdate update, CancellationToken cancellationToken = default)
+            => ((IStreamingAgentFilter)inner).OnStreamDeltaAsync(update, cancellationToken);
+
+        protected override ValueTask OnStreamCompleteAsync(
+            CompletionResponse final, CancellationToken cancellationToken = default)
+            => ((IStreamingAgentFilter)inner).OnStreamCompleteAsync(final, cancellationToken);
     }
 
     private sealed class InstrumentedInputMiddleware(

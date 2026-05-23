@@ -199,7 +199,85 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         outcome.Result.Should().Be("real-result");
     }
 
+    // ── LLM gateway seam: full request/response /pre + /post round-trip over HTTP ─
+
+    // CL-1. Round-trip: pre 'next' calls the model, post observes, response passes through.
+    [Fact]
+    public async Task LlmProxy_NextAction_RoundTripsAndPassesResponseThrough()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "next");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return Task.FromResult(new CompletionResponse("real-answer")); },
+            CancellationToken.None);
+
+        modelCalled.Should().BeTrue("'next' must call the model");
+        resp.Text.Should().Be("real-answer");
+    }
+
+    // CL-2. shortCircuit: pre returns a synthetic response; the model is never called.
+    [Fact]
+    public async Task LlmProxy_ShortCircuit_ReturnsSyntheticResponseWithoutModel()
+    {
+        using var server = new MockContainerServer(preAction: "shortCircuit", preResponseText: "synthetic");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return Task.FromResult(new CompletionResponse("real-answer")); },
+            CancellationToken.None);
+
+        modelCalled.Should().BeFalse("shortCircuit must skip the model");
+        resp.Text.Should().Be("synthetic");
+    }
+
+    // CL-3. post mutate: model called, post replaces the response (e.g. redact).
+    [Fact]
+    public async Task LlmProxy_PostMutate_ReplacesResponse()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "mutate", postResponseText: "[redacted]");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => Task.FromResult(new CompletionResponse("secret-answer")),
+            CancellationToken.None);
+
+        resp.Text.Should().Be("[redacted]", "post 'mutate' must replace the model response");
+    }
+
+    // CL-4. Streaming bypasses the container LLM handler (pre/post can't express a stream).
+    [Fact]
+    public async Task LlmProxy_Streaming_PassesThroughWithoutContainer()
+    {
+        using var server = new MockContainerServer(preAction: "shortCircuit", preResponseText: "should-not-apply");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var stream = ((IStreamingAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return EmptyUpdates(); },
+            CancellationToken.None);
+        await foreach (var _ in stream) { }
+
+        modelCalled.Should().BeTrue("streaming bypasses the container LLM handler and calls the model directly");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    private static HttpContainerHandlerProxy MakeLlmProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-llm/pre", "/handlers/h-llm/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-llm", ExtensionSeams.LlmGatewayMiddleware, "container"));
+
+    private static CompletionRequest LlmReq() =>
+        new(new[] { new ChatTurn(AgentChatRole.User, "hello") });
+
+    private static async IAsyncEnumerable<CompletionUpdate> EmptyUpdates()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
 
     private static HttpContainerHandlerProxy MakeProxy(MockContainerServer server, string pre, string post) =>
         new(new HttpClient { BaseAddress = server.BaseUri }, pre, post, failureMode: "fail",
@@ -228,6 +306,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         private readonly string _postAction;
         private readonly string? _postResult;
         private readonly string? _postError;
+        private readonly string? _preResponseText;
+        private readonly string? _postResponseText;
 
         public Uri BaseUri { get; }
 
@@ -238,7 +318,9 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             string? preError = null,
             string postAction = "passThrough",
             string? postResult = null,
-            string? postError = null)
+            string? postError = null,
+            string? preResponseText = null,
+            string? postResponseText = null)
         {
             _preAction = preAction;
             _preContextPatch = preContextPatch;
@@ -247,6 +329,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             _postAction = postAction;
             _postResult = postResult;
             _postError = postError;
+            _preResponseText = preResponseText;
+            _postResponseText = postResponseText;
 
             var port = FindFreePort();
             BaseUri = new Uri($"http://localhost:{port}");
@@ -281,6 +365,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
                     contextPatch      = _preContextPatch,
                     result            = _preResult,
                     error             = _preError,
+                    response          = _preResponseText is null ? null : new { text = _preResponseText },
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));
@@ -289,9 +374,10 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             {
                 var body = JsonSerializer.Serialize(new
                 {
-                    action = _postAction,
-                    result = _postResult,
-                    error  = _postError,
+                    action   = _postAction,
+                    result   = _postResult,
+                    error    = _postError,
+                    response = _postResponseText is null ? null : new { text = _postResponseText },
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));

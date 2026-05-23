@@ -293,6 +293,9 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
         public Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string agentId, CancellationToken cancellationToken = default)
             => Task.FromResult(ToolChain);
 
+        public Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<LlmGatewayMiddleware>>(Array.Empty<LlmGatewayMiddleware>());
+
         public void InvalidateAgent(string agentId) { }
 
         public void InvalidateAll() { }

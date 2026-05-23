@@ -30,6 +30,13 @@ public interface IExtensionChainComposer
     /// </summary>
     Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the ordered <see cref="LlmGatewayMiddleware"/> chain for <paramref name="agentId"/>.
+    /// Empty when no extensions scope to this agent on the <c>llmGatewayMiddleware</c> seam.
+    /// Consumers concatenate this after statically-registered LLM gateway middleware.
+    /// </summary>
+    Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string agentId, CancellationToken cancellationToken = default);
+
     /// <summary>Invalidate the cached chain for <paramref name="agentId"/>.</summary>
     void InvalidateAgent(string agentId);
 

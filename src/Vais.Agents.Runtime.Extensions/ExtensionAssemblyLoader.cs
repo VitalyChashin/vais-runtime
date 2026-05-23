@@ -21,6 +21,7 @@ internal sealed class ExtensionAssemblyLoader
         typeof(AgentInputMiddleware),
         typeof(AgentOutputMiddleware),
         typeof(ToolGatewayMiddleware),
+        typeof(LlmGatewayMiddleware),
     ];
 
     /// <summary>Map from seam base type to the canonical seam name used in manifests.</summary>
@@ -29,6 +30,7 @@ internal sealed class ExtensionAssemblyLoader
         [typeof(AgentInputMiddleware)]      = ExtensionSeams.AgentInput,
         [typeof(AgentOutputMiddleware)]     = ExtensionSeams.AgentOutput,
         [typeof(ToolGatewayMiddleware)]     = ExtensionSeams.ToolGatewayMiddleware,
+        [typeof(LlmGatewayMiddleware)]      = ExtensionSeams.LlmGatewayMiddleware,
     };
 
     private readonly ExtensionLoaderOptions _options;

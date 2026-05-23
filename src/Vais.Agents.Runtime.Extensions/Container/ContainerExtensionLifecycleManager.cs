@@ -30,6 +30,7 @@ internal sealed class ContainerExtensionLifecycleManager
             [ExtensionSeams.AgentInput]            = proxy => new AgentInputHandlerProxy(proxy),
             [ExtensionSeams.AgentOutput]          = proxy => new AgentOutputHandlerProxy(proxy),
             [ExtensionSeams.ToolGatewayMiddleware] = proxy => new ToolGatewayHandlerProxy(proxy),
+            [ExtensionSeams.LlmGatewayMiddleware] = proxy => new LlmGatewayHandlerProxy(proxy),
         };
 
     private readonly ExtensionHandlerRegistry _registry;
