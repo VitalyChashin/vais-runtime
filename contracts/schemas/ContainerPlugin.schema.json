@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents ContainerPlugin manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "ContainerPlugin"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image reference (e.g., my-registry/plugin:1.0)."
+        },
+        "build": {
+          "type": "object",
+          "properties": {
+            "context": {
+              "type": "string",
+              "description": "Docker build context path. Relative paths are resolved against the manifest file\u0027s directory."
+            },
+            "dockerfile": {
+              "type": "string",
+              "description": "Dockerfile path relative to Context. Default: Dockerfile."
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Optional --build-arg key=value pairs."
+            },
+            "push": {
+              "type": "boolean",
+              "description": "Run docker push after a successful build. Default: false."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional client-side build configuration for build-on-apply. Stored by the server but not acted upon at deploy time."
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port the container exposes for the IP-1 HTTP protocol. Default: 8080."
+        },
+        "topology": {
+          "type": "string",
+          "description": "Deployment topology: standalone | sidecar | kubernetes. Default: standalone."
+        },
+        "startupTimeoutSeconds": {
+          "type": "integer",
+          "description": "Seconds to wait for the container health check on startup. Default: 30."
+        },
+        "invokeTimeoutSeconds": {
+          "type": "integer",
+          "description": "Seconds allowed per invoke call before timing out. Default: 60."
+        },
+        "imagePullPolicy": {
+          "type": "string",
+          "description": "Docker image pull policy: Always | IfNotPresent | Never. Default: IfNotPresent."
+        },
+        "retryPolicy": {
+          "type": "object",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer"
+            },
+            "backoffSeconds": {
+              "type": "integer"
+            },
+            "retryOn": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional retry policy for failed invocations."
+        },
+        "kubernetes": {
+          "type": "object",
+          "properties": {
+            "serviceUrl": {
+              "type": "string",
+              "description": "URL of the Kubernetes Service the runtime should probe (e.g., http://my-plugin.default.svc.cluster.local:8080)."
+            },
+            "deploymentName": {
+              "type": "string",
+              "description": "Kubernetes Deployment name (used for image patching)."
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Kubernetes namespace. Default: default."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Kubernetes-specific configuration (required when Topology is kubernetes)."
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Secret references injected as environment variables. Key = env-var name; value = secret:// URI."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

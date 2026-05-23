@@ -1,2 +1,6 @@
 #nullable enable
+Vais.Agents.Control.Manifests.EnvelopeCodec
+Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator
+static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(System.Type! recordType, string! kind, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null) -> string!
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
+static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!

@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents AgentGraph manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "AgentGraph"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "Id of the entry node. Must exist in Nodes."
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique-within-graph identifier. Matches edge endpoints by string."
+              },
+              "kind": {
+                "type": "string",
+                "description": "One of \u0022Agent\u0022, \u0022Code\u0022, \u0022Interrupt\u0022, \u0022End\u0022."
+              },
+              "ref": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Agent id."
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Agent version. Null resolves to latest."
+                  },
+                  "runtimeUrl": {
+                    "type": "string",
+                    "description": "Absolute http/https URL of the remote runtime hosting this agent. Null = local (resolved via IAgentRegistry)."
+                  },
+                  "a2aUrl": {
+                    "type": "string",
+                    "description": "Absolute http/https URL of a remote A2A-compatible agent endpoint. When set, the graph node invokes via the A2A protocol. Mutually exclusive with RuntimeUrl."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Reference to a registered agent, for Agent-kind nodes."
+              },
+              "handlerRef": {
+                "type": "object",
+                "properties": {
+                  "typeName": {
+                    "type": "string",
+                    "description": "Fully-qualified type name of the handler class."
+                  },
+                  "assemblyName": {
+                    "type": "string",
+                    "description": "Optional assembly name. Null when the runtime resolves by type-name alone."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Reference to a DI-resolved code handler, for Code-kind nodes."
+              },
+              "stateBindings": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Graph-state keys to read. For Agent-kind nodes, these keys become metadata on the AgentInvocationRequest. For Code-kind nodes, the handler receives a dictionary subset keyed by these names."
+                  },
+                  "output": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Graph-state keys to write from the node\u0027s output. For Agent-kind nodes, the agent must declare a matching OutputSchema with these fields; the runtime extracts them from the structured assistant response. For Code-kind nodes, the handler\u0027s output dictionary is filtered to these keys."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Describes how graph state projects into/out of this node\u0027s invocation."
+              },
+              "interruptReason": {
+                "type": "string",
+                "description": "Operator-readable reason surfaced on Reason; optional for Interrupt-kind nodes."
+              },
+              "retryPolicy": {
+                "type": "object",
+                "properties": {
+                  "maxAttempts": {
+                    "type": "integer",
+                    "description": "Total attempts including the first. Must be \u2265 1; 1 = no retry."
+                  },
+                  "initialBackoffSeconds": {
+                    "type": "number",
+                    "description": "Delay before the second attempt. Must be \u2265 0."
+                  },
+                  "backoffMultiplier": {
+                    "type": "number",
+                    "description": "Exponential growth factor applied per attempt. Must be \u2265 1."
+                  },
+                  "maxBackoffSeconds": {
+                    "type": "number",
+                    "description": "Upper bound on any single backoff delay. Must be \u2265 InitialBackoffSeconds."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Optional per-node retry policy. Null (default) = no retry; the node body runs once and any failure propagates. See GraphNodeRetryPolicy."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "All nodes in the graph. Ids unique within the manifest."
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Source node id."
+              },
+              "to": {
+                "type": "string",
+                "description": "Target node id."
+              },
+              "when": {
+                "description": "Predicate. Null means always-true."
+              },
+              "onTraverse": {
+                "description": "Side-effect applied to graph state when the edge is taken."
+              },
+              "concurrent": {
+                "type": "boolean",
+                "description": "When true, this edge participates in a fan-out / fan-in topology. All concurrent edges from the same source node fire in parallel; all concurrent edges pointing to the same target node form a barrier join (the target waits for all sources). Requires MafGraphOrchestrator; silently ignored by InProcessGraphOrchestrator, which is sequential-only."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Edges between nodes, order-significant (first-match-wins when a node has multiple outgoing edges)."
+        },
+        "maxSteps": {
+          "type": "integer",
+          "description": "Hard ceiling on super-step count per invocation. Prevents runaway cycles. Defaults to 1000 (matching LangGraph\u0027s recursion_limit) when null. Exceeding this throws GraphRecursionException."
+        },
+        "stateReducers": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Per-key reducer overrides. Keys not listed here use the runtime defaults: messages appends, every other key last-write-wins. An explicit LastWriteWins entry overrides even the built-in messages append rule."
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "schema": {}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

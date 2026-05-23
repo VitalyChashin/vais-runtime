@@ -208,6 +208,44 @@ public sealed class ExtensionFoundationIntegrationTests
         manifest.Labels.Should().ContainKey("team").WhoseValue.Should().Be("platform");
     }
 
+    // ── 8b. YAML deserializer: secrets + container fields + metadata.id fallback (MS-1c-ext) ──
+    [Fact]
+    public void YamlDeserializer_SecretsAndIdFallback_AreParsed()
+    {
+        var yaml = """
+            apiVersion: vais.agents/v1
+            kind: Extension
+            metadata:
+              id: container-ext
+              version: "2.0"
+            spec:
+              host: container
+              image: my/ext:1
+              port: 9000
+              topology: kubernetes
+              startupTimeoutSeconds: 45
+              invokeTimeoutSeconds: 10
+              imagePullPolicy: Always
+              handlers:
+                - id: h1
+                  seam: toolGatewayMiddleware
+                  timeoutSeconds: 7
+              secrets:
+                TOKEN: secret://env/TOK
+            """;
+
+        var manifest = new ExtensionManifestYamlDeserializer().Deserialize(yaml);
+
+        manifest.Id.Should().Be("container-ext"); // metadata.id fallback (no metadata.name)
+        manifest.Spec.Port.Should().Be(9000);
+        manifest.Spec.Topology.Should().Be("kubernetes");
+        manifest.Spec.StartupTimeoutSeconds.Should().Be(45);
+        manifest.Spec.InvokeTimeoutSeconds.Should().Be(10);
+        manifest.Spec.ImagePullPolicy.Should().Be("Always");
+        manifest.Spec.Handlers.Single().TimeoutSeconds.Should().Be(7);
+        manifest.Spec.Secrets.Should().ContainKey("TOKEN").WhoseValue.Should().Be("secret://env/TOK");
+    }
+
     // ── helpers ────────────────────────────────────────────────────────────
 
     private static ExtensionManifest MakeManifest(string id, string version, ExtensionScope? scope = null) =>

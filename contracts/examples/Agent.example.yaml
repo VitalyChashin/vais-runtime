@@ -1,0 +1,18 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: example-agent
+  version: "1.0"
+  description: Example declarative agent.
+spec:
+  handler:
+    typeName: declarative
+  protocols: []
+  tools: []
+  model:
+    provider: openai
+    id: gpt-4.1
+  systemPrompt:
+    inline: You are a helpful assistant.
+  agentMode: ToolCalling
+

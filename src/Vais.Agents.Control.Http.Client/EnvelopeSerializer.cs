@@ -1,391 +1,57 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using Vais.Agents.Control.Manifests;
 
 namespace Vais.Agents.Control.Http;
 
 /// <summary>
-/// Wraps an <see cref="AgentManifest"/> into the v0.6 envelope shape
-/// (<c>apiVersion</c> + <c>kind</c> + <c>metadata</c> + <c>spec</c>) the server's
-/// manifest loader expects on the wire. Kept out of the public surface — consumers
-/// only see typed methods on <see cref="IAgentControlPlaneClient"/>.
+/// Wraps manifest records into the v0.6 envelope shape (<c>apiVersion</c> + <c>kind</c> +
+/// <c>metadata</c> + <c>spec</c>) the server's loader expects on the wire. Every kind
+/// delegates to the shared <see cref="EnvelopeCodec"/>. Kept internal — consumers only see
+/// typed methods on <see cref="IAgentControlPlaneClient"/>.
 /// </summary>
 internal static class EnvelopeSerializer
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-    };
-
     public static string Serialize(AgentManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-
-        var metadata = new JsonObject
-        {
-            ["id"] = manifest.Id,
-            ["version"] = manifest.Version,
-        };
-        if (manifest.Description is not null) metadata["description"] = manifest.Description;
-        if (manifest.Labels is { Count: > 0 } labels)
-        {
-            metadata["labels"] = ToJsonObject(labels);
-        }
-        if (manifest.Annotations is { Count: > 0 } annotations)
-        {
-            metadata["annotations"] = ToJsonObject(annotations);
-        }
-
-        var spec = new JsonObject();
-        AddIfSet(spec, "handler", manifest.Handler);
-        if (manifest.Protocols is { Count: > 0 }) spec["protocols"] = JsonSerializer.SerializeToNode(manifest.Protocols, JsonOptions);
-        if (manifest.Tools is { Count: > 0 }) spec["tools"] = JsonSerializer.SerializeToNode(manifest.Tools, JsonOptions);
-        AddIfSet(spec, "memory", manifest.Memory);
-        AddIfSet(spec, "identity", manifest.Identity);
-        AddIfSet(spec, "autoscaling", manifest.Autoscaling);
-        AddIfSet(spec, "model", manifest.Model);
-        AddIfSet(spec, "systemPrompt", manifest.SystemPrompt);
-        if (manifest.McpServers is { Count: > 0 }) spec["mcpServers"] = JsonSerializer.SerializeToNode(manifest.McpServers, JsonOptions);
-        AddIfSet(spec, "guardrails", manifest.Guardrails);
-        if (manifest.Handoffs is { Count: > 0 }) spec["handoffs"] = JsonSerializer.SerializeToNode(manifest.Handoffs, JsonOptions);
-        AddIfSet(spec, "budget", manifest.Budget);
-        if (manifest.ContextProviders is { Count: > 0 }) spec["contextProviders"] = JsonSerializer.SerializeToNode(manifest.ContextProviders, JsonOptions);
-        if (manifest.OutputSchema is JsonElement os) spec["outputSchema"] = JsonNode.Parse(os.GetRawText());
-        if (manifest.AgentMode != AgentMode.ToolCalling) spec["agentMode"] = manifest.AgentMode.ToString();
-        AddIfSet(spec, "reasoning", manifest.Reasoning);
-        AddIfSet(spec, "observability", manifest.Observability);
-        AddIfSet(spec, "llmGatewayRef", manifest.LlmGatewayRef);
-        AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
-        if (manifest.LocalAgents is { Count: > 0 }) spec["localAgents"] = JsonSerializer.SerializeToNode(manifest.LocalAgents, JsonOptions);
-        if (manifest.A2ARemoteAgents is { Count: > 0 }) spec["a2aRemoteAgents"] = JsonSerializer.SerializeToNode(manifest.A2ARemoteAgents, JsonOptions);
-
-        var envelope = new JsonObject
-        {
-            ["apiVersion"] = "vais.agents/v1",
-            ["kind"] = "Agent",
-            ["metadata"] = metadata,
-            ["spec"] = spec,
-        };
-        return envelope.ToJsonString(JsonOptions);
-    }
-
-    private static void AddIfSet<T>(JsonObject target, string key, T? value) where T : class
-    {
-        if (value is null) return;
-        target[key] = JsonSerializer.SerializeToNode(value, JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "Agent");
     }
 
     public static string Serialize(AgentGraphManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-
-        var metadata = new JsonObject
-        {
-            ["id"] = manifest.Id,
-            ["version"] = manifest.Version,
-        };
-        if (manifest.Description is not null) metadata["description"] = manifest.Description;
-        if (manifest.Labels is { Count: > 0 } labels) metadata["labels"] = ToJsonObject(labels);
-        if (manifest.Annotations is { Count: > 0 } annotations) metadata["annotations"] = ToJsonObject(annotations);
-
-        var spec = new JsonObject
-        {
-            ["entry"] = manifest.Entry,
-            ["nodes"] = SerializeGraphNodes(manifest.Nodes),
-            ["edges"] = SerializeGraphEdges(manifest.Edges),
-        };
-        if (manifest.StateSchema is System.Text.Json.JsonElement schema)
-            spec["state"] = new JsonObject { ["schema"] = JsonNode.Parse(schema.GetRawText()) };
-        if (manifest.MaxSteps is int maxSteps) spec["maxSteps"] = maxSteps;
-
-        var envelope = new JsonObject
-        {
-            ["apiVersion"] = "vais.agents/v1",
-            ["kind"] = "AgentGraph",
-            ["metadata"] = metadata,
-            ["spec"] = spec,
-        };
-        return envelope.ToJsonString(JsonOptions);
-    }
-
-    private static JsonArray SerializeGraphNodes(IReadOnlyList<Vais.Agents.GraphNode> nodes)
-    {
-        var arr = new JsonArray();
-        foreach (var node in nodes)
-        {
-            var obj = new JsonObject { ["id"] = node.Id, ["kind"] = node.Kind };
-            if (node.Ref is { } r) { var ro = new JsonObject { ["id"] = r.Id }; if (r.Version is not null) ro["version"] = r.Version; obj["ref"] = ro; }
-            if (node.HandlerRef is { } h) obj["handlerRef"] = new JsonObject { ["typeName"] = h.TypeName };
-            if (node.StateBindings is { } b)
-            {
-                var bObj = new JsonObject();
-                if (b.Input is { Count: > 0 }) bObj["input"] = new JsonArray(b.Input.Select(s => (JsonNode?)s).ToArray());
-                if (b.Output is { Count: > 0 }) bObj["output"] = new JsonArray(b.Output.Select(s => (JsonNode?)s).ToArray());
-                if (bObj.Count > 0) obj["stateBindings"] = bObj;
-            }
-            if (node.InterruptReason is not null) obj["interruptReason"] = node.InterruptReason;
-            arr.Add(obj);
-        }
-        return arr;
-    }
-
-    private static JsonArray SerializeGraphEdges(IReadOnlyList<Vais.Agents.GraphEdge> edges)
-    {
-        var arr = new JsonArray();
-        foreach (var edge in edges)
-        {
-            var obj = new JsonObject { ["from"] = edge.From, ["to"] = edge.To };
-            if (edge.When is not null) obj["when"] = SerializeGraphPredicate(edge.When);
-            if (edge.OnTraverse is not null) obj["onTraverse"] = SerializeGraphEffect(edge.OnTraverse);
-            if (edge.Concurrent) obj["concurrent"] = true;
-            arr.Add(obj);
-        }
-        return arr;
-    }
-
-    private static JsonNode SerializeGraphPredicate(Vais.Agents.GraphEdgePredicate predicate)
-    {
-        return predicate switch
-        {
-            Vais.Agents.GraphEdgePredicate.Always => (JsonNode)"always",
-            Vais.Agents.GraphEdgePredicate.Expression e => (JsonNode)e.Expr,
-            Vais.Agents.GraphEdgePredicate.PropertyMatcher m => SerializeGraphMatcher(m),
-            Vais.Agents.GraphEdgePredicate.AllOf a => new JsonObject { ["allOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializeGraphPredicate(p)).ToArray()) },
-            Vais.Agents.GraphEdgePredicate.AnyOf a => new JsonObject { ["anyOf"] = new JsonArray(a.Predicates.Select(p => (JsonNode?)SerializeGraphPredicate(p)).ToArray()) },
-            Vais.Agents.GraphEdgePredicate.Not n => new JsonObject { ["not"] = SerializeGraphPredicate(n.Predicate) },
-            Vais.Agents.GraphEdgePredicate.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeGraphHandlerRef(h.Handler) },
-            _ => throw new NotSupportedException($"Unknown predicate subtype '{predicate.GetType().Name}'."),
-        };
-    }
-
-    private static JsonObject SerializeGraphMatcher(Vais.Agents.GraphEdgePredicate.PropertyMatcher matcher)
-    {
-        var obj = new JsonObject
-        {
-            ["property"] = matcher.Property,
-            ["operator"] = matcher.Operator.ToString(),
-        };
-        if (matcher.Value is JsonElement value)
-        {
-            obj["value"] = JsonNode.Parse(value.GetRawText());
-        }
-        return obj;
-    }
-
-    private static JsonObject SerializeGraphEffect(Vais.Agents.GraphEdgeEffect effect)
-    {
-        return effect switch
-        {
-            Vais.Agents.GraphEdgeEffect.Set s => new JsonObject
-            {
-                ["set"] = new JsonObject
-                {
-                    ["property"] = s.Property,
-                    ["value"] = JsonNode.Parse(s.Value.GetRawText()),
-                },
-            },
-            Vais.Agents.GraphEdgeEffect.Increment i => new JsonObject
-            {
-                ["increment"] = new JsonObject
-                {
-                    ["property"] = i.Property,
-                    ["by"] = i.By,
-                },
-            },
-            Vais.Agents.GraphEdgeEffect.Append a => new JsonObject
-            {
-                ["append"] = new JsonObject
-                {
-                    ["property"] = a.Property,
-                    ["value"] = JsonNode.Parse(a.Value.GetRawText()),
-                },
-            },
-            Vais.Agents.GraphEdgeEffect.HandlerRef h => new JsonObject { ["handlerRef"] = SerializeGraphHandlerRef(h.Handler) },
-            _ => throw new NotSupportedException($"Unknown effect subtype '{effect.GetType().Name}'."),
-        };
-    }
-
-    private static JsonObject SerializeGraphHandlerRef(Vais.Agents.GraphHandlerRef handler)
-    {
-        var obj = new JsonObject { ["typeName"] = handler.TypeName };
-        if (handler.AssemblyName is not null) obj["assemblyName"] = handler.AssemblyName;
-        return obj;
+        return EnvelopeCodec.Serialize(manifest, "AgentGraph");
     }
 
     public static string Serialize(LlmGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
-        if (manifest.RateLimit is { } rl)
-        {
-            var rlObj = new JsonObject();
-            if (rl.RequestsPerMinute is int rpm) rlObj["requestsPerMinute"] = rpm;
-            if (rl.TokensPerMinute is int tpm) rlObj["tokensPerMinute"] = tpm;
-            spec["rateLimit"] = rlObj;
-        }
-        return WrapEnvelope("LlmGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "LlmGatewayConfig");
     }
 
     public static string Serialize(McpGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
-        if (manifest.WorkspacePolicies is { Count: > 0 } wp)
-            spec["workspacePolicies"] = JsonSerializer.SerializeToNode(wp, JsonOptions);
-        return WrapEnvelope("McpGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "McpGatewayConfig");
     }
 
     public static string Serialize(McpServerManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject();
-        if (manifest.Virtual) spec["virtual"] = true;
-        AddIfSet(spec, "transport", manifest.Transport);
-        AddIfSet(spec, "url", manifest.Url);
-        AddIfSet(spec, "command", manifest.Command);
-        if (manifest.Args is { Count: > 0 }) spec["args"] = JsonSerializer.SerializeToNode(manifest.Args, JsonOptions);
-        if (manifest.Env is { Count: > 0 }) spec["env"] = JsonSerializer.SerializeToNode(manifest.Env, JsonOptions);
-        AddIfSet(spec, "authRef", manifest.AuthRef);
-        if (manifest.Tools is { Count: > 0 }) spec["tools"] = JsonSerializer.SerializeToNode(manifest.Tools, JsonOptions);
-        if (manifest.Sources is { Count: > 0 }) spec["sources"] = JsonSerializer.SerializeToNode(manifest.Sources, JsonOptions);
-        if (manifest.ToolProjection is { Count: > 0 }) spec["toolProjection"] = JsonSerializer.SerializeToNode(manifest.ToolProjection, JsonOptions);
-        AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
-        if (manifest.Container is { } container)
-        {
-            var c = new JsonObject();
-            AddIfSet(c, "image", container.Image);
-            if (container.Build is { } build) c["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
-            if (container.Port != 7000) c["port"] = container.Port;
-            if (!string.Equals(container.Path, "/mcp", StringComparison.Ordinal)) c["path"] = container.Path;
-            if (!string.Equals(container.HealthPath, "/health", StringComparison.Ordinal)) c["healthPath"] = container.HealthPath;
-            if (container.Command is { Count: > 0 }) c["command"] = JsonSerializer.SerializeToNode(container.Command, JsonOptions);
-            if (container.Args is { Count: > 0 }) c["args"] = JsonSerializer.SerializeToNode(container.Args, JsonOptions);
-            if (container.Env is { Count: > 0 }) c["env"] = JsonSerializer.SerializeToNode(container.Env, JsonOptions);
-            if (container.Secrets is { Count: > 0 }) c["secrets"] = JsonSerializer.SerializeToNode(container.Secrets, JsonOptions);
-            if (container.StartupTimeoutSeconds != 30) c["startupTimeoutSeconds"] = container.StartupTimeoutSeconds;
-            if (!string.Equals(container.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) c["imagePullPolicy"] = container.ImagePullPolicy;
-            if (container.Resources is { } r) c["resources"] = JsonSerializer.SerializeToNode(r, JsonOptions);
-            if (container.Kubernetes is { } k8s) c["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
-            spec["container"] = c;
-        }
-        return WrapEnvelope("McpServer", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "McpServer");
     }
 
     public static string Serialize(ContainerPluginManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
-        var s = manifest.Spec;
-        var spec = new JsonObject { ["image"] = s.Image };
-        if (s.Port != 8080) spec["port"] = s.Port;
-        if (!string.Equals(s.Topology, "standalone", StringComparison.Ordinal)) spec["topology"] = s.Topology;
-        if (s.StartupTimeoutSeconds != 30) spec["startupTimeoutSeconds"] = s.StartupTimeoutSeconds;
-        if (s.InvokeTimeoutSeconds != 60) spec["invokeTimeoutSeconds"] = s.InvokeTimeoutSeconds;
-        if (!string.Equals(s.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) spec["imagePullPolicy"] = s.ImagePullPolicy;
-        if (s.Build is { } build) spec["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
-        if (s.RetryPolicy is { } rp) spec["retryPolicy"] = JsonSerializer.SerializeToNode(rp, JsonOptions);
-        if (s.Kubernetes is { } k8s) spec["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
-        if (s.Secrets is { Count: > 0 }) spec["secrets"] = JsonSerializer.SerializeToNode(s.Secrets, JsonOptions);
-        return WrapEnvelope("ContainerPlugin", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "ContainerPlugin");
     }
 
     public static string Serialize(EvalSuiteManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
-        var s = manifest.Spec;
-        var spec = new JsonObject();
-        if (s.AgentId is not null) spec["agentId"] = s.AgentId;
-        if (s.GraphId is not null) spec["graphId"] = s.GraphId;
-        if (s.ReplayMode != EvalReplayMode.Live)
-            spec["replayMode"] = s.ReplayMode.ToString().ToLowerInvariant();
-        if (s.Target is { } t)
-        {
-            var targetObj = new JsonObject();
-            if (t.AgentRef is not null) targetObj["agentRef"] = t.AgentRef;
-            if (t.GraphRef is not null) targetObj["graphRef"] = t.GraphRef;
-            if (t.AgentVersion is not null) targetObj["agentVersion"] = t.AgentVersion;
-            spec["target"] = targetObj;
-        }
-        if (s.Defaults is { } d)
-        {
-            var dObj = new JsonObject();
-            if (d.JudgeModel is not null) dObj["judgeModel"] = d.JudgeModel;
-            if (d.Timeout is { } ts) dObj["timeout"] = ts.ToString();
-            spec["defaults"] = dObj;
-        }
-        if (s.Baseline is { } b)
-            spec["baseline"] = new JsonObject { ["runId"] = b.RunId };
-        var casesArr = new JsonArray();
-        foreach (var c in s.Cases ?? [])
-        {
-            var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
-            if (c.Name is not null) caseObj["name"] = c.Name;
-            if (c.Description is not null) caseObj["description"] = c.Description;
-            if (c.ExpectedOutput is not null) caseObj["expectedOutput"] = c.ExpectedOutput;
-            if (c.Replay is { } cr) caseObj["replay"] = cr.ToString().ToLowerInvariant();
-            if (c.InitialHistory is { Count: > 0 })
-            {
-                var histArr = new JsonArray();
-                foreach (var turn in c.InitialHistory)
-                    histArr.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Content });
-                caseObj["initialHistory"] = histArr;
-            }
-            if (c.Variables is { Count: > 0 })
-                caseObj["variables"] = JsonSerializer.SerializeToNode(c.Variables, JsonOptions);
-            if (c.Assertions.Count > 0)
-            {
-                var assertArr = new JsonArray();
-                foreach (var a in c.Assertions)
-                {
-                    var assertObj = new JsonObject { ["kind"] = a.Kind };
-                    if (a.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
-                        assertObj["params"] = JsonNode.Parse(p.GetRawText());
-                    assertArr.Add(assertObj);
-                }
-                caseObj["assertions"] = assertArr;
-            }
-            casesArr.Add(caseObj);
-        }
-        spec["cases"] = casesArr;
-        return WrapEnvelope("EvalSuite", metadata, spec).ToJsonString(JsonOptions);
-    }
-
-    private static JsonObject BuildGatewayMetadata(string id, string version, string? description,
-        IReadOnlyDictionary<string, string>? labels, IReadOnlyDictionary<string, string>? annotations)
-    {
-        var metadata = new JsonObject { ["id"] = id, ["version"] = version };
-        if (description is not null) metadata["description"] = description;
-        if (labels is { Count: > 0 }) metadata["labels"] = ToJsonObject(labels);
-        if (annotations is { Count: > 0 }) metadata["annotations"] = ToJsonObject(annotations);
-        return metadata;
-    }
-
-    private static JsonObject WrapEnvelope(string kind, JsonObject metadata, JsonObject spec)
-        => new() { ["apiVersion"] = "vais.agents/v1", ["kind"] = kind, ["metadata"] = metadata, ["spec"] = spec };
-
-    private static JsonArray SerializeMiddleware(IReadOnlyList<GatewayMiddlewareSpec> middleware)
-    {
-        var arr = new JsonArray();
-        foreach (var m in middleware)
-        {
-            var obj = new JsonObject { ["name"] = m.Name };
-            if (m.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
-                obj["params"] = JsonNode.Parse(p.GetRawText());
-            arr.Add(obj);
-        }
-        return arr;
-    }
-
-    private static JsonObject ToJsonObject(IReadOnlyDictionary<string, string> map)
-    {
-        var obj = new JsonObject();
-        foreach (var kv in map) obj[kv.Key] = kv.Value;
-        return obj;
+        return EnvelopeCodec.Serialize(manifest, "EvalSuite");
     }
 }

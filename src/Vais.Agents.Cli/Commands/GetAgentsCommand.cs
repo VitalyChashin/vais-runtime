@@ -61,13 +61,9 @@ internal sealed class GetAgentsCommand : AsyncCommand<GetAgentsCommand.Settings>
                 {
                     RenderTable(manifests);
                 }
-                else if (format == OutputFormat.Json)
-                {
-                    OutputFormatter.WriteJson(manifests, AnsiConsole.Console);
-                }
                 else
                 {
-                    OutputFormatter.WriteYaml(manifests, AnsiConsole.Console);
+                    OutputFormatter.WriteManifestEnvelopeList(manifests, "Agent", format, AnsiConsole.Console);
                 }
                 return ProblemDetailsParser.ExitSuccess;
             }
@@ -84,13 +80,9 @@ internal sealed class GetAgentsCommand : AsyncCommand<GetAgentsCommand.Settings>
             {
                 RenderTable(new[] { response.Manifest });
             }
-            else if (singleFormat == OutputFormat.Json)
-            {
-                OutputFormatter.WriteJson(response, AnsiConsole.Console);
-            }
             else
             {
-                OutputFormatter.WriteYaml(response, AnsiConsole.Console);
+                OutputFormatter.WriteManifestEnvelope(response.Manifest, "Agent", singleFormat, AnsiConsole.Console);
             }
             return ProblemDetailsParser.ExitSuccess;
         }

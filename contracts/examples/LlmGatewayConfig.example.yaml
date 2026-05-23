@@ -1,0 +1,12 @@
+apiVersion: vais.agents/v1
+kind: LlmGatewayConfig
+metadata:
+  id: example-llm-gw
+  version: "1.0"
+  description: Example LLM gateway config.
+spec:
+  middleware:
+  - name: logging
+  rateLimit:
+    requestsPerMinute: 120
+

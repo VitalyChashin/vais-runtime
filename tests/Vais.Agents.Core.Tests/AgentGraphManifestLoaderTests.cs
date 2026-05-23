@@ -711,6 +711,7 @@ public sealed class AgentGraphManifestLoaderTests
             {
                 ["tags"] = new GraphStateReducer.Append(),
                 ["score"] = new GraphStateReducer.LastWriteWins(),
+                ["winner"] = new GraphStateReducer.FirstWriteWins(),
                 ["custom"] = new GraphStateReducer.HandlerRef(new GraphHandlerRef("My.Reducer", "My.Assembly")),
             },
         };
@@ -724,6 +725,7 @@ public sealed class AgentGraphManifestLoaderTests
         rt.StateReducers.Should().NotBeNull();
         rt.StateReducers!["tags"].Should().BeOfType<GraphStateReducer.Append>();
         rt.StateReducers["score"].Should().BeOfType<GraphStateReducer.LastWriteWins>();
+        rt.StateReducers["winner"].Should().BeOfType<GraphStateReducer.FirstWriteWins>();
         var hrReducer = rt.StateReducers["custom"].Should().BeOfType<GraphStateReducer.HandlerRef>().Subject;
         hrReducer.Handler.TypeName.Should().Be("My.Reducer");
         hrReducer.Handler.AssemblyName.Should().Be("My.Assembly");

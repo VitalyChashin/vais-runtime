@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents EvalSuite manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "EvalSuite"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "description": "Optional id of the target agent to invoke for each case. Mutually exclusive with GraphId."
+        },
+        "graphId": {
+          "type": "string",
+          "description": "Optional id of the target graph to invoke for each case. Mutually exclusive with AgentId."
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "agentRef": {
+              "type": "string",
+              "description": "Agent id to invoke. Mutually exclusive with GraphRef."
+            },
+            "graphRef": {
+              "type": "string",
+              "description": "Graph id to invoke. Mutually exclusive with AgentRef."
+            },
+            "agentVersion": {
+              "type": "string",
+              "description": "Specific agent manifest version to pin. Snapshotted into eval_runs.target_version."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Structured target reference. When present, takes precedence over AgentId / GraphId."
+        },
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "judgeModel": {
+              "type": "string",
+              "description": "Model router alias used by JudgeScoreAssertion. Snapshotted into eval_runs.judge_model."
+            },
+            "timeout": {
+              "type": "string",
+              "description": "Per-case timeout. Null means no suite-level timeout."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Suite-level defaults applied to every case unless overridden."
+        },
+        "baseline": {
+          "type": "object",
+          "properties": {
+            "runId": {
+              "type": "string",
+              "description": "The eval run id of the baseline."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Baseline run to diff against in vais eval diff."
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable case identifier, unique within the suite."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable case name."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable case description."
+              },
+              "input": {
+                "type": "string",
+                "description": "User-turn input text sent to the agent or graph."
+              },
+              "variables": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Optional structured variables for graph invocations (key = state field name)."
+              },
+              "expectedOutput": {
+                "type": "string",
+                "description": "Optional expected output text for exact-match assertions."
+              },
+              "initialHistory": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "description": "Role label \u2014 \u0022user\u0022, \u0022assistant\u0022, or \u0022system\u0022."
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "Turn content text."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "Optional conversation history injected before the input turn."
+              },
+              "replay": {
+                "type": "string",
+                "enum": [
+                  "Live",
+                  "Cached"
+                ],
+                "description": "Per-case replay mode override. Null means use suite-level ReplayMode."
+              },
+              "assertions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "description": "Assertion kind string, matched against registered IEvalAssertionKindRegistry entries."
+                    },
+                    "params": {
+                      "description": "Optional JSON parameters for the assertion implementation."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "Assertion list evaluated against the agent/graph response. Empty list means \u0022no assertions, record only\u0022."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Test cases that make up this suite (batch mode). Exactly one of Cases or Sampling must be set. Null when Sampling is present."
+        },
+        "replayMode": {
+          "type": "string",
+          "enum": [
+            "Live",
+            "Cached"
+          ],
+          "description": "Suite-level replay mode default. Per-case Replay overrides this. Default: Live."
+        },
+        "sampling": {
+          "type": "object",
+          "properties": {
+            "rate": {
+              "type": "number",
+              "description": "Probability in [0, 1] that any one completed production run is scored."
+            },
+            "minPerHour": {
+              "type": "integer",
+              "description": "Target minimum samples per hour. Best-effort hint in v1 \u2014 strict floor is a follow-on."
+            },
+            "windowDuration": {
+              "type": "string",
+              "description": "Length of the rolling eval_runs window. Default 1 hour."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Continuous-mode sampling configuration. When set, exactly one of Cases or Sampling must be present. Mutually exclusive with Cases."
+        },
+        "assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "Assertion kind string, matched against registered IEvalAssertionKindRegistry entries."
+              },
+              "params": {
+                "description": "Optional JSON parameters for the assertion implementation."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Suite-level assertion list used when Sampling is set (continuous mode). Each sampled production run is evaluated against all assertions here. Must be non-empty when Sampling is present."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

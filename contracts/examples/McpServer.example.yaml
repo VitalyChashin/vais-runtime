@@ -1,0 +1,11 @@
+apiVersion: vais.agents/v1
+kind: McpServer
+metadata:
+  id: example-mcp
+  version: "1.0"
+  description: Example MCP server.
+spec:
+  transport: streamableHttp
+  url: http://localhost:3000/mcp
+  virtual: false
+

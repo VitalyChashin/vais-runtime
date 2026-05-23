@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents McpGatewayConfig manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "McpGatewayConfig"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "middleware": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Registered middleware name \u2014 e.g. \u0022Prometheus\u0022, \u0022Fallback\u0022, \u0022ToolRateLimit\u0022."
+              },
+              "params": {
+                "description": "Optional JSON params forwarded to the factory verbatim."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "workspacePolicies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "allowedTools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "deniedTools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "minPrivilegeLevel": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Per-workspace allow/deny tool policies. Keys are AgentContext.WorkspaceId values. Absent workspace \u2192 no policy constraint beyond the middleware chain."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

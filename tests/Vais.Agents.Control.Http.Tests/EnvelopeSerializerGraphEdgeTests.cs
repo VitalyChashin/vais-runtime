@@ -74,6 +74,37 @@ public sealed class EnvelopeSerializerGraphEdgeTests
         JsonSerializer.Serialize(edge.OnTraverse).Should().Be(JsonSerializer.Serialize(effect));
     }
 
+    // ── State-reducer round-trips ───────────────────────────────────────────────
+    // Client serializer only began emitting stateReducers with the round-trip parity
+    // fix; cover every GraphStateReducer subtype through the client path here.
+
+    public static IEnumerable<object[]> ReducerCases()
+    {
+        yield return new object[] { new GraphStateReducer.LastWriteWins() };
+        yield return new object[] { new GraphStateReducer.FirstWriteWins() };
+        yield return new object[] { new GraphStateReducer.Append() };
+        yield return new object[] { new GraphStateReducer.HandlerRef(new GraphHandlerRef("MyReducer", "My.Assembly")) };
+    }
+
+    [Theory]
+    [MemberData(nameof(ReducerCases))]
+    public async Task Serialize_DropsNoFields_AcrossEveryReducerSubtype(GraphStateReducer reducer)
+    {
+        var manifest = new AgentGraphManifest(
+            Id: "test-graph", Version: "1.0", Entry: "start", Nodes: Nodes,
+            Edges: new[] { new GraphEdge("start", "finish") })
+        {
+            StateReducers = new Dictionary<string, GraphStateReducer> { ["state"] = reducer },
+        };
+
+        var json = EnvelopeSerializer.Serialize(manifest);
+        var manifests = await new JsonAgentGraphManifestLoader().LoadFromStringAsync(json);
+        var roundTripped = manifests.Single().StateReducers!["state"];
+
+        roundTripped.Should().BeOfType(reducer.GetType());
+        JsonSerializer.Serialize(roundTripped).Should().Be(JsonSerializer.Serialize(reducer));
+    }
+
     // ── Combined predicate + effect ────────────────────────────────────────────
 
     [Fact]
