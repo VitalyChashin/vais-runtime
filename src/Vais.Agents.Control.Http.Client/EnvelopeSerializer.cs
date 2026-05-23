@@ -99,6 +99,7 @@ internal static class EnvelopeSerializer
         if (manifest.StateSchema is System.Text.Json.JsonElement schema)
             spec["state"] = new JsonObject { ["schema"] = JsonNode.Parse(schema.GetRawText()) };
         if (manifest.MaxSteps is int maxSteps) spec["maxSteps"] = maxSteps;
+        if (manifest.StateReducers is { Count: > 0 } reducers) spec["stateReducers"] = SerializeGraphStateReducers(reducers);
 
         var envelope = new JsonObject
         {
@@ -116,8 +117,15 @@ internal static class EnvelopeSerializer
         foreach (var node in nodes)
         {
             var obj = new JsonObject { ["id"] = node.Id, ["kind"] = node.Kind };
-            if (node.Ref is { } r) { var ro = new JsonObject { ["id"] = r.Id }; if (r.Version is not null) ro["version"] = r.Version; obj["ref"] = ro; }
-            if (node.HandlerRef is { } h) obj["handlerRef"] = new JsonObject { ["typeName"] = h.TypeName };
+            if (node.Ref is { } r)
+            {
+                var ro = new JsonObject { ["id"] = r.Id };
+                if (r.Version is not null) ro["version"] = r.Version;
+                if (r.RuntimeUrl is not null) ro["runtimeUrl"] = r.RuntimeUrl;
+                if (r.A2AUrl is not null) ro["a2aUrl"] = r.A2AUrl;
+                obj["ref"] = ro;
+            }
+            if (node.HandlerRef is { } h) obj["handlerRef"] = SerializeGraphHandlerRef(h);
             if (node.StateBindings is { } b)
             {
                 var bObj = new JsonObject();
@@ -126,6 +134,16 @@ internal static class EnvelopeSerializer
                 if (bObj.Count > 0) obj["stateBindings"] = bObj;
             }
             if (node.InterruptReason is not null) obj["interruptReason"] = node.InterruptReason;
+            if (node.RetryPolicy is { } rp)
+            {
+                obj["retryPolicy"] = new JsonObject
+                {
+                    ["maxAttempts"] = rp.MaxAttempts,
+                    ["initialBackoffSeconds"] = rp.InitialBackoffSeconds,
+                    ["backoffMultiplier"] = rp.BackoffMultiplier,
+                    ["maxBackoffSeconds"] = rp.MaxBackoffSeconds,
+                };
+            }
             arr.Add(obj);
         }
         return arr;
@@ -212,6 +230,25 @@ internal static class EnvelopeSerializer
         var obj = new JsonObject { ["typeName"] = handler.TypeName };
         if (handler.AssemblyName is not null) obj["assemblyName"] = handler.AssemblyName;
         return obj;
+    }
+
+    private static JsonObject SerializeGraphStateReducers(IReadOnlyDictionary<string, Vais.Agents.GraphStateReducer> reducers)
+    {
+        var obj = new JsonObject();
+        foreach (var (key, reducer) in reducers) obj[key] = SerializeGraphReducer(reducer);
+        return obj;
+    }
+
+    private static JsonNode SerializeGraphReducer(Vais.Agents.GraphStateReducer reducer)
+    {
+        return reducer switch
+        {
+            Vais.Agents.GraphStateReducer.LastWriteWins => (JsonNode)"lastWriteWins",
+            Vais.Agents.GraphStateReducer.FirstWriteWins => (JsonNode)"firstWriteWins",
+            Vais.Agents.GraphStateReducer.Append => (JsonNode)"append",
+            Vais.Agents.GraphStateReducer.HandlerRef hr => new JsonObject { ["handlerRef"] = SerializeGraphHandlerRef(hr.Handler) },
+            _ => throw new NotSupportedException($"Unknown reducer subtype '{reducer.GetType().Name}'."),
+        };
     }
 
     public static string Serialize(LlmGatewayConfigManifest manifest)
