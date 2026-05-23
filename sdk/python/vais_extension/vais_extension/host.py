@@ -11,12 +11,14 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from .middleware import (
     AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
+    ErrorInterceptor,
 )
 from .wire import (
     AgentInputContext, AgentOutputContext,
     PreResponse, PostResponse,
     ToolGatewayContext, ToolOutcome,
     LlmContext, LlmResponse, LlmMessage, LlmToolCall, LlmToolDecl, LlmResponseFormat,
+    ErrorContext,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -116,6 +118,10 @@ class _LlmPostResponseBody(_CamelModel):
     response: _LlmResponseBody | None = None
 
 
+class _ErrorResponseBody(_CamelModel):
+    message: str | None = None
+
+
 # ── Context builders ──────────────────────────────────────────────────────────
 
 def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
@@ -168,6 +174,16 @@ def _build_llm_context(r: dict[str, Any]) -> LlmContext:
         ),
         agent_id=r.get("agentId", ""),
         run_id=r.get("runId"),
+    )
+
+
+def _build_error_context(c: dict[str, Any]) -> ErrorContext:
+    return ErrorContext(
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId"),
+        node_id=c.get("nodeId"),
+        error_type=c.get("errorType", ""),
+        error_message=c.get("errorMessage", ""),
     )
 
 
@@ -292,6 +308,14 @@ def _register_llm_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
         return _LlmPostResponseBody(action=resp.action, response=_llm_response_to_body(resp.response))
 
 
+def _register_error_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """errorInterceptor: a single call (reuses the /pre path); no /post pair."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_error")
+    async def error_handler(body: _PreRequestBody) -> _ErrorResponseBody:
+        outcome = await handler.on_error(_build_error_context(body.context), body.call_id)
+        return _ErrorResponseBody(message=outcome.message)
+
+
 # ── Seam registry ───────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -307,6 +331,7 @@ _SEAMS: tuple[_SeamSpec, ...] = (
     _SeamSpec("agentOutput", AgentOutputMiddleware, _uniform_registrar(_build_output_context)),
     _SeamSpec("toolGatewayMiddleware", ToolGatewayMiddleware, _register_tool_routes),
     _SeamSpec("llmGatewayMiddleware", LlmGatewayMiddleware, _register_llm_routes),
+    _SeamSpec("errorInterceptor", ErrorInterceptor, _register_error_routes),
 )
 
 
@@ -338,13 +363,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor] = handlers
         self._app = self._build_app()
 
     @property

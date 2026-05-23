@@ -143,6 +143,24 @@ class LlmGatewayPostResponse:
     response: LlmResponse | None = None         # mutate: replacement response
 
 
+# ── errorInterceptor seam ─────────────────────────────────────────────────────
+# A single-call hook fired when a turn/node fails. Observe + optionally rewrite the
+# user-facing message. It can never suppress the failure or change error_type (P9).
+
+@dataclass
+class ErrorContext:
+    agent_id: str = ""
+    run_id: str | None = None
+    node_id: str | None = None
+    error_type: str = ""                        # immutable from the handler's perspective
+    error_message: str = ""
+
+
+@dataclass
+class ErrorOutcome:
+    message: str | None = None                  # non-empty replaces the surfaced message; None = observe-only
+
+
 @dataclass
 class AdvertisedHandler:
     id: str
