@@ -4,7 +4,8 @@ for every registered handler. Implements GET /v1/handlers for discovery.
 """
 from __future__ import annotations
 import uuid
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 from .middleware import AgentInputMiddleware, AgentOutputMiddleware
@@ -52,6 +53,46 @@ class _PreResponseBody(BaseModel):
 class _PostResponseBody(BaseModel):
     action: str
     context_patch: dict[str, Any] | None = None
+
+
+# ── Seam registry ───────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class _SeamSpec:
+    """One row per seam: its wire name, the ABC it matches, and how to build its context."""
+    name: str
+    abc: type
+    build_context: Callable[[dict[str, Any]], Any]
+
+
+_SEAMS: tuple[_SeamSpec, ...] = (
+    _SeamSpec(
+        "agentInput", AgentInputMiddleware,
+        lambda c: AgentInputContext(
+            agent_id=c.get("agentId", ""),
+            run_id=c.get("runId"),
+            node_id=c.get("nodeId"),
+            message=c.get("message", ""),
+        ),
+    ),
+    _SeamSpec(
+        "agentOutput", AgentOutputMiddleware,
+        lambda c: AgentOutputContext(
+            agent_id=c.get("agentId", ""),
+            run_id=c.get("runId", ""),
+            session_id=c.get("sessionId"),
+            output_tokens=c.get("outputTokens"),
+            input_tokens=c.get("inputTokens"),
+        ),
+    ),
+)
+
+
+def _spec_for(handler: Any) -> _SeamSpec | None:
+    for spec in _SEAMS:
+        if isinstance(handler, spec.abc):
+            return spec
+    return None
 
 
 # ── Host ──────────────────────────────────────────────────────────────────────
@@ -133,62 +174,35 @@ class Host:
         handler_id: str,
         handler: AgentInputMiddleware | AgentOutputMiddleware,
     ) -> None:
+        spec = _spec_for(handler)
+        if spec is None:
+            # Unknown handler type: advertised as "unknown" with no routes (matches prior behavior).
+            return
+
         pre_path = f"/handlers/{handler_id}/pre"
         post_path = f"/handlers/{handler_id}/post"
+        build_context = spec.build_context
 
-        if isinstance(handler, AgentInputMiddleware):
-            input_handler = handler
+        # Capture handler/build_context by closure, NOT as endpoint default args: FastAPI inspects
+        # the signature and would treat a defaulted parameter as a request field, instantiating a
+        # fresh handler per call (losing handler state). This method runs once per handler, so the
+        # closure binds the correct instance with no loop late-binding hazard.
+        @app.post(pre_path, name=f"{handler_id}_pre")
+        async def handler_pre(body: _PreRequestBody) -> _PreResponseBody:
+            ctx = build_context(body.context)
+            resp = await handler.pre(ctx, body.call_id)
+            return _PreResponseBody(
+                action=resp.action,
+                continuation_token=resp.continuation_token,
+                context_patch=resp.context_patch,
+            )
 
-            @app.post(pre_path)
-            async def input_pre(body: _PreRequestBody, _h=input_handler) -> _PreResponseBody:
-                ctx_data = body.context
-                ctx = AgentInputContext(
-                    agent_id=ctx_data.get("agentId", ""),
-                    run_id=ctx_data.get("runId"),
-                    node_id=ctx_data.get("nodeId"),
-                    message=ctx_data.get("message", ""),
-                )
-                resp = await _h.pre(ctx, body.call_id)
-                return _PreResponseBody(
-                    action=resp.action,
-                    continuation_token=resp.continuation_token,
-                    context_patch=resp.context_patch,
-                )
-
-            @app.post(post_path)
-            async def input_post(body: _PostRequestBody, _h=input_handler) -> _PostResponseBody:
-                resp = await _h.post(body.call_id, body.continuation_token)
-                return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
-
-        elif isinstance(handler, AgentOutputMiddleware):
-            output_handler = handler
-
-            @app.post(pre_path)
-            async def output_pre(body: _PreRequestBody, _h=output_handler) -> _PreResponseBody:
-                ctx_data = body.context
-                ctx = AgentOutputContext(
-                    agent_id=ctx_data.get("agentId", ""),
-                    run_id=ctx_data.get("runId", ""),
-                    session_id=ctx_data.get("sessionId"),
-                    output_tokens=ctx_data.get("outputTokens"),
-                    input_tokens=ctx_data.get("inputTokens"),
-                )
-                resp = await _h.pre(ctx, body.call_id)
-                return _PreResponseBody(
-                    action=resp.action,
-                    continuation_token=resp.continuation_token,
-                    context_patch=resp.context_patch,
-                )
-
-            @app.post(post_path)
-            async def output_post(body: _PostRequestBody, _h=output_handler) -> _PostResponseBody:
-                resp = await _h.post(body.call_id, body.continuation_token)
-                return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
+        @app.post(post_path, name=f"{handler_id}_post")
+        async def handler_post(body: _PostRequestBody) -> _PostResponseBody:
+            resp = await handler.post(body.call_id, body.continuation_token)
+            return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
 
     @staticmethod
     def _seam_name(handler: AgentInputMiddleware | AgentOutputMiddleware) -> str:
-        if isinstance(handler, AgentInputMiddleware):
-            return "agentInput"
-        if isinstance(handler, AgentOutputMiddleware):
-            return "agentOutput"
-        return "unknown"
+        spec = _spec_for(handler)
+        return spec.name if spec is not None else "unknown"
