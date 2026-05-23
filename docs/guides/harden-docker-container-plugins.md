@@ -84,9 +84,10 @@ The chart renders an `emptyDir` (ephemeral; `medium: Memory` when `memory`) or a
 Docker, the runtime does not provision Kubernetes storage itself — the chart/operator does; the
 manifest field is the single declaration that drives the rendered pod spec.
 
-> **Note** — the workspace is mounted writable but is *not* `noexec`: a coding agent typically runs
-> build tools from it. Getting a repo *into* the workspace (clone, seed) is the agent's job, not the
-> runtime's — the contract only provides the space.
+> **Note** — a `disk` workspace (Docker named volume) is exec-capable, so a coding agent can run
+> build tools from it; a `memory` workspace is a tmpfs and inherits Docker's `noexec`/`nosuid`/`nodev`
+> defaults (like `/tmp`), so use `disk` for build/exec workloads. Getting a repo *into* the workspace
+> (clone, seed) is the agent's job, not the runtime's — the contract only provides the space.
 
 ---
 
