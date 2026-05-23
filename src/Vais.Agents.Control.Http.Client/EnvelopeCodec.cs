@@ -47,6 +47,7 @@ internal static class EnvelopeCodec
         {
             new JsonStringEnumConverter(),
             new TimeSpanConstantConverter(),
+            new GraphStateReducerJsonConverter(),
         },
     };
 
@@ -55,8 +56,13 @@ internal static class EnvelopeCodec
         "id", "version", "description", "labels", "annotations",
     };
 
-    /// <summary>Serialize <paramref name="manifest"/> to a v0.6 envelope JSON string.</summary>
-    public static string Serialize<T>(T manifest, string kind)
+    /// <summary>
+    /// Serialize <paramref name="manifest"/> to a v0.6 envelope JSON string. An optional
+    /// <paramref name="specHook"/> rewrites the assembled spec block before wrapping — used
+    /// by kinds whose wire shape isn't a flat projection of the record (e.g. AgentGraph's
+    /// <c>state.schema</c> wrapping).
+    /// </summary>
+    public static string Serialize<T>(T manifest, string kind, Action<JsonObject>? specHook = null)
         where T : notnull
     {
         var flat = JsonSerializer.SerializeToNode(manifest, Options)!.AsObject();
@@ -79,6 +85,8 @@ internal static class EnvelopeCodec
                 spec[property.Key] = property.Value?.DeepClone();
             }
         }
+
+        specHook?.Invoke(spec);
 
         var envelope = new JsonObject
         {

@@ -60,6 +60,7 @@ public sealed record AgentManifest(
     public IReadOnlyList<McpServerRef>? McpServers { get; init; }
 
     /// <summary>Agent2Agent (A2A) remote-agent bindings. Referenced by <c>ToolRef.Source = "a2a:&lt;name&gt;"</c>. v0.17 Pillar B.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("a2aRemoteAgents")]
     public IReadOnlyList<A2ARemoteAgentRef>? A2ARemoteAgents { get; init; }
 
     /// <summary>Local (same-runtime) agent bindings. Referenced by <c>ToolRef.Source = "agent:&lt;name&gt;"</c>. v0.18 — closes P7 agent-as-tool.</summary>
