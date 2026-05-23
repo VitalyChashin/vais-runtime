@@ -52,6 +52,23 @@ env: []
 ## Image pull secrets.
 imagePullSecrets: []
 
+## Opt-in writable workspace mount (P12: the only added writable path; rootfs stays read-only).
+## Disabled by default. When enabled, a writable working tree is mounted at workspace.path.
+workspace:
+  enabled: false
+  ## Absolute mount path inside the container (must not be / or /tmp).
+  path: /workspace
+  ## Workspace size in MiB. Hard cap for medium=memory (tmpfs); the PVC request / emptyDir sizeLimit otherwise.
+  sizeMb: 4096
+  ## Storage backend: disk (PVC when persist=true, else node emptyDir) | memory (in-RAM emptyDir).
+  medium: disk
+  ## When true, back the workspace with a PersistentVolumeClaim that survives pod restarts; else an emptyDir.
+  persist: false
+  ## Optional StorageClass for the PVC (persist=true). Empty = cluster default.
+  storageClassName: ""
+  ## Optional: mount an existing PVC by name instead of having the chart create one (persist=true).
+  existingClaim: ""
+
 ## NetworkPolicy (P12 egress isolation — enabled by default).
 ## Allows ingress only from the runtime service and egress only to the runtime + DNS.
 networkPolicy:

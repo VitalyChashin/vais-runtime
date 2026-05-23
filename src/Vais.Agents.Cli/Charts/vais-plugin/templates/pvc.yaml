@@ -1,0 +1,17 @@
+{{- if and .Values.workspace.enabled .Values.workspace.persist (not .Values.workspace.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pluginName }}-workspace
+  labels:
+    app: {{ .Values.pluginName }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.workspace.sizeMb }}Mi
+  {{- if .Values.workspace.storageClassName }}
+  storageClassName: {{ .Values.workspace.storageClassName | quote }}
+  {{- end }}
+{{- end }}

@@ -44,6 +44,50 @@ fail to start. Fix patterns:
 - **Bake artifacts at build time** — download models/deps in the Dockerfile, not at startup.
 - **Run as non-root** — add `USER 10001` in the Dockerfile (not enforced at runtime, but the `vais plugin-init` template includes it).
 
+### Writable workspace (opt-in)
+
+By default the only writable path is the 64 MiB `/tmp` tmpfs — correct for short-turn,
+stateless-on-disk plugins. A plugin that must keep a working tree on disk (e.g. a co-tenant
+coding agent that checks out and edits a repo) can declare an opt-in workspace. It is the
+**only** added writable mount; the read-only rootfs and all other Phase 1 hardening stay in place.
+
+```yaml
+spec:
+  workspace:
+    path: /workspace   # absolute; may not be / or /tmp. Default /workspace
+    sizeMb: 4096        # required, > 0; clamped to the operator maximum
+    medium: disk        # disk (default) | memory
+    persist: false      # false = ephemeral; true = survives restart
+```
+
+| Field | Meaning |
+|---|---|
+| `path` | Mount point inside the container. |
+| `sizeMb` | Size in MiB. **Hard** kernel cap for `memory`; **advisory** for `disk` (the Docker `local` driver does not enforce volume size). |
+| `medium` | `disk` = a Docker named volume (survives container restart); `memory` = a tmpfs (RAM-backed, counts against the `Memory` limit). |
+| `persist` | `false`: created on start, removed on stop/drain (and reset on image replace). `true`: a named volume keyed by plugin id that survives restarts, removed only when the plugin is removed. `persist: true` with `medium: memory` is rejected — a tmpfs cannot persist. |
+
+Lifecycle is the **container's** lifetime, not per-invoke or per-session: a plugin container is
+shared across concurrent invocations, so its workspace is shared too. If a coding agent needs
+per-session isolation, give each session its own subdirectory under the workspace.
+
+Operator-level caps apply: `ContainerPluginResourceBounds.MaxWorkspaceSizeMb` (default 10 GiB)
+clamps oversized requests, alongside the memory/CPU/PID caps.
+
+`medium` is an open backend identifier — `disk` and `memory` ship today; a future centralized
+backend can be added without a manifest change.
+
+**Kubernetes.** The same declaration drives `vais plugin deploy`: pass `--workspace-size-mb`,
+`--workspace-path`, `--workspace-medium`, `--workspace-persist`, and `--workspace-storage-class`.
+The chart renders an `emptyDir` (ephemeral; `medium: Memory` when `memory`) or a
+`PersistentVolumeClaim` (`persist: true`), always preserving `readOnlyRootFilesystem: true`. Unlike
+Docker, the runtime does not provision Kubernetes storage itself — the chart/operator does; the
+manifest field is the single declaration that drives the rendered pod spec.
+
+> **Note** — the workspace is mounted writable but is *not* `noexec`: a coding agent typically runs
+> build tools from it. Getting a repo *into* the workspace (clone, seed) is the agent's job, not the
+> runtime's — the contract only provides the space.
+
 ---
 
 ## Phase 2 — Internal-network egress isolation (opt-in)

@@ -57,3 +57,8 @@ spec:
 | `spec.kubernetes.deploymentName` | string | no | Kubernetes Deployment name (used for image patching). |
 | `spec.kubernetes.namespace` | string | no | Kubernetes namespace. Default: default. |
 | `spec.secrets` | map&lt;string, string&gt; | no | Secret references injected as environment variables. Key = env-var name; value = secret:// URI. |
+| `spec.workspace` | object | no | Opt-in writable workspace mount. Absent ⇒ today's behaviour (read-only rootfs plus the 64 MB ephemeral /tmp tmpfs only). When present, the runtime mounts one writable working tree at Path for the container's lifetime. |
+| `spec.workspace.path` | string | no | Absolute mount path inside the container. May not be / or /tmp. Default /workspace. |
+| `spec.workspace.sizeMb` | integer | no | Required workspace size in MiB (must be > 0); clamped to the operator maximum. A hard cap for the memory medium; an advisory cap for disk. |
+| `spec.workspace.medium` | string | no | Storage backend identifier. disk (default) = a Docker named volume (K8s: PVC or emptyDir); memory = a RAM-backed tmpfs (size hard-enforced, counts against the container memory limit). Modelled as an open string so future centralized backends slot in without a contract change. |
+| `spec.workspace.persist` | boolean | no | When true the workspace survives container restart/replace (a named volume keyed by plugin id; K8s: a PVC). When false (default) it is created on start and removed on stop/drain. true combined with Mediummemory is invalid — tmpfs cannot persist. |

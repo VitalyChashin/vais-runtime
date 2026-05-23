@@ -73,4 +73,7 @@ public sealed class ContainerPluginResourceBounds
 
     /// <summary>Maximum PID limit a plugin may request. Default 1024.</summary>
     public long MaxPidsLimit   { get; init; } = 1024;
+
+    /// <summary>Maximum workspace size a plugin may request in <c>spec.workspace.sizeMb</c>, in MiB. Default 10240 (10 GiB).</summary>
+    public long MaxWorkspaceSizeMb { get; init; } = 10240;
 }

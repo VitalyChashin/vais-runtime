@@ -145,6 +145,29 @@
             "type": "string"
           },
           "description": "Secret references injected as environment variables. Key = env-var name; value = secret:// URI."
+        },
+        "workspace": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Absolute mount path inside the container. May not be / or /tmp. Default /workspace."
+            },
+            "sizeMb": {
+              "type": "integer",
+              "description": "Required workspace size in MiB (must be \u003E 0); clamped to the operator maximum. A hard cap for the memory medium; an advisory cap for disk."
+            },
+            "medium": {
+              "type": "string",
+              "description": "Storage backend identifier. disk (default) = a Docker named volume (K8s: PVC or emptyDir); memory = a RAM-backed tmpfs (size hard-enforced, counts against the container memory limit). Modelled as an open string so future centralized backends slot in without a contract change."
+            },
+            "persist": {
+              "type": "boolean",
+              "description": "When true the workspace survives container restart/replace (a named volume keyed by plugin id; K8s: a PVC). When false (default) it is created on start and removed on stop/drain. true combined with Mediummemory is invalid \u2014 tmpfs cannot persist."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Opt-in writable workspace mount. Absent \u21D2 today\u0027s behaviour (read-only rootfs plus the 64 MB ephemeral /tmp tmpfs only). When present, the runtime mounts one writable working tree at Path for the container\u0027s lifetime."
         }
       },
       "additionalProperties": false

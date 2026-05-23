@@ -34,9 +34,24 @@ internal sealed class ContainerPluginDescriptor
     /// Null = legacy host-runtime mode (plugin port published to 127.0.0.1).
     /// </summary>
     public string? DockerPluginNetwork { get; init; }
+
+    /// <summary>
+    /// Validated writable-workspace configuration parsed from <c>spec.workspace</c>, or null when none
+    /// is declared (today's behaviour: read-only rootfs + 64 MB <c>/tmp</c> only).
+    /// </summary>
+    public ContainerWorkspaceConfig? Workspace { get; init; }
 }
 
 internal enum ContainerTopology { Sidecar, Standalone, Kubernetes }
+
+/// <summary>
+/// Storage backend for a plugin workspace. Open set — a future centralized backend (e.g. s3-snapshot)
+/// is added here plus its branch in <see cref="DockerContainerSupervisor.BuildHostConfig"/>.
+/// </summary>
+internal enum WorkspaceMedium { Disk, Memory }
+
+/// <summary>Validated workspace configuration carried on a <see cref="ContainerPluginDescriptor"/>.</summary>
+internal sealed record ContainerWorkspaceConfig(string Path, int SizeMb, WorkspaceMedium Medium, bool Persist);
 
 internal sealed record ContainerRetryPolicy(
     int MaxAttempts,

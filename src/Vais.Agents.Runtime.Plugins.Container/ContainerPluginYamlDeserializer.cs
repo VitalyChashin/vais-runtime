@@ -45,6 +45,15 @@ internal sealed class ContainerPluginYamlSpec
     public ContainerPluginYamlKubernetesSpec? Kubernetes { get; set; }
     public Dictionary<string, string> Secrets { get; set; } = new();
     public ContainerPluginYamlResources? Resources { get; set; }
+    public ContainerPluginYamlWorkspace? Workspace { get; set; }
+}
+
+internal sealed class ContainerPluginYamlWorkspace
+{
+    public string Path { get; set; } = "/workspace";
+    public int SizeMb { get; set; }
+    public string Medium { get; set; } = "disk";
+    public bool Persist { get; set; }
 }
 
 internal sealed class ContainerPluginYamlResources

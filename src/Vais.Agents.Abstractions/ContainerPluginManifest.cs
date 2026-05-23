@@ -68,6 +68,41 @@ public sealed record ContainerPluginSpec
 
     /// <summary>Secret references injected as environment variables. Key = env-var name; value = <c>secret://</c> URI.</summary>
     public IReadOnlyDictionary<string, string>? Secrets { get; init; }
+
+    /// <summary>
+    /// Opt-in writable workspace mount. Absent ⇒ today's behaviour (read-only rootfs plus the 64 MB
+    /// ephemeral <c>/tmp</c> tmpfs only). When present, the runtime mounts one writable working tree
+    /// at <see cref="ContainerPluginWorkspaceSpec.Path"/> for the container's lifetime.
+    /// </summary>
+    public ContainerPluginWorkspaceSpec? Workspace { get; init; }
+}
+
+/// <summary>
+/// Declares a single writable workspace mount for a container plugin. The workspace is the only added
+/// writable path; the read-only rootfs and all other hardening are preserved. Scoped to the container's
+/// lifetime — not per-invoke or per-session, since a plugin container is shared across invocations.
+/// </summary>
+public sealed record ContainerPluginWorkspaceSpec
+{
+    /// <summary>Absolute mount path inside the container. May not be <c>/</c> or <c>/tmp</c>. Default <c>/workspace</c>.</summary>
+    public string Path { get; init; } = "/workspace";
+
+    /// <summary>Required workspace size in MiB (must be &gt; 0); clamped to the operator maximum. A hard cap for the <c>memory</c> medium; an advisory cap for <c>disk</c>.</summary>
+    public required int SizeMb { get; init; }
+
+    /// <summary>
+    /// Storage backend identifier. <c>disk</c> (default) = a Docker named volume (K8s: PVC or emptyDir);
+    /// <c>memory</c> = a RAM-backed tmpfs (size hard-enforced, counts against the container memory limit).
+    /// Modelled as an open string so future centralized backends slot in without a contract change.
+    /// </summary>
+    public string Medium { get; init; } = "disk";
+
+    /// <summary>
+    /// When <c>true</c> the workspace survives container restart/replace (a named volume keyed by plugin
+    /// id; K8s: a PVC). When <c>false</c> (default) it is created on start and removed on stop/drain.
+    /// <c>true</c> combined with <see cref="Medium"/> <c>memory</c> is invalid — tmpfs cannot persist.
+    /// </summary>
+    public bool Persist { get; init; }
 }
 
 /// <summary>Build specification for client-side build-on-apply. Ignored by the server at deploy time.</summary>

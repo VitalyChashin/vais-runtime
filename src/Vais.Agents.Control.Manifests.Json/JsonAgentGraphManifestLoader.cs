@@ -1102,6 +1102,16 @@ public sealed class JsonAgentGraphManifestLoader
             }
         }
 
+        ContainerPluginWorkspaceSpec? workspaceSpec = null;
+        if (spec.TryGetProperty("workspace", out var wsEl) && wsEl.ValueKind == JsonValueKind.Object)
+        {
+            var wsPath = wsEl.TryGetProperty("path", out var wpEl) ? wpEl.GetString() ?? "/workspace" : "/workspace";
+            var wsSize = wsEl.TryGetProperty("sizeMb", out var wsmEl) && wsmEl.ValueKind == JsonValueKind.Number ? wsmEl.GetInt32() : 0;
+            var wsMedium = wsEl.TryGetProperty("medium", out var wmEl) ? wmEl.GetString() ?? "disk" : "disk";
+            var wsPersist = wsEl.TryGetProperty("persist", out var wpsEl) && wpsEl.ValueKind == JsonValueKind.True;
+            workspaceSpec = new ContainerPluginWorkspaceSpec { Path = wsPath, SizeMb = wsSize, Medium = wsMedium, Persist = wsPersist };
+        }
+
         if (string.IsNullOrEmpty(image)) return null;
 
         return new ContainerPluginManifest(id!, version!, description, labels)
@@ -1120,6 +1130,7 @@ public sealed class JsonAgentGraphManifestLoader
                 RetryPolicy = retryPolicy,
                 Kubernetes = k8sConfig,
                 Secrets = secrets,
+                Workspace = workspaceSpec,
             },
         };
     }
