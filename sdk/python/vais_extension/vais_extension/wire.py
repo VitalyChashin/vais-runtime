@@ -161,6 +161,35 @@ class ErrorOutcome:
     message: str | None = None                  # non-empty replaces the surfaced message; None = observe-only
 
 
+# ── graphNode seam ────────────────────────────────────────────────────────────
+# Wraps a graph node's body. pre may short-circuit (substitute output without running the
+# node) or pass through; post observes / transforms the node output before it merges into
+# graph state. A short-circuit is journaling-safe — the runtime merges + checkpoints the
+# substitute output exactly like a real run. Hot seam (per-node).
+
+@dataclass
+class GraphNodeContext:
+    run_id: str = ""
+    node_id: str = ""
+    node_kind: str = ""                          # "Agent" | "Code"
+    agent_id: str = ""                           # node's agent ref id; "" for Code nodes
+    super_step: int = 0
+    input: dict[str, Any] = field(default_factory=dict)   # binding-filtered node input state
+
+
+@dataclass
+class GraphNodePreResponse:
+    action: str = "next"                        # "next" | "shortCircuit"
+    continuation_token: str | None = None
+    output: dict[str, Any] | None = None        # shortCircuit: substitute node output (skips the body)
+
+
+@dataclass
+class GraphNodePostResponse:
+    action: str = "next"                        # "next" | "mutate"
+    output: dict[str, Any] | None = None        # mutate: replacement node output
+
+
 @dataclass
 class AdvertisedHandler:
     id: str

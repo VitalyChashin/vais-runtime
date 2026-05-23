@@ -13,6 +13,7 @@ from vais_extension import (
     AgentInputMiddleware,
     AgentOutputMiddleware,
     ErrorInterceptor,
+    GraphNodeMiddleware,
     Host,
     LlmGatewayMiddleware,
     ToolGatewayMiddleware,
@@ -22,6 +23,9 @@ from vais_extension.wire import (
     AgentOutputContext,
     ErrorContext,
     ErrorOutcome,
+    GraphNodeContext,
+    GraphNodePostResponse,
+    GraphNodePreResponse,
     LlmContext,
     LlmGatewayPostResponse,
     LlmGatewayPreResponse,
@@ -113,6 +117,26 @@ class _RecordingError(ErrorInterceptor):
         self.ctx = context
         self.call_id = call_id
         return ErrorOutcome(message=self._message)
+
+
+class _RecordingGraphNode(GraphNodeMiddleware):
+    def __init__(self, pre_action: str = "next", pre_output: dict | None = None,
+                 post_action: str = "next", post_output: dict | None = None) -> None:
+        self._pre_action = pre_action
+        self._pre_output = pre_output
+        self._post_action = post_action
+        self._post_output = post_output
+        self.pre_ctx: GraphNodeContext | None = None
+        self.post_output_in: dict | None = None
+
+    async def pre(self, context: GraphNodeContext, call_id: str) -> GraphNodePreResponse:
+        self.pre_ctx = context
+        return GraphNodePreResponse(action=self._pre_action, output=self._pre_output)
+
+    async def post(self, call_id: str, continuation_token: str | None,
+                   output: dict) -> GraphNodePostResponse:
+        self.post_output_in = output
+        return GraphNodePostResponse(action=self._post_action, output=self._post_output)
 
 
 def _client(handlers: dict) -> TestClient:
@@ -351,3 +375,49 @@ def test_error_pre_observe_only_returns_null_message():
 
     assert resp.status_code == 200
     assert resp.json()["message"] is None
+
+
+def test_discovery_advertises_graph_node_seam():
+    body = _client({"node": _RecordingGraphNode()}).get("/v1/handlers").json()
+    advertised = {h["id"]: h for h in body["handlers"]}
+    assert advertised["node"]["seam"] == "graphNode"
+
+
+def test_graph_node_pre_builds_context_and_short_circuits():
+    node = _RecordingGraphNode(pre_action="shortCircuit", pre_output={"marker": "cached"})
+    client = _client({"node": node})
+
+    resp = client.post("/handlers/node/pre", json={
+        "callId": "c1",
+        "context": {
+            "runId": "r1", "nodeId": "plan", "nodeKind": "Agent",
+            "agentId": "a1", "superStep": 2, "input": {"topic": "x"},
+        },
+    })
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["action"] == "shortCircuit"
+    assert data["output"] == {"marker": "cached"}
+
+    assert isinstance(node.pre_ctx, GraphNodeContext)
+    assert (node.pre_ctx.run_id, node.pre_ctx.node_id, node.pre_ctx.node_kind) == ("r1", "plan", "Agent")
+    assert node.pre_ctx.agent_id == "a1"
+    assert node.pre_ctx.super_step == 2
+    assert node.pre_ctx.input == {"topic": "x"}
+
+
+def test_graph_node_post_receives_output_and_mutates():
+    node = _RecordingGraphNode(post_action="mutate", post_output={"marker": "transformed"})
+    client = _client({"node": node})
+
+    resp = client.post("/handlers/node/post", json={
+        "callId": "c1", "continuationToken": "ct",
+        "output": {"marker": "body"},
+    })
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["action"] == "mutate"
+    assert data["output"] == {"marker": "transformed"}
+    assert node.post_output_in == {"marker": "body"}

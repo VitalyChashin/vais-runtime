@@ -5,11 +5,13 @@ Each seam corresponds to a pipeline hook in the Vais.Agents runtime.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Awaitable, Callable
+from typing import Any
 from .wire import (
     AgentInputContext, AgentOutputContext, PreResponse, PostResponse,
     ToolGatewayContext, ToolOutcome, ToolGatewayPreResponse, ToolGatewayPostResponse,
     LlmContext, LlmResponse, LlmGatewayPreResponse, LlmGatewayPostResponse,
     ErrorContext, ErrorOutcome,
+    GraphNodeContext, GraphNodePreResponse, GraphNodePostResponse,
 )
 
 
@@ -150,3 +152,33 @@ class ErrorInterceptor(ABC):
         ErrorOutcome() (default) to observe only.
         """
         ...
+
+
+class GraphNodeMiddleware(ABC):
+    """
+    Abstract base for graphNode seam handlers. Wraps a graph node's body execution.
+    Capability: observe, short-circuit (substitute output without running the node — caching/deny),
+    or transform the node output. Short-circuit is journaling-safe (the runtime merges + checkpoints
+    the substitute output like a real run). Hot seam — adds a per-node round-trip.
+    """
+
+    @abstractmethod
+    async def pre(self, context: GraphNodeContext, call_id: str) -> GraphNodePreResponse:
+        """
+        Called before the node body runs.
+        Return GraphNodePreResponse(action="shortCircuit", output={...}) to substitute the node's
+        output without running it, or GraphNodePreResponse(action="next") to run the body.
+        """
+        ...
+
+    async def post(
+        self,
+        call_id: str,
+        continuation_token: str | None,
+        output: dict[str, Any],
+    ) -> GraphNodePostResponse:
+        """
+        Called after the node body runs (only when pre returned next). Observe or transform the
+        output; return GraphNodePostResponse(action="mutate", output={...}) to replace it.
+        """
+        return GraphNodePostResponse()

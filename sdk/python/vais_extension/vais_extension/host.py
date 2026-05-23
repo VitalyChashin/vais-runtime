@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from .middleware import (
     AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
-    ErrorInterceptor,
+    ErrorInterceptor, GraphNodeMiddleware,
 )
 from .wire import (
     AgentInputContext, AgentOutputContext,
@@ -19,6 +19,7 @@ from .wire import (
     ToolGatewayContext, ToolOutcome,
     LlmContext, LlmResponse, LlmMessage, LlmToolCall, LlmToolDecl, LlmResponseFormat,
     ErrorContext,
+    GraphNodeContext,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -122,6 +123,23 @@ class _ErrorResponseBody(_CamelModel):
     message: str | None = None
 
 
+class _GraphNodePreResponseBody(_CamelModel):
+    action: str
+    continuation_token: str | None = None
+    output: dict[str, Any] | None = None
+
+
+class _GraphNodePostRequestBody(_CamelModel):
+    call_id: str
+    continuation_token: str | None = None
+    output: dict[str, Any] = {}
+
+
+class _GraphNodePostResponseBody(_CamelModel):
+    action: str
+    output: dict[str, Any] | None = None
+
+
 # ── Context builders ──────────────────────────────────────────────────────────
 
 def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
@@ -174,6 +192,17 @@ def _build_llm_context(r: dict[str, Any]) -> LlmContext:
         ),
         agent_id=r.get("agentId", ""),
         run_id=r.get("runId"),
+    )
+
+
+def _build_graph_node_context(c: dict[str, Any]) -> GraphNodeContext:
+    return GraphNodeContext(
+        run_id=c.get("runId", ""),
+        node_id=c.get("nodeId", ""),
+        node_kind=c.get("nodeKind", ""),
+        agent_id=c.get("agentId", ""),
+        super_step=c.get("superStep", 0),
+        input=c.get("input") or {},
     )
 
 
@@ -316,6 +345,23 @@ def _register_error_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
         return _ErrorResponseBody(message=outcome.message)
 
 
+def _register_graph_node_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """graphNode: pre may short-circuit (substitute output); post carries + may transform the output."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+    async def graph_node_pre(body: _PreRequestBody) -> _GraphNodePreResponseBody:
+        resp = await handler.pre(_build_graph_node_context(body.context), body.call_id)
+        return _GraphNodePreResponseBody(
+            action=resp.action,
+            continuation_token=resp.continuation_token,
+            output=resp.output,
+        )
+
+    @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+    async def graph_node_post(body: _GraphNodePostRequestBody) -> _GraphNodePostResponseBody:
+        resp = await handler.post(body.call_id, body.continuation_token, body.output)
+        return _GraphNodePostResponseBody(action=resp.action, output=resp.output)
+
+
 # ── Seam registry ───────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -332,6 +378,7 @@ _SEAMS: tuple[_SeamSpec, ...] = (
     _SeamSpec("toolGatewayMiddleware", ToolGatewayMiddleware, _register_tool_routes),
     _SeamSpec("llmGatewayMiddleware", LlmGatewayMiddleware, _register_llm_routes),
     _SeamSpec("errorInterceptor", ErrorInterceptor, _register_error_routes),
+    _SeamSpec("graphNode", GraphNodeMiddleware, _register_graph_node_routes),
 )
 
 
@@ -363,13 +410,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware] = handlers
         self._app = self._build_app()
 
     @property
