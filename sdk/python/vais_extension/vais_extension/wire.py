@@ -190,6 +190,26 @@ class GraphNodePostResponse:
     output: dict[str, Any] | None = None        # mutate: replacement node output
 
 
+# ── sessionLifecycle seam ─────────────────────────────────────────────────────
+# A fire-and-forget observe hook fired on session open (grain activate) and close (grain
+# deactivate). On "closing" the conversation history is included for summarize-on-close.
+# Best-effort: a hard crash skips close, and idle grain cycles produce extra open/close pairs.
+
+@dataclass
+class SessionTurn:
+    role: str = ""                              # user | assistant | system | tool
+    text: str = ""
+
+
+@dataclass
+class SessionLifecycleContext:
+    agent_id: str = ""
+    session_id: str = ""
+    phase: str = ""                             # "opened" | "closing"
+    turn_count: int = 0
+    history: list[SessionTurn] | None = None    # populated on "closing"; None on "opened"
+
+
 @dataclass
 class AdvertisedHandler:
     id: str

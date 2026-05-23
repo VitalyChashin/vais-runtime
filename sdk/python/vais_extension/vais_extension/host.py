@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from .middleware import (
     AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
-    ErrorInterceptor, GraphNodeMiddleware,
+    ErrorInterceptor, GraphNodeMiddleware, SessionLifecycleHook,
 )
 from .wire import (
     AgentInputContext, AgentOutputContext,
@@ -20,6 +20,7 @@ from .wire import (
     LlmContext, LlmResponse, LlmMessage, LlmToolCall, LlmToolDecl, LlmResponseFormat,
     ErrorContext,
     GraphNodeContext,
+    SessionLifecycleContext, SessionTurn,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -140,6 +141,10 @@ class _GraphNodePostResponseBody(_CamelModel):
     output: dict[str, Any] | None = None
 
 
+class _SessionLifecycleResponseBody(_CamelModel):
+    pass
+
+
 # ── Context builders ──────────────────────────────────────────────────────────
 
 def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
@@ -192,6 +197,20 @@ def _build_llm_context(r: dict[str, Any]) -> LlmContext:
         ),
         agent_id=r.get("agentId", ""),
         run_id=r.get("runId"),
+    )
+
+
+def _build_session_lifecycle_context(c: dict[str, Any]) -> SessionLifecycleContext:
+    raw_history = c.get("history")
+    history = None if raw_history is None else [
+        SessionTurn(role=t.get("role", ""), text=t.get("text", "")) for t in raw_history
+    ]
+    return SessionLifecycleContext(
+        agent_id=c.get("agentId", ""),
+        session_id=c.get("sessionId", ""),
+        phase=c.get("phase", ""),
+        turn_count=c.get("turnCount", 0),
+        history=history,
     )
 
 
@@ -345,6 +364,14 @@ def _register_error_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
         return _ErrorResponseBody(message=outcome.message)
 
 
+def _register_session_lifecycle_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """sessionLifecycle: a single fire-and-forget call (reuses the /pre path); no /post, no response."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_session")
+    async def session_handler(body: _PreRequestBody) -> _SessionLifecycleResponseBody:
+        await handler.on_session(_build_session_lifecycle_context(body.context), body.call_id)
+        return _SessionLifecycleResponseBody()
+
+
 def _register_graph_node_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
     """graphNode: pre may short-circuit (substitute output); post carries + may transform the output."""
     @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
@@ -379,6 +406,7 @@ _SEAMS: tuple[_SeamSpec, ...] = (
     _SeamSpec("llmGatewayMiddleware", LlmGatewayMiddleware, _register_llm_routes),
     _SeamSpec("errorInterceptor", ErrorInterceptor, _register_error_routes),
     _SeamSpec("graphNode", GraphNodeMiddleware, _register_graph_node_routes),
+    _SeamSpec("sessionLifecycle", SessionLifecycleHook, _register_session_lifecycle_routes),
 )
 
 
@@ -410,13 +438,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware | SessionLifecycleHook],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware | ErrorInterceptor | GraphNodeMiddleware | SessionLifecycleHook] = handlers
         self._app = self._build_app()
 
     @property

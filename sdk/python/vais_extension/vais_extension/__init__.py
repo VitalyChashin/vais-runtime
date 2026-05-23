@@ -32,7 +32,7 @@ _log_handler_module._configure_log_handler()
 
 from .middleware import (
     AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
-    ErrorInterceptor, GraphNodeMiddleware,
+    ErrorInterceptor, GraphNodeMiddleware, SessionLifecycleHook,
 )
 from .host import Host
 from .wire import (
@@ -57,6 +57,8 @@ from .wire import (
     GraphNodeContext,
     GraphNodePreResponse,
     GraphNodePostResponse,
+    SessionLifecycleContext,
+    SessionTurn,
     HandlerAdvertisement,
     AdvertisedHandler,
 )
@@ -69,6 +71,7 @@ __all__ = [
     "LlmGatewayMiddleware",
     "ErrorInterceptor",
     "GraphNodeMiddleware",
+    "SessionLifecycleHook",
     "Host",
     "AgentInputContext",
     "AgentOutputContext",
@@ -91,6 +94,8 @@ __all__ = [
     "GraphNodeContext",
     "GraphNodePreResponse",
     "GraphNodePostResponse",
+    "SessionLifecycleContext",
+    "SessionTurn",
     "HandlerAdvertisement",
     "AdvertisedHandler",
     "extract_parent_context",
