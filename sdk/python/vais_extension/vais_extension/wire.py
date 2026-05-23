@@ -73,6 +73,76 @@ class ToolGatewayPostResponse:
     error: str | None = None                    # mutate: replacement error
 
 
+# ── llmGatewayMiddleware seam ─────────────────────────────────────────────────
+#
+# Container projection limitations (the in-process C# seam has none): tools are read-only
+# (they cannot round-trip back into the request — preserved from the original on mutate);
+# streaming is not delivered to container handlers; agent_id/run_id arrive empty.
+
+@dataclass
+class LlmToolCall:
+    id: str
+    name: str
+    arguments: Any = None
+
+
+@dataclass
+class LlmMessage:
+    role: str
+    content: str | None = None
+    tool_calls: list[LlmToolCall] | None = None
+    tool_call_id: str | None = None
+
+
+@dataclass
+class LlmToolDecl:
+    name: str
+    description: str | None = None
+    parameters_schema: Any = None
+
+
+@dataclass
+class LlmResponseFormat:
+    schema: Any = None
+    name: str | None = None
+    strict: bool = True
+
+
+@dataclass
+class LlmContext:
+    """The completion request the handler sees. To rewrite it, mutate this and return
+    LlmGatewayPreResponse(action='mutate', request=ctx). Tools are read-only."""
+    messages: list[LlmMessage] = field(default_factory=list)
+    system_prompt: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    tools: list[LlmToolDecl] | None = None
+    response_format: LlmResponseFormat | None = None
+    agent_id: str = ""
+    run_id: str | None = None
+
+
+@dataclass
+class LlmResponse:
+    text: str = ""
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+
+@dataclass
+class LlmGatewayPreResponse:
+    action: str = "next"                        # "next" | "shortCircuit" | "mutate"
+    continuation_token: str | None = None
+    response: LlmResponse | None = None         # shortCircuit: synthetic response (skip the model)
+    request: LlmContext | None = None           # mutate: replacement request (tools ignored)
+
+
+@dataclass
+class LlmGatewayPostResponse:
+    action: str = "next"                        # "next" | "mutate"
+    response: LlmResponse | None = None         # mutate: replacement response
+
+
 @dataclass
 class AdvertisedHandler:
     id: str

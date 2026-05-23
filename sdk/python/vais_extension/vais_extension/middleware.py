@@ -8,6 +8,7 @@ from typing import Awaitable, Callable
 from .wire import (
     AgentInputContext, AgentOutputContext, PreResponse, PostResponse,
     ToolGatewayContext, ToolOutcome, ToolGatewayPreResponse, ToolGatewayPostResponse,
+    LlmContext, LlmResponse, LlmGatewayPreResponse, LlmGatewayPostResponse,
 )
 
 
@@ -98,3 +99,37 @@ class ToolGatewayMiddleware(ABC):
         the outcome; return ToolGatewayPostResponse(action="mutate", result=...) to replace it.
         """
         return ToolGatewayPostResponse()
+
+
+class LlmGatewayMiddleware(ABC):
+    """
+    Abstract base for llmGatewayMiddleware seam handlers (non-streaming path).
+    Fires once per LLM call. Capability: observe, short-circuit (synthetic response),
+    transform the response, or rewrite the request (messages/params only — tools are read-only).
+    Streaming calls bypass container handlers.
+    """
+
+    @abstractmethod
+    async def pre(
+        self,
+        context: LlmContext,
+        call_id: str,
+    ) -> LlmGatewayPreResponse:
+        """
+        Called before the model is invoked.
+        Return LlmGatewayPreResponse(action="shortCircuit", response=LlmResponse(...)) to skip the model,
+        (action="mutate", request=context) to rewrite the request, or (action="next") to proceed.
+        """
+        ...
+
+    async def post(
+        self,
+        call_id: str,
+        continuation_token: str | None,
+        response: LlmResponse,
+    ) -> LlmGatewayPostResponse:
+        """
+        Called after the model returns (only when pre returned next). Observe or transform
+        the response; return LlmGatewayPostResponse(action="mutate", response=...) to replace it.
+        """
+        return LlmGatewayPostResponse()

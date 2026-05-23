@@ -9,11 +9,14 @@ from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from .middleware import AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware
+from .middleware import (
+    AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
+)
 from .wire import (
     AgentInputContext, AgentOutputContext,
     PreResponse, PostResponse,
     ToolGatewayContext, ToolOutcome,
+    LlmContext, LlmResponse, LlmMessage, LlmToolCall, LlmToolDecl, LlmResponseFormat,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -84,6 +87,35 @@ class _ToolPostResponseBody(_CamelModel):
     error: str | None = None
 
 
+class _LlmResponseBody(_CamelModel):
+    text: str = ""
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+
+class _LlmPreRequestBody(_CamelModel):
+    call_id: str
+    request: dict[str, Any]
+
+
+class _LlmPreResponseBody(_CamelModel):
+    action: str
+    continuation_token: str | None = None
+    response: _LlmResponseBody | None = None
+    request: dict[str, Any] | None = None       # mutate: replacement request (camelCase keys, tools ignored)
+
+
+class _LlmPostRequestBody(_CamelModel):
+    call_id: str
+    continuation_token: str | None = None
+    response: _LlmResponseBody | None = None
+
+
+class _LlmPostResponseBody(_CamelModel):
+    action: str
+    response: _LlmResponseBody | None = None
+
+
 # ── Context builders ──────────────────────────────────────────────────────────
 
 def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
@@ -116,6 +148,78 @@ def _build_tool_context(c: dict[str, Any]) -> ToolGatewayContext:
         workspace_id=c.get("workspaceId"),
         allowed_tools=c.get("allowedTools"),
     )
+
+
+def _build_llm_context(r: dict[str, Any]) -> LlmContext:
+    return LlmContext(
+        messages=[_llm_message_from_dict(m) for m in r.get("messages") or []],
+        system_prompt=r.get("systemPrompt"),
+        temperature=r.get("temperature"),
+        max_tokens=r.get("maxTokens"),
+        tools=None if r.get("tools") is None else [
+            LlmToolDecl(name=t.get("name", ""), description=t.get("description"),
+                        parameters_schema=t.get("parametersSchema"))
+            for t in r["tools"]
+        ],
+        response_format=None if r.get("responseFormat") is None else LlmResponseFormat(
+            schema=r["responseFormat"].get("schema"),
+            name=r["responseFormat"].get("name"),
+            strict=r["responseFormat"].get("strict", True),
+        ),
+        agent_id=r.get("agentId", ""),
+        run_id=r.get("runId"),
+    )
+
+
+def _llm_message_from_dict(m: dict[str, Any]) -> LlmMessage:
+    return LlmMessage(
+        role=m.get("role", "user"),
+        content=m.get("content"),
+        tool_calls=None if m.get("toolCalls") is None else [
+            LlmToolCall(id=tc.get("id", ""), name=tc.get("name", ""), arguments=tc.get("arguments"))
+            for tc in m["toolCalls"]
+        ],
+        tool_call_id=m.get("toolCallId"),
+    )
+
+
+def _llm_response_to_body(r: LlmResponse | None) -> "_LlmResponseBody | None":
+    if r is None:
+        return None
+    return _LlmResponseBody(text=r.text, prompt_tokens=r.prompt_tokens, completion_tokens=r.completion_tokens)
+
+
+def _llm_context_to_request_dict(ctx: LlmContext | None) -> dict[str, Any] | None:
+    if ctx is None:
+        return None
+    return {
+        "messages": [_llm_message_to_dict(m) for m in ctx.messages],
+        "systemPrompt": ctx.system_prompt,
+        "temperature": ctx.temperature,
+        "maxTokens": ctx.max_tokens,
+        "tools": None if ctx.tools is None else [
+            {"name": t.name, "description": t.description, "parametersSchema": t.parameters_schema}
+            for t in ctx.tools
+        ],
+        "responseFormat": None if ctx.response_format is None else {
+            "schema": ctx.response_format.schema,
+            "name": ctx.response_format.name,
+            "strict": ctx.response_format.strict,
+        },
+        "agentId": ctx.agent_id,
+        "runId": ctx.run_id,
+    }
+
+
+def _llm_message_to_dict(m: LlmMessage) -> dict[str, Any]:
+    return {
+        "role": m.role,
+        "content": m.content,
+        "toolCalls": None if m.tool_calls is None else [
+            {"id": tc.id, "name": tc.name, "arguments": tc.arguments} for tc in m.tool_calls
+        ],
+        "toolCallId": m.tool_call_id,
+    }
 
 
 # ── Route registrars ──────────────────────────────────────────────────────────
@@ -164,6 +268,30 @@ def _register_tool_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
         return _ToolPostResponseBody(action=resp.action, result=resp.result, error=resp.error)
 
 
+def _register_llm_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """llmGatewayMiddleware: pre may short-circuit / mutate-request; post carries + may transform the response."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+    async def llm_pre(body: _LlmPreRequestBody) -> _LlmPreResponseBody:
+        resp = await handler.pre(_build_llm_context(body.request), body.call_id)
+        return _LlmPreResponseBody(
+            action=resp.action,
+            continuation_token=resp.continuation_token,
+            response=_llm_response_to_body(resp.response),
+            request=_llm_context_to_request_dict(resp.request),
+        )
+
+    @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+    async def llm_post(body: _LlmPostRequestBody) -> _LlmPostResponseBody:
+        incoming = body.response
+        response = LlmResponse(
+            text=incoming.text if incoming else "",
+            prompt_tokens=incoming.prompt_tokens if incoming else None,
+            completion_tokens=incoming.completion_tokens if incoming else None,
+        )
+        resp = await handler.post(body.call_id, body.continuation_token, response)
+        return _LlmPostResponseBody(action=resp.action, response=_llm_response_to_body(resp.response))
+
+
 # ── Seam registry ───────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -178,6 +306,7 @@ _SEAMS: tuple[_SeamSpec, ...] = (
     _SeamSpec("agentInput", AgentInputMiddleware, _uniform_registrar(_build_input_context)),
     _SeamSpec("agentOutput", AgentOutputMiddleware, _uniform_registrar(_build_output_context)),
     _SeamSpec("toolGatewayMiddleware", ToolGatewayMiddleware, _register_tool_routes),
+    _SeamSpec("llmGatewayMiddleware", LlmGatewayMiddleware, _register_llm_routes),
 )
 
 
@@ -209,13 +338,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware] = handlers
         self._app = self._build_app()
 
     @property
