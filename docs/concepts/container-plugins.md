@@ -185,6 +185,22 @@ What changes (all transparent to plugin authors using the SDK's `request.llm` / 
 
 **Scaling contract (P1/P5).** The lease registry is `IInvokeLeaseStore`. The default `InMemoryInvokeLeaseStore` is correct for a **single silo** (Docker standalone — the gateway callback hits the same process that opened the lease). A **multi-silo Kubernetes** runtime, where a plugin's callback can be load-balanced to a different silo than its supervisor, must use the Orleans-grain-backed store — the runtime host registers it by default (`AddOrleansInvokeLeaseStore`).
 
+### Invoke duration vs. wedged-container reclaim
+
+The single `invokeTimeoutSeconds` is fine for short-turn plugins — it both bounds the turn and reclaims a hang at the same timescale. A long session needs those decoupled: a healthy invoke may run for minutes, but a *silent/wedged* container should still be reclaimed fast. Two independent knobs do that:
+
+- **Absolute cap** — the hard ceiling on one invoke. In session mode this is `sessionTtlSeconds` (so a long invoke is *allowed* without inflating the kill-timeout); otherwise it stays `invokeTimeoutSeconds`. It bounds both the `/v1/invoke` and `/v1/stream` paths, and is the value handed to the plugin as its own `timeoutSeconds` self-budget.
+- **Idle / progress timeout** — `invokeIdleTimeoutSeconds` (optional). On the **streaming** path the runtime aborts the invoke if no SSE activity — a delta *or* an SSE heartbeat comment — arrives for this long. Because the SDK emits a heartbeat every ~15s while its event loop is alive, this reliably distinguishes a wedged/dead container (silent) from a healthy one doing local work between LLM calls (heartbeats keep flowing). The non-streaming `/v1/invoke` path has no liveness channel, so it gets the absolute cap only — **long-lived agents should stream.**
+
+```yaml
+spec:
+  invokeTimeoutSeconds: 60          # short-turn kill-timeout (unchanged)
+  sessionTtlSeconds: 1800           # absolute cap for a long session invoke
+  invokeIdleTimeoutSeconds: 120     # reclaim a silent/wedged streaming invoke after 2 min
+```
+
+Short-turn plugins set none of these and keep today's single-timeout behavior.
+
 Short-turn plugins (no `sessionTtlSeconds`) are entirely unaffected: one full-TTL token, no renewal, no lease. OTLP-span and structured-log auth always use the separate 24 h startup tokens, so telemetry needs no renewal either. Contract reference: [`gateway-internal.md`](../../contracts/plugin-container/gateway-internal.md) §`token/renew`.
 
 ## OTLP telemetry

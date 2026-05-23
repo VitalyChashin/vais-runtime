@@ -40,6 +40,7 @@ internal sealed class ContainerPluginYamlSpec
     public int StartupTimeoutSeconds { get; set; } = 30;
     public int InvokeTimeoutSeconds { get; set; } = 60;
     public int? SessionTtlSeconds { get; set; }
+    public int? InvokeIdleTimeoutSeconds { get; set; }
     public ContainerPluginYamlRetryPolicy? RetryPolicy { get; set; }
     public ContainerPluginYamlKubernetesSpec? Kubernetes { get; set; }
     public Dictionary<string, string> Secrets { get; set; } = new();

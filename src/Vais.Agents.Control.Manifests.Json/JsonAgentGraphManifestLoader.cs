@@ -1060,6 +1060,8 @@ public sealed class JsonAgentGraphManifestLoader
             ? itEl.GetInt32() : 60;
         int? sessionTtl = spec.TryGetProperty("sessionTtlSeconds", out var sttEl) && sttEl.ValueKind == JsonValueKind.Number
             ? sttEl.GetInt32() : null;
+        int? invokeIdleTimeout = spec.TryGetProperty("invokeIdleTimeoutSeconds", out var iitEl) && iitEl.ValueKind == JsonValueKind.Number
+            ? iitEl.GetInt32() : null;
         var imagePullPolicy = spec.TryGetProperty("imagePullPolicy", out var ippEl) ? ippEl.GetString() ?? "IfNotPresent" : "IfNotPresent";
 
         var secrets = ParseStringMap(spec, "secrets");
@@ -1113,6 +1115,7 @@ public sealed class JsonAgentGraphManifestLoader
                 StartupTimeoutSeconds = startupTimeout,
                 InvokeTimeoutSeconds = invokeTimeout,
                 SessionTtlSeconds = sessionTtl,
+                InvokeIdleTimeoutSeconds = invokeIdleTimeout,
                 ImagePullPolicy = imagePullPolicy,
                 RetryPolicy = retryPolicy,
                 Kubernetes = k8sConfig,

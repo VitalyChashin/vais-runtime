@@ -41,6 +41,113 @@ public sealed class ContainerAgentShimTests
                 options: s_webOpts)
         };
 
+    // ── Streaming idle / absolute watchdog (IT-3) ──────────────────────────
+
+    [Fact]
+    public async Task StreamAsync_IdleTimeout_AbortsWithTurnFailed()
+    {
+        // Container sends headers, then goes silent forever. Idle watchdog (1s) must trip.
+        var (shim, handler) = MakeShim(invokeIdleTimeoutSeconds: 1);
+        handler.InvokeHandler = _ => Task.FromResult(SseResponse((System.Threading.Timeout.Infinite, "")));
+
+        var events = await CollectAsync(shim);
+
+        events.Should().Contain(e => e is TurnFailed);
+        events.Should().NotContain(e => e is TurnCompleted);
+        events.OfType<TurnFailed>().Single().ErrorMessage.Should().Contain("idle");
+    }
+
+    [Fact]
+    public async Task StreamAsync_SseHeartbeats_KeepInvokeAlive_ThenCompletes()
+    {
+        // Heartbeat comments arrive every 300ms (< the 1s idle window), so the invoke is NOT idle and
+        // runs to a normal completion. Proves the heartbeat ':' line resets the idle deadline.
+        var (shim, handler) = MakeShim(invokeIdleTimeoutSeconds: 1);
+        handler.InvokeHandler = _ => Task.FromResult(SseResponse(
+            (300, ": heartbeat\n\n"),
+            (300, ": heartbeat\n\n"),
+            (300, ": heartbeat\n\n"),
+            (300, "event: done\ndata: {\"assistantMessage\":\"ok\"}\n\n")));
+
+        var events = await CollectAsync(shim);
+
+        events.Should().NotContain(e => e is TurnFailed);
+        events.OfType<TurnCompleted>().Single().AssistantText.Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task StreamAsync_MaxDuration_AbortsEvenWhileHeartbeating()
+    {
+        // Session mode with a 1s absolute cap. The container keeps heartbeating (never idle), but the
+        // hard ceiling must still abort it — a non-idle runaway is bounded by sessionTtlSeconds.
+        var (shim, handler) = MakeShim(invokeIdleTimeoutSeconds: 5, sessionConfig: SessionConfig(sessionTtlSeconds: 1));
+        handler.InvokeHandler = _ => Task.FromResult(SseResponse(
+            Enumerable.Range(0, 100).Select(_ => (200, ": heartbeat\n\n")).ToArray()));
+
+        var events = await CollectAsync(shim);
+
+        events.Should().Contain(e => e is TurnFailed);
+        events.OfType<TurnFailed>().Single().ErrorMessage.Should().Contain("maximum duration");
+    }
+
+    private static async Task<List<AgentEvent>> CollectAsync(ContainerAgentShim shim)
+    {
+        var events = new List<AgentEvent>();
+        await foreach (var ev in shim.StreamAsync("hi", AgentContext.Empty, CancellationToken.None))
+            events.Add(ev);
+        return events;
+    }
+
+    /// <summary>Builds a 200 text/event-stream response whose body emits each (delayMs, text) chunk in turn.</summary>
+    private static HttpResponseMessage SseResponse(params (int DelayMs, string Text)[] chunks)
+    {
+        var content = new StreamContent(new DelayedChunkStream(chunks));
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/event-stream");
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+    }
+
+    /// <summary>Read-only stream that yields scripted chunks, waiting DelayMs (honoring ct) before each.</summary>
+    private sealed class DelayedChunkStream(IEnumerable<(int DelayMs, string Text)> chunks) : Stream
+    {
+        private readonly IEnumerator<(int DelayMs, string Text)> _chunks = chunks.GetEnumerator();
+        private byte[] _current = [];
+        private int _pos;
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            if (_pos >= _current.Length)
+            {
+                if (!_chunks.MoveNext()) return 0; // EOF
+                var (delayMs, text) = _chunks.Current;
+                await Task.Delay(
+                    delayMs == System.Threading.Timeout.Infinite
+                        ? System.Threading.Timeout.InfiniteTimeSpan
+                        : TimeSpan.FromMilliseconds(delayMs),
+                    ct).ConfigureAwait(false);
+                _current = System.Text.Encoding.UTF8.GetBytes(text);
+                _pos = 0;
+                if (_current.Length == 0) return 0;
+            }
+            var n = Math.Min(buffer.Length, _current.Length - _pos);
+            _current.AsSpan(_pos, n).CopyTo(buffer.Span);
+            _pos += n;
+            return n;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct)
+            => ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     // ── Fake HTTP handler ──────────────────────────────────────────────────
 
     /// <summary>
@@ -68,7 +175,9 @@ public sealed class ContainerAgentShimTests
         new(agentId, "1.0", new AgentHandlerRef("Test"), [], []);
 
     private static (ContainerAgentShim Shim, FakeHttpHandler Handler) MakeShim(
-        string agentId = "test-agent")
+        string agentId = "test-agent",
+        int? invokeIdleTimeoutSeconds = null,
+        ContainerSessionTokenConfig? sessionConfig = null)
     {
         var handler = new FakeHttpHandler();
         var httpClient = new HttpClient(handler)
@@ -78,6 +187,8 @@ public sealed class ContainerAgentShimTests
 
         var tokenSvc = Substitute.For<ICallTokenService>();
         tokenSvc.Generate(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>())
+                .Returns("test-call-token");
+        tokenSvc.Generate(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>())
                 .Returns("test-call-token");
 
         var shim = new ContainerAgentShim(
@@ -89,11 +200,16 @@ public sealed class ContainerAgentShimTests
             internalLlmGatewayUrl: "http://gateway/llm",
             internalToolGatewayUrl: "http://gateway/tools",
             invokeTimeoutSeconds: 60,
-            sessionConfig: null,
+            sessionConfig: sessionConfig,
+            invokeIdleTimeoutSeconds: invokeIdleTimeoutSeconds,
             logger: NullLogger.Instance);
 
         return (shim, handler);
     }
+
+    private static ContainerSessionTokenConfig SessionConfig(int sessionTtlSeconds) =>
+        new(sessionTtlSeconds, RenewTokenTtlSeconds: 120,
+            RenewTokenUrl: "http://gateway/renew", LeaseStore: new InMemoryInvokeLeaseStore());
 
     // ── AskAsync — basic path ──────────────────────────────────────────────
 

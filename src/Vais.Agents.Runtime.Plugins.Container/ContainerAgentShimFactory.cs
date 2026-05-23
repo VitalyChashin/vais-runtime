@@ -41,10 +41,15 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
         var callTokenService = serviceProvider.GetRequiredService<ICallTokenService>();
         var internalBase = _options.InternalGatewayBaseUrl;
 
+        // The HttpClient total timeout is the invoke's ABSOLUTE bound. In session mode that is
+        // sessionTtlSeconds (so a long invoke is allowed without inflating the kill-timeout); otherwise
+        // it stays invokeTimeoutSeconds. Idle/progress reclaim on the streaming path is enforced
+        // separately by the shim's idle watchdog (invokeIdleTimeoutSeconds).
+        var absoluteTimeoutSeconds = _descriptor.SessionTtlSeconds ?? _descriptor.InvokeTimeoutSeconds;
         var invokeClient = new HttpClient
         {
             BaseAddress = new Uri(_descriptor.InvokeBaseUrl),
-            Timeout = TimeSpan.FromSeconds(_descriptor.InvokeTimeoutSeconds + 10),
+            Timeout = TimeSpan.FromSeconds(absoluteTimeoutSeconds + 10),
         };
 
         ContainerSessionTokenConfig? sessionConfig = _descriptor.SessionTtlSeconds is { } sessionTtl
@@ -65,6 +70,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             internalToolGatewayUrl: $"{internalBase}/v1/container-gateway/tools/invoke",
             invokeTimeoutSeconds: _descriptor.InvokeTimeoutSeconds,
             sessionConfig: sessionConfig,
+            invokeIdleTimeoutSeconds: _descriptor.InvokeIdleTimeoutSeconds,
             logger: _loggerFactory.CreateLogger<ContainerAgentShim>());
 
         return ValueTask.FromResult<IAiAgent>(shim);
