@@ -30,45 +30,45 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `AgentGraph` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.entry` | string | no |
-| `spec.nodes` | array&lt;object&gt; | no |
-| `spec.nodes[].id` | string | no |
-| `spec.nodes[].kind` | string | no |
-| `spec.nodes[].ref` | object | no |
-| `spec.nodes[].ref.id` | string | no |
-| `spec.nodes[].ref.version` | string | no |
-| `spec.nodes[].ref.runtimeUrl` | string | no |
-| `spec.nodes[].ref.a2aUrl` | string | no |
-| `spec.nodes[].handlerRef` | object | no |
-| `spec.nodes[].handlerRef.typeName` | string | no |
-| `spec.nodes[].handlerRef.assemblyName` | string | no |
-| `spec.nodes[].stateBindings` | object | no |
-| `spec.nodes[].stateBindings.input` | array&lt;string&gt; | no |
-| `spec.nodes[].stateBindings.output` | array&lt;string&gt; | no |
-| `spec.nodes[].interruptReason` | string | no |
-| `spec.nodes[].retryPolicy` | object | no |
-| `spec.nodes[].retryPolicy.maxAttempts` | integer | no |
-| `spec.nodes[].retryPolicy.initialBackoffSeconds` | number | no |
-| `spec.nodes[].retryPolicy.backoffMultiplier` | number | no |
-| `spec.nodes[].retryPolicy.maxBackoffSeconds` | number | no |
-| `spec.edges` | array&lt;object&gt; | no |
-| `spec.edges[].from` | string | no |
-| `spec.edges[].to` | string | no |
-| `spec.edges[].when` | any | no |
-| `spec.edges[].onTraverse` | any | no |
-| `spec.edges[].concurrent` | boolean | no |
-| `spec.maxSteps` | integer | no |
-| `spec.stateReducers` | map&lt;string, any&gt; | no |
-| `spec.state` | object | no |
-| `spec.state.schema` | any | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `AgentGraph` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.entry` | string | no | Id of the entry node. Must exist in Nodes. |
+| `spec.nodes` | array&lt;object&gt; | no | All nodes in the graph. Ids unique within the manifest. |
+| `spec.nodes[].id` | string | no | Unique-within-graph identifier. Matches edge endpoints by string. |
+| `spec.nodes[].kind` | string | no | One of "Agent", "Code", "Interrupt", "End". |
+| `spec.nodes[].ref` | object | no | Reference to a registered agent, for Agent-kind nodes. |
+| `spec.nodes[].ref.id` | string | no | Agent id. |
+| `spec.nodes[].ref.version` | string | no | Agent version. Null resolves to latest. |
+| `spec.nodes[].ref.runtimeUrl` | string | no | Absolute http/https URL of the remote runtime hosting this agent. Null = local (resolved via IAgentRegistry). |
+| `spec.nodes[].ref.a2aUrl` | string | no | Absolute http/https URL of a remote A2A-compatible agent endpoint. When set, the graph node invokes via the A2A protocol. Mutually exclusive with RuntimeUrl. |
+| `spec.nodes[].handlerRef` | object | no | Reference to a DI-resolved code handler, for Code-kind nodes. |
+| `spec.nodes[].handlerRef.typeName` | string | no | Fully-qualified type name of the handler class. |
+| `spec.nodes[].handlerRef.assemblyName` | string | no | Optional assembly name. Null when the runtime resolves by type-name alone. |
+| `spec.nodes[].stateBindings` | object | no | Describes how graph state projects into/out of this node's invocation. |
+| `spec.nodes[].stateBindings.input` | array&lt;string&gt; | no | Graph-state keys to read. For Agent-kind nodes, these keys become metadata on the AgentInvocationRequest. For Code-kind nodes, the handler receives a dictionary subset keyed by these names. |
+| `spec.nodes[].stateBindings.output` | array&lt;string&gt; | no | Graph-state keys to write from the node's output. For Agent-kind nodes, the agent must declare a matching OutputSchema with these fields; the runtime extracts them from the structured assistant response. For Code-kind nodes, the handler's output dictionary is filtered to these keys. |
+| `spec.nodes[].interruptReason` | string | no | Operator-readable reason surfaced on Reason; optional for Interrupt-kind nodes. |
+| `spec.nodes[].retryPolicy` | object | no | Optional per-node retry policy. Null (default) = no retry; the node body runs once and any failure propagates. See GraphNodeRetryPolicy. |
+| `spec.nodes[].retryPolicy.maxAttempts` | integer | no | Total attempts including the first. Must be ≥ 1; 1 = no retry. |
+| `spec.nodes[].retryPolicy.initialBackoffSeconds` | number | no | Delay before the second attempt. Must be ≥ 0. |
+| `spec.nodes[].retryPolicy.backoffMultiplier` | number | no | Exponential growth factor applied per attempt. Must be ≥ 1. |
+| `spec.nodes[].retryPolicy.maxBackoffSeconds` | number | no | Upper bound on any single backoff delay. Must be ≥ InitialBackoffSeconds. |
+| `spec.edges` | array&lt;object&gt; | no | Edges between nodes, order-significant (first-match-wins when a node has multiple outgoing edges). |
+| `spec.edges[].from` | string | no | Source node id. |
+| `spec.edges[].to` | string | no | Target node id. |
+| `spec.edges[].when` | any | no | Predicate. Null means always-true. |
+| `spec.edges[].onTraverse` | any | no | Side-effect applied to graph state when the edge is taken. |
+| `spec.edges[].concurrent` | boolean | no | When true, this edge participates in a fan-out / fan-in topology. All concurrent edges from the same source node fire in parallel; all concurrent edges pointing to the same target node form a barrier join (the target waits for all sources). Requires MafGraphOrchestrator; silently ignored by InProcessGraphOrchestrator, which is sequential-only. |
+| `spec.maxSteps` | integer | no | Hard ceiling on super-step count per invocation. Prevents runaway cycles. Defaults to 1000 (matching LangGraph's recursion_limit) when null. Exceeding this throws GraphRecursionException. |
+| `spec.stateReducers` | map&lt;string, any&gt; | no | Per-key reducer overrides. Keys not listed here use the runtime defaults: messages appends, every other key last-write-wins. An explicit LastWriteWins entry overrides even the built-in messages append rule. |
+| `spec.state` | object | no |  |
+| `spec.state.schema` | any | no |  |

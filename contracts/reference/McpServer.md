@@ -21,53 +21,53 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `McpServer` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.transport` | string | no |
-| `spec.url` | string | no |
-| `spec.command` | string | no |
-| `spec.args` | array&lt;string&gt; | no |
-| `spec.env` | map&lt;string, string&gt; | no |
-| `spec.authRef` | string | no |
-| `spec.tools` | array&lt;string&gt; | no |
-| `spec.container` | object | no |
-| `spec.container.image` | string | no |
-| `spec.container.build` | object | no |
-| `spec.container.build.context` | string | no |
-| `spec.container.build.dockerfile` | string | no |
-| `spec.container.build.args` | map&lt;string, string&gt; | no |
-| `spec.container.build.push` | boolean | no |
-| `spec.container.port` | integer | no |
-| `spec.container.path` | string | no |
-| `spec.container.healthPath` | string | no |
-| `spec.container.command` | array&lt;string&gt; | no |
-| `spec.container.args` | array&lt;string&gt; | no |
-| `spec.container.env` | map&lt;string, string&gt; | no |
-| `spec.container.secrets` | map&lt;string, string&gt; | no |
-| `spec.container.resources` | object | no |
-| `spec.container.resources.memory` | string | no |
-| `spec.container.resources.cpu` | string | no |
-| `spec.container.resources.pidsLimit` | integer | no |
-| `spec.container.startupTimeoutSeconds` | integer | no |
-| `spec.container.imagePullPolicy` | string | no |
-| `spec.container.kubernetes` | object | no |
-| `spec.container.kubernetes.serviceUrl` | string | no |
-| `spec.container.kubernetes.deploymentName` | string | no |
-| `spec.container.kubernetes.namespace` | string | no |
-| `spec.virtual` | boolean | no |
-| `spec.sources` | array&lt;object&gt; | no |
-| `spec.sources[].ref` | string | no |
-| `spec.toolProjection` | array&lt;object&gt; | no |
-| `spec.toolProjection[].name` | string | no |
-| `spec.toolProjection[].from` | string | no |
-| `spec.toolProjection[].sourceToolName` | string | no |
-| `spec.mcpGatewayRef` | string | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `McpServer` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.transport` | string | no | Transport: "streamableHttp" \| "sse" \| "stdio" \| "containerStdio". Required for physical servers. |
+| `spec.url` | string | no | Server URL for streamableHttp / sse transports. |
+| `spec.command` | string | no | Executable path for stdio transport. |
+| `spec.args` | array&lt;string&gt; | no | Command-line arguments for stdio transport. |
+| `spec.env` | map&lt;string, string&gt; | no | Environment variables passed to stdio child processes. |
+| `spec.authRef` | string | no | Optional secret:// URI for bearer / header auth on HTTP transports. |
+| `spec.tools` | array&lt;string&gt; | no | Optional tool allowlist. Null = expose all tools the server lists. |
+| `spec.container` | object | no | Container spec for containerStdio transport. Required when Transport is containerStdio; must be null for other transports. |
+| `spec.container.image` | string | no | Container image reference. Mutually exclusive with Build. |
+| `spec.container.build` | object | no | Build-on-apply spec. The CLI builds the image and tags it before the manifest is sent. Mutually exclusive with Image only when neither is null. |
+| `spec.container.build.context` | string | no | Docker build context path. Relative paths resolve against the manifest file's directory at CLI time. |
+| `spec.container.build.dockerfile` | string | no | Dockerfile path relative to Context. Default Dockerfile. |
+| `spec.container.build.args` | map&lt;string, string&gt; | no | Optional --build-arg key=value pairs. |
+| `spec.container.build.push` | boolean | no | Run docker push after a successful build. Default false. |
+| `spec.container.port` | integer | no | Bridge HTTP port the container exposes. Default 7000 (chosen to dodge common dev ports — runtime 8080, plugin 8090, langfuse 3000, openwebui 5000). |
+| `spec.container.path` | string | no | Bridge MCP URL path. Default /mcp. |
+| `spec.container.healthPath` | string | no | Bridge health endpoint path. Default /health; the runtime polls until it returns 2xx. |
+| `spec.container.command` | array&lt;string&gt; | no | Optional override of the image's default CMD (i.e. the bridge entrypoint). |
+| `spec.container.args` | array&lt;string&gt; | no | Optional args appended to Command (or image CMD). |
+| `spec.container.env` | map&lt;string, string&gt; | no | Environment variables passed to the container. The bridge reads its stdio child command from MCP_STDIO_CMD by convention. |
+| `spec.container.secrets` | map&lt;string, string&gt; | no | Secret references injected as env vars at container start. Key = env-var name; value = secret:// URI. |
+| `spec.container.resources` | object | no | Resource limits — memory / cpu / pids. Defaults apply when null. |
+| `spec.container.resources.memory` | string | no | Memory limit (e.g. 128Mi, 1Gi). Null = supervisor default. |
+| `spec.container.resources.cpu` | string | no | CPU limit in cores (e.g. 0.25, 1, 2). Null = supervisor default. |
+| `spec.container.resources.pidsLimit` | integer | no | Max process IDs the container may spawn. Null = supervisor default. |
+| `spec.container.startupTimeoutSeconds` | integer | no | Seconds to wait for the bridge HealthPath to return 2xx during initial start. Default 30. |
+| `spec.container.imagePullPolicy` | string | no | Docker image pull policy: Always \| IfNotPresent \| Never. Default IfNotPresent. |
+| `spec.container.kubernetes` | object | no | Kubernetes-specific config (required when the runtime supervisor is the K8s one). |
+| `spec.container.kubernetes.serviceUrl` | string | no | URL of the K8s Service the runtime should probe (e.g. http://my-mcp.default.svc.cluster.local:7000). |
+| `spec.container.kubernetes.deploymentName` | string | no | K8s Deployment name (used for image patching). |
+| `spec.container.kubernetes.namespace` | string | no | K8s namespace. Default default. |
+| `spec.virtual` | boolean | no | True = virtual aggregator. False (default) = physical server. |
+| `spec.sources` | array&lt;object&gt; | no | Upstream server refs for virtual mode. Each Ref is an Id in IMcpServerRegistry. |
+| `spec.sources[].ref` | string | no | The Id of the upstream server. |
+| `spec.toolProjection` | array&lt;object&gt; | no | Tool projection for virtual mode. Maps visible tool name → source server id. Null = expose all tools from all sources (de-duplicated by name, first source wins). |
+| `spec.toolProjection[].name` | string | no | The tool name as exposed to the agent. |
+| `spec.toolProjection[].from` | string | no | The Id of the source server that provides this tool. |
+| `spec.toolProjection[].sourceToolName` | string | no | Optional override for the upstream tool name if it differs from Name. |
+| `spec.mcpGatewayRef` | string | no | Optional Id applied per tool dispatch through this server. Lower precedence than an agent-level McpGatewayRef. |

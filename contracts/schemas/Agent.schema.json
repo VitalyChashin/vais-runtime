@@ -47,13 +47,16 @@
           "type": "object",
           "properties": {
             "typeName": {
-              "type": "string"
+              "type": "string",
+              "description": "Fully-qualified .NET type name for in-process, or OCI image reference for containerized runtimes."
             },
             "assemblyName": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional assembly name; null when TypeName is already fully qualified or when the runtime resolves via a different mechanism."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Code reference (class name / image ref) the runtime instantiates."
         },
         "protocols": {
           "type": "array",
@@ -61,14 +64,17 @@
             "type": "object",
             "properties": {
               "kind": {
-                "type": "string"
+                "type": "string",
+                "description": "Protocol name \u2014 \u0022Http\u0022, \u0022A2A\u0022, \u0022Mcp\u0022, \u0022SignalR\u0022, etc. Consumer-defined; no enum to keep the shape open."
               },
               "endpoint": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional endpoint hint (URL, path, channel name). Null when the runtime chooses."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Protocol bindings the agent is exposed on \u2014 HTTP, A2A, MCP, custom."
         },
         "tools": {
           "type": "array",
@@ -76,41 +82,51 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Tool name \u2014 matches Name."
               },
               "source": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional source identifier (e.g., MCP-server id, A2A remote name). Null when the tool is registered locally."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Tools available to the agent. Each entry names a tool and optionally points at a source."
         },
         "memory": {
           "type": "object",
           "properties": {
             "provider": {
-              "type": "string"
+              "type": "string",
+              "description": "Provider name \u2014 e.g., \u0022Redis\u0022, \u0022Postgres\u0022, \u0022VectorData\u0022. Consumer-defined."
             },
             "connectionName": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional connection / named-instance ref resolved at runtime."
             },
             "scope": {
-              "type": "string"
+              "type": "string",
+              "description": "Memory scope \u2014 \u0022session\u0022 (per-conversation) or \u0022agent\u0022 (shared across sessions). Null = runtime default."
             },
             "historyReducer": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional history-reducer name \u2014 resolved against the host DI keyspace."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Memory backing \u2014 pluggable store provider \u002B connection ref. Null for ephemeral."
         },
         "identity": {
           "type": "object",
           "properties": {
             "inboundAuth": {
-              "type": "string"
+              "type": "string",
+              "description": "Inbound-auth scheme reference (e.g., OAuth issuer, mTLS profile name)."
             },
             "outboundCredentials": {
-              "type": "string"
+              "type": "string",
+              "description": "Legacy single-credential reference. Kept for v0.4 back-compat; prefer Credentials for multi-credential manifests."
             },
             "credentials": {
               "type": "array",
@@ -118,98 +134,124 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Stable name tools / adapters use to look up this credential at invocation time. E.g. an MCP server with authRef: openai-api matches a credential with Name: \u0022openai-api\u0022."
                   },
                   "ref": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "secret:// URI pointing at the credential store."
                   },
                   "type": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Credential kind \u2014 \u0022bearer\u0022, \u0022basic\u0022, \u0022oauth2ClientCredentials\u0022, \u0022apiKey\u0022, \u0022custom\u0022. Consumer-defined; the identity provider routes on this value."
                   }
                 },
                 "additionalProperties": false
-              }
+              },
+              "description": "List of outbound credentials the agent\u0027s tools / adapters can look up by name at invocation time. Introduced in v0.6 \u2014 supersedes the single-valued OutboundCredentials string when multiple credentials are needed."
             },
             "inboundClaims": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
-              }
+              },
+              "description": "Optional required-claims map for inbound JWT validation (e.g. scope: \u0022agent:invoke\u0022)."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Inbound/outbound auth configuration. Null for unauthenticated scenarios (dev, single-tenant)."
         },
         "autoscaling": {
           "type": "object",
           "properties": {
             "minReplicas": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Minimum replicas. 0 means scale-to-zero is allowed."
             },
             "maxReplicas": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Maximum replicas. Null means unbounded (runtime-default)."
             },
             "target": {
-              "type": "string"
+              "type": "string",
+              "description": "Free-form target metric \u2014 e.g., \u0022concurrent-requests\u0022, \u0022cpu:70%\u0022. Consumer-defined."
             },
             "targetValue": {
-              "type": "number"
+              "type": "number",
+              "description": "Optional numeric target value paired with Target \u2014 e.g. Target: \u0022cpu\u0022, TargetValue: 0.7."
             },
             "idleTtl": {
-              "type": "string"
+              "type": "string",
+              "description": "Deactivate idle replicas after this duration. Null = runtime default."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Replica caps \u002B target concurrency. Null for \u0022whatever the runtime defaults to\u0022."
         },
         "model": {
           "type": "object",
           "properties": {
             "provider": {
-              "type": "string"
+              "type": "string",
+              "description": "Provider key \u2014 e.g. \u0022openai\u0022, \u0022azureOpenAi\u0022, \u0022anthropic\u0022, \u0022google\u0022, \u0022mistral\u0022, \u0022local\u0022, \u0022custom\u0022. Consumer-defined; the runtime routes to the matching ICompletionProvider binding."
             },
             "id": {
-              "type": "string"
+              "type": "string",
+              "description": "Model identifier the provider understands \u2014 \u0022gpt-4.1\u0022, \u0022claude-3-7-sonnet\u0022, etc."
             },
             "apiKeyRef": {
-              "type": "string"
+              "type": "string",
+              "description": "Credential pointer (secret:// URI) resolved at activation time."
             },
             "baseUrlRef": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional base-URL override for Azure / proxy / local deployments."
             },
             "temperature": {
-              "type": "number"
+              "type": "number",
+              "description": "Optional sampling temperature. Null = provider default."
             },
             "topP": {
-              "type": "number"
+              "type": "number",
+              "description": "Optional nucleus-sampling threshold. Null = provider default."
             },
             "maxTokens": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Optional response token cap. Null = provider default."
             },
             "responseFormat": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional response shape \u2014 \u0022text\u0022 (default), \u0022json\u0022, or \u0022structured\u0022. Consumer-defined; the runtime\u0027s model provider interprets."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "LLM model binding for declarative agents. Null when Handler carries custom behaviour. Set via object-initializer syntax: new AgentManifest(...) { Model = new ModelSpec(...) }."
         },
         "systemPrompt": {
           "type": "object",
           "properties": {
             "inline": {
-              "type": "string"
+              "type": "string",
+              "description": "Literal prompt text. Use for small / agent-specific prompts."
             },
             "templateRef": {
-              "type": "string"
+              "type": "string",
+              "description": "Name of a prompt template registered in the host\u0027s ISystemPromptComposer / IPromptTemplate DI keyspace. Combined with Variables."
             },
             "fileRef": {
-              "type": "string"
+              "type": "string",
+              "description": "Path to a prompt file, relative to the manifest\u0027s directory."
             },
             "variables": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
-              }
+              },
+              "description": "Optional variable bag for TemplateRef."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "System prompt \u2014 inline text, template reference, or file reference. Exactly one shape set when non-null."
         },
         "mcpServers": {
           "type": "array",
@@ -217,41 +259,50 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Stable name for this MCP binding \u2014 used for logging, audit, and the optional Tools allowlist reference from Source."
               },
               "transport": {
-                "type": "string"
+                "type": "string",
+                "description": "One of \u0022stdio\u0022, \u0022streamableHttp\u0022, \u0022sse\u0022, \u0022plugin\u0022, or RegisteredTransport. Use \u0022plugin\u0022 for servers whose subprocess is managed by the runtime (e.g. Python plugins loaded via INamedToolSourceProvider); command and url are not required or used for this transport."
               },
               "command": {
-                "type": "string"
+                "type": "string",
+                "description": "Executable path for stdio transport. Required when Transport = \u0022stdio\u0022."
               },
               "args": {
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "Command-line arguments for stdio."
               },
               "url": {
-                "type": "string"
+                "type": "string",
+                "description": "Server URL for streamableHttp / sse. Required for those transports."
               },
               "env": {
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
-                }
+                },
+                "description": "Environment variables passed to stdio child processes."
               },
               "authRef": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional secret:// URI for bearer / header auth on HTTP transports."
               },
               "tools": {
                 "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "description": "Optional allowlist restricting which tools from the server are exposed to the agent. Null / empty = expose all tools the server lists."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Model Context Protocol server bindings. Each server contributes tools to the agent at activation time."
         },
         "a2aRemoteAgents": {
           "type": "array",
@@ -259,24 +310,29 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Stable name for this A2A binding \u2014 referenced from ToolRef.Source = \u0022a2a:\u003CName\u003E\u0022. Unique within a manifest."
               },
               "url": {
                 "type": "string",
-                "format": "uri"
+                "format": "uri",
+                "description": "Absolute URL of the remote agent endpoint (the A2A server\u0027s base URL)."
               },
               "authRef": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional secret:// URI resolving to a bearer token for outbound Authorization."
               },
               "metadata": {
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
-                }
+                },
+                "description": "Optional key/value pairs attached to the outbound A2A calls \u2014 e.g. trace tags, tenant hints. Consumed by A2ARemoteAgentTool when wiring the HTTP layer."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Agent2Agent (A2A) remote-agent bindings. Referenced by ToolRef.Source = \u0022a2a:\u003Cname\u003E\u0022. v0.17 Pillar B."
         },
         "localAgents": {
           "type": "array",
@@ -284,33 +340,41 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Stable name for this binding \u2014 referenced from ToolRef.Source = \u0022agent:\u003CName\u003E\u0022. Unique within a manifest."
               },
               "agentId": {
-                "type": "string"
+                "type": "string",
+                "description": "Target agent id in the registry. Defaults to Name when null."
               },
               "agentVersion": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional pinned version. Null = latest lexicographic version."
               },
               "mode": {
                 "type": "string",
                 "enum": [
                   "Blocking",
                   "Background"
-                ]
+                ],
+                "description": "Blocking (default) or Background invocation mode."
               },
               "description": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional description override. When null the runtime derives the description from the target agent\u0027s manifest Description field."
               },
               "allowCallerSuppliedSession": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Allow the coordinator LLM to supply a sessionId argument on each call, enabling multi-turn sub-conversations with the same child agent. When false (default) the session id is derived deterministically from the parent run id and call arguments so each distinct sub-task gets an isolated session that is cleaned up after the call."
               },
               "propagateAllowedTools": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Propagate the caller\u0027s AllowedTools to the child agent\u0027s context. When true (default) the child is constrained to the same tool set as the caller. Set false to let the child run under its own manifest\u0027s full tool set."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Local (same-runtime) agent bindings. Referenced by ToolRef.Source = \u0022agent:\u003Cname\u003E\u0022. v0.18 \u2014 closes P7 agent-as-tool."
         },
         "guardrails": {
           "type": "object",
@@ -321,12 +385,16 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Guardrail name \u2014 matches a DI key."
                   },
-                  "params": {}
+                  "params": {
+                    "description": "Guardrail-specific configuration. Shape is guardrail-defined."
+                  }
                 },
                 "additionalProperties": false
-              }
+              },
+              "description": "Guardrails that run before the provider call."
             },
             "output": {
               "type": "array",
@@ -334,12 +402,16 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Guardrail name \u2014 matches a DI key."
                   },
-                  "params": {}
+                  "params": {
+                    "description": "Guardrail-specific configuration. Shape is guardrail-defined."
+                  }
                 },
                 "additionalProperties": false
-              }
+              },
+              "description": "Guardrails that run on the provider response."
             },
             "tool": {
               "type": "array",
@@ -347,15 +419,20 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Guardrail name \u2014 matches a DI key."
                   },
-                  "params": {}
+                  "params": {
+                    "description": "Guardrail-specific configuration. Shape is guardrail-defined."
+                  }
                 },
                 "additionalProperties": false
-              }
+              },
+              "description": "Guardrails that run around each tool-call dispatch."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Three-layer guardrail bindings (input / output / tool) \u2014 projected onto the equivalent StatefulAgentOptions fields at runtime."
         },
         "handoffs": {
           "type": "array",
@@ -363,38 +440,48 @@
             "type": "object",
             "properties": {
               "toAgent": {
-                "type": "string"
+                "type": "string",
+                "description": "Target agent id \u2014 must resolve to another AgentManifest in the same registry."
               },
               "when": {
-                "type": "string"
+                "type": "string",
+                "description": "Free-form natural-language hint describing when this handoff applies (e.g. \u0022user asks about invoices or refunds\u0022). Used by the orchestrator today; may become a routing LLM prompt in a later pillar."
               },
               "carryHistory": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "When true, forwarding the conversation history to the target agent; when false or null, starts the target with a fresh session. Defaults to runtime policy."
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Declarative handoff targets \u2014 other agents this manifest can delegate to by id."
         },
         "budget": {
           "type": "object",
           "properties": {
             "maxTurns": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Maximum number of model invocations in a single run."
             },
             "maxToolCalls": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Maximum number of tool invocations in a single run."
             },
             "maxPromptTokens": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Total prompt tokens summed across all model invocations in a run."
             },
             "maxCompletionTokens": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Total completion tokens summed across all model invocations in a run."
             },
             "maxDuration": {
-              "type": "string"
+              "type": "string",
+              "description": "Wall-clock cap on a single run."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Per-run budget caps \u2014 projected onto RunBudget at runtime."
         },
         "contextProviders": {
           "type": "array",
@@ -402,21 +489,28 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Provider name \u2014 matches a DI key registered by the host."
               },
-              "params": {}
+              "params": {
+                "description": "Provider-specific configuration (topK, collection names, embedding model, etc). Opaque to the manifest; interpreted by the provider\u0027s factory."
+              }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Context providers bound to this agent \u2014 resolved against the host DI keyspace."
         },
-        "outputSchema": {},
+        "outputSchema": {
+          "description": "Structured-output shape for the final assistant turn. Inline JSON Schema."
+        },
         "agentMode": {
           "type": "string",
           "enum": [
             "ToolCalling",
             "SchemaGuided",
             "SchemaGuidedToolCalling"
-          ]
+          ],
+          "description": "Execution-loop flavour \u2014 ToolCalling by default. Non-default values are contract-only in v0.6."
         },
         "reasoning": {
           "type": "object",
@@ -427,47 +521,61 @@
                 "Cascade",
                 "Routing",
                 "Cycle"
-              ]
+              ],
+              "description": "Reasoning flow shape \u2014 see ReasoningPattern."
             },
-            "schema": {},
+            "schema": {
+              "description": "Inline JSON Schema for the reasoning output. Field order matters."
+            },
             "schemaRef": {
-              "type": "string"
+              "type": "string",
+              "description": "Alternative to Schema \u2014 opaque name resolved by the host\u0027s DI keyspace."
             },
             "maxIterations": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Cap on cycle iterations for Cycle. Null = runtime default."
             },
             "maxClarifications": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Cap on clarification rounds \u2014 interrupts raised to the user. Null = runtime default."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Schema-Guided Reasoning configuration. Contract-only in v0.6 \u2014 engine treats as ToolCalling."
         },
         "observability": {
           "type": "object",
           "properties": {
             "langfuseProject": {
-              "type": "string"
+              "type": "string",
+              "description": "Langfuse project name. Null = use host-default project."
             },
             "samplingRate": {
-              "type": "number"
+              "type": "number",
+              "description": "Per-agent trace sampling rate (0.0 \u2013 1.0). Null = host-default."
             },
             "tags": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
-              }
+              },
+              "description": "Static tags attached to every emitted trace / metric for this agent."
             },
             "tracingEnabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Explicit on/off toggle. Null = host-default."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Observability overlays \u2014 Langfuse project, sampling, custom tags."
         },
         "llmGatewayRef": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional reference to a deployed LlmGatewayConfigManifest by id. When set, the translator builds a per-agent LlmGatewayPipeline from the referenced config at grain activation, replacing (not appending to) the DI-global chain entirely. Null = DI-global chain applies unchanged (backwards compatible)."
         },
         "mcpGatewayRef": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional reference to a deployed McpGatewayConfigManifest by id. When set, a per-agent ToolGatewayMiddleware chain is built from the referenced config at grain activation, replacing the DI-global chain entirely. Null = DI-global chain applies unchanged."
         }
       },
       "additionalProperties": false

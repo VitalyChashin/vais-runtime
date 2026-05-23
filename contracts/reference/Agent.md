@@ -28,116 +28,116 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `Agent` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.handler` | object | no |
-| `spec.handler.typeName` | string | no |
-| `spec.handler.assemblyName` | string | no |
-| `spec.protocols` | array&lt;object&gt; | no |
-| `spec.protocols[].kind` | string | no |
-| `spec.protocols[].endpoint` | string | no |
-| `spec.tools` | array&lt;object&gt; | no |
-| `spec.tools[].name` | string | no |
-| `spec.tools[].source` | string | no |
-| `spec.memory` | object | no |
-| `spec.memory.provider` | string | no |
-| `spec.memory.connectionName` | string | no |
-| `spec.memory.scope` | string | no |
-| `spec.memory.historyReducer` | string | no |
-| `spec.identity` | object | no |
-| `spec.identity.inboundAuth` | string | no |
-| `spec.identity.outboundCredentials` | string | no |
-| `spec.identity.credentials` | array&lt;object&gt; | no |
-| `spec.identity.credentials[].name` | string | no |
-| `spec.identity.credentials[].ref` | string | no |
-| `spec.identity.credentials[].type` | string | no |
-| `spec.identity.inboundClaims` | map&lt;string, string&gt; | no |
-| `spec.autoscaling` | object | no |
-| `spec.autoscaling.minReplicas` | integer | no |
-| `spec.autoscaling.maxReplicas` | integer | no |
-| `spec.autoscaling.target` | string | no |
-| `spec.autoscaling.targetValue` | number | no |
-| `spec.autoscaling.idleTtl` | string | no |
-| `spec.model` | object | no |
-| `spec.model.provider` | string | no |
-| `spec.model.id` | string | no |
-| `spec.model.apiKeyRef` | string | no |
-| `spec.model.baseUrlRef` | string | no |
-| `spec.model.temperature` | number | no |
-| `spec.model.topP` | number | no |
-| `spec.model.maxTokens` | integer | no |
-| `spec.model.responseFormat` | string | no |
-| `spec.systemPrompt` | object | no |
-| `spec.systemPrompt.inline` | string | no |
-| `spec.systemPrompt.templateRef` | string | no |
-| `spec.systemPrompt.fileRef` | string | no |
-| `spec.systemPrompt.variables` | map&lt;string, string&gt; | no |
-| `spec.mcpServers` | array&lt;object&gt; | no |
-| `spec.mcpServers[].name` | string | no |
-| `spec.mcpServers[].transport` | string | no |
-| `spec.mcpServers[].command` | string | no |
-| `spec.mcpServers[].args` | array&lt;string&gt; | no |
-| `spec.mcpServers[].url` | string | no |
-| `spec.mcpServers[].env` | map&lt;string, string&gt; | no |
-| `spec.mcpServers[].authRef` | string | no |
-| `spec.mcpServers[].tools` | array&lt;string&gt; | no |
-| `spec.a2aRemoteAgents` | array&lt;object&gt; | no |
-| `spec.a2aRemoteAgents[].name` | string | no |
-| `spec.a2aRemoteAgents[].url` | string | no |
-| `spec.a2aRemoteAgents[].authRef` | string | no |
-| `spec.a2aRemoteAgents[].metadata` | map&lt;string, string&gt; | no |
-| `spec.localAgents` | array&lt;object&gt; | no |
-| `spec.localAgents[].name` | string | no |
-| `spec.localAgents[].agentId` | string | no |
-| `spec.localAgents[].agentVersion` | string | no |
-| `spec.localAgents[].mode` | enum: `Blocking` \| `Background` | no |
-| `spec.localAgents[].description` | string | no |
-| `spec.localAgents[].allowCallerSuppliedSession` | boolean | no |
-| `spec.localAgents[].propagateAllowedTools` | boolean | no |
-| `spec.guardrails` | object | no |
-| `spec.guardrails.input` | array&lt;object&gt; | no |
-| `spec.guardrails.input[].name` | string | no |
-| `spec.guardrails.input[].params` | any | no |
-| `spec.guardrails.output` | array&lt;object&gt; | no |
-| `spec.guardrails.output[].name` | string | no |
-| `spec.guardrails.output[].params` | any | no |
-| `spec.guardrails.tool` | array&lt;object&gt; | no |
-| `spec.guardrails.tool[].name` | string | no |
-| `spec.guardrails.tool[].params` | any | no |
-| `spec.handoffs` | array&lt;object&gt; | no |
-| `spec.handoffs[].toAgent` | string | no |
-| `spec.handoffs[].when` | string | no |
-| `spec.handoffs[].carryHistory` | boolean | no |
-| `spec.budget` | object | no |
-| `spec.budget.maxTurns` | integer | no |
-| `spec.budget.maxToolCalls` | integer | no |
-| `spec.budget.maxPromptTokens` | integer | no |
-| `spec.budget.maxCompletionTokens` | integer | no |
-| `spec.budget.maxDuration` | string | no |
-| `spec.contextProviders` | array&lt;object&gt; | no |
-| `spec.contextProviders[].name` | string | no |
-| `spec.contextProviders[].params` | any | no |
-| `spec.outputSchema` | any | no |
-| `spec.agentMode` | enum: `ToolCalling` \| `SchemaGuided` \| `SchemaGuidedToolCalling` | no |
-| `spec.reasoning` | object | no |
-| `spec.reasoning.pattern` | enum: `Cascade` \| `Routing` \| `Cycle` | no |
-| `spec.reasoning.schema` | any | no |
-| `spec.reasoning.schemaRef` | string | no |
-| `spec.reasoning.maxIterations` | integer | no |
-| `spec.reasoning.maxClarifications` | integer | no |
-| `spec.observability` | object | no |
-| `spec.observability.langfuseProject` | string | no |
-| `spec.observability.samplingRate` | number | no |
-| `spec.observability.tags` | map&lt;string, string&gt; | no |
-| `spec.observability.tracingEnabled` | boolean | no |
-| `spec.llmGatewayRef` | string | no |
-| `spec.mcpGatewayRef` | string | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `Agent` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.handler` | object | no | Code reference (class name / image ref) the runtime instantiates. |
+| `spec.handler.typeName` | string | no | Fully-qualified .NET type name for in-process, or OCI image reference for containerized runtimes. |
+| `spec.handler.assemblyName` | string | no | Optional assembly name; null when TypeName is already fully qualified or when the runtime resolves via a different mechanism. |
+| `spec.protocols` | array&lt;object&gt; | no | Protocol bindings the agent is exposed on — HTTP, A2A, MCP, custom. |
+| `spec.protocols[].kind` | string | no | Protocol name — "Http", "A2A", "Mcp", "SignalR", etc. Consumer-defined; no enum to keep the shape open. |
+| `spec.protocols[].endpoint` | string | no | Optional endpoint hint (URL, path, channel name). Null when the runtime chooses. |
+| `spec.tools` | array&lt;object&gt; | no | Tools available to the agent. Each entry names a tool and optionally points at a source. |
+| `spec.tools[].name` | string | no | Tool name — matches Name. |
+| `spec.tools[].source` | string | no | Optional source identifier (e.g., MCP-server id, A2A remote name). Null when the tool is registered locally. |
+| `spec.memory` | object | no | Memory backing — pluggable store provider + connection ref. Null for ephemeral. |
+| `spec.memory.provider` | string | no | Provider name — e.g., "Redis", "Postgres", "VectorData". Consumer-defined. |
+| `spec.memory.connectionName` | string | no | Optional connection / named-instance ref resolved at runtime. |
+| `spec.memory.scope` | string | no | Memory scope — "session" (per-conversation) or "agent" (shared across sessions). Null = runtime default. |
+| `spec.memory.historyReducer` | string | no | Optional history-reducer name — resolved against the host DI keyspace. |
+| `spec.identity` | object | no | Inbound/outbound auth configuration. Null for unauthenticated scenarios (dev, single-tenant). |
+| `spec.identity.inboundAuth` | string | no | Inbound-auth scheme reference (e.g., OAuth issuer, mTLS profile name). |
+| `spec.identity.outboundCredentials` | string | no | Legacy single-credential reference. Kept for v0.4 back-compat; prefer Credentials for multi-credential manifests. |
+| `spec.identity.credentials` | array&lt;object&gt; | no | List of outbound credentials the agent's tools / adapters can look up by name at invocation time. Introduced in v0.6 — supersedes the single-valued OutboundCredentials string when multiple credentials are needed. |
+| `spec.identity.credentials[].name` | string | no | Stable name tools / adapters use to look up this credential at invocation time. E.g. an MCP server with authRef: openai-api matches a credential with Name: "openai-api". |
+| `spec.identity.credentials[].ref` | string | no | secret:// URI pointing at the credential store. |
+| `spec.identity.credentials[].type` | string | no | Credential kind — "bearer", "basic", "oauth2ClientCredentials", "apiKey", "custom". Consumer-defined; the identity provider routes on this value. |
+| `spec.identity.inboundClaims` | map&lt;string, string&gt; | no | Optional required-claims map for inbound JWT validation (e.g. scope: "agent:invoke"). |
+| `spec.autoscaling` | object | no | Replica caps + target concurrency. Null for "whatever the runtime defaults to". |
+| `spec.autoscaling.minReplicas` | integer | no | Minimum replicas. 0 means scale-to-zero is allowed. |
+| `spec.autoscaling.maxReplicas` | integer | no | Maximum replicas. Null means unbounded (runtime-default). |
+| `spec.autoscaling.target` | string | no | Free-form target metric — e.g., "concurrent-requests", "cpu:70%". Consumer-defined. |
+| `spec.autoscaling.targetValue` | number | no | Optional numeric target value paired with Target — e.g. Target: "cpu", TargetValue: 0.7. |
+| `spec.autoscaling.idleTtl` | string | no | Deactivate idle replicas after this duration. Null = runtime default. |
+| `spec.model` | object | no | LLM model binding for declarative agents. Null when Handler carries custom behaviour. Set via object-initializer syntax: new AgentManifest(...) { Model = new ModelSpec(...) }. |
+| `spec.model.provider` | string | no | Provider key — e.g. "openai", "azureOpenAi", "anthropic", "google", "mistral", "local", "custom". Consumer-defined; the runtime routes to the matching ICompletionProvider binding. |
+| `spec.model.id` | string | no | Model identifier the provider understands — "gpt-4.1", "claude-3-7-sonnet", etc. |
+| `spec.model.apiKeyRef` | string | no | Credential pointer (secret:// URI) resolved at activation time. |
+| `spec.model.baseUrlRef` | string | no | Optional base-URL override for Azure / proxy / local deployments. |
+| `spec.model.temperature` | number | no | Optional sampling temperature. Null = provider default. |
+| `spec.model.topP` | number | no | Optional nucleus-sampling threshold. Null = provider default. |
+| `spec.model.maxTokens` | integer | no | Optional response token cap. Null = provider default. |
+| `spec.model.responseFormat` | string | no | Optional response shape — "text" (default), "json", or "structured". Consumer-defined; the runtime's model provider interprets. |
+| `spec.systemPrompt` | object | no | System prompt — inline text, template reference, or file reference. Exactly one shape set when non-null. |
+| `spec.systemPrompt.inline` | string | no | Literal prompt text. Use for small / agent-specific prompts. |
+| `spec.systemPrompt.templateRef` | string | no | Name of a prompt template registered in the host's ISystemPromptComposer / IPromptTemplate DI keyspace. Combined with Variables. |
+| `spec.systemPrompt.fileRef` | string | no | Path to a prompt file, relative to the manifest's directory. |
+| `spec.systemPrompt.variables` | map&lt;string, string&gt; | no | Optional variable bag for TemplateRef. |
+| `spec.mcpServers` | array&lt;object&gt; | no | Model Context Protocol server bindings. Each server contributes tools to the agent at activation time. |
+| `spec.mcpServers[].name` | string | no | Stable name for this MCP binding — used for logging, audit, and the optional Tools allowlist reference from Source. |
+| `spec.mcpServers[].transport` | string | no | One of "stdio", "streamableHttp", "sse", "plugin", or RegisteredTransport. Use "plugin" for servers whose subprocess is managed by the runtime (e.g. Python plugins loaded via INamedToolSourceProvider); command and url are not required or used for this transport. |
+| `spec.mcpServers[].command` | string | no | Executable path for stdio transport. Required when Transport = "stdio". |
+| `spec.mcpServers[].args` | array&lt;string&gt; | no | Command-line arguments for stdio. |
+| `spec.mcpServers[].url` | string | no | Server URL for streamableHttp / sse. Required for those transports. |
+| `spec.mcpServers[].env` | map&lt;string, string&gt; | no | Environment variables passed to stdio child processes. |
+| `spec.mcpServers[].authRef` | string | no | Optional secret:// URI for bearer / header auth on HTTP transports. |
+| `spec.mcpServers[].tools` | array&lt;string&gt; | no | Optional allowlist restricting which tools from the server are exposed to the agent. Null / empty = expose all tools the server lists. |
+| `spec.a2aRemoteAgents` | array&lt;object&gt; | no | Agent2Agent (A2A) remote-agent bindings. Referenced by ToolRef.Source = "a2a:<name>". v0.17 Pillar B. |
+| `spec.a2aRemoteAgents[].name` | string | no | Stable name for this A2A binding — referenced from ToolRef.Source = "a2a:<Name>". Unique within a manifest. |
+| `spec.a2aRemoteAgents[].url` | string | no | Absolute URL of the remote agent endpoint (the A2A server's base URL). |
+| `spec.a2aRemoteAgents[].authRef` | string | no | Optional secret:// URI resolving to a bearer token for outbound Authorization. |
+| `spec.a2aRemoteAgents[].metadata` | map&lt;string, string&gt; | no | Optional key/value pairs attached to the outbound A2A calls — e.g. trace tags, tenant hints. Consumed by A2ARemoteAgentTool when wiring the HTTP layer. |
+| `spec.localAgents` | array&lt;object&gt; | no | Local (same-runtime) agent bindings. Referenced by ToolRef.Source = "agent:<name>". v0.18 — closes P7 agent-as-tool. |
+| `spec.localAgents[].name` | string | no | Stable name for this binding — referenced from ToolRef.Source = "agent:<Name>". Unique within a manifest. |
+| `spec.localAgents[].agentId` | string | no | Target agent id in the registry. Defaults to Name when null. |
+| `spec.localAgents[].agentVersion` | string | no | Optional pinned version. Null = latest lexicographic version. |
+| `spec.localAgents[].mode` | enum: `Blocking` \| `Background` | no | Blocking (default) or Background invocation mode. |
+| `spec.localAgents[].description` | string | no | Optional description override. When null the runtime derives the description from the target agent's manifest Description field. |
+| `spec.localAgents[].allowCallerSuppliedSession` | boolean | no | Allow the coordinator LLM to supply a sessionId argument on each call, enabling multi-turn sub-conversations with the same child agent. When false (default) the session id is derived deterministically from the parent run id and call arguments so each distinct sub-task gets an isolated session that is cleaned up after the call. |
+| `spec.localAgents[].propagateAllowedTools` | boolean | no | Propagate the caller's AllowedTools to the child agent's context. When true (default) the child is constrained to the same tool set as the caller. Set false to let the child run under its own manifest's full tool set. |
+| `spec.guardrails` | object | no | Three-layer guardrail bindings (input / output / tool) — projected onto the equivalent StatefulAgentOptions fields at runtime. |
+| `spec.guardrails.input` | array&lt;object&gt; | no | Guardrails that run before the provider call. |
+| `spec.guardrails.input[].name` | string | no | Guardrail name — matches a DI key. |
+| `spec.guardrails.input[].params` | any | no | Guardrail-specific configuration. Shape is guardrail-defined. |
+| `spec.guardrails.output` | array&lt;object&gt; | no | Guardrails that run on the provider response. |
+| `spec.guardrails.output[].name` | string | no | Guardrail name — matches a DI key. |
+| `spec.guardrails.output[].params` | any | no | Guardrail-specific configuration. Shape is guardrail-defined. |
+| `spec.guardrails.tool` | array&lt;object&gt; | no | Guardrails that run around each tool-call dispatch. |
+| `spec.guardrails.tool[].name` | string | no | Guardrail name — matches a DI key. |
+| `spec.guardrails.tool[].params` | any | no | Guardrail-specific configuration. Shape is guardrail-defined. |
+| `spec.handoffs` | array&lt;object&gt; | no | Declarative handoff targets — other agents this manifest can delegate to by id. |
+| `spec.handoffs[].toAgent` | string | no | Target agent id — must resolve to another AgentManifest in the same registry. |
+| `spec.handoffs[].when` | string | no | Free-form natural-language hint describing when this handoff applies (e.g. "user asks about invoices or refunds"). Used by the orchestrator today; may become a routing LLM prompt in a later pillar. |
+| `spec.handoffs[].carryHistory` | boolean | no | When true, forwarding the conversation history to the target agent; when false or null, starts the target with a fresh session. Defaults to runtime policy. |
+| `spec.budget` | object | no | Per-run budget caps — projected onto RunBudget at runtime. |
+| `spec.budget.maxTurns` | integer | no | Maximum number of model invocations in a single run. |
+| `spec.budget.maxToolCalls` | integer | no | Maximum number of tool invocations in a single run. |
+| `spec.budget.maxPromptTokens` | integer | no | Total prompt tokens summed across all model invocations in a run. |
+| `spec.budget.maxCompletionTokens` | integer | no | Total completion tokens summed across all model invocations in a run. |
+| `spec.budget.maxDuration` | string | no | Wall-clock cap on a single run. |
+| `spec.contextProviders` | array&lt;object&gt; | no | Context providers bound to this agent — resolved against the host DI keyspace. |
+| `spec.contextProviders[].name` | string | no | Provider name — matches a DI key registered by the host. |
+| `spec.contextProviders[].params` | any | no | Provider-specific configuration (topK, collection names, embedding model, etc). Opaque to the manifest; interpreted by the provider's factory. |
+| `spec.outputSchema` | any | no | Structured-output shape for the final assistant turn. Inline JSON Schema. |
+| `spec.agentMode` | enum: `ToolCalling` \| `SchemaGuided` \| `SchemaGuidedToolCalling` | no | Execution-loop flavour — ToolCalling by default. Non-default values are contract-only in v0.6. |
+| `spec.reasoning` | object | no | Schema-Guided Reasoning configuration. Contract-only in v0.6 — engine treats as ToolCalling. |
+| `spec.reasoning.pattern` | enum: `Cascade` \| `Routing` \| `Cycle` | no | Reasoning flow shape — see ReasoningPattern. |
+| `spec.reasoning.schema` | any | no | Inline JSON Schema for the reasoning output. Field order matters. |
+| `spec.reasoning.schemaRef` | string | no | Alternative to Schema — opaque name resolved by the host's DI keyspace. |
+| `spec.reasoning.maxIterations` | integer | no | Cap on cycle iterations for Cycle. Null = runtime default. |
+| `spec.reasoning.maxClarifications` | integer | no | Cap on clarification rounds — interrupts raised to the user. Null = runtime default. |
+| `spec.observability` | object | no | Observability overlays — Langfuse project, sampling, custom tags. |
+| `spec.observability.langfuseProject` | string | no | Langfuse project name. Null = use host-default project. |
+| `spec.observability.samplingRate` | number | no | Per-agent trace sampling rate (0.0 – 1.0). Null = host-default. |
+| `spec.observability.tags` | map&lt;string, string&gt; | no | Static tags attached to every emitted trace / metric for this agent. |
+| `spec.observability.tracingEnabled` | boolean | no | Explicit on/off toggle. Null = host-default. |
+| `spec.llmGatewayRef` | string | no | Optional reference to a deployed LlmGatewayConfigManifest by id. When set, the translator builds a per-agent LlmGatewayPipeline from the referenced config at grain activation, replacing (not appending to) the DI-global chain entirely. Null = DI-global chain applies unchanged (backwards compatible). |
+| `spec.mcpGatewayRef` | string | no | Optional reference to a deployed McpGatewayConfigManifest by id. When set, a per-agent ToolGatewayMiddleware chain is built from the referenced config at grain activation, replacing the DI-global chain entirely. Null = DI-global chain applies unchanged. |

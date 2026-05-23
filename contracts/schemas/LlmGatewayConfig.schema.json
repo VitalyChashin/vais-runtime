@@ -49,24 +49,31 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Registered middleware name \u2014 e.g. \u0022Prometheus\u0022, \u0022Fallback\u0022, \u0022ToolRateLimit\u0022."
               },
-              "params": {}
+              "params": {
+                "description": "Optional JSON params forwarded to the factory verbatim."
+              }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Ordered list of middleware layers. Execution order: index 0 = outermost interceptor. Each entry is resolved at activation time via ILlmGatewayMiddlewareFactory."
         },
         "rateLimit": {
           "type": "object",
           "properties": {
             "requestsPerMinute": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Max completion requests per minute across all agents using this config. Null = uncapped."
             },
             "tokensPerMinute": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Max tokens (prompt \u002B completion) per minute. Null = uncapped."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Optional rate-limit caps applied at the gateway level."
         }
       },
       "additionalProperties": false

@@ -24,34 +24,34 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `ContainerPlugin` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.image` | string | no |
-| `spec.build` | object | no |
-| `spec.build.context` | string | no |
-| `spec.build.dockerfile` | string | no |
-| `spec.build.args` | map&lt;string, string&gt; | no |
-| `spec.build.push` | boolean | no |
-| `spec.port` | integer | no |
-| `spec.topology` | string | no |
-| `spec.startupTimeoutSeconds` | integer | no |
-| `spec.invokeTimeoutSeconds` | integer | no |
-| `spec.imagePullPolicy` | string | no |
-| `spec.retryPolicy` | object | no |
-| `spec.retryPolicy.maxAttempts` | integer | no |
-| `spec.retryPolicy.backoffSeconds` | integer | no |
-| `spec.retryPolicy.retryOn` | array&lt;string&gt; | no |
-| `spec.kubernetes` | object | no |
-| `spec.kubernetes.serviceUrl` | string | no |
-| `spec.kubernetes.deploymentName` | string | no |
-| `spec.kubernetes.namespace` | string | no |
-| `spec.secrets` | map&lt;string, string&gt; | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `ContainerPlugin` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.image` | string | no | Container image reference (e.g., my-registry/plugin:1.0). |
+| `spec.build` | object | no | Optional client-side build configuration for build-on-apply. Stored by the server but not acted upon at deploy time. |
+| `spec.build.context` | string | no | Docker build context path. Relative paths are resolved against the manifest file's directory. |
+| `spec.build.dockerfile` | string | no | Dockerfile path relative to Context. Default: Dockerfile. |
+| `spec.build.args` | map&lt;string, string&gt; | no | Optional --build-arg key=value pairs. |
+| `spec.build.push` | boolean | no | Run docker push after a successful build. Default: false. |
+| `spec.port` | integer | no | Port the container exposes for the IP-1 HTTP protocol. Default: 8080. |
+| `spec.topology` | string | no | Deployment topology: standalone \| sidecar \| kubernetes. Default: standalone. |
+| `spec.startupTimeoutSeconds` | integer | no | Seconds to wait for the container health check on startup. Default: 30. |
+| `spec.invokeTimeoutSeconds` | integer | no | Seconds allowed per invoke call before timing out. Default: 60. |
+| `spec.imagePullPolicy` | string | no | Docker image pull policy: Always \| IfNotPresent \| Never. Default: IfNotPresent. |
+| `spec.retryPolicy` | object | no | Optional retry policy for failed invocations. |
+| `spec.retryPolicy.maxAttempts` | integer | no |  |
+| `spec.retryPolicy.backoffSeconds` | integer | no |  |
+| `spec.retryPolicy.retryOn` | array&lt;string&gt; | no |  |
+| `spec.kubernetes` | object | no | Kubernetes-specific configuration (required when Topology is kubernetes). |
+| `spec.kubernetes.serviceUrl` | string | no | URL of the Kubernetes Service the runtime should probe (e.g., http://my-plugin.default.svc.cluster.local:8080). |
+| `spec.kubernetes.deploymentName` | string | no | Kubernetes Deployment name (used for image patching). |
+| `spec.kubernetes.namespace` | string | no | Kubernetes namespace. Default: default. |
+| `spec.secrets` | map&lt;string, string&gt; | no | Secret references injected as environment variables. Key = env-var name; value = secret:// URI. |

@@ -22,20 +22,20 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `LlmGatewayConfig` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.middleware` | array&lt;object&gt; | no |
-| `spec.middleware[].name` | string | no |
-| `spec.middleware[].params` | any | no |
-| `spec.rateLimit` | object | no |
-| `spec.rateLimit.requestsPerMinute` | integer | no |
-| `spec.rateLimit.tokensPerMinute` | integer | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `LlmGatewayConfig` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.middleware` | array&lt;object&gt; | no | Ordered list of middleware layers. Execution order: index 0 = outermost interceptor. Each entry is resolved at activation time via ILlmGatewayMiddlewareFactory. |
+| `spec.middleware[].name` | string | no | Registered middleware name — e.g. "Prometheus", "Fallback", "ToolRateLimit". |
+| `spec.middleware[].params` | any | no | Optional JSON params forwarded to the factory verbatim. |
+| `spec.rateLimit` | object | no | Optional rate-limit caps applied at the gateway level. |
+| `spec.rateLimit.requestsPerMinute` | integer | no | Max completion requests per minute across all agents using this config. Null = uncapped. |
+| `spec.rateLimit.tokensPerMinute` | integer | no | Max tokens (prompt + completion) per minute. Null = uncapped. |

@@ -34,7 +34,7 @@ public sealed class ManifestReferenceDocTests
     [MemberData(nameof(Kinds))]
     public void ReferenceDoc_IsCheckedIn_AndUpToDate(string kind, Type recordType)
     {
-        var schema = ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(recordType, kind);
+        var schema = ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(recordType, kind, XmlDocSummaries.ForAbstractions());
         var doc = Render(kind, schema, ReadExample(kind));
         var path = DocPath(kind);
 
@@ -65,14 +65,16 @@ public sealed class ManifestReferenceDocTests
         sb.Append(exampleYaml.TrimEnd('\n'));
         sb.Append("\n```\n\n");
 
-        sb.Append("## Fields\n\n| Path | Type | Required |\n|------|------|----------|\n");
+        sb.Append("## Fields\n\n| Path | Type | Required | Description |\n|------|------|----------|-------------|\n");
         using var doc = JsonDocument.Parse(schemaJson);
         foreach (var row in WalkObject(doc.RootElement, ""))
-            sb.Append($"| `{row.Path}` | {row.Type} | {(row.Required ? "yes" : "no")} |\n");
+            sb.Append($"| `{row.Path}` | {row.Type} | {(row.Required ? "yes" : "no")} | {EscapeCell(row.Description)} |\n");
         return sb.ToString();
     }
 
-    private readonly record struct FieldRow(string Path, string Type, bool Required);
+    private static string EscapeCell(string s) => s.Replace("|", "\\|");
+
+    private readonly record struct FieldRow(string Path, string Type, bool Required, string Description);
 
     private static IEnumerable<FieldRow> WalkObject(JsonElement objectSchema, string prefix)
     {
@@ -83,7 +85,8 @@ public sealed class ManifestReferenceDocTests
         foreach (var prop in props.EnumerateObject())
         {
             var path = prefix.Length == 0 ? prop.Name : $"{prefix}.{prop.Name}";
-            yield return new FieldRow(path, DescribeType(prop.Value), required.Contains(prop.Name));
+            var description = prop.Value.TryGetProperty("description", out var d) ? d.GetString() ?? "" : "";
+            yield return new FieldRow(path, DescribeType(prop.Value), required.Contains(prop.Name), description);
 
             // Recurse: nested object, or array-of-objects.
             if (IsObjectWithProperties(prop.Value))

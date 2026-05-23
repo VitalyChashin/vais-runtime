@@ -25,18 +25,18 @@ spec:
 
 ## Fields
 
-| Path | Type | Required |
-|------|------|----------|
-| `apiVersion` | `vais.agents/v1` | yes |
-| `kind` | `McpGatewayConfig` | yes |
-| `metadata` | object | yes |
-| `metadata.id` | string | yes |
-| `metadata.version` | string | yes |
-| `metadata.description` | string | no |
-| `metadata.labels` | map&lt;string, string&gt; | no |
-| `metadata.annotations` | map&lt;string, string&gt; | no |
-| `spec` | object | yes |
-| `spec.middleware` | array&lt;object&gt; | no |
-| `spec.middleware[].name` | string | no |
-| `spec.middleware[].params` | any | no |
-| `spec.workspacePolicies` | map&lt;string, object&gt; | no |
+| Path | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiVersion` | `vais.agents/v1` | yes |  |
+| `kind` | `McpGatewayConfig` | yes |  |
+| `metadata` | object | yes |  |
+| `metadata.id` | string | yes |  |
+| `metadata.version` | string | yes |  |
+| `metadata.description` | string | no |  |
+| `metadata.labels` | map&lt;string, string&gt; | no |  |
+| `metadata.annotations` | map&lt;string, string&gt; | no |  |
+| `spec` | object | yes |  |
+| `spec.middleware` | array&lt;object&gt; | no |  |
+| `spec.middleware[].name` | string | no | Registered middleware name — e.g. "Prometheus", "Fallback", "ToolRateLimit". |
+| `spec.middleware[].params` | any | no | Optional JSON params forwarded to the factory verbatim. |
+| `spec.workspacePolicies` | map&lt;string, object&gt; | no | Per-workspace allow/deny tool policies. Keys are AgentContext.WorkspaceId values. Absent workspace → no policy constraint beyond the middleware chain. |

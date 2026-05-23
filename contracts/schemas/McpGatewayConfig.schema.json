@@ -49,9 +49,12 @@
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Registered middleware name \u2014 e.g. \u0022Prometheus\u0022, \u0022Fallback\u0022, \u0022ToolRateLimit\u0022."
               },
-              "params": {}
+              "params": {
+                "description": "Optional JSON params forwarded to the factory verbatim."
+              }
             },
             "additionalProperties": false
           }
@@ -78,7 +81,8 @@
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Per-workspace allow/deny tool policies. Keys are AgentContext.WorkspaceId values. Absent workspace \u2192 no policy constraint beyond the middleware chain."
         }
       },
       "additionalProperties": false

@@ -21,6 +21,11 @@ namespace Vais.Agents.Control.Manifests;
 /// and the nested-<c>Spec</c> unwrap. The one rule with no type-level equivalent — AgentGraph's
 /// <c>stateSchema → spec.state.schema</c> hook — is reproduced here and guarded by tests.
 /// Closed hierarchies (predicate/effect/reducer) are permissive (any) in v1.
+/// <para>
+/// Optional per-field <c>description</c>s are supplied by the caller (keyed by XML-doc
+/// member id <c>P:Namespace.Type.Property</c>), loaded from the assembly's XML doc file — so
+/// this stays free of any runtime doc-file dependency.
+/// </para>
 /// </remarks>
 public static class ManifestJsonSchemaGenerator
 {
@@ -34,12 +39,15 @@ public static class ManifestJsonSchemaGenerator
     };
 
     /// <summary>Generate the indented JSON Schema string for <paramref name="recordType"/> as envelope <paramref name="kind"/>.</summary>
-    public static string GenerateEnvelopeSchema(Type recordType, string kind)
+    /// <param name="recordType">The manifest record type.</param>
+    /// <param name="kind">The envelope <c>kind</c> value.</param>
+    /// <param name="descriptions">Optional XML-doc member-id → description map for per-field <c>description</c>s.</param>
+    public static string GenerateEnvelopeSchema(Type recordType, string kind, IReadOnlyDictionary<string, string>? descriptions = null)
     {
         ArgumentNullException.ThrowIfNull(recordType);
         ArgumentException.ThrowIfNullOrWhiteSpace(kind);
 
-        var spec = BuildSpecSchema(recordType);
+        var spec = BuildSpecSchema(recordType, descriptions);
         if (kind == "AgentGraph")
             ApplyGraphStateHook(spec);
 
@@ -76,7 +84,7 @@ public static class ManifestJsonSchemaGenerator
         ["additionalProperties"] = false,
     };
 
-    private static JsonObject BuildSpecSchema(Type recordType)
+    private static JsonObject BuildSpecSchema(Type recordType, IReadOnlyDictionary<string, string>? descriptions)
     {
         var specProps = recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => !MetadataKeys.Contains(WireName(p)))
@@ -87,10 +95,10 @@ public static class ManifestJsonSchemaGenerator
         if (specProps is [var only] && string.Equals(WireName(only), "spec", StringComparison.OrdinalIgnoreCase)
             && IsConcreteRecord(Underlying(only.PropertyType)))
         {
-            return RecordSchema(Underlying(only.PropertyType), new HashSet<Type>());
+            return RecordSchema(Underlying(only.PropertyType), new HashSet<Type>(), descriptions);
         }
 
-        return ObjectSchema(specProps, new HashSet<Type>());
+        return ObjectSchema(specProps, new HashSet<Type>(), descriptions);
     }
 
     // AgentGraph stores its JSON Schema flat as StateSchema, but the wire nests it under
@@ -108,14 +116,22 @@ public static class ManifestJsonSchemaGenerator
         }
     }
 
-    private static JsonObject RecordSchema(Type recordType, HashSet<Type> visited)
-        => ObjectSchema(recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance), visited);
+    private static JsonObject RecordSchema(Type recordType, HashSet<Type> visited, IReadOnlyDictionary<string, string>? descriptions)
+        => ObjectSchema(recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance), visited, descriptions);
 
-    private static JsonObject ObjectSchema(IEnumerable<PropertyInfo> props, HashSet<Type> visited)
+    private static JsonObject ObjectSchema(IEnumerable<PropertyInfo> props, HashSet<Type> visited, IReadOnlyDictionary<string, string>? descriptions)
     {
         var properties = new JsonObject();
         foreach (var prop in props)
-            properties[WireName(prop)] = TypeSchema(prop.PropertyType, visited);
+        {
+            var schema = TypeSchema(prop.PropertyType, visited, descriptions);
+            if (descriptions is not null && schema is JsonObject obj
+                && descriptions.TryGetValue(MemberId(prop), out var description))
+            {
+                obj["description"] = description;
+            }
+            properties[WireName(prop)] = schema;
+        }
         return new JsonObject
         {
             ["type"] = "object",
@@ -124,7 +140,7 @@ public static class ManifestJsonSchemaGenerator
         };
     }
 
-    private static JsonNode TypeSchema(Type type, HashSet<Type> visited)
+    private static JsonNode TypeSchema(Type type, HashSet<Type> visited, IReadOnlyDictionary<string, string>? descriptions)
     {
         var t = Underlying(type);
 
@@ -142,14 +158,14 @@ public static class ManifestJsonSchemaGenerator
             return new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(Enum.GetNames(t).Select(n => (JsonNode?)n).ToArray()) };
 
         if (DictionaryValueType(t) is { } valueType)
-            return new JsonObject { ["type"] = "object", ["additionalProperties"] = TypeSchema(valueType, visited) };
+            return new JsonObject { ["type"] = "object", ["additionalProperties"] = TypeSchema(valueType, visited, descriptions) };
         if (ListElementType(t) is { } elemType)
-            return new JsonObject { ["type"] = "array", ["items"] = TypeSchema(elemType, visited) };
+            return new JsonObject { ["type"] = "array", ["items"] = TypeSchema(elemType, visited, descriptions) };
 
         if (IsConcreteRecord(t))
         {
             if (!visited.Add(t)) return new JsonObject(); // cycle guard → any
-            var schema = RecordSchema(t, visited);
+            var schema = RecordSchema(t, visited, descriptions);
             visited.Remove(t);
             return schema;
         }
@@ -160,6 +176,8 @@ public static class ManifestJsonSchemaGenerator
 
     private static JsonObject StringMapSchema()
         => new() { ["type"] = "object", ["additionalProperties"] = new JsonObject { ["type"] = "string" } };
+
+    private static string MemberId(PropertyInfo prop) => $"P:{prop.DeclaringType!.FullName}.{prop.Name}";
 
     private static string WireName(PropertyInfo prop)
     {

@@ -33,7 +33,7 @@ public sealed class ManifestJsonSchemaTests
     [MemberData(nameof(Kinds))]
     public void Schema_IsCheckedIn_AndUpToDate(string kind, Type recordType)
     {
-        var generated = ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(recordType, kind);
+        var generated = ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(recordType, kind, XmlDocSummaries.ForAbstractions());
         var path = SchemaPath(kind);
 
         if (Environment.GetEnvironmentVariable("VAIS_UPDATE_SCHEMAS") == "1")
