@@ -251,166 +251,38 @@ internal static class EnvelopeSerializer
         };
     }
 
-    // MS-1 (Phase 3): gateway configs serialize through the generic EnvelopeCodec.
+    // MS-1 (Phase 3): "flat-mapping" kinds serialize through the generic EnvelopeCodec.
+    // AgentManifest + AgentGraphManifest keep hand-written serializers (enum/property-order
+    // and the spec.state.schema wrapping the naive codec can't express yet).
     public static string Serialize(LlmGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        return EnvelopeCodec.Serialize(manifest, "LlmGatewayConfig", JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "LlmGatewayConfig");
     }
 
     public static string Serialize(McpGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        return EnvelopeCodec.Serialize(manifest, "McpGatewayConfig", JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "McpGatewayConfig");
     }
 
     public static string Serialize(McpServerManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject();
-        if (manifest.Virtual) spec["virtual"] = true;
-        AddIfSet(spec, "transport", manifest.Transport);
-        AddIfSet(spec, "url", manifest.Url);
-        AddIfSet(spec, "command", manifest.Command);
-        if (manifest.Args is { Count: > 0 }) spec["args"] = JsonSerializer.SerializeToNode(manifest.Args, JsonOptions);
-        if (manifest.Env is { Count: > 0 }) spec["env"] = JsonSerializer.SerializeToNode(manifest.Env, JsonOptions);
-        AddIfSet(spec, "authRef", manifest.AuthRef);
-        if (manifest.Tools is { Count: > 0 }) spec["tools"] = JsonSerializer.SerializeToNode(manifest.Tools, JsonOptions);
-        if (manifest.Sources is { Count: > 0 }) spec["sources"] = JsonSerializer.SerializeToNode(manifest.Sources, JsonOptions);
-        if (manifest.ToolProjection is { Count: > 0 }) spec["toolProjection"] = JsonSerializer.SerializeToNode(manifest.ToolProjection, JsonOptions);
-        AddIfSet(spec, "mcpGatewayRef", manifest.McpGatewayRef);
-        if (manifest.Container is { } container)
-        {
-            var c = new JsonObject();
-            AddIfSet(c, "image", container.Image);
-            if (container.Build is { } build) c["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
-            if (container.Port != 7000) c["port"] = container.Port;
-            if (!string.Equals(container.Path, "/mcp", StringComparison.Ordinal)) c["path"] = container.Path;
-            if (!string.Equals(container.HealthPath, "/health", StringComparison.Ordinal)) c["healthPath"] = container.HealthPath;
-            if (container.Command is { Count: > 0 }) c["command"] = JsonSerializer.SerializeToNode(container.Command, JsonOptions);
-            if (container.Args is { Count: > 0 }) c["args"] = JsonSerializer.SerializeToNode(container.Args, JsonOptions);
-            if (container.Env is { Count: > 0 }) c["env"] = JsonSerializer.SerializeToNode(container.Env, JsonOptions);
-            if (container.Secrets is { Count: > 0 }) c["secrets"] = JsonSerializer.SerializeToNode(container.Secrets, JsonOptions);
-            if (container.StartupTimeoutSeconds != 30) c["startupTimeoutSeconds"] = container.StartupTimeoutSeconds;
-            if (!string.Equals(container.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) c["imagePullPolicy"] = container.ImagePullPolicy;
-            if (container.Resources is { } r) c["resources"] = JsonSerializer.SerializeToNode(r, JsonOptions);
-            if (container.Kubernetes is { } k8s) c["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
-            spec["container"] = c;
-        }
-        return WrapEnvelope("McpServer", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "McpServer");
     }
 
     public static string Serialize(ContainerPluginManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
-        var s = manifest.Spec;
-        var spec = new JsonObject { ["image"] = s.Image };
-        if (s.Port != 8080) spec["port"] = s.Port;
-        if (!string.Equals(s.Topology, "standalone", StringComparison.Ordinal)) spec["topology"] = s.Topology;
-        if (s.StartupTimeoutSeconds != 30) spec["startupTimeoutSeconds"] = s.StartupTimeoutSeconds;
-        if (s.InvokeTimeoutSeconds != 60) spec["invokeTimeoutSeconds"] = s.InvokeTimeoutSeconds;
-        if (!string.Equals(s.ImagePullPolicy, "IfNotPresent", StringComparison.Ordinal)) spec["imagePullPolicy"] = s.ImagePullPolicy;
-        if (s.Build is { } build) spec["build"] = JsonSerializer.SerializeToNode(build, JsonOptions);
-        if (s.RetryPolicy is { } rp) spec["retryPolicy"] = JsonSerializer.SerializeToNode(rp, JsonOptions);
-        if (s.Kubernetes is { } k8s) spec["kubernetes"] = JsonSerializer.SerializeToNode(k8s, JsonOptions);
-        if (s.Secrets is { Count: > 0 }) spec["secrets"] = JsonSerializer.SerializeToNode(s.Secrets, JsonOptions);
-        return WrapEnvelope("ContainerPlugin", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "ContainerPlugin");
     }
 
     public static string Serialize(EvalSuiteManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, annotations: null);
-        var s = manifest.Spec;
-        var spec = new JsonObject();
-        if (s.AgentId is not null) spec["agentId"] = s.AgentId;
-        if (s.GraphId is not null) spec["graphId"] = s.GraphId;
-        if (s.ReplayMode != EvalReplayMode.Live)
-            spec["replayMode"] = s.ReplayMode.ToString().ToLowerInvariant();
-        if (s.Target is { } t)
-        {
-            var targetObj = new JsonObject();
-            if (t.AgentRef is not null) targetObj["agentRef"] = t.AgentRef;
-            if (t.GraphRef is not null) targetObj["graphRef"] = t.GraphRef;
-            if (t.AgentVersion is not null) targetObj["agentVersion"] = t.AgentVersion;
-            spec["target"] = targetObj;
-        }
-        if (s.Defaults is { } d)
-        {
-            var dObj = new JsonObject();
-            if (d.JudgeModel is not null) dObj["judgeModel"] = d.JudgeModel;
-            if (d.Timeout is { } ts) dObj["timeout"] = ts.ToString();
-            spec["defaults"] = dObj;
-        }
-        if (s.Baseline is { } b)
-            spec["baseline"] = new JsonObject { ["runId"] = b.RunId };
-        // Cases (batch mode) and Sampling (continuous mode) are mutually exclusive — emit
-        // whichever is set. Emitting an empty cases array in continuous mode would fail the
-        // loader's "cases required" check, dropping the sampling config on apply.
-        if (s.Cases is { } cases)
-        {
-            var casesArr = new JsonArray();
-            foreach (var c in cases)
-            {
-                var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
-                if (c.Name is not null) caseObj["name"] = c.Name;
-                if (c.Description is not null) caseObj["description"] = c.Description;
-                if (c.ExpectedOutput is not null) caseObj["expectedOutput"] = c.ExpectedOutput;
-                if (c.Replay is { } cr) caseObj["replay"] = cr.ToString().ToLowerInvariant();
-                if (c.InitialHistory is { Count: > 0 })
-                {
-                    var histArr = new JsonArray();
-                    foreach (var turn in c.InitialHistory)
-                        histArr.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Content });
-                    caseObj["initialHistory"] = histArr;
-                }
-                if (c.Variables is { Count: > 0 })
-                    caseObj["variables"] = JsonSerializer.SerializeToNode(c.Variables, JsonOptions);
-                if (c.Assertions.Count > 0)
-                    caseObj["assertions"] = SerializeEvalAssertions(c.Assertions);
-                casesArr.Add(caseObj);
-            }
-            spec["cases"] = casesArr;
-        }
-        if (s.Sampling is { } sampling)
-        {
-            var samplingObj = new JsonObject { ["rate"] = sampling.Rate };
-            if (sampling.MinPerHour is int mph) samplingObj["minPerHour"] = mph;
-            samplingObj["windowDuration"] = sampling.WindowDuration.ToString();
-            spec["sampling"] = samplingObj;
-        }
-        if (s.Assertions is { Count: > 0 } specAssertions)
-            spec["assertions"] = SerializeEvalAssertions(specAssertions);
-        return WrapEnvelope("EvalSuite", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "EvalSuite");
     }
-
-    private static JsonArray SerializeEvalAssertions(IReadOnlyList<EvalAssertion> assertions)
-    {
-        var arr = new JsonArray();
-        foreach (var a in assertions)
-        {
-            var obj = new JsonObject { ["kind"] = a.Kind };
-            if (a.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
-                obj["params"] = JsonNode.Parse(p.GetRawText());
-            arr.Add(obj);
-        }
-        return arr;
-    }
-
-    private static JsonObject BuildGatewayMetadata(string id, string version, string? description,
-        IReadOnlyDictionary<string, string>? labels, IReadOnlyDictionary<string, string>? annotations)
-    {
-        var metadata = new JsonObject { ["id"] = id, ["version"] = version };
-        if (description is not null) metadata["description"] = description;
-        if (labels is { Count: > 0 }) metadata["labels"] = ToJsonObject(labels);
-        if (annotations is { Count: > 0 }) metadata["annotations"] = ToJsonObject(annotations);
-        return metadata;
-    }
-
-    private static JsonObject WrapEnvelope(string kind, JsonObject metadata, JsonObject spec)
-        => new() { ["apiVersion"] = "vais.agents/v1", ["kind"] = kind, ["metadata"] = metadata, ["spec"] = spec };
 
     private static JsonObject ToJsonObject(IReadOnlyDictionary<string, string> map)
     {
