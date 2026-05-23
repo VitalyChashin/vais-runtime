@@ -456,6 +456,7 @@ internal static class CompositionRoot
                             ? authHeader[7..] : null,
                         expressionEvaluator: sp.GetService<IGraphExpressionEvaluator>(),
                         errorInterceptorComposer: sp.GetService<Vais.Agents.Runtime.Extensions.IExtensionChainComposer>(),
+                        graphNodeComposer: sp.GetService<Vais.Agents.Runtime.Extensions.IExtensionChainComposer>(),
                         logger: sp.GetService<ILogger<MafGraphOrchestrator<IDictionary<string, JsonElement>>>>()),
                 coordinator: sp.GetService<IGraphRunCoordinator>());
         });

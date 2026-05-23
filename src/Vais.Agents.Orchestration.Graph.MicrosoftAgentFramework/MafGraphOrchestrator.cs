@@ -76,6 +76,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly IGraphExpressionEvaluator? _expressionEvaluator;
     private readonly IReadOnlyList<AgentInputMiddleware>? _inputMiddleware;
     private readonly IExtensionChainComposer? _errorInterceptorComposer;
+    private readonly IExtensionChainComposer? _graphNodeComposer;
     private readonly ILogger _logger;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
@@ -104,6 +105,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
     /// <param name="errorInterceptorComposer">Optional composer used to resolve the <c>errorInterceptor</c> chain on the failure path (rewrites <see cref="GraphFailed.ErrorMessage"/>, keyed by failed node id). Null disables extension-authored error interception for graph failures.</param>
+    /// <param name="graphNodeComposer">Optional composer used to resolve the <c>graphNode</c> chain that wraps each node's body execution (keyed by the node's agent ref id). Null disables extension-authored node middleware.</param>
     /// <param name="logger">Logger for node-boundary ERROR records (ADR 016 / P9). Null uses a no-op logger.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
@@ -122,6 +124,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         IGraphExpressionEvaluator? expressionEvaluator = null,
         IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
         IExtensionChainComposer? errorInterceptorComposer = null,
+        IExtensionChainComposer? graphNodeComposer = null,
         ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -143,6 +146,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _expressionEvaluator = expressionEvaluator;
         _inputMiddleware = inputMiddleware;
         _errorInterceptorComposer = errorInterceptorComposer;
+        _graphNodeComposer = graphNodeComposer;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -284,6 +288,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             expressionEvaluator: _expressionEvaluator,
             checkpointer: _checkpointer,
             inputMiddleware: _inputMiddleware,
+            graphNodeComposer: _graphNodeComposer,
             logger: _logger);
         var workflow = buildResult.Workflow;
         var portIdToNodeId = buildResult.PortIdToNodeId;
@@ -449,6 +454,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             startNodeId: resumeFromNodeId,
             checkpointer: _checkpointer,
             inputMiddleware: _inputMiddleware,
+            graphNodeComposer: _graphNodeComposer,
             logger: _logger);
 
         var watch = Stopwatch.StartNew();
@@ -673,8 +679,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         IGraphExpressionEvaluator? expressionEvaluator = null,
         IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
         IExtensionChainComposer? errorInterceptorComposer = null,
+        IExtensionChainComposer? graphNodeComposer = null,
         ILogger? logger = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware, errorInterceptorComposer, logger)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware, errorInterceptorComposer, graphNodeComposer, logger)
     {
     }
 }

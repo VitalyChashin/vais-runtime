@@ -936,6 +936,63 @@ public sealed class MafGraphOrchestratorTests
         failed.ErrorMessage.Should().StartWith("[graph#7] ", "the errorInterceptor rewrote the surfaced message");
     }
 
+    [Fact]
+    public async Task GraphNode_ShortCircuits_Body_And_Substitutes_Output()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "maf-gn-sc", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("body")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var codeNode = new FlaggingCodeNode();
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle,
+            codeNodeResolver: _ => codeNode,
+            graphNodeComposer: new StubGraphNodeComposer(new ShortCircuitGraphNode()));
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            events.Add(e);
+
+        codeNode.Ran.Should().BeFalse("the graphNode handler short-circuited the node body");
+        var completed = events.OfType<GraphCompleted>().Should().ContainSingle().Which;
+        completed.FinalState!["marker"].GetString().Should().Be("cached",
+            "the substitute output merges + checkpoints exactly like a real run");
+    }
+
+    [Fact]
+    public async Task GraphNode_Transforms_Node_Output_After_Body_Runs()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "maf-gn-tx", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("body")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var codeNode = new FlaggingCodeNode();
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle,
+            codeNodeResolver: _ => codeNode,
+            graphNodeComposer: new StubGraphNodeComposer(new TransformGraphNode()));
+
+        var events = new List<AgentGraphEvent>();
+        await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            events.Add(e);
+
+        codeNode.Ran.Should().BeTrue("transform calls next, so the body runs");
+        var completed = events.OfType<GraphCompleted>().Should().ContainSingle().Which;
+        completed.FinalState!["marker"].GetString().Should().Be("transformed");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
@@ -1661,6 +1718,63 @@ public sealed class MafGraphOrchestratorTests
             };
             return ValueTask.FromResult(result);
         }
+    }
+
+    private sealed class FlaggingCodeNode : IGraphCodeNode
+    {
+        public bool Ran;
+        public ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAsync(
+            IReadOnlyDictionary<string, JsonElement> input, AgentContext context, CancellationToken cancellationToken = default)
+        {
+            Ran = true;
+            IReadOnlyDictionary<string, JsonElement> r = new Dictionary<string, JsonElement>
+            {
+                ["marker"] = JsonSerializer.SerializeToElement("body"),
+            };
+            return ValueTask.FromResult(r);
+        }
+    }
+
+    private sealed class ShortCircuitGraphNode : GraphNodeMiddleware
+    {
+        public override Task<GraphNodeOutcome> InvokeAsync(
+            GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct = default)
+            => Task.FromResult(new GraphNodeOutcome(new Dictionary<string, JsonElement>
+            {
+                ["marker"] = JsonSerializer.SerializeToElement("cached"),
+            }));
+    }
+
+    private sealed class TransformGraphNode : GraphNodeMiddleware
+    {
+        public override async Task<GraphNodeOutcome> InvokeAsync(
+            GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct = default)
+        {
+            await next().ConfigureAwait(false);
+            return new GraphNodeOutcome(new Dictionary<string, JsonElement>
+            {
+                ["marker"] = JsonSerializer.SerializeToElement("transformed"),
+            });
+        }
+    }
+
+    private sealed class StubGraphNodeComposer(GraphNodeMiddleware mw)
+        : Vais.Agents.Runtime.Extensions.IExtensionChainComposer
+    {
+        public Task<IReadOnlyList<AgentInputMiddleware>> GetInputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentInputMiddleware>>(Array.Empty<AgentInputMiddleware>());
+        public Task<IReadOnlyList<AgentOutputMiddleware>> GetOutputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentOutputMiddleware>>(Array.Empty<AgentOutputMiddleware>());
+        public Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<ToolGatewayMiddleware>>(Array.Empty<ToolGatewayMiddleware>());
+        public Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<LlmGatewayMiddleware>>(Array.Empty<LlmGatewayMiddleware>());
+        public Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(Array.Empty<ErrorInterceptor>());
+        public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(new[] { mw });
+        public void InvalidateAgent(string a) { }
+        public void InvalidateAll() { }
     }
 
     private sealed class FakeCompletionProvider : ICompletionProvider
