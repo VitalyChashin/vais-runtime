@@ -51,6 +51,8 @@ Vais.Agents.Core.ToolGatewayServiceCollectionExtensions
 static Vais.Agents.Core.ToolGatewayServiceCollectionExtensions.AddToolGatewayMiddleware<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolGatewayMiddleware!>!
 Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.init -> void
+Vais.Agents.Core.StatefulAgentOptions.ErrorInterceptors.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ErrorInterceptor!>!
+Vais.Agents.Core.StatefulAgentOptions.ErrorInterceptors.init -> void
 Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null, System.Collections.Generic.IEnumerable<Vais.Agents.ToolGatewayMiddleware!>? gatewayMiddleware = null) -> void
 Vais.Agents.Core.ToolLoggingMiddleware
 Vais.Agents.Core.ToolLoggingMiddleware.ToolLoggingMiddleware(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.ToolLoggingMiddleware!>! logger) -> void

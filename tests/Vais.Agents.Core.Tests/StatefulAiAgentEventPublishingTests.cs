@@ -135,6 +135,36 @@ public sealed class StatefulAiAgentEventPublishingTests
         events.OfType<TurnStarted>().Single().Context.AgentName.Should().Be("ambient-name");
     }
 
+    [Fact]
+    public async Task AskAsync_ErrorInterceptor_RewritesMessage_KeepsTypeAndStillThrows()
+    {
+        var bus = new InMemoryAgentEventBus();
+        var events = Collect(bus);
+
+        var provider = new FakeCompletionProvider(_ => throw new InvalidOperationException("boom"));
+        var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+        {
+            AgentName = "err-agent",
+            EventBus = bus,
+            ResiliencePipeline = Polly.ResiliencePipeline.Empty,
+            ErrorInterceptors = [new PrefixingErrorInterceptor("[support#42] ")],
+        });
+
+        Func<Task> act = () => agent.AskAsync("boom");
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Message.Should().Be("boom", "the original exception still propagates unchanged (P9)");
+
+        var failed = events.OfType<TurnFailed>().Single();
+        failed.ErrorType.Should().Be(nameof(InvalidOperationException), "ErrorType is immutable (P9)");
+        failed.ErrorMessage.Should().Be("[support#42] boom", "the interceptor rewrites the surfaced message");
+    }
+
+    private sealed class PrefixingErrorInterceptor(string prefix) : ErrorInterceptor
+    {
+        public override Task<ErrorOutcome> OnErrorAsync(ErrorContext ctx, CancellationToken ct = default)
+            => Task.FromResult(new ErrorOutcome(prefix + ctx.ErrorMessage));
+    }
+
     private static List<AgentEvent> Collect(InMemoryAgentEventBus bus)
     {
         var list = new List<AgentEvent>();

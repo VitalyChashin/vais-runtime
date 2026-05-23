@@ -157,12 +157,14 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         IReadOnlyList<AgentOutputMiddleware> extOutputChain = Array.Empty<AgentOutputMiddleware>();
         IReadOnlyList<ToolGatewayMiddleware> extToolChain = Array.Empty<ToolGatewayMiddleware>();
         IReadOnlyList<LlmGatewayMiddleware> extLlmChain = Array.Empty<LlmGatewayMiddleware>();
+        IReadOnlyList<ErrorInterceptor> extErrorChain = Array.Empty<ErrorInterceptor>();
         if (_extensionChainComposer is not null)
         {
             extInputChain = await _extensionChainComposer.GetInputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             extOutputChain = await _extensionChainComposer.GetOutputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             extToolChain = await _extensionChainComposer.GetToolChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             extLlmChain = await _extensionChainComposer.GetLlmChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+            extErrorChain = await _extensionChainComposer.GetErrorInterceptorChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
 
         var mergedInputMiddleware = supplied.InputMiddleware.Count > 0 || extInputChain.Count > 0
@@ -183,6 +185,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             ? [.. supplied.GatewayMiddleware, .. extLlmChain]
             : (IReadOnlyList<LlmGatewayMiddleware>)Array.Empty<LlmGatewayMiddleware>();
 
+        var mergedErrorInterceptors = supplied.ErrorInterceptors.Count > 0 || extErrorChain.Count > 0
+            ? [.. supplied.ErrorInterceptors, .. extErrorChain]
+            : (IReadOnlyList<ErrorInterceptor>)Array.Empty<ErrorInterceptor>();
+
         var seeded = new StatefulAgentOptions
         {
             AgentName = supplied.AgentName ?? _agentId,
@@ -198,6 +204,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             Budget = supplied.Budget,
             GatewayMiddleware = mergedGatewayMiddleware,
             ToolGatewayMiddleware = mergedToolMiddleware,
+            ErrorInterceptors = mergedErrorInterceptors,
             InputMiddleware = mergedInputMiddleware,
             OutputMiddleware = mergedOutputMiddleware,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
