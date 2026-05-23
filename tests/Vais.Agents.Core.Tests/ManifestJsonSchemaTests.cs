@@ -1,7 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using FluentAssertions;
 using Vais.Agents.Control.Manifests;
@@ -84,11 +83,5 @@ public sealed class ManifestJsonSchemaTests
 
     private static string SchemaPath(string kind) => Path.Combine(AgenticContractsDir(), "schemas", $"{kind}.schema.json");
 
-    private static string AgenticContractsDir([CallerFilePath] string callerPath = "")
-    {
-        // callerPath = <repo>/agentic/tests/Vais.Agents.Core.Tests/ManifestJsonSchemaTests.cs
-        var testsProjDir = Directory.GetParent(callerPath)!;       // Vais.Agents.Core.Tests
-        var agenticDir = testsProjDir.Parent!.Parent!;             // tests -> agentic
-        return Path.Combine(agenticDir.FullName, "contracts");
-    }
+    private static string AgenticContractsDir() => RepoContracts.Dir();
 }

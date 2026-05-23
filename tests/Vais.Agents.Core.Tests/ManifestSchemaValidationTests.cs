@@ -1,7 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Json.Schema;
@@ -70,10 +69,5 @@ public sealed class ManifestSchemaValidationTests
     private static string ExamplePath(string kind) =>
         Path.Combine(ContractsDir(), "examples", $"{kind}.example.yaml");
 
-    private static string ContractsDir([CallerFilePath] string callerPath = "")
-    {
-        var testsProjDir = Directory.GetParent(callerPath)!;  // Vais.Agents.Core.Tests
-        var agenticDir = testsProjDir.Parent!.Parent!;        // tests -> agentic
-        return Path.Combine(agenticDir.FullName, "contracts");
-    }
+    private static string ContractsDir() => RepoContracts.Dir();
 }
