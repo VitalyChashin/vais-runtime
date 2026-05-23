@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents EvalSuite manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "EvalSuite"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "graphId": {
+          "type": "string"
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "agentRef": {
+              "type": "string"
+            },
+            "graphRef": {
+              "type": "string"
+            },
+            "agentVersion": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "judgeModel": {
+              "type": "string"
+            },
+            "timeout": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "baseline": {
+          "type": "object",
+          "properties": {
+            "runId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "input": {
+                "type": "string"
+              },
+              "variables": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "expectedOutput": {
+                "type": "string"
+              },
+              "initialHistory": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "replay": {
+                "type": "string",
+                "enum": [
+                  "Live",
+                  "Cached"
+                ]
+              },
+              "assertions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string"
+                    },
+                    "params": {}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "replayMode": {
+          "type": "string",
+          "enum": [
+            "Live",
+            "Cached"
+          ]
+        },
+        "sampling": {
+          "type": "object",
+          "properties": {
+            "rate": {
+              "type": "number"
+            },
+            "minPerHour": {
+              "type": "integer"
+            },
+            "windowDuration": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "params": {}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

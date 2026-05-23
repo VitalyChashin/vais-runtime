@@ -1,0 +1,483 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents Agent manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "Agent"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "handler": {
+          "type": "object",
+          "properties": {
+            "typeName": {
+              "type": "string"
+            },
+            "assemblyName": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "endpoint": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string"
+            },
+            "connectionName": {
+              "type": "string"
+            },
+            "scope": {
+              "type": "string"
+            },
+            "historyReducer": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "identity": {
+          "type": "object",
+          "properties": {
+            "inboundAuth": {
+              "type": "string"
+            },
+            "outboundCredentials": {
+              "type": "string"
+            },
+            "credentials": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "ref": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "inboundClaims": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "minReplicas": {
+              "type": "integer"
+            },
+            "maxReplicas": {
+              "type": "integer"
+            },
+            "target": {
+              "type": "string"
+            },
+            "targetValue": {
+              "type": "number"
+            },
+            "idleTtl": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "apiKeyRef": {
+              "type": "string"
+            },
+            "baseUrlRef": {
+              "type": "string"
+            },
+            "temperature": {
+              "type": "number"
+            },
+            "topP": {
+              "type": "number"
+            },
+            "maxTokens": {
+              "type": "integer"
+            },
+            "responseFormat": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "systemPrompt": {
+          "type": "object",
+          "properties": {
+            "inline": {
+              "type": "string"
+            },
+            "templateRef": {
+              "type": "string"
+            },
+            "fileRef": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "mcpServers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "transport": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "url": {
+                "type": "string"
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "authRef": {
+                "type": "string"
+              },
+              "tools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "a2aRemoteAgents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "authRef": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "localAgents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "Blocking",
+                  "Background"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "allowCallerSuppliedSession": {
+                "type": "boolean"
+              },
+              "propagateAllowedTools": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "params": {}
+                },
+                "additionalProperties": false
+              }
+            },
+            "output": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "params": {}
+                },
+                "additionalProperties": false
+              }
+            },
+            "tool": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "params": {}
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "handoffs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "toAgent": {
+                "type": "string"
+              },
+              "when": {
+                "type": "string"
+              },
+              "carryHistory": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "maxTurns": {
+              "type": "integer"
+            },
+            "maxToolCalls": {
+              "type": "integer"
+            },
+            "maxPromptTokens": {
+              "type": "integer"
+            },
+            "maxCompletionTokens": {
+              "type": "integer"
+            },
+            "maxDuration": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "contextProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "params": {}
+            },
+            "additionalProperties": false
+          }
+        },
+        "outputSchema": {},
+        "agentMode": {
+          "type": "string",
+          "enum": [
+            "ToolCalling",
+            "SchemaGuided",
+            "SchemaGuidedToolCalling"
+          ]
+        },
+        "reasoning": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "enum": [
+                "Cascade",
+                "Routing",
+                "Cycle"
+              ]
+            },
+            "schema": {},
+            "schemaRef": {
+              "type": "string"
+            },
+            "maxIterations": {
+              "type": "integer"
+            },
+            "maxClarifications": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "observability": {
+          "type": "object",
+          "properties": {
+            "langfuseProject": {
+              "type": "string"
+            },
+            "samplingRate": {
+              "type": "number"
+            },
+            "tags": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "tracingEnabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "llmGatewayRef": {
+          "type": "string"
+        },
+        "mcpGatewayRef": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}

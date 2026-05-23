@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "vais.agents ContainerPlugin manifest",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "const": "vais.agents/v1"
+    },
+    "kind": {
+      "const": "ContainerPlugin"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "build": {
+          "type": "object",
+          "properties": {
+            "context": {
+              "type": "string"
+            },
+            "dockerfile": {
+              "type": "string"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "push": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "port": {
+          "type": "integer"
+        },
+        "topology": {
+          "type": "string"
+        },
+        "startupTimeoutSeconds": {
+          "type": "integer"
+        },
+        "invokeTimeoutSeconds": {
+          "type": "integer"
+        },
+        "imagePullPolicy": {
+          "type": "string"
+        },
+        "retryPolicy": {
+          "type": "object",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer"
+            },
+            "backoffSeconds": {
+              "type": "integer"
+            },
+            "retryOn": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "kubernetes": {
+          "type": "object",
+          "properties": {
+            "serviceUrl": {
+              "type": "string"
+            },
+            "deploymentName": {
+              "type": "string"
+            },
+            "namespace": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false
+}
