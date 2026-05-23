@@ -8,10 +8,11 @@ namespace Vais.Agents.Runtime.Extensions;
 /// when it does without operator acknowledgment.
 /// </summary>
 /// <remarks>
-/// Hot seams are those called in the critical LLM path where container round-trips add
+/// Hot seams are those called in the critical execution path where container round-trips add
 /// measurable per-call latency. The set is configurable; <see cref="Default"/> includes
-/// <c>llmGatewayMiddleware</c> (per-turn, hot). The warm <c>toolGatewayMiddleware</c> seam is
-/// intentionally NOT gated — its per-tool-call cost is documented, not blocked.
+/// <c>llmGatewayMiddleware</c> (per-turn) and <c>graphNode</c> (per-node). The warm
+/// <c>toolGatewayMiddleware</c> seam is intentionally NOT gated — its per-tool-call cost is
+/// documented, not blocked.
 /// </remarks>
 public sealed class HotSeamGuard
 {
@@ -24,11 +25,16 @@ public sealed class HotSeamGuard
     }
 
     /// <summary>
-    /// Default instance — the hot set is <c>{ llmGatewayMiddleware }</c>. A <c>host: container</c>
-    /// extension on this seam requires an explicit latency-cost acknowledgment at apply time.
+    /// Default instance — the hot set is <c>{ llmGatewayMiddleware, graphNode }</c>. A
+    /// <c>host: container</c> extension on either seam requires an explicit latency-cost acknowledgment
+    /// at apply time.
     /// </summary>
     public static readonly HotSeamGuard Default = new(
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ExtensionSeams.LlmGatewayMiddleware });
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ExtensionSeams.LlmGatewayMiddleware,
+            ExtensionSeams.GraphNode,
+        });
 
     /// <summary>
     /// Returns descriptions of any handlers that target a hot seam in a <c>host: container</c> extension.
