@@ -37,6 +37,13 @@ public interface IExtensionChainComposer
     /// </summary>
     Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the ordered <see cref="ErrorInterceptor"/> chain for <paramref name="agentId"/>.
+    /// Empty when no extensions scope to this agent on the <c>errorInterceptor</c> seam.
+    /// Consumers run this on the failure path to observe / rewrite the surfaced message (P9-safe).
+    /// </summary>
+    Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string agentId, CancellationToken cancellationToken = default);
+
     /// <summary>Invalidate the cached chain for <paramref name="agentId"/>.</summary>
     void InvalidateAgent(string agentId);
 

@@ -1602,3 +1602,41 @@ static Vais.Agents.LabelSelector.operator ==(Vais.Agents.LabelSelector? left, Va
 Vais.Agents.IClassifiedAgentError
 Vais.Agents.IClassifiedAgentError.ErrorType.get -> string!
 Vais.Agents.IClassifiedAgentError.IsTransient.get -> bool
+Vais.Agents.ErrorInterceptor
+Vais.Agents.ErrorInterceptor.ErrorInterceptor() -> void
+virtual Vais.Agents.ErrorInterceptor.OnErrorAsync(Vais.Agents.ErrorContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ErrorOutcome!>!
+Vais.Agents.ErrorContext
+Vais.Agents.ErrorContext.<Clone>$() -> Vais.Agents.ErrorContext!
+Vais.Agents.ErrorContext.AgentId.get -> string!
+Vais.Agents.ErrorContext.AgentId.init -> void
+Vais.Agents.ErrorContext.RunId.get -> string?
+Vais.Agents.ErrorContext.RunId.init -> void
+Vais.Agents.ErrorContext.NodeId.get -> string?
+Vais.Agents.ErrorContext.NodeId.init -> void
+Vais.Agents.ErrorContext.ErrorType.get -> string!
+Vais.Agents.ErrorContext.ErrorType.init -> void
+Vais.Agents.ErrorContext.ErrorMessage.get -> string!
+Vais.Agents.ErrorContext.ErrorMessage.init -> void
+Vais.Agents.ErrorContext.Deconstruct(out string! AgentId, out string? RunId, out string? NodeId, out string! ErrorType, out string! ErrorMessage) -> void
+Vais.Agents.ErrorContext.Equals(Vais.Agents.ErrorContext? other) -> bool
+Vais.Agents.ErrorContext.ErrorContext(string! AgentId, string? RunId, string? NodeId, string! ErrorType, string! ErrorMessage) -> void
+override Vais.Agents.ErrorContext.Equals(object? obj) -> bool
+override Vais.Agents.ErrorContext.GetHashCode() -> int
+override Vais.Agents.ErrorContext.ToString() -> string!
+static Vais.Agents.ErrorContext.operator !=(Vais.Agents.ErrorContext? left, Vais.Agents.ErrorContext? right) -> bool
+static Vais.Agents.ErrorContext.operator ==(Vais.Agents.ErrorContext? left, Vais.Agents.ErrorContext? right) -> bool
+Vais.Agents.ErrorOutcome
+Vais.Agents.ErrorOutcome.<Clone>$() -> Vais.Agents.ErrorOutcome!
+Vais.Agents.ErrorOutcome.Message.get -> string?
+Vais.Agents.ErrorOutcome.Message.init -> void
+Vais.Agents.ErrorOutcome.Deconstruct(out string? Message) -> void
+Vais.Agents.ErrorOutcome.Equals(Vais.Agents.ErrorOutcome? other) -> bool
+Vais.Agents.ErrorOutcome.ErrorOutcome(string? Message = null) -> void
+override Vais.Agents.ErrorOutcome.Equals(object? obj) -> bool
+override Vais.Agents.ErrorOutcome.GetHashCode() -> int
+override Vais.Agents.ErrorOutcome.ToString() -> string!
+static readonly Vais.Agents.ErrorOutcome.Observe -> Vais.Agents.ErrorOutcome!
+static Vais.Agents.ErrorOutcome.operator !=(Vais.Agents.ErrorOutcome? left, Vais.Agents.ErrorOutcome? right) -> bool
+static Vais.Agents.ErrorOutcome.operator ==(Vais.Agents.ErrorOutcome? left, Vais.Agents.ErrorOutcome? right) -> bool
+Vais.Agents.ErrorInterceptorChain
+static Vais.Agents.ErrorInterceptorChain.RunAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.ErrorInterceptor!>! interceptors, Vais.Agents.ErrorContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!

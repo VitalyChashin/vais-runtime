@@ -271,6 +271,25 @@ public sealed class ExtensionFoundationIntegrationTests
         resp.Text.Should().Be("real");
     }
 
+    // ── 7f. errorInterceptor seam: GetErrorInterceptorChainAsync builds the chain; message folds ──
+    [Fact]
+    public async Task ChainComposer_ErrorInterceptorSeam_TransformsMessage()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-err", "1.0.0", scope: null,
+            ("err-tag", ExtensionSeams.ErrorInterceptor, new TaggingErrorInterceptor(), 100));
+        await registry.SwapAsync("ext-err", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetErrorInterceptorChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered errorInterceptor handler must appear in the chain");
+
+        var ctx = new ErrorContext("any-agent", "r1", NodeId: null, "InvalidOperationException", "boom");
+        var message = await ErrorInterceptorChain.RunAsync(chain, ctx);
+
+        message.Should().Be("[tagged] boom", "the chain folds the rewritten message");
+    }
+
     // ── 8. YAML deserializer: parses a valid Extension manifest ───────────
     [Fact]
     public void YamlDeserializer_ValidManifest_ParsesAllFields()
@@ -422,5 +441,11 @@ public sealed class ExtensionFoundationIntegrationTests
             Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
             CancellationToken cancellationToken)
             => Task.FromResult(new CompletionResponse("synthetic"));
+    }
+
+    private sealed class TaggingErrorInterceptor : ErrorInterceptor
+    {
+        public override Task<ErrorOutcome> OnErrorAsync(ErrorContext ctx, CancellationToken ct = default)
+            => Task.FromResult(new ErrorOutcome($"[tagged] {ctx.ErrorMessage}"));
     }
 }

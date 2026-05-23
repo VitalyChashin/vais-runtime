@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from vais_extension import (
     AgentInputMiddleware,
     AgentOutputMiddleware,
+    ErrorInterceptor,
     Host,
     LlmGatewayMiddleware,
     ToolGatewayMiddleware,
@@ -19,6 +20,8 @@ from vais_extension import (
 from vais_extension.wire import (
     AgentInputContext,
     AgentOutputContext,
+    ErrorContext,
+    ErrorOutcome,
     LlmContext,
     LlmGatewayPostResponse,
     LlmGatewayPreResponse,
@@ -98,6 +101,18 @@ class _RecordingLlm(LlmGatewayMiddleware):
                    response: LlmResponse) -> LlmGatewayPostResponse:
         self.post_response_in = response
         return LlmGatewayPostResponse(action=self._post_action, response=self._post_response)
+
+
+class _RecordingError(ErrorInterceptor):
+    def __init__(self, message: str | None = None) -> None:
+        self._message = message
+        self.ctx: ErrorContext | None = None
+        self.call_id: str | None = None
+
+    async def on_error(self, context: ErrorContext, call_id: str) -> ErrorOutcome:
+        self.ctx = context
+        self.call_id = call_id
+        return ErrorOutcome(message=self._message)
 
 
 def _client(handlers: dict) -> TestClient:
@@ -295,3 +310,44 @@ def test_llm_post_receives_response_and_mutates():
     assert isinstance(llm.post_response_in, LlmResponse)
     assert llm.post_response_in.text == "secret"
     assert llm.post_response_in.prompt_tokens == 3
+
+
+def test_discovery_advertises_error_seam():
+    body = _client({"err": _RecordingError()}).get("/v1/handlers").json()
+    advertised = {h["id"]: h for h in body["handlers"]}
+    assert advertised["err"]["seam"] == "errorInterceptor"
+
+
+def test_error_pre_builds_context_and_rewrites_message():
+    err = _RecordingError(message="A transient error occurred. Please retry.")
+    client = _client({"err": err})
+
+    resp = client.post("/handlers/err/pre", json={
+        "callId": "c1",
+        "context": {
+            "agentId": "a1", "runId": "r1", "nodeId": "plan",
+            "errorType": "System.TimeoutException", "errorMessage": "raw 504 from upstream",
+        },
+    })
+
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "A transient error occurred. Please retry."
+
+    assert isinstance(err.ctx, ErrorContext)
+    assert (err.ctx.agent_id, err.ctx.run_id, err.ctx.node_id) == ("a1", "r1", "plan")
+    assert err.ctx.error_type == "System.TimeoutException"
+    assert err.ctx.error_message == "raw 504 from upstream"
+    assert err.call_id == "c1"
+
+
+def test_error_pre_observe_only_returns_null_message():
+    err = _RecordingError(message=None)
+    client = _client({"err": err})
+
+    resp = client.post("/handlers/err/pre", json={
+        "callId": "c1",
+        "context": {"agentId": "a1", "errorType": "X", "errorMessage": "boom"},
+    })
+
+    assert resp.status_code == 200
+    assert resp.json()["message"] is None

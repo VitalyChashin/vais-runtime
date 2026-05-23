@@ -8,6 +8,7 @@ using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
@@ -74,6 +75,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     private readonly string? _bearerToken;
     private readonly IGraphExpressionEvaluator? _expressionEvaluator;
     private readonly IReadOnlyList<AgentInputMiddleware>? _inputMiddleware;
+    private readonly IExtensionChainComposer? _errorInterceptorComposer;
     private readonly ILogger _logger;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
@@ -101,6 +103,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// <param name="bearerToken">Bearer token forwarded to remote runtimes for identity propagation.</param>
     /// <param name="expressionEvaluator">Evaluator for <see cref="GraphEdgePredicate.Expression"/> predicates. Null means expression predicates throw. Register via <c>AddPowerFxExpressionEvaluator()</c>.</param>
     /// <param name="inputMiddleware">Optional chain of <see cref="AgentInputMiddleware"/> applied to each agent-kind node's inbound message before the agent receives it. Null means no input shaping.</param>
+    /// <param name="errorInterceptorComposer">Optional composer used to resolve the <c>errorInterceptor</c> chain on the failure path (rewrites <see cref="GraphFailed.ErrorMessage"/>, keyed by failed node id). Null disables extension-authored error interception for graph failures.</param>
     /// <param name="logger">Logger for node-boundary ERROR records (ADR 016 / P9). Null uses a no-op logger.</param>
     public MafGraphOrchestrator(
         AgentGraphManifest manifest,
@@ -118,6 +121,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
         IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        IExtensionChainComposer? errorInterceptorComposer = null,
         ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -138,6 +142,7 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         _bearerToken = bearerToken;
         _expressionEvaluator = expressionEvaluator;
         _inputMiddleware = inputMiddleware;
+        _errorInterceptorComposer = errorInterceptorComposer;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -345,10 +350,10 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 {
                     await run.CancelRunAsync().ConfigureAwait(false);
                     var abortExc = new GraphHitlAbortedException(hitlNodeId);
-                    var failEvt = new GraphFailed(
+                    var failEvt = await FoldGraphFailedAsync(new GraphFailed(
                         DateTimeOffset.UtcNow, context, runId, superStep,
                         nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed,
-                        FailedNodeId: hitlNodeId);
+                        FailedNodeId: hitlNodeId), cancellationToken).ConfigureAwait(false);
                     await _graphEventBus.PublishAsync(failEvt, cancellationToken).ConfigureAwait(false);
                     yield return failEvt;
                     throw abortExc;
@@ -370,8 +375,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
 
             foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
             {
-                await _graphEventBus.PublishAsync(translated, cancellationToken).ConfigureAwait(false);
-                yield return translated;
+                var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
+                await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
+                yield return emit;
             }
         }
 
@@ -496,8 +502,9 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
             }
             foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
             {
-                await _graphEventBus.PublishAsync(translated, cancellationToken).ConfigureAwait(false);
-                yield return translated;
+                var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
+                await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
+                yield return emit;
             }
         }
 
@@ -618,6 +625,27 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
                 return Array.Empty<AgentGraphEvent>();
         }
     }
+
+    /// <summary>
+    /// Folds the agent's error-interceptor chain over a <see cref="GraphFailed"/> event, rewriting
+    /// its user-facing <c>ErrorMessage</c>. Keyed by the failed node's id (it is an agent) or the
+    /// graph context name for graph-level failures; the latter matches cluster-wide interceptors only.
+    /// <c>ErrorType</c> and the failure itself are never changed (P9). No-op without a composer.
+    /// </summary>
+    private async Task<AgentGraphEvent> FoldGraphFailedAsync(AgentGraphEvent evt, CancellationToken cancellationToken)
+    {
+        if (_errorInterceptorComposer is null || evt is not GraphFailed gf)
+            return evt;
+
+        var key = gf.FailedNodeId ?? gf.Context.AgentName ?? string.Empty;
+        var chain = await _errorInterceptorComposer.GetErrorInterceptorChainAsync(key, cancellationToken).ConfigureAwait(false);
+        if (chain.Count == 0)
+            return evt;
+
+        var errorContext = new ErrorContext(key, gf.RunId, gf.FailedNodeId, gf.ErrorType, gf.ErrorMessage);
+        var message = await ErrorInterceptorChain.RunAsync(chain, errorContext, cancellationToken).ConfigureAwait(false);
+        return gf with { ErrorMessage = message };
+    }
 }
 
 /// <summary>
@@ -644,8 +672,9 @@ public sealed class MafGraphOrchestrator : MafGraphOrchestrator<IDictionary<stri
         string? bearerToken = null,
         IGraphExpressionEvaluator? expressionEvaluator = null,
         IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        IExtensionChainComposer? errorInterceptorComposer = null,
         ILogger? logger = null)
-        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware, logger)
+        : base(manifest, registry, lifecycle, predicateResolver, effectResolver, codeNodeResolver, reducerResolver, runIdFactory, checkpointer, graphEventBus, remoteInvoker, a2aInvoker, bearerToken, expressionEvaluator, inputMiddleware, errorInterceptorComposer, logger)
     {
     }
 }

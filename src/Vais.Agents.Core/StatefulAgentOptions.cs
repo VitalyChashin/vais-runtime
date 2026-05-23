@@ -282,6 +282,16 @@ public sealed class StatefulAgentOptions
         = Array.Empty<ToolGatewayMiddleware>();
 
     /// <summary>
+    /// Ordered error interceptors (the <c>errorInterceptor</c> seam). Each runs on the failure path
+    /// before <see cref="TurnFailed"/> is published; the chain folds the user-facing message.
+    /// Interceptors cannot suppress the failure or change the error type (P9). First = outermost.
+    /// Extension-bound interceptors (via <c>IExtensionChainComposer</c>) are concatenated after
+    /// statically-registered ones. Default: empty.
+    /// </summary>
+    public IReadOnlyList<ErrorInterceptor> ErrorInterceptors { get; init; }
+        = Array.Empty<ErrorInterceptor>();
+
+    /// <summary>
     /// Ordered input middleware chain (P12 inbound zone). Each <see cref="AgentInputMiddleware"/>
     /// runs over the inbound message before the agent receives it. First-registered = outermost.
     /// Phase-2 cognitive primitives (HCM, S-MMU, DIEE, PAS) register here without modifying

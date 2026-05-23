@@ -108,12 +108,24 @@ The OPA policy engine is the production-ready choice. Implement a custom `IAgent
 
 Subscribe to react to events without being on the call path. Audit logs, custom dashboards, alerting, side-channel automation — all good fits. Subscriber exceptions are logged at WARN and swallowed (per architectural principle P9); the bus is a fan-out mechanism, not a transaction.
 
+## Error interceptor
+
+**Base class:** `ErrorInterceptor` (in `Vais.Agents.Abstractions`)
+**What it intercepts:** an agent turn or graph node *failure*, on the failure path, before the failure event is built and re-thrown. Observe (audit, alert) and optionally rewrite the user-facing message.
+**Seam name:** `errorInterceptor` — DI or hot-published `kind: Extension`.
+**Reference impls:** `samples/extensions/ext-errortag-csharp` (`host: csharp`, tags + audits the message).
+
+Author it as an extension when you want one place to translate raw failure text into a tenant-friendly message, attach a correlation reference, or fan a failure out to an alerting side-channel — without putting that logic in every agent. Multiple interceptors run in ascending `priority`; each sees the message as left by the previous one (sequential fold).
+
+It is a **post-error hook, not a `next`-wrapping middleware**: there is no continuation and no pre/post pair (the container wire is a single `/pre` call — see [handler-protocol.md](../../contracts/extensions/handler-protocol.md#errorinterceptor)). **It cannot break diagnosability (P9):** it may not suppress the failure (the exception still propagates) and may not change `ErrorType` — the failure event always carries the original type, and the structured ERROR log (run/node id + stack) is written *before* the interceptor runs. Only the human-facing message is replaceable.
+
 ## Picking the right seam
 
 | You want to… | Seam |
 |---|---|
 | Gate every LLM call | [LLM gateway middleware](author-an-llm-gateway-middleware.md) — DI or hot-published `kind: Extension` (`llmGatewayMiddleware` seam) |
 | Gate every tool call | [MCP gateway middleware](author-an-mcp-gateway-middleware.md) — DI or hot-published `kind: Extension` (`toolGatewayMiddleware` seam) |
+| Rewrite or audit a failure message (without hiding the failure) | Error interceptor — DI or hot-published `kind: Extension` (`errorInterceptor` seam) |
 | Inject memory or retrieval before the model sees the prompt | Input middleware |
 | Add a named contribution (tenant policy, RAG hits, observability-only metadata) to every turn | Context provider |
 | Customise how the section list fits a budget | Section window packer |

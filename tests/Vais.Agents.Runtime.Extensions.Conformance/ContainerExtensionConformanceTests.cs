@@ -263,7 +263,45 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         modelCalled.Should().BeTrue("streaming bypasses the container LLM handler and calls the model directly");
     }
 
+    // ── errorInterceptor seam: single /error call ─────────────────────────────
+
+    // CE-1. The handler rewrites the surfaced message.
+    [Fact]
+    public async Task ErrorProxy_RewritesMessage()
+    {
+        using var server = new MockContainerServer(preMessage: "[ext] enriched");
+        var mw = new ErrorInterceptorHandlerProxy(MakeErrorProxy(server));
+
+        var outcome = await mw.OnErrorAsync(
+            new ErrorContext("agent-a", "r1", NodeId: null, "InvalidOperationException", "boom"));
+
+        outcome.Message.Should().Be("[ext] enriched");
+    }
+
+    // CE-2. An unreachable interceptor never masks the failure (observe-only).
+    [Fact]
+    public async Task ErrorProxy_Unreachable_ObservesOnly()
+    {
+        var proxy = new HttpContainerHandlerProxy(
+            new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
+            preEndpoint:  "/handlers/h-err/error",
+            postEndpoint: "/handlers/h-err/post",
+            failureMode:  "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-err", ExtensionSeams.ErrorInterceptor, "container"));
+        var mw = new ErrorInterceptorHandlerProxy(proxy);
+
+        var outcome = await mw.OnErrorAsync(
+            new ErrorContext("agent-a", "r1", NodeId: null, "InvalidOperationException", "boom"));
+
+        outcome.Message.Should().BeNull("an unreachable interceptor must never mask or replace the failure");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    private static HttpContainerHandlerProxy MakeErrorProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-err/pre", "/handlers/h-err/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-err", ExtensionSeams.ErrorInterceptor, "container"));
 
     private static HttpContainerHandlerProxy MakeLlmProxy(MockContainerServer server) =>
         new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-llm/pre", "/handlers/h-llm/post",
@@ -308,6 +346,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         private readonly string? _postError;
         private readonly string? _preResponseText;
         private readonly string? _postResponseText;
+        private readonly string? _preMessage;
 
         public Uri BaseUri { get; }
 
@@ -320,7 +359,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             string? postResult = null,
             string? postError = null,
             string? preResponseText = null,
-            string? postResponseText = null)
+            string? postResponseText = null,
+            string? preMessage = null)
         {
             _preAction = preAction;
             _preContextPatch = preContextPatch;
@@ -331,6 +371,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             _postError = postError;
             _preResponseText = preResponseText;
             _postResponseText = postResponseText;
+            _preMessage = preMessage;
 
             var port = FindFreePort();
             BaseUri = new Uri($"http://localhost:{port}");
@@ -366,6 +407,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
                     result            = _preResult,
                     error             = _preError,
                     response          = _preResponseText is null ? null : new { text = _preResponseText },
+                    message           = _preMessage,
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));

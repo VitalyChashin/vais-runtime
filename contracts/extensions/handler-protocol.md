@@ -1,6 +1,6 @@
 # Extension Handler Protocol
 
-**Version:** 0.32  
+**Version:** 0.33  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the language SDKs and runtime proxy.
 
 ---
@@ -232,6 +232,45 @@ Post-response (`mutate` replaces the response — e.g. redact the text):
 { "action": "next" | "mutate", "response": { "text": "<replacement>", "promptTokens": null, "completionTokens": null } }
 ```
 
+### `errorInterceptor`
+
+A **single-call hook**, not a `next`-wrapping pair. Fired once when an agent turn or graph node
+fails, on the failure path. There is no `/post` — the runtime posts only to `/handlers/<id>/pre`
+(the advertised `postEndpoint` is never called for this seam). The body uses the standard `context`
+envelope.
+
+The handler may observe the failure and optionally rewrite the user-facing message. **It cannot
+break diagnosability (P9):** the failure still propagates, `errorType` is immutable, and the
+structured ERROR log (with run/node id + stack) is written *before* the interceptor runs. Only the
+human-facing message is replaceable.
+
+Pre-request:
+
+```json
+{
+  "callId": "call-err",
+  "context": {
+    "agentId": "research-agent",
+    "runId": "run-123",
+    "nodeId": "plan",
+    "errorType": "System.TimeoutException",
+    "errorMessage": "raw 504 from upstream"
+  }
+}
+```
+
+`nodeId` is set when the failure is inside a graph node; null for a plain agent turn. `runId` is
+null for a stateless turn.
+
+Pre-response:
+
+```json
+{ "message": "A transient error occurred. Please retry. (ref: run-123)" }
+```
+
+A non-empty `message` replaces the surfaced error message; `null` (or absent) observes only. The
+runtime never reads `errorType` back from the response — it is fixed.
+
 ---
 
 ## Wire constraints
@@ -297,6 +336,7 @@ Response headers MUST NOT include `traceparent` — the runtime owns the parent 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.33 | 2026-05-23 | Added `errorInterceptor` seam — a single-call (`/pre` only) failure hook that observes and optionally rewrites the user-facing message without changing `errorType` or suppressing the failure (P9). Additive — earlier seams remain compatible. |
 | 0.32 | 2026-05-23 | Added `toolGatewayMiddleware` + `llmGatewayMiddleware` seam contexts and their outcome/response-carrying pre/post shapes. Additive — `agentInput`/`agentOutput` extensions targeting 0.30/0.31 remain compatible. |
 | 0.31 | 2026-05-20 | Added §Trace context: `traceparent`, `X-Vais-*` headers, OTLP URL discriminator format |
 | 0.30 | 2026-05-19 | Initial extension handler protocol (Phase B) |

@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-errortag-python
+  version: "0.1.0"
+  description: "Python port of ext-errortag-csharp. Tags and audits agent/graph failure messages on the error interceptor seam."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: container
+  image: ext-errortag-python:local
+  port: 8080
+  topology: standalone
+  startupTimeoutSeconds: 30
+  invokeTimeoutSeconds: 5
+  handlers:
+    - id: error-tag
+      seam: errorInterceptor
+      priority: 100
+      failureMode: skip

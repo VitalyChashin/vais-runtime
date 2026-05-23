@@ -54,6 +54,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     private readonly IReadOnlyList<IOutputGuardrail> _outputGuardrails;
     private readonly IReadOnlyList<IStreamingAgentFilter> _streamingFilters;
     private readonly AgentOutputMiddleware[] _outputMiddleware;
+    private readonly IReadOnlyList<ErrorInterceptor> _errorInterceptors;
     private readonly RunBudget _budget;
     private readonly IToolCallDispatcher _toolCallDispatcher;
     private readonly IAgentJournal _journal;
@@ -131,6 +132,7 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _outputMiddleware = options.OutputMiddleware.Count == 0
             ? []
             : options.OutputMiddleware.ToArray();
+        _errorInterceptors = options.ErrorInterceptors;
         _session = options.Session ?? new InMemoryAgentSession(
             agentId: _agentName ?? "agent",
             sessionId: null,
@@ -354,8 +356,9 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
 
         if (failure is not null)
         {
+            var errorMessage = await ApplyErrorInterceptorsAsync(eventContext, failure, cancellationToken).ConfigureAwait(false);
             await PublishEventAsync(
-                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, failure.Message, runStopwatch.Elapsed),
+                new TurnFailed(DateTimeOffset.UtcNow, eventContext, failure.GetType().Name, errorMessage, runStopwatch.Elapsed),
                 cancellationToken).ConfigureAwait(false);
             throw failure;
         }
@@ -1087,11 +1090,12 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     interruptEx.Interrupt.Reason);
             }
 
+            var errorMessage = await ApplyErrorInterceptorsAsync(eventContext, failure, cancellationToken).ConfigureAwait(false);
             var turnFailed = new TurnFailed(
                 DateTimeOffset.UtcNow,
                 eventContext,
                 failure.GetType().Name,
-                failure.Message,
+                errorMessage,
                 sw.Elapsed);
             await PublishEventAsync(turnFailed, cancellationToken).ConfigureAwait(false);
             yield return turnFailed;
@@ -1587,6 +1591,22 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
     }
 
     private static string DefaultRunIdFactory() => Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Folds the error-interceptor chain over a failure and returns the (possibly rewritten) message.
+    /// The chain may not change <see cref="Exception"/> type or suppress the failure (P9): the caller
+    /// still emits <see cref="TurnFailed"/> with the original <c>ErrorType</c> and re-throws.
+    /// </summary>
+    private async Task<string> ApplyErrorInterceptorsAsync(AgentContext context, Exception failure, CancellationToken cancellationToken)
+    {
+        if (_errorInterceptors.Count == 0)
+            return failure.Message;
+
+        var errorContext = new ErrorContext(
+            context.AgentName ?? string.Empty, context.RunId, NodeId: null,
+            failure.GetType().Name, failure.Message);
+        return await ErrorInterceptorChain.RunAsync(_errorInterceptors, errorContext, cancellationToken).ConfigureAwait(false);
+    }
 
     private AgentContext StampRunId(AgentContext context, string? runIdOverride = null)
     {

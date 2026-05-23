@@ -9,6 +9,7 @@ from .wire import (
     AgentInputContext, AgentOutputContext, PreResponse, PostResponse,
     ToolGatewayContext, ToolOutcome, ToolGatewayPreResponse, ToolGatewayPostResponse,
     LlmContext, LlmResponse, LlmGatewayPreResponse, LlmGatewayPostResponse,
+    ErrorContext, ErrorOutcome,
 )
 
 
@@ -133,3 +134,19 @@ class LlmGatewayMiddleware(ABC):
         the response; return LlmGatewayPostResponse(action="mutate", response=...) to replace it.
         """
         return LlmGatewayPostResponse()
+
+
+class ErrorInterceptor(ABC):
+    """
+    Abstract base for errorInterceptor seam handlers. A single-call hook fired when an agent turn
+    or graph node fails. Observe (audit/alert) and optionally rewrite the user-facing message;
+    it can never suppress the failure or change error_type (P9).
+    """
+
+    @abstractmethod
+    async def on_error(self, context: ErrorContext, call_id: str) -> ErrorOutcome:
+        """
+        Return ErrorOutcome(message="...") to replace the surfaced error message, or
+        ErrorOutcome() (default) to observe only.
+        """
+        ...

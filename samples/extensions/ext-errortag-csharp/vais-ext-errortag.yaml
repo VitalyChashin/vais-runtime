@@ -1,0 +1,16 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-errortag-csharp
+  version: "1.0.0"
+  description: "Tags and audits agent/graph failure messages on the error interceptor seam."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: csharp
+  handlers:
+    - id: error-tag
+      seam: errorInterceptor
+      priority: 100
+      failureMode: skip

@@ -873,6 +873,67 @@ public sealed class MafGraphOrchestratorTests
                 "the plugin's semantic errorType propagates instead of the .NET exception type name");
     }
 
+    // ---- errorInterceptor seam: GraphFailed message rewrite (P9-safe) ----
+
+    private sealed class PrefixingErrorInterceptor(string prefix) : ErrorInterceptor
+    {
+        public override Task<ErrorOutcome> OnErrorAsync(ErrorContext ctx, CancellationToken ct = default)
+            => Task.FromResult(new ErrorOutcome(prefix + ctx.ErrorMessage));
+    }
+
+    private sealed class StubErrorComposer(ErrorInterceptor interceptor)
+        : Vais.Agents.Runtime.Extensions.IExtensionChainComposer
+    {
+        public Task<IReadOnlyList<AgentInputMiddleware>> GetInputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentInputMiddleware>>(Array.Empty<AgentInputMiddleware>());
+        public Task<IReadOnlyList<AgentOutputMiddleware>> GetOutputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentOutputMiddleware>>(Array.Empty<AgentOutputMiddleware>());
+        public Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<ToolGatewayMiddleware>>(Array.Empty<ToolGatewayMiddleware>());
+        public Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<LlmGatewayMiddleware>>(Array.Empty<LlmGatewayMiddleware>());
+        public Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(new[] { interceptor });
+        public void InvalidateAgent(string a) { }
+        public void InvalidateAll() { }
+    }
+
+    [Fact]
+    public async Task ErrorInterceptor_Rewrites_GraphFailed_Message_KeepsErrorType()
+    {
+        var (registry, lifecycle) = BuildHarness();
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-errint", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("boom")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var composer = new StubErrorComposer(new PrefixingErrorInterceptor("[graph#7] "));
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle,
+            codeNodeResolver: _ => new ClassifiedCodeNode(),
+            errorInterceptorComposer: composer);
+
+        var events = new List<AgentGraphEvent>();
+        try
+        {
+            await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+                events.Add(e);
+        }
+        catch
+        {
+            // MAF may also surface the failure as an exception; GraphFailed is asserted below.
+        }
+
+        var failed = events.OfType<GraphFailed>().Should().ContainSingle(f => f.FailedNodeId == "work").Which;
+        failed.ErrorType.Should().Be("Timeout", "ErrorType is immutable (P9)");
+        failed.ErrorMessage.Should().StartWith("[graph#7] ", "the errorInterceptor rewrote the surfaced message");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();

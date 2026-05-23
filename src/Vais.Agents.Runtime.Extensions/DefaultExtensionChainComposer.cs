@@ -70,6 +70,15 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<ErrorInterceptor>(ExtensionSeams.ErrorInterceptor);
+    }
+
+    /// <inheritdoc />
     public void InvalidateAgent(string agentId) => _cache.TryRemove(agentId, out _);
 
     /// <inheritdoc />
@@ -109,6 +118,10 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 snapshot, manifest, agentId, ExtensionSeams.LlmGatewayMiddleware,
                 (inst, desc, fm) => inst is LlmGatewayMiddleware mw
                     ? new InstrumentedLlmMiddleware(mw, desc, fm, agentId) : null),
+            [ExtensionSeams.ErrorInterceptor] = BuildChain<ErrorInterceptor>(
+                snapshot, manifest, agentId, ExtensionSeams.ErrorInterceptor,
+                (inst, desc, fm) => inst is ErrorInterceptor ei
+                    ? new InstrumentedErrorInterceptor(ei, desc, fm, agentId) : null),
         };
 
         var built = new CachedChains(chains);
@@ -340,6 +353,44 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         protected override ValueTask OnStreamCompleteAsync(
             CompletionResponse final, CancellationToken cancellationToken = default)
             => ((IStreamingAgentFilter)inner).OnStreamCompleteAsync(final, cancellationToken);
+    }
+
+    private sealed class InstrumentedErrorInterceptor(
+        ErrorInterceptor inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode,
+        string agentId) : ErrorInterceptor
+    {
+        public override async Task<ErrorOutcome> OnErrorAsync(ErrorContext ctx, CancellationToken ct = default)
+        {
+            var outcome = ErrorOutcome.Observe;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor,
+                string.IsNullOrEmpty(ctx.AgentId) ? agentId : ctx.AgentId,
+                ctx.RunId, ctx.NodeId,
+                async () =>
+                {
+                    if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            outcome = await inner.OnErrorAsync(ctx, ct).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (!ct.IsCancellationRequested)
+                        {
+                            return HandlerOutcome.Skip(ex);
+                        }
+                    }
+                    else
+                    {
+                        outcome = await inner.OnErrorAsync(ctx, ct).ConfigureAwait(false);
+                    }
+
+                    return string.IsNullOrEmpty(outcome.Message) ? HandlerOutcome.Next() : HandlerOutcome.Mutate();
+                },
+                ct).ConfigureAwait(false);
+            return outcome;
+        }
     }
 
     private sealed class InstrumentedInputMiddleware(

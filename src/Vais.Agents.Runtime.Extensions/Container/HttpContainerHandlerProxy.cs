@@ -244,6 +244,33 @@ internal sealed class HttpContainerHandlerProxy
         return (denied, HandlerOutcome.ShortCircuit());
     }
 
+    // ── errorInterceptor (single call) ────────────────────────────────────────
+    // No self-instrumentation (the composer's InstrumentedErrorInterceptor emits the span). A handler
+    // failure here is ALWAYS swallowed (observe-only) regardless of failureMode — an interceptor on
+    // the failure path must never mask or replace the original failure (P9).
+
+    internal async Task<ErrorOutcome> InvokeErrorAsync(ErrorContext ctx, CancellationToken ct)
+    {
+        var callId = Guid.NewGuid().ToString("N");
+        var wire = new ErrorContextWire(ctx.AgentId, ctx.RunId, ctx.NodeId, ctx.ErrorType, ctx.ErrorMessage);
+        var req = new ErrorInterceptorRequest(callId, wire);
+        try
+        {
+            using var msg = CreateTracedRequest(_preEndpoint, req, ctx.AgentId, ctx.RunId, ctx.NodeId);
+            using var resp = await _http.SendAsync(msg, ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            var body = await resp.Content.ReadFromJsonAsync<ErrorInterceptorResponse>(JsonOptions, ct).ConfigureAwait(false);
+            return string.IsNullOrEmpty(body?.Message) ? ErrorOutcome.Observe : new ErrorOutcome(body!.Message);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex,
+                "error-interceptor handler {Endpoint} failed; agentId={AgentId} runId={RunId}; observing only.",
+                _preEndpoint, ctx.AgentId, ctx.RunId);
+            return ErrorOutcome.Observe;
+        }
+    }
+
     // ── llmGatewayMiddleware (non-streaming) ──────────────────────────────────
     // No self-instrumentation here: the composer's InstrumentedLlmMiddleware emits the
     // vais.extension.handler.invoke span with the build-time agentId (which the proxy lacks).
@@ -534,4 +561,18 @@ internal sealed class LlmGatewayHandlerProxy : LlmGatewayMiddleware
         Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
         CancellationToken cancellationToken)
         => next(request, cancellationToken);
+}
+
+/// <summary>
+/// <see cref="ErrorInterceptor"/> adapter that delegates to an <see cref="HttpContainerHandlerProxy"/>.
+/// </summary>
+internal sealed class ErrorInterceptorHandlerProxy : ErrorInterceptor
+{
+    private readonly HttpContainerHandlerProxy _proxy;
+
+    internal ErrorInterceptorHandlerProxy(HttpContainerHandlerProxy proxy) => _proxy = proxy;
+
+    /// <inheritdoc />
+    public override Task<ErrorOutcome> OnErrorAsync(ErrorContext context, CancellationToken cancellationToken = default)
+        => _proxy.InvokeErrorAsync(context, cancellationToken);
 }
