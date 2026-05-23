@@ -38,8 +38,13 @@ public static class OpenAiCompatEndpoints
     /// existing <see cref="IModelRouter"/> LLM gateway.<br/>
     /// <b>Streaming.</b> Requests with <c>stream: true</c> require the registered
     /// <see cref="ICompletionProvider"/> to implement <see cref="IStreamingCompletionProvider"/>
-    /// for LLM models. Agent streaming uses <see cref="IAgentRuntime"/> via the
-    /// <c>X-Session-Id</c> header for session continuity.
+    /// for LLM models. Agent streaming uses <see cref="IAgentRuntime"/>.<br/>
+    /// <b>Run correlation.</b> An optional inbound <c>X-Run-Id</c> header sets the run id for the
+    /// call. On the LLM path it stamps <see cref="AgentContext.RunId"/> so a multi-turn client's
+    /// completions group under one run in telemetry. On the <c>agent:</c>/<c>graph:</c> paths it is
+    /// used as the session / run id, giving multi-call session continuity. When absent, the run id
+    /// is identity-derived (from <see cref="IInboundIdentityResolver"/>) or minted per call. An
+    /// explicit header overrides an identity-derived run id.
     /// </remarks>
     public static IEndpointRouteBuilder MapOpenAiCompat(this IEndpointRouteBuilder app)
     {
@@ -92,6 +97,18 @@ public static class OpenAiCompatEndpoints
             await WriteErrorAsync(ctx.Response, StatusCodes.Status401Unauthorized,
                 "invalid_api_key", ex.Message, ct).ConfigureAwait(false);
             return;
+        }
+
+        // 2b. Caller-supplied run correlation — an inbound X-Run-Id overrides the identity-derived
+        // run id and groups this call with the rest of the caller's session in telemetry.
+        var inboundRunId = ResolveInboundRunId(ctx.Request);
+        if (inboundRunId is not null)
+        {
+            agentCtx = agentCtx with
+            {
+                RunId = inboundRunId,
+                CorrelationId = agentCtx.CorrelationId ?? inboundRunId
+            };
         }
 
         using var _ = contextSetter.Push(agentCtx);
@@ -294,7 +311,7 @@ public static class OpenAiCompatEndpoints
 
         var invocationRequest = new AgentInvocationRequest(
             Text: lastUserText,
-            SessionId: Guid.NewGuid().ToString("N"),
+            SessionId: agentCtx.RunId ?? Guid.NewGuid().ToString("N"),
             Metadata: metadata.Count > 0 ? metadata : null,
             InitialHistory: history.Count > 0 ? history : null);
 
@@ -373,7 +390,12 @@ public static class OpenAiCompatEndpoints
         }
 
         IAiAgent agent;
-        try { agent = agentRuntime.GetOrCreate(agentId); }
+        try
+        {
+            agent = agentCtx.RunId is { } sessionId
+                ? agentRuntime.GetOrCreateForSession(agentId, sessionId)
+                : agentRuntime.GetOrCreate(agentId);
+        }
         catch
         {
             await WriteErrorAsync(ctx.Response, StatusCodes.Status404NotFound, "model_not_found",
@@ -467,7 +489,7 @@ public static class OpenAiCompatEndpoints
         var graphRequest = new GraphInvocationRequest(
             InitialState: new Dictionary<string, JsonElement> { [inputKey] = inputJson },
             Metadata: metadata.Count > 0 ? metadata : null,
-            RunId: Guid.NewGuid().ToString("N"));
+            RunId: agentCtx.RunId ?? Guid.NewGuid().ToString("N"));
 
         var handle = new AgentGraphHandle(manifest.Id, manifest.Version);
 
@@ -572,7 +594,7 @@ public static class OpenAiCompatEndpoints
         var graphRequest = new GraphInvocationRequest(
             InitialState: new Dictionary<string, JsonElement> { [inputKey] = inputJson },
             Metadata: metadata.Count > 0 ? metadata : null,
-            RunId: Guid.NewGuid().ToString("N"));
+            RunId: agentCtx.RunId ?? Guid.NewGuid().ToString("N"));
 
         var handle = new AgentGraphHandle(manifest.Id, manifest.Version);
         var events = graphLifecycleManager.InvokeStreamAsync(handle, graphRequest, ct);
@@ -832,6 +854,31 @@ public static class OpenAiCompatEndpoints
             int.TryParse(val, out var result))
             return result;
         return 0;
+    }
+
+    // Reads the optional inbound X-Run-Id header. Returns a sanitized token, or null when absent
+    // or invalid (too long, or containing control/whitespace chars) — callers then fall back to
+    // the identity-derived run id or a per-call mint.
+    private static string? ResolveInboundRunId(HttpRequest request)
+    {
+        if (!request.Headers.TryGetValue("X-Run-Id", out var values) || values.Count == 0)
+            return null;
+
+        var raw = values[^1];
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var trimmed = raw.Trim();
+        if (trimmed.Length > 200)
+            return null;
+
+        foreach (var c in trimmed)
+        {
+            if (char.IsControl(c) || char.IsWhiteSpace(c))
+                return null;
+        }
+
+        return trimmed;
     }
 
     private static string ExtractBearer(string? authHeader)
