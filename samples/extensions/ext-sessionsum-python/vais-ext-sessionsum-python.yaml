@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-sessionsum-python
+  version: "0.1.0"
+  description: "Python port of ext-sessionsum-csharp. Logs session open/close and summarizes the conversation on close."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: container
+  image: ext-sessionsum-python:local
+  port: 8080
+  topology: standalone
+  startupTimeoutSeconds: 30
+  invokeTimeoutSeconds: 5
+  handlers:
+    - id: session-summary
+      seam: sessionLifecycle
+      priority: 100
+      failureMode: skip

@@ -1,6 +1,6 @@
 # Extension Handler Protocol
 
-**Version:** 0.34  
+**Version:** 0.35  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the language SDKs and runtime proxy.
 
 ---
@@ -323,6 +323,37 @@ Post-response (`mutate` replaces the node output before it merges into graph sta
 { "action": "next" | "mutate", "output": { "...": "replacement node output" } }
 ```
 
+### `sessionLifecycle`
+
+A **single fire-and-forget notification**, not a `next`-wrapping pair. Fired when an agent session
+opens (grain activation) and closes (grain deactivation). The runtime posts only to
+`/handlers/<id>/pre` (the advertised `postEndpoint` is never called); the response body is ignored
+(observe-only). Cold seam — no latency gate.
+
+Pre-request:
+
+```json
+{
+  "callId": "call-sess",
+  "context": {
+    "agentId": "research-planner",
+    "sessionId": "run-123",
+    "phase": "opened" | "closing",
+    "turnCount": 4,
+    "history": [ { "role": "user", "text": "..." }, { "role": "assistant", "text": "..." } ]
+  }
+}
+```
+
+`history` is populated only on `closing` (null on `opened`) and carries role+text per turn for
+summarize-on-close. **Best-effort (P1):** `closing` runs on idle-timeout, shutdown, or explicit
+session removal, but a hard crash skips it — so summarize-on-close is lossy. Because grains
+deactivate/reactivate across idle cycles, a long session may produce multiple `opened`/`closing`
+pairs (the phases mean *grain activated / grain deactivating*). A handler failure never aborts the
+session lifecycle.
+
+Pre-response: ignored (any 2xx). The runtime does not read a body.
+
 ---
 
 ## Wire constraints
@@ -388,6 +419,7 @@ Response headers MUST NOT include `traceparent` — the runtime owns the parent 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.35 | 2026-05-24 | Added `sessionLifecycle` seam — a single fire-and-forget (`/pre` only) notification fired on session open (grain activate) + close (grain deactivate). The `closing` context carries the conversation history for summarize-on-close. Cold seam; best-effort (P1); grain-cycle scoped. Additive — earlier seams remain compatible. |
 | 0.34 | 2026-05-24 | Added `graphNode` seam — a per-node `/pre` + `/post` hook wrapping graph node body execution. `pre` may short-circuit with a substitute `output` (journaled like a real run, resume-safe); `post` may transform the node `output`. Hot seam (per-node). Additive — earlier seams remain compatible. |
 | 0.33 | 2026-05-23 | Added `errorInterceptor` seam — a single-call (`/pre` only) failure hook that observes and optionally rewrites the user-facing message without changing `errorType` or suppressing the failure (P9). Additive — earlier seams remain compatible. |
 | 0.32 | 2026-05-23 | Added `toolGatewayMiddleware` + `llmGatewayMiddleware` seam contexts and their outcome/response-carrying pre/post shapes. Additive — `agentInput`/`agentOutput` extensions targeting 0.30/0.31 remain compatible. |
