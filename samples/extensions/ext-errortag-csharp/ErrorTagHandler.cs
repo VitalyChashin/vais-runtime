@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Logging;
 
 [assembly: Vais.Agents.VaisExtension(
-    TargetApiVersion = "0.33",
+    TargetApiVersion = "0.30",
     Handlers = new[] { typeof(Vais.Agents.Samples.Extensions.ErrorTag.TenantErrorTag) })]
 
 namespace Vais.Agents.Samples.Extensions.ErrorTag;

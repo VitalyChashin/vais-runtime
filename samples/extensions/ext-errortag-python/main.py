@@ -24,7 +24,7 @@ class TenantErrorTag(ErrorInterceptor):
 app = Host(
     extension_id="ext-errortag-python",
     version="0.1.0",
-    target_api_version="0.33",
+    target_api_version="0.30",
     handlers={"error-tag": TenantErrorTag()},
 ).fastapi
 
