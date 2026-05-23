@@ -111,6 +111,21 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         return Results.Ok(new TokenRenewResponse { Token = token, ExpiresAt = expiresAt });
     }
 
+    /// <summary>
+    /// Concatenates the agent's <c>llmGatewayMiddleware</c> extension chain after the statically-registered
+    /// (DI) LLM gateway middleware, so a co-tenant container agent's LLM calls are governed by
+    /// <c>kind: Extension</c> exactly like C# agents. No-op when the extension runtime is absent.
+    /// </summary>
+    private static async Task<IEnumerable<LlmGatewayMiddleware>> MergeLlmExtensionsAsync(
+        HttpContext ctx, IEnumerable<LlmGatewayMiddleware> gatewayMiddleware, string agentId, CancellationToken ct)
+    {
+        var composer = ctx.RequestServices.GetService<IExtensionChainComposer>();
+        if (composer is null)
+            return gatewayMiddleware;
+        var extChain = await composer.GetLlmChainAsync(agentId, ct).ConfigureAwait(false);
+        return extChain.Count == 0 ? gatewayMiddleware : gatewayMiddleware.Concat(extChain);
+    }
+
     private static async Task<IResult> HandleLlmCompleteAsync(
         HttpContext ctx,
         GatewayLlmCompleteRequest body,
@@ -139,6 +154,8 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
+
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
 
         var modelId = string.IsNullOrEmpty(body.ModelId) ? "gpt-4o-mini" : body.ModelId;
         var provider = await pool.GetAsync(
@@ -189,12 +206,12 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                     statusCode: StatusCodes.Status422UnprocessableEntity,
                     title: "Provider does not support streaming.");
             }
-            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, effectiveMiddleware, ct);
             await ContainerGatewayVaisSseWriter.WriteAsync(ctx.Response, stream, ct).ConfigureAwait(false);
             return Results.Empty;
         }
 
-        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, effectiveMiddleware, ct)
             .ConfigureAwait(false);
 
         return Results.Ok(new GatewayLlmCompleteResponse
@@ -356,6 +373,8 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
             ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
 
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
+
         var completionId = $"chatcmpl-{Guid.NewGuid():N}";
 
         if (body.Stream == true)
@@ -363,13 +382,13 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             if (provider is not IStreamingCompletionProvider streamingProvider)
                 return Results.StatusCode(StatusCodes.Status422UnprocessableEntity);
 
-            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, effectiveMiddleware, ct);
             await ContainerGatewaySseWriter.WriteAsync(ctx.Response, completionId, body.Model, stream, ct)
                 .ConfigureAwait(false);
             return Results.Empty;
         }
 
-        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, effectiveMiddleware, ct)
             .ConfigureAwait(false);
 
         return Results.Ok(new OpenAiChatResponse

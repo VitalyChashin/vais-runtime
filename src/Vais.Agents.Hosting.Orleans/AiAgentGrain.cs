@@ -156,11 +156,13 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         IReadOnlyList<AgentInputMiddleware> extInputChain = Array.Empty<AgentInputMiddleware>();
         IReadOnlyList<AgentOutputMiddleware> extOutputChain = Array.Empty<AgentOutputMiddleware>();
         IReadOnlyList<ToolGatewayMiddleware> extToolChain = Array.Empty<ToolGatewayMiddleware>();
+        IReadOnlyList<LlmGatewayMiddleware> extLlmChain = Array.Empty<LlmGatewayMiddleware>();
         if (_extensionChainComposer is not null)
         {
             extInputChain = await _extensionChainComposer.GetInputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             extOutputChain = await _extensionChainComposer.GetOutputChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             extToolChain = await _extensionChainComposer.GetToolChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+            extLlmChain = await _extensionChainComposer.GetLlmChainAsync(_agentId!, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
 
         var mergedInputMiddleware = supplied.InputMiddleware.Count > 0 || extInputChain.Count > 0
@@ -177,6 +179,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             ? [.. supplied.ToolGatewayMiddleware, .. extToolChain]
             : (IReadOnlyList<ToolGatewayMiddleware>)Array.Empty<ToolGatewayMiddleware>();
 
+        var mergedGatewayMiddleware = supplied.GatewayMiddleware.Count > 0 || extLlmChain.Count > 0
+            ? [.. supplied.GatewayMiddleware, .. extLlmChain]
+            : (IReadOnlyList<LlmGatewayMiddleware>)Array.Empty<LlmGatewayMiddleware>();
+
         var seeded = new StatefulAgentOptions
         {
             AgentName = supplied.AgentName ?? _agentId,
@@ -190,7 +196,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             OutputGuardrails = supplied.OutputGuardrails,
             ToolGuardrails = supplied.ToolGuardrails,
             Budget = supplied.Budget,
-            GatewayMiddleware = supplied.GatewayMiddleware,
+            GatewayMiddleware = mergedGatewayMiddleware,
             ToolGatewayMiddleware = mergedToolMiddleware,
             InputMiddleware = mergedInputMiddleware,
             OutputMiddleware = mergedOutputMiddleware,

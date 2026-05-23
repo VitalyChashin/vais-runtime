@@ -9,8 +9,9 @@ namespace Vais.Agents.Runtime.Extensions;
 /// </summary>
 /// <remarks>
 /// Hot seams are those called in the critical LLM path where container round-trips add
-/// measurable per-call latency. The set is configurable; it starts empty in Phase A/B
-/// (no seam is blocked by default). Phase C adds LlmGatewayMiddleware to the default set.
+/// measurable per-call latency. The set is configurable; <see cref="Default"/> includes
+/// <c>llmGatewayMiddleware</c> (per-turn, hot). The warm <c>toolGatewayMiddleware</c> seam is
+/// intentionally NOT gated — its per-tool-call cost is documented, not blocked.
 /// </remarks>
 public sealed class HotSeamGuard
 {
@@ -22,8 +23,12 @@ public sealed class HotSeamGuard
         _hotSeams = hotSeams ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>Default instance — empty hot-seam set (no seams are blocked in Phase B).</summary>
-    public static readonly HotSeamGuard Default = new();
+    /// <summary>
+    /// Default instance — the hot set is <c>{ llmGatewayMiddleware }</c>. A <c>host: container</c>
+    /// extension on this seam requires an explicit latency-cost acknowledgment at apply time.
+    /// </summary>
+    public static readonly HotSeamGuard Default = new(
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ExtensionSeams.LlmGatewayMiddleware });
 
     /// <summary>
     /// Returns descriptions of any handlers that target a hot seam in a <c>host: container</c> extension.
