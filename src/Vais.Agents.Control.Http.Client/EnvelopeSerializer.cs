@@ -251,29 +251,17 @@ internal static class EnvelopeSerializer
         };
     }
 
+    // MS-1 (Phase 3): gateway configs serialize through the generic EnvelopeCodec.
     public static string Serialize(LlmGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
-        if (manifest.RateLimit is { } rl)
-        {
-            var rlObj = new JsonObject();
-            if (rl.RequestsPerMinute is int rpm) rlObj["requestsPerMinute"] = rpm;
-            if (rl.TokensPerMinute is int tpm) rlObj["tokensPerMinute"] = tpm;
-            spec["rateLimit"] = rlObj;
-        }
-        return WrapEnvelope("LlmGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "LlmGatewayConfig", JsonOptions);
     }
 
     public static string Serialize(McpGatewayConfigManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var metadata = BuildGatewayMetadata(manifest.Id, manifest.Version, manifest.Description, manifest.Labels, manifest.Annotations);
-        var spec = new JsonObject { ["middleware"] = SerializeMiddleware(manifest.Middleware) };
-        if (manifest.WorkspacePolicies is { Count: > 0 } wp)
-            spec["workspacePolicies"] = JsonSerializer.SerializeToNode(wp, JsonOptions);
-        return WrapEnvelope("McpGatewayConfig", metadata, spec).ToJsonString(JsonOptions);
+        return EnvelopeCodec.Serialize(manifest, "McpGatewayConfig", JsonOptions);
     }
 
     public static string Serialize(McpServerManifest manifest)
@@ -423,19 +411,6 @@ internal static class EnvelopeSerializer
 
     private static JsonObject WrapEnvelope(string kind, JsonObject metadata, JsonObject spec)
         => new() { ["apiVersion"] = "vais.agents/v1", ["kind"] = kind, ["metadata"] = metadata, ["spec"] = spec };
-
-    private static JsonArray SerializeMiddleware(IReadOnlyList<GatewayMiddlewareSpec> middleware)
-    {
-        var arr = new JsonArray();
-        foreach (var m in middleware)
-        {
-            var obj = new JsonObject { ["name"] = m.Name };
-            if (m.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
-                obj["params"] = JsonNode.Parse(p.GetRawText());
-            arr.Add(obj);
-        }
-        return arr;
-    }
 
     private static JsonObject ToJsonObject(IReadOnlyDictionary<string, string> map)
     {
