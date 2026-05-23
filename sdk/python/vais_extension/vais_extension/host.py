@@ -9,10 +9,11 @@ from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from .middleware import AgentInputMiddleware, AgentOutputMiddleware
+from .middleware import AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware
 from .wire import (
     AgentInputContext, AgentOutputContext,
     PreResponse, PostResponse,
+    ToolGatewayContext, ToolOutcome,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -63,36 +64,120 @@ class _PostResponseBody(_CamelModel):
     context_patch: dict[str, Any] | None = None
 
 
+class _ToolPreResponseBody(_CamelModel):
+    action: str
+    continuation_token: str | None = None
+    result: str | None = None
+    error: str | None = None
+
+
+class _ToolPostRequestBody(_CamelModel):
+    call_id: str
+    continuation_token: str | None = None
+    outcome_result: str | None = None
+    outcome_error: str | None = None
+
+
+class _ToolPostResponseBody(_CamelModel):
+    action: str
+    result: str | None = None
+    error: str | None = None
+
+
+# ── Context builders ──────────────────────────────────────────────────────────
+
+def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
+    return AgentInputContext(
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId"),
+        node_id=c.get("nodeId"),
+        message=c.get("message", ""),
+    )
+
+
+def _build_output_context(c: dict[str, Any]) -> AgentOutputContext:
+    return AgentOutputContext(
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId", ""),
+        session_id=c.get("sessionId"),
+        output_tokens=c.get("outputTokens"),
+        input_tokens=c.get("inputTokens"),
+    )
+
+
+def _build_tool_context(c: dict[str, Any]) -> ToolGatewayContext:
+    return ToolGatewayContext(
+        tool_name=c.get("toolName", ""),
+        call_id=c.get("callId", ""),
+        arguments=c.get("arguments"),
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId"),
+        privilege_level=c.get("privilegeLevel"),
+        workspace_id=c.get("workspaceId"),
+        allowed_tools=c.get("allowedTools"),
+    )
+
+
+# ── Route registrars ──────────────────────────────────────────────────────────
+# Handler/build_context are captured by closure (these run once per handler), never as FastAPI
+# endpoint default args — a defaulted parameter would be treated as a request field and a fresh
+# handler instantiated per call, losing handler state.
+
+def _uniform_registrar(
+    build_context: Callable[[dict[str, Any]], Any],
+) -> Callable[[FastAPI, str, Any], None]:
+    """agentInput/agentOutput share a contextPatch-based pre/post protocol."""
+    def register(app: FastAPI, handler_id: str, handler: Any) -> None:
+        @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+        async def handler_pre(body: _PreRequestBody) -> _PreResponseBody:
+            resp = await handler.pre(build_context(body.context), body.call_id)
+            return _PreResponseBody(
+                action=resp.action,
+                continuation_token=resp.continuation_token,
+                context_patch=resp.context_patch,
+            )
+
+        @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+        async def handler_post(body: _PostRequestBody) -> _PostResponseBody:
+            resp = await handler.post(body.call_id, body.continuation_token)
+            return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
+
+    return register
+
+
+def _register_tool_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """toolGatewayMiddleware: pre may deny/short-circuit; post carries + may transform the outcome."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+    async def tool_pre(body: _PreRequestBody) -> _ToolPreResponseBody:
+        resp = await handler.pre(_build_tool_context(body.context), body.call_id)
+        return _ToolPreResponseBody(
+            action=resp.action,
+            continuation_token=resp.continuation_token,
+            result=resp.result,
+            error=resp.error,
+        )
+
+    @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+    async def tool_post(body: _ToolPostRequestBody) -> _ToolPostResponseBody:
+        outcome = ToolOutcome(result=body.outcome_result, error=body.outcome_error)
+        resp = await handler.post(body.call_id, body.continuation_token, outcome)
+        return _ToolPostResponseBody(action=resp.action, result=resp.result, error=resp.error)
+
+
 # ── Seam registry ───────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
 class _SeamSpec:
-    """One row per seam: its wire name, the ABC it matches, and how to build its context."""
+    """One row per seam: its wire name, the ABC it matches, and how it registers pre/post routes."""
     name: str
     abc: type
-    build_context: Callable[[dict[str, Any]], Any]
+    register_routes: Callable[[FastAPI, str, Any], None]
 
 
 _SEAMS: tuple[_SeamSpec, ...] = (
-    _SeamSpec(
-        "agentInput", AgentInputMiddleware,
-        lambda c: AgentInputContext(
-            agent_id=c.get("agentId", ""),
-            run_id=c.get("runId"),
-            node_id=c.get("nodeId"),
-            message=c.get("message", ""),
-        ),
-    ),
-    _SeamSpec(
-        "agentOutput", AgentOutputMiddleware,
-        lambda c: AgentOutputContext(
-            agent_id=c.get("agentId", ""),
-            run_id=c.get("runId", ""),
-            session_id=c.get("sessionId"),
-            output_tokens=c.get("outputTokens"),
-            input_tokens=c.get("inputTokens"),
-        ),
-    ),
+    _SeamSpec("agentInput", AgentInputMiddleware, _uniform_registrar(_build_input_context)),
+    _SeamSpec("agentOutput", AgentOutputMiddleware, _uniform_registrar(_build_output_context)),
+    _SeamSpec("toolGatewayMiddleware", ToolGatewayMiddleware, _register_tool_routes),
 )
 
 
@@ -124,13 +209,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware] = handlers
         self._app = self._build_app()
 
     @property
@@ -176,41 +261,14 @@ class Host:
 
         return app
 
-    def _register_handler_routes(
-        self,
-        app: FastAPI,
-        handler_id: str,
-        handler: AgentInputMiddleware | AgentOutputMiddleware,
-    ) -> None:
+    def _register_handler_routes(self, app: FastAPI, handler_id: str, handler: Any) -> None:
         spec = _spec_for(handler)
         if spec is None:
             # Unknown handler type: advertised as "unknown" with no routes (matches prior behavior).
             return
-
-        pre_path = f"/handlers/{handler_id}/pre"
-        post_path = f"/handlers/{handler_id}/post"
-        build_context = spec.build_context
-
-        # Capture handler/build_context by closure, NOT as endpoint default args: FastAPI inspects
-        # the signature and would treat a defaulted parameter as a request field, instantiating a
-        # fresh handler per call (losing handler state). This method runs once per handler, so the
-        # closure binds the correct instance with no loop late-binding hazard.
-        @app.post(pre_path, name=f"{handler_id}_pre")
-        async def handler_pre(body: _PreRequestBody) -> _PreResponseBody:
-            ctx = build_context(body.context)
-            resp = await handler.pre(ctx, body.call_id)
-            return _PreResponseBody(
-                action=resp.action,
-                continuation_token=resp.continuation_token,
-                context_patch=resp.context_patch,
-            )
-
-        @app.post(post_path, name=f"{handler_id}_post")
-        async def handler_post(body: _PostRequestBody) -> _PostResponseBody:
-            resp = await handler.post(body.call_id, body.continuation_token)
-            return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
+        spec.register_routes(app, handler_id, handler)
 
     @staticmethod
-    def _seam_name(handler: AgentInputMiddleware | AgentOutputMiddleware) -> str:
+    def _seam_name(handler: Any) -> str:
         spec = _spec_for(handler)
         return spec.name if spec is not None else "unknown"

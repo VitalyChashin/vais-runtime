@@ -37,6 +37,42 @@ class PostResponse:
     context_patch: dict[str, Any] | None = None
 
 
+# ── toolGatewayMiddleware seam ────────────────────────────────────────────────
+
+@dataclass
+class ToolGatewayContext:
+    tool_name: str
+    call_id: str
+    arguments: Any = None                       # parsed tool arguments (typically a dict)
+    agent_id: str = ""
+    run_id: str | None = None
+    privilege_level: str | None = None
+    workspace_id: str | None = None
+    allowed_tools: list[str] | None = None
+
+
+@dataclass
+class ToolOutcome:
+    """The result of dispatching the tool, handed to post() to observe or transform."""
+    result: str | None = None
+    error: str | None = None
+
+
+@dataclass
+class ToolGatewayPreResponse:
+    action: str = "next"                        # "next" | "shortCircuit"
+    continuation_token: str | None = None
+    result: str | None = None                   # shortCircuit: result returned to the agent
+    error: str | None = None                    # shortCircuit: deny/error string
+
+
+@dataclass
+class ToolGatewayPostResponse:
+    action: str = "next"                        # "next" | "mutate"
+    result: str | None = None                   # mutate: replacement result
+    error: str | None = None                    # mutate: replacement error
+
+
 @dataclass
 class AdvertisedHandler:
     id: str

@@ -9,12 +9,21 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from vais_extension import AgentInputMiddleware, AgentOutputMiddleware, Host
+from vais_extension import (
+    AgentInputMiddleware,
+    AgentOutputMiddleware,
+    Host,
+    ToolGatewayMiddleware,
+)
 from vais_extension.wire import (
     AgentInputContext,
     AgentOutputContext,
     PostResponse,
     PreResponse,
+    ToolGatewayContext,
+    ToolGatewayPostResponse,
+    ToolGatewayPreResponse,
+    ToolOutcome,
 )
 
 
@@ -41,6 +50,26 @@ class _ShortCircuitOutput(AgentOutputMiddleware):
     async def pre(self, context: AgentOutputContext, call_id: str) -> PreResponse:
         self.pre_ctx = context
         return PreResponse(action="shortCircuit")
+
+
+class _RecordingTool(ToolGatewayMiddleware):
+    def __init__(self, pre_action: str = "next", pre_error: str | None = None,
+                 post_action: str = "next", post_result: str | None = None) -> None:
+        self._pre_action = pre_action
+        self._pre_error = pre_error
+        self._post_action = post_action
+        self._post_result = post_result
+        self.pre_ctx: ToolGatewayContext | None = None
+        self.post_outcome: ToolOutcome | None = None
+
+    async def pre(self, context: ToolGatewayContext, call_id: str) -> ToolGatewayPreResponse:
+        self.pre_ctx = context
+        return ToolGatewayPreResponse(action=self._pre_action, error=self._pre_error)
+
+    async def post(self, call_id: str, continuation_token: str | None,
+                   outcome: ToolOutcome) -> ToolGatewayPostResponse:
+        self.post_outcome = outcome
+        return ToolGatewayPostResponse(action=self._post_action, result=self._post_result)
 
 
 def _client(handlers: dict) -> TestClient:
@@ -107,3 +136,53 @@ def test_output_pre_builds_output_context_and_short_circuits():
     assert isinstance(out.pre_ctx, AgentOutputContext)
     assert (out.pre_ctx.agent_id, out.pre_ctx.session_id,
             out.pre_ctx.output_tokens, out.pre_ctx.input_tokens) == ("a2", "s2", 5, 3)
+
+
+def test_discovery_advertises_tool_seam():
+    body = _client({"gov": _RecordingTool()}).get("/v1/handlers").json()
+    advertised = {h["id"]: h for h in body["handlers"]}
+    assert advertised["gov"]["seam"] == "toolGatewayMiddleware"
+
+
+def test_tool_pre_builds_context_and_short_circuits():
+    tool = _RecordingTool(pre_action="shortCircuit", pre_error="denied-by-policy")
+    client = _client({"gov": tool})
+
+    resp = client.post("/handlers/gov/pre", json={
+        "callId": "c1",
+        "context": {
+            "toolName": "shell", "callId": "c1", "arguments": {"cmd": "ls"},
+            "agentId": "a1", "runId": "r1", "privilegeLevel": "Standard",
+            "workspaceId": "w1", "allowedTools": ["shell", "edit"],
+        },
+    })
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["action"] == "shortCircuit"
+    assert data["error"] == "denied-by-policy"
+
+    assert isinstance(tool.pre_ctx, ToolGatewayContext)
+    assert tool.pre_ctx.tool_name == "shell"
+    assert tool.pre_ctx.arguments == {"cmd": "ls"}
+    assert tool.pre_ctx.agent_id == "a1"
+    assert tool.pre_ctx.privilege_level == "Standard"
+    assert tool.pre_ctx.allowed_tools == ["shell", "edit"]
+
+
+def test_tool_post_receives_outcome_and_mutates():
+    tool = _RecordingTool(post_action="mutate", post_result="[redacted]")
+    client = _client({"gov": tool})
+
+    resp = client.post("/handlers/gov/post", json={
+        "callId": "c1", "continuationToken": "ct",
+        "outcomeResult": "secret", "outcomeError": None,
+    })
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["action"] == "mutate"
+    assert data["result"] == "[redacted]"
+
+    assert isinstance(tool.post_outcome, ToolOutcome)
+    assert tool.post_outcome.result == "secret"
