@@ -177,6 +177,28 @@ By default both `agent:*` and `graph:*` models are enabled. Disable either via e
 | `Vais__OpenAiCompat__AgentRoutingEnabled` | `true` | When `false`, `agent:*` models are hidden from `/v1/models` and return 404 on invocation. |
 | `Vais__OpenAiCompat__GraphRoutingEnabled` | `true` | When `false`, `graph:*` models are hidden from `/v1/models` and return 404 on invocation. |
 
+## Group a conversation's calls into one run
+
+Send an optional `X-Run-Id` header to correlate a sequence of requests as one run
+in telemetry. On `agent:`/`graph:` models it doubles as the session / run id, so
+repeated calls with the same value share session continuity; on the plain LLM path
+it groups the completions under one run in Langfuse. Without it, the run id is
+identity-derived or minted per call; an explicit header overrides the
+identity-derived value.
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Run-Id: chat-session-7" \
+  -d '{
+    "model": "agent:greeter",
+    "messages": [{"role": "user", "content": "Hello again!"}]
+  }'
+```
+
+OpenWebUI does not send this header itself; it is for clients (such as a coding
+agent) that make many calls per session and want them grouped.
+
 ## What you built
 
 - A direct connection from OpenWebUI to the runtime's OpenAI-compatible endpoint.

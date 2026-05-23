@@ -661,6 +661,29 @@ forwarded to the agent as metadata keys (`oai.temperature`, `oai.max_tokens`,
 The gateway does not enforce them — honouring them is up to each agent
 implementation.
 
+### Group a session's calls into one run
+
+Pass an `X-Run-Id` header to tie a sequence of calls to one run in telemetry.
+On the LLM path it stamps the run/correlation id so a multi-turn client's
+completions roll up under one run in Langfuse instead of appearing as N unrelated
+calls; on `agent:`/`graph:` models it is used as the session / run id, so repeated
+calls with the same value share session continuity.
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Run-Id: my-session-42" \
+  -d '{
+    "model": "agent:planner",
+    "messages": [{"role": "user", "content": "continue where we left off"}]
+  }'
+```
+
+When the header is absent the run id is identity-derived (from your
+`IInboundIdentityResolver`) or minted per call. An explicit `X-Run-Id` overrides
+an identity-derived id, so a caller can scope correlation per session even on a
+shared API key.
+
 ### Connect OpenWebUI
 
 1. Settings → Connections → Add OpenAI connection.
