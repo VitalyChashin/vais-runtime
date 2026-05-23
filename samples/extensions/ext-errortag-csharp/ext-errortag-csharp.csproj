@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.Samples.Extensions.ErrorTag</RootNamespace>
+    <AssemblyName>ext-errortag-csharp</AssemblyName>
+    <OutputType>Library</OutputType>
+    <IsPackable>false</IsPackable>
+    <Description>Sample Vais.Agents C# extension: tags and audits agent/graph failure messages on the error interceptor seam. Demonstrates host:csharp extension-authored error handling via ErrorInterceptor.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
+  </ItemGroup>
+
+</Project>
