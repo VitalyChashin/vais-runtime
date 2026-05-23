@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from .middleware import AgentInputMiddleware, AgentOutputMiddleware
 from .wire import (
     AgentInputContext, AgentOutputContext,
@@ -34,23 +35,30 @@ class _OutputContextBody(BaseModel):
     input_tokens: int | None = None
 
 
-class _PreRequestBody(BaseModel):
+# The handler protocol envelope is camelCase on the wire (matches the C# runtime proxy,
+# the inner context object, and every other vais manifest/wire shape). populate_by_name
+# keeps snake_case construction working in Python; FastAPI serializes responses by alias.
+class _CamelModel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class _PreRequestBody(_CamelModel):
     call_id: str
     context: dict[str, Any]
 
 
-class _PostRequestBody(BaseModel):
+class _PostRequestBody(_CamelModel):
     call_id: str
     continuation_token: str | None = None
 
 
-class _PreResponseBody(BaseModel):
+class _PreResponseBody(_CamelModel):
     action: str
     continuation_token: str | None = None
     context_patch: dict[str, Any] | None = None
 
 
-class _PostResponseBody(BaseModel):
+class _PostResponseBody(_CamelModel):
     action: str
     context_patch: dict[str, Any] | None = None
 

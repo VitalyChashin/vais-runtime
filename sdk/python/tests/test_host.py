@@ -1,13 +1,9 @@
 """Tests for the registry-driven vais_extension FastAPI Host seam routing.
 
-These pin the Host's actual current behavior so the seam-routing refactor (one
-``_SeamSpec`` row per seam instead of an isinstance chain) is guarded, and so adding
-the tool/llm seams later cannot silently break agentInput/agentOutput dispatch.
-
-Note: the outer envelope fields are snake_case here (``call_id`` / ``continuation_token``)
-because that is what the Host parses today. A separate C#<->Python envelope-casing
-mismatch is tracked outside this refactor; these tests deliberately do not assert the
-envelope-casing contract, only the routing + context building.
+These pin the Host's routing (one ``_SeamSpec`` row per seam instead of an isinstance
+chain) so adding the tool/llm seams later cannot silently break agentInput/agentOutput
+dispatch, and pin the camelCase envelope contract the C# runtime proxy speaks
+(``callId`` / ``continuationToken`` / ``contextPatch``).
 """
 from __future__ import annotations
 
@@ -69,15 +65,15 @@ def test_input_pre_builds_context_and_echoes_response():
     client = _client({"in": inp})
 
     resp = client.post("/handlers/in/pre", json={
-        "call_id": "c1",
+        "callId": "c1",
         "context": {"agentId": "a1", "runId": "r1", "nodeId": "n1", "message": "hello"},
     })
 
     assert resp.status_code == 200
     data = resp.json()
     assert data["action"] == "mutate"
-    assert data["continuation_token"] == "ct-1"
-    assert data["context_patch"] == {"k": "v"}
+    assert data["continuationToken"] == "ct-1"
+    assert data["contextPatch"] == {"k": "v"}
 
     assert isinstance(inp.pre_ctx, AgentInputContext)
     assert (inp.pre_ctx.agent_id, inp.pre_ctx.run_id, inp.pre_ctx.node_id, inp.pre_ctx.message) == \
@@ -89,7 +85,7 @@ def test_input_post_dispatches_to_handler():
     inp = _RecordingInput()
     client = _client({"in": inp})
 
-    resp = client.post("/handlers/in/post", json={"call_id": "c1", "continuation_token": "ct-1"})
+    resp = client.post("/handlers/in/post", json={"callId": "c1", "continuationToken": "ct-1"})
 
     assert resp.status_code == 200
     assert resp.json()["action"] == "mutate"
@@ -101,7 +97,7 @@ def test_output_pre_builds_output_context_and_short_circuits():
     client = _client({"out": out})
 
     resp = client.post("/handlers/out/pre", json={
-        "call_id": "c2",
+        "callId": "c2",
         "context": {"agentId": "a2", "runId": "r2", "sessionId": "s2",
                     "outputTokens": 5, "inputTokens": 3},
     })
