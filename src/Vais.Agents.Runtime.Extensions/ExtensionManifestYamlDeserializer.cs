@@ -28,9 +28,12 @@ public sealed class ExtensionManifestYamlDeserializer
         var doc = _deserializer.Deserialize<ExtensionYamlDocument?>(yaml)
             ?? throw new InvalidOperationException("Extension YAML document is empty.");
 
-        if (string.IsNullOrWhiteSpace(doc.Metadata?.Name))
+        // Extension manifests use metadata.name (K8s-like); accept metadata.id as a fallback
+        // for parity with the JSON loader (JsonAgentGraphManifestLoader.ParseExtension).
+        var id = !string.IsNullOrWhiteSpace(doc.Metadata?.Name) ? doc.Metadata!.Name : doc.Metadata?.Id;
+        if (string.IsNullOrWhiteSpace(id))
         {
-            throw new InvalidOperationException("Extension YAML: metadata.name is required.");
+            throw new InvalidOperationException("Extension YAML: metadata.name (or metadata.id) is required.");
         }
         if (string.IsNullOrWhiteSpace(doc.Spec?.Host))
         {
@@ -67,8 +70,8 @@ public sealed class ExtensionManifestYamlDeserializer
         }
 
         return new ExtensionManifest(
-            Id: doc.Metadata!.Name,
-            Version: doc.Metadata.Version ?? "0.0.0",
+            Id: id!,
+            Version: doc.Metadata!.Version ?? "0.0.0",
             Spec: new ExtensionSpec
             {
                 Host = spec.Host,
@@ -81,6 +84,7 @@ public sealed class ExtensionManifestYamlDeserializer
                 ImagePullPolicy = spec.ImagePullPolicy,
                 Handlers = handlers,
                 Scope = scope,
+                Secrets = spec.Secrets?.Count > 0 ? spec.Secrets : null,
             },
             Labels: doc.Metadata.Labels?.Count > 0 ? doc.Metadata.Labels : null,
             Description: doc.Metadata.Description);
@@ -100,6 +104,7 @@ internal sealed class ExtensionYamlDocument
 internal sealed class ExtensionYamlMetadata
 {
     public string Name { get; set; } = "";
+    public string? Id { get; set; }
     public string? Version { get; set; }
     public string? Description { get; set; }
     public Dictionary<string, string>? Labels { get; set; }
@@ -117,6 +122,7 @@ internal sealed class ExtensionYamlSpec
     public string? ImagePullPolicy { get; set; }
     public List<ExtensionYamlHandler>? Handlers { get; set; }
     public ExtensionYamlScope? Scope { get; set; }
+    public Dictionary<string, string>? Secrets { get; set; }
 }
 
 internal sealed class ExtensionYamlHandler

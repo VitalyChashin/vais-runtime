@@ -1233,6 +1233,8 @@ public sealed class JsonAgentGraphManifestLoader
                 var failureMode = item.TryGetProperty("failureMode", out var fmEl) ? fmEl.GetString() ?? "fail" : "fail";
                 var typeName = item.TryGetProperty("typeName", out var tnEl) ? tnEl.GetString() : null;
                 var endpoint = item.TryGetProperty("endpoint", out var epEl) ? epEl.GetString() : null;
+                int? handlerTimeout = item.TryGetProperty("timeoutSeconds", out var htEl) && htEl.TryGetInt32(out var htVal)
+                    ? htVal : null;
                 if (!string.IsNullOrEmpty(hid) && !string.IsNullOrEmpty(seam))
                 {
                     handlers.Add(new ExtensionHandler
@@ -1243,6 +1245,7 @@ public sealed class JsonAgentGraphManifestLoader
                         Endpoint = endpoint,
                         Priority = priority,
                         FailureMode = failureMode,
+                        TimeoutSeconds = handlerTimeout,
                     });
                 }
                 idx++;
@@ -1263,8 +1266,14 @@ public sealed class JsonAgentGraphManifestLoader
                 Host = host!,
                 Package = spec.TryGetProperty("package", out var pkgEl) ? pkgEl.GetString() : null,
                 Image = spec.TryGetProperty("image", out var imgEl) ? imgEl.GetString() : null,
+                Port = spec.TryGetProperty("port", out var portEl) && portEl.TryGetInt32(out var portVal) ? portVal : null,
+                Topology = spec.TryGetProperty("topology", out var topoEl) ? topoEl.GetString() : null,
+                StartupTimeoutSeconds = spec.TryGetProperty("startupTimeoutSeconds", out var stEl) && stEl.TryGetInt32(out var stVal) ? stVal : null,
+                InvokeTimeoutSeconds = spec.TryGetProperty("invokeTimeoutSeconds", out var itEl) && itEl.TryGetInt32(out var itVal) ? itVal : null,
+                ImagePullPolicy = spec.TryGetProperty("imagePullPolicy", out var ippEl) ? ippEl.GetString() : null,
                 Handlers = handlers,
                 Scope = ParseExtensionScope(spec, prefix),
+                Secrets = ParseStringMap(spec, "secrets"),
             },
             Labels: labels,
             Description: description);
