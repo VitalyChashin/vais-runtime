@@ -1677,3 +1677,43 @@ override Vais.Agents.GraphNodeOutcome.GetHashCode() -> int
 override Vais.Agents.GraphNodeOutcome.ToString() -> string!
 static Vais.Agents.GraphNodeOutcome.operator !=(Vais.Agents.GraphNodeOutcome? left, Vais.Agents.GraphNodeOutcome? right) -> bool
 static Vais.Agents.GraphNodeOutcome.operator ==(Vais.Agents.GraphNodeOutcome? left, Vais.Agents.GraphNodeOutcome? right) -> bool
+Vais.Agents.SessionLifecycleHook
+Vais.Agents.SessionLifecycleHook.SessionLifecycleHook() -> void
+virtual Vais.Agents.SessionLifecycleHook.OnSessionAsync(Vais.Agents.SessionLifecycleContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.SessionLifecycleContext
+Vais.Agents.SessionLifecycleContext.<Clone>$() -> Vais.Agents.SessionLifecycleContext!
+Vais.Agents.SessionLifecycleContext.AgentId.get -> string!
+Vais.Agents.SessionLifecycleContext.AgentId.init -> void
+Vais.Agents.SessionLifecycleContext.Deconstruct(out string! AgentId, out string! SessionId, out string! Phase, out int TurnCount, out System.Collections.Generic.IReadOnlyList<Vais.Agents.SessionTurn!>? History) -> void
+Vais.Agents.SessionLifecycleContext.Equals(Vais.Agents.SessionLifecycleContext? other) -> bool
+Vais.Agents.SessionLifecycleContext.History.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.SessionTurn!>?
+Vais.Agents.SessionLifecycleContext.History.init -> void
+Vais.Agents.SessionLifecycleContext.Phase.get -> string!
+Vais.Agents.SessionLifecycleContext.Phase.init -> void
+Vais.Agents.SessionLifecycleContext.SessionId.get -> string!
+Vais.Agents.SessionLifecycleContext.SessionId.init -> void
+Vais.Agents.SessionLifecycleContext.SessionLifecycleContext(string! AgentId, string! SessionId, string! Phase, int TurnCount, System.Collections.Generic.IReadOnlyList<Vais.Agents.SessionTurn!>? History) -> void
+Vais.Agents.SessionLifecycleContext.TurnCount.get -> int
+Vais.Agents.SessionLifecycleContext.TurnCount.init -> void
+override Vais.Agents.SessionLifecycleContext.Equals(object? obj) -> bool
+override Vais.Agents.SessionLifecycleContext.GetHashCode() -> int
+override Vais.Agents.SessionLifecycleContext.ToString() -> string!
+static Vais.Agents.SessionLifecycleContext.operator !=(Vais.Agents.SessionLifecycleContext? left, Vais.Agents.SessionLifecycleContext? right) -> bool
+static Vais.Agents.SessionLifecycleContext.operator ==(Vais.Agents.SessionLifecycleContext? left, Vais.Agents.SessionLifecycleContext? right) -> bool
+Vais.Agents.SessionTurn
+Vais.Agents.SessionTurn.<Clone>$() -> Vais.Agents.SessionTurn!
+Vais.Agents.SessionTurn.Deconstruct(out string! Role, out string! Text) -> void
+Vais.Agents.SessionTurn.Equals(Vais.Agents.SessionTurn? other) -> bool
+Vais.Agents.SessionTurn.Role.get -> string!
+Vais.Agents.SessionTurn.Role.init -> void
+Vais.Agents.SessionTurn.SessionTurn(string! Role, string! Text) -> void
+Vais.Agents.SessionTurn.Text.get -> string!
+Vais.Agents.SessionTurn.Text.init -> void
+override Vais.Agents.SessionTurn.Equals(object? obj) -> bool
+override Vais.Agents.SessionTurn.GetHashCode() -> int
+override Vais.Agents.SessionTurn.ToString() -> string!
+static Vais.Agents.SessionTurn.operator !=(Vais.Agents.SessionTurn? left, Vais.Agents.SessionTurn? right) -> bool
+static Vais.Agents.SessionTurn.operator ==(Vais.Agents.SessionTurn? left, Vais.Agents.SessionTurn? right) -> bool
+Vais.Agents.SessionPhase
+const Vais.Agents.SessionPhase.Closing = "closing" -> string!
+const Vais.Agents.SessionPhase.Opened = "opened" -> string!
