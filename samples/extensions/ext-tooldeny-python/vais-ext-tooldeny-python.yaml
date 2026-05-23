@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-tooldeny-python
+  version: "0.1.0"
+  description: "Python port of ext-tooldeny-csharp. Denies dangerous tools (shell, delete_file) on the tool gateway."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: container
+  image: ext-tooldeny-python:local
+  port: 8080
+  topology: standalone
+  startupTimeoutSeconds: 30
+  invokeTimeoutSeconds: 5
+  handlers:
+    - id: tool-deny
+      seam: toolGatewayMiddleware
+      priority: 100
+      failureMode: fail

@@ -1,0 +1,16 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-tooldeny-csharp
+  version: "1.0.0"
+  description: "Denies a fixed set of dangerous tools (shell, delete_file) on the tool gateway."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: csharp
+  handlers:
+    - id: tool-deny
+      seam: toolGatewayMiddleware
+      priority: 100
+      failureMode: fail
