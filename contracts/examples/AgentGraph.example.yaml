@@ -1,0 +1,20 @@
+apiVersion: vais.agents/v1
+kind: AgentGraph
+metadata:
+  id: example-graph
+  version: "1.0"
+  description: Example two-node graph.
+spec:
+  entry: start
+  nodes:
+  - id: start
+    kind: Agent
+    ref:
+      id: example-agent
+  - id: done
+    kind: End
+  edges:
+  - from: start
+    to: done
+    concurrent: false
+

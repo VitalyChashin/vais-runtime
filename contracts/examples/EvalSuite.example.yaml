@@ -1,0 +1,17 @@
+apiVersion: vais.agents/v1
+kind: EvalSuite
+metadata:
+  id: example-suite
+  version: "1.0"
+  description: Example eval suite.
+spec:
+  agentId: example-agent
+  cases:
+  - id: greets
+    input: Say hello.
+    assertions:
+    - kind: contains
+      params:
+        value: hello
+  replayMode: Live
+
