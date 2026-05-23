@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 using Vais.Agents.Runtime.Instantiation;
 using Xunit;
 
@@ -35,6 +36,7 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
     private RecordingGuardrail _guardrail = null!;
     private InMemoryAgentJournal _journal = null!;
     private RecordingToolMiddleware _middleware = null!;
+    private StubComposer _composer = null!;
     private StubTool _tool = null!;
 
     public async Task InitializeAsync()
@@ -42,6 +44,7 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
         _guardrail = new RecordingGuardrail();
         _journal = new InMemoryAgentJournal();
         _middleware = new RecordingToolMiddleware();
+        _composer = new StubComposer();
         _tool = new StubTool("echo", "ECHO:");
 
         _host = await new HostBuilder()
@@ -64,6 +67,7 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
                     services.AddSingleton<IToolGuardrail>(_guardrail);
                     services.AddSingleton<IAgentJournal>(_journal);
                     services.AddSingleton<ToolGatewayMiddleware>(_middleware);
+                    services.AddSingleton<IExtensionChainComposer>(_composer);
 
                     // ICompletionProviderPool needed for the LLM endpoints in the same group
                     // (route binding inspects all endpoints at startup).
@@ -148,6 +152,43 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
         _tool.InvokeCount.Should().Be(0);
     }
 
+    // SG-11: a co-tenant container agent's tool call is governed by an extension-authored
+    // toolGatewayMiddleware chain (concatenated after the DI middleware), not just DI middleware.
+    [Fact]
+    public async Task ToolInvoke_ExtensionTool_Deny_ShortCircuitsBeforeTool()
+    {
+        var ext = new DenyExtMiddleware();
+        _composer.ToolChain = new ToolGatewayMiddleware[] { ext };
+
+        var resp = await PostInvokeAsync("run-ext", "agent-ext", "echo", "{}");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("isError").GetBoolean().Should().BeTrue();
+        body.GetProperty("content").GetString().Should().Contain("ExtensionDenied");
+
+        ext.Invocations.Should().Be(1, "the extension tool chain must run on the container-gateway path");
+        _tool.InvokeCount.Should().Be(0, "an extension deny must short-circuit before the tool");
+        _middleware.Invocations.Should().Be(1, "DI middleware is outermost and still runs");
+    }
+
+    [Fact]
+    public async Task ToolInvoke_ExtensionTool_Observes_OnSuccess()
+    {
+        var ext = new RecordingToolMiddleware();
+        _composer.ToolChain = new ToolGatewayMiddleware[] { ext };
+
+        var resp = await PostInvokeAsync("run-ext2", "agent-ext2", "echo", "{\"x\":1}");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("isError").GetBoolean().Should().BeFalse();
+        body.GetProperty("content").GetString().Should().Be("ECHO:{\"x\":1}");
+
+        ext.Invocations.Should().Be(1, "extension tool middleware runs on the success path too");
+        _tool.InvokeCount.Should().Be(1);
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private async Task<HttpResponseMessage> PostInvokeAsync(
@@ -222,6 +263,39 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
             Interlocked.Increment(ref Invocations);
             return await next();
         }
+    }
+
+    private sealed class DenyExtMiddleware : ToolGatewayMiddleware
+    {
+        public int Invocations;
+
+        public override Task<ToolCallOutcome> InvokeAsync(
+            ToolGatewayContext context,
+            Func<Task<ToolCallOutcome>> next,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref Invocations);
+            return Task.FromResult(new ToolCallOutcome(context.CallId, Result: null, Error: "ExtensionDenied: not allowed"));
+        }
+    }
+
+    // Stub composer: only the tool chain is exercised here; input/output return empty.
+    private sealed class StubComposer : IExtensionChainComposer
+    {
+        public IReadOnlyList<ToolGatewayMiddleware> ToolChain { get; set; } = Array.Empty<ToolGatewayMiddleware>();
+
+        public Task<IReadOnlyList<AgentInputMiddleware>> GetInputChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentInputMiddleware>>(Array.Empty<AgentInputMiddleware>());
+
+        public Task<IReadOnlyList<AgentOutputMiddleware>> GetOutputChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentOutputMiddleware>>(Array.Empty<AgentOutputMiddleware>());
+
+        public Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult(ToolChain);
+
+        public void InvalidateAgent(string agentId) { }
+
+        public void InvalidateAll() { }
     }
 
     private sealed class SingleServerRegistry(string id) : IMcpServerRegistry

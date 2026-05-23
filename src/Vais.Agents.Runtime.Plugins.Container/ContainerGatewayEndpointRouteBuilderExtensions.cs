@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Otlp;
 using Vais.Agents.Runtime.Plugins.Container.StructuredLog;
@@ -413,6 +414,17 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
+        // Extension-authored tool governance: concatenate the agent's toolGatewayMiddleware
+        // extension chain AFTER the statically-registered (DI) middleware, so a co-tenant
+        // container agent's tool calls are governed by `kind: Extension` exactly like C# agents.
+        var composer = ctx.RequestServices.GetService<IExtensionChainComposer>();
+        var extToolChain = composer is null
+            ? (IReadOnlyList<ToolGatewayMiddleware>)Array.Empty<ToolGatewayMiddleware>()
+            : await composer.GetToolChainAsync(agentId, ct).ConfigureAwait(false);
+        var mergedToolMiddleware = extToolChain.Count == 0
+            ? toolMiddleware
+            : toolMiddleware.Concat(extToolChain);
+
         // DefaultToolCallDispatcher gives us: IToolGuardrail Before/After hooks,
         // IAgentJournal append (when RunId is set), IAgentEventBus ToolCallStarted/Completed,
         // ToolGatewayMiddleware chain — same path C# agents use via StatefulAiAgent.
@@ -421,7 +433,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             toolGuardrails:    guardrails.ToArray(),
             eventBus:          ctx.RequestServices.GetService<IAgentEventBus>(),
             journal:           ctx.RequestServices.GetService<IAgentJournal>(),
-            gatewayMiddleware: toolMiddleware);
+            gatewayMiddleware: mergedToolMiddleware);
 
         ToolCallOutcome outcome;
         try
