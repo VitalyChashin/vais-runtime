@@ -24,6 +24,7 @@ internal sealed class ExtensionAssemblyLoader
         typeof(LlmGatewayMiddleware),
         typeof(ErrorInterceptor),
         typeof(GraphNodeMiddleware),
+        typeof(SessionLifecycleHook),
     ];
 
     /// <summary>Map from seam base type to the canonical seam name used in manifests.</summary>
@@ -35,6 +36,7 @@ internal sealed class ExtensionAssemblyLoader
         [typeof(LlmGatewayMiddleware)]      = ExtensionSeams.LlmGatewayMiddleware,
         [typeof(ErrorInterceptor)]          = ExtensionSeams.ErrorInterceptor,
         [typeof(GraphNodeMiddleware)]       = ExtensionSeams.GraphNode,
+        [typeof(SessionLifecycleHook)]      = ExtensionSeams.SessionLifecycle,
     };
 
     private readonly ExtensionLoaderOptions _options;

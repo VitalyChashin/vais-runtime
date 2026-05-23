@@ -896,6 +896,8 @@ public sealed class MafGraphOrchestratorTests
             => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(new[] { interceptor });
         public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string a, CancellationToken c = default)
             => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(Array.Empty<GraphNodeMiddleware>());
+        public Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<SessionLifecycleHook>>(Array.Empty<SessionLifecycleHook>());
         public void InvalidateAgent(string a) { }
         public void InvalidateAll() { }
     }
@@ -1773,6 +1775,8 @@ public sealed class MafGraphOrchestratorTests
             => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(Array.Empty<ErrorInterceptor>());
         public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string a, CancellationToken c = default)
             => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(new[] { mw });
+        public Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<SessionLifecycleHook>>(Array.Empty<SessionLifecycleHook>());
         public void InvalidateAgent(string a) { }
         public void InvalidateAll() { }
     }

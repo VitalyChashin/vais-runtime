@@ -333,6 +333,28 @@ public sealed class ExtensionFoundationIntegrationTests
         return next();
     }
 
+    // ── 7h. sessionLifecycle seam: GetSessionLifecycleChainAsync builds the chain; hook fires ──
+    [Fact]
+    public async Task ChainComposer_SessionLifecycleSeam_FiresHook()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var hook = new RecordingSessionHook();
+        var descriptor = MakeDescriptorWithHandlers("ext-sess", "1.0.0", scope: null,
+            ("sess", ExtensionSeams.SessionLifecycle, hook, 100));
+        await registry.SwapAsync("ext-sess", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetSessionLifecycleChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered sessionLifecycle handler must appear in the chain");
+
+        var ctx = new SessionLifecycleContext("any-agent", "s1", SessionPhase.Closing, 3,
+            new[] { new SessionTurn("user", "hi") });
+        await chain[0].OnSessionAsync(ctx);
+
+        hook.LastPhase.Should().Be(SessionPhase.Closing);
+        hook.LastTurnCount.Should().Be(3);
+    }
+
     // ── 8. YAML deserializer: parses a valid Extension manifest ───────────
     [Fact]
     public void YamlDeserializer_ValidManifest_ParsesAllFields()
@@ -498,5 +520,18 @@ public sealed class ExtensionFoundationIntegrationTests
             GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct = default)
             => Task.FromResult(new GraphNodeOutcome(
                 new Dictionary<string, JsonElement> { ["k"] = JsonDocument.Parse("\"cached\"").RootElement.Clone() }));
+    }
+
+    private sealed class RecordingSessionHook : SessionLifecycleHook
+    {
+        public string? LastPhase { get; private set; }
+        public int LastTurnCount { get; private set; }
+
+        public override Task OnSessionAsync(SessionLifecycleContext ctx, CancellationToken ct = default)
+        {
+            LastPhase = ctx.Phase;
+            LastTurnCount = ctx.TurnCount;
+            return Task.CompletedTask;
+        }
     }
 }

@@ -349,6 +349,9 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
         public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string agentId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(Array.Empty<GraphNodeMiddleware>());
 
+        public Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SessionLifecycleHook>>(Array.Empty<SessionLifecycleHook>());
+
         public void InvalidateAgent(string agentId) { }
 
         public void InvalidateAll() { }
