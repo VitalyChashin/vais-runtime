@@ -46,7 +46,8 @@ The plugin only opens HTTP connections to the runtime — never directly to prov
 | `ContainerAgentShim` | The plugin-side adapter the agent grain holds; turns `AskAsync` / `StreamAsync` calls into HTTP requests to the container's `/invoke` endpoint and merges results back. |
 | `IContainerPluginReloader` | Hot-reload entry point. Drains in-flight invocations, swaps the image, validates the handler type name didn't change. |
 | `IContainerPluginRegistry` (in `Vais.Agents.Abstractions`) + `ContainerPluginRegistryGrain` | Orleans-backed registry. Same shape as `IAgentRegistry` — `ListAsync`, `GetAsync`, `RegisterAsync`, `RemoveAsync`. Survives silo restart. |
-| `HmacCallTokenService` (`ICallTokenService`) | HMAC-SHA256 short-lived bearer tokens (`base64url(payload).base64url(hmac)`, payload `{runId}:{agentId}:{expiresAtUnixSeconds}`). Issues per-invocation tokens; `TryExtract` resolves the receiving side. |
+| `HmacCallTokenService` (`ICallTokenService`) | HMAC-SHA256 short-lived bearer tokens (`base64url(payload).base64url(hmac)`). Two payload shapes: v1 `{runId}:{agentId}:{expiresAt}` (short-turn) and v2 `v2:{runId}:{agentId}:{leaseId}:{expiresAt}` ([session mode](#session-mode-long-lived-plugins)). `TryExtract` resolves the receiving side. |
+| `IInvokeLeaseStore` (in `Vais.Agents.Core`) + `InMemoryInvokeLeaseStore` / `OrleansInvokeLeaseStore` + `InvokeLeaseGrain` | Tracks session-mode invoke-lease liveness. In-memory for a single silo; Orleans-grain-backed for multi-silo (P1). Fronted on the hot path by `LeaseLivenessCache`. |
 
 ## Manifest shape
 
@@ -112,6 +113,7 @@ The runtime exposes an **internal** gateway on a separate port (default 5001) th
 | `POST /v1/container-gateway/tools/invoke` | Invoke a registered tool via the MCP Gateway middleware chain. |
 | `GET /v1/container-gateway/tools/list` | Enumerate the agent's tool registry. |
 | `POST /v1/container-gateway/sections/build` | Build a sectioned request via the runtime-side composer. |
+| `POST /v1/container-gateway/token/renew` | Session mode only — refresh a short-lived call token. See [session-mode plugins](#session-mode-long-lived-plugins). |
 | `POST /v1/otlp/v1/traces` | OTLP/protobuf trace receiver. See [OTLP telemetry](#otlp-telemetry). |
 
 **Auth** uses two related schemes against the same `HmacCallTokenService`:
@@ -119,7 +121,7 @@ The runtime exposes an **internal** gateway on a separate port (default 5001) th
 - **Gateway calls** — `Authorization: Bearer <token>` plus `X-Run-Id` / `X-Agent-Id` headers. The runtime validates `(token, runId, agentId)` per call.
 - **OTLP receiver** — `Authorization: vais-plugin-token <token>` (single header). The receiver calls `TryExtract(token, out runId, out agentId)` to recover the trace context.
 
-Tokens are HMAC-SHA256-signed, short-lived (`invokeTimeoutSeconds + 30s` for gateway calls; 24 h for OTLP), and minted per invocation by the supervisor. The signing key comes from `Vais:ContainerPlugin:CallTokenSecret` (min 32 chars; required in production configuration).
+Tokens are HMAC-SHA256-signed and minted per invocation. For short-turn plugins the gateway token lives `invokeTimeoutSeconds + 30s`; OTLP/log tokens live 24 h. For [session-mode plugins](#session-mode-long-lived-plugins) the gateway token is short and renewable. The signing key comes from `Vais:ContainerPlugin:CallTokenSecret` (min 32 chars; required in production configuration).
 
 **Environment variables injected by the supervisor** at container start:
 
@@ -162,6 +164,28 @@ The built-in `vais-plugin` Helm chart applies:
 - `securityContext` — `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`.
 - `NetworkPolicy` (enabled by default) — ingress only from the runtime Service; egress only to the runtime + kube-dns + the OTLP port when enabled.
 - RBAC — `rbac.pluginSupervision` grants the runtime ServiceAccount `get` + `patch` on `apps/v1/deployments` so `KubernetesContainerSupervisor` can roll out new images.
+
+## Session-mode (long-lived) plugins
+
+The default token model is built for the one-node-per-turn shape: one `invoke` is one short LLM turn, so a per-invoke token whose life equals the kill-timeout is exactly right. A **co-tenant agent** (an OpenCode/Codex-style coding agent that owns its own loop) is different — a single `invoke` spans a whole multi-minute session and drives *many* gateway calls on one token. Setting `invokeTimeoutSeconds` to 30 minutes to keep that token alive would also give a leaked token a 30-minute blast radius and erase fast reclaim of a wedged container.
+
+Session mode decouples those concerns. Set **`spec.sessionTtlSeconds`** on the manifest to opt in:
+
+```yaml
+spec:
+  image: ghcr.io/example/coding-agent:1.0.0
+  invokeTimeoutSeconds: 1800     # the invoke may run this long
+  sessionTtlSeconds: 1800        # …but the call token is short + renewable, capped here
+```
+
+What changes (all transparent to plugin authors using the SDK's `request.llm` / `request.tools`):
+
+- **Short, renewable tokens.** Instead of one long-lived token, the plugin gets a short token (`renewTokenTtlSeconds`, default 120s; set `VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS`) plus a `renewTokenUrl`. The SDK's `TokenManager` refreshes it before expiry and on a 401. A leaked token is then valid for at most one renewal window.
+- **Lease binding.** Each session token carries a per-invoke `leaseId`. The runtime opens an **invoke lease** at the start of the invoke, heartbeats it on each renewal, and releases it when the invoke ends. The gateway honours a session token only while its lease is live (checked through a short-TTL cache on the hot path), so the token dies with the session — on graceful end *or* if the supervising silo crashes (heartbeats stop, the lease lapses). `sessionTtlSeconds` is the absolute ceiling regardless of renewals.
+
+**Scaling contract (P1/P5).** The lease registry is `IInvokeLeaseStore`. The default `InMemoryInvokeLeaseStore` is correct for a **single silo** (Docker standalone — the gateway callback hits the same process that opened the lease). A **multi-silo Kubernetes** runtime, where a plugin's callback can be load-balanced to a different silo than its supervisor, must use the Orleans-grain-backed store — the runtime host registers it by default (`AddOrleansInvokeLeaseStore`).
+
+Short-turn plugins (no `sessionTtlSeconds`) are entirely unaffected: one full-TTL token, no renewal, no lease. OTLP-span and structured-log auth always use the separate 24 h startup tokens, so telemetry needs no renewal either. Contract reference: [`gateway-internal.md`](../../contracts/plugin-container/gateway-internal.md) §`token/renew`.
 
 ## OTLP telemetry
 

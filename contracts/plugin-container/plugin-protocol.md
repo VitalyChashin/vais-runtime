@@ -1,7 +1,7 @@
 # Container Plugin Protocol
 
-**Version:** 0.25  
-**Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3). v0.25 adds the 502/503/504 error codes additively over 0.24; the runtime accepts both versions and 0.24 plugins need no change.
+**Version:** 0.26  
+**Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3). v0.25 adds the 502/503/504 error codes additively over 0.24; v0.26 adds the optional `context.renewTokenUrl` field for session-mode token renewal (additive — absent for short-turn plugins). The runtime accepts 0.24–0.26 and older plugins need no change.
 
 ---
 
@@ -89,7 +89,8 @@ Synchronous invocation. Returns the complete response after all LLM and tool cal
     "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
     "runId": "3c7c4a28-78a2-4b68-b12f-2c8e6f1a9d11",
     "correlationId": "req-abc",
-    "callToken": "<opaque bearer token>"
+    "callToken": "<opaque bearer token>",
+    "renewTokenUrl": "http://runtime-internal:5001/v1/container-gateway/token/renew"
   }
 }
 ```
@@ -99,7 +100,8 @@ Field rules:
 - `llmGatewayUrl` / `toolGatewayUrl` — the container **must** use these URLs for all LLM and tool calls. Hard-coded LLM calls not using `llmGatewayUrl` violate architectural principle P4. The SDK provides clients pre-configured with these URLs; plugin authors use `request.llm` and `request.tools`, not raw HTTP clients.
 - `opaqueState` — JSON object or `null`. Null on first invocation or after a fresh-start (see error types). The container must not assume this field is present. **Size cap:** not currently enforced on the container plugin path (the 1 MiB cap on `PythonPluginLoaderOptions.MaxAgentStateSizeBytes` applies to Python subprocess plugins, not container plugins). Plan defensively for ≤1 MiB until enforcement is added.
 - `timeoutSeconds` — applies to the entire invocation including nested LLM and tool calls. The container is responsible for respecting this budget.
-- `context.callToken` — must be included as `Authorization: Bearer <callToken>` on every callback to `llmGatewayUrl` and `toolGatewayUrl`. Token validity window: `timeoutSeconds + 30s` to allow for clock skew. Algorithm and key rotation are specified in IP-3. (Separate from the OTLP-receiver token, which uses a 24 h TTL.)
+- `context.callToken` — must be included as `Authorization: Bearer <callToken>` on every callback to `llmGatewayUrl` and `toolGatewayUrl`. For short-turn plugins the validity window is `timeoutSeconds + 30s` (clock skew). For session-mode plugins (manifest `spec.sessionTtlSeconds`) it is short and renewable — see `context.renewTokenUrl`. Algorithm and key rotation are specified in IP-3. (Separate from the OTLP-receiver token, which uses a 24 h TTL.)
+- `context.renewTokenUrl` — session mode only (v0.26); absent for short-turn plugins. Absolute URL the plugin POSTs to (current token as the bearer) for a fresh short-lived token before the current one expires. The SDK's gateway clients renew transparently; see `gateway-internal.md §POST /v1/container-gateway/token/renew`.
 
 ### Response
 

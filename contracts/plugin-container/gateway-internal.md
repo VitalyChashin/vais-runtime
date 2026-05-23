@@ -1,7 +1,9 @@
 # Internal Gateway Protocol
 
-**Version:** 0.27  
+**Version:** 0.28  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3).
+
+**v0.28 (additive):** session-mode call tokens + the `POST /v1/container-gateway/token/renew` endpoint (see below). Short-turn plugins are unaffected — they keep receiving a single full-TTL token and never call the renewal endpoint.
 
 ---
 
@@ -13,7 +15,12 @@ Endpoints the runtime exposes for container → runtime callbacks. Called by plu
 
 **Path prefix:** All gateway endpoints mount under `/v1/container-gateway/*` on the internal port. Older drafts of this contract referenced unprefixed paths (`/v1/llm/complete` etc.); those never shipped — the prefix has been in place since IP-3.
 
-**Authentication:** Every request must carry `Authorization: Bearer <callToken>`, where `callToken` is the value from `InvokeRequest.context.callToken`. Token generation algorithm and key rotation are specified in IP-3. Token validity window: `invokeTimeoutSeconds + 30s` to allow for clock skew (separate from the OTLP-receiver token, which uses a 24 h TTL — see [plugin-protocol §OTLP receiver]).
+**Authentication:** Every request must carry `Authorization: Bearer <callToken>`, where `callToken` is the value from `InvokeRequest.context.callToken`. Token generation algorithm and key rotation are specified in IP-3.
+
+- **Short-turn (default).** The token's validity window is `invokeTimeoutSeconds + 30s` to allow for clock skew. The plugin uses the single token for the whole invoke and never renews.
+- **Session mode** (plugin manifest sets `spec.sessionTtlSeconds`). The token is short-lived (`renewTokenTtlSeconds`, default 120s) and carries an opaque `leaseId`. The plugin must refresh it via `POST /v1/container-gateway/token/renew` before it expires; the gateway honours such a token only while the matching **invoke lease** is live, so a leaked token dies with the session (at most one renewal window) rather than living out a wall-clock TTL. The session's absolute ceiling is `sessionTtlSeconds`. `InvokeRequest.context.renewTokenUrl` carries the renewal URL; it is absent for short-turn plugins.
+
+(Both are separate from the OTLP-receiver / structured-log tokens, which use a 24 h TTL — see [plugin-protocol §OTLP receiver].)
 
 **Required headers on every gateway request:**
 
@@ -277,3 +284,42 @@ Some plugins build their own context (LangGraph state, persistent agent threads,
 2. **Request-side filter** — adding an optional `"suppress": ["memory.*"]` field on the request body.
 
 For v0.26 the plugin always receives the full resolved section list and picks what to use; the suppress mechanism is deferred to a later additive contract change driven by concrete adapter needs.
+
+---
+
+## `POST /v1/container-gateway/token/renew`
+
+Session-mode only (v0.28). A plugin that received a `renewTokenUrl` in `InvokeRequest.context` calls this endpoint to obtain a fresh short-lived token before the current one expires. Short-turn plugins never call it.
+
+### Request
+
+No body. Standard required headers, with the **current** (still-valid) token as the bearer:
+
+```
+POST /v1/container-gateway/token/renew
+Authorization: Bearer <currentCallToken>
+X-Agent-Id: <agentId>
+X-Run-Id: <runId>
+```
+
+### Response
+
+```json
+{
+  "token": "<freshCallToken>",
+  "expiresAt": 1716500000
+}
+```
+
+- `token` — the new token to use on all subsequent gateway calls. It carries the same `leaseId` as the old one.
+- `expiresAt` — absolute expiry as Unix seconds (UTC). The SDK should renew again before this, minus a skew margin.
+
+### Gateway behaviour
+
+- The outer filter validates the presented token first, so an already-expired token yields `401` — **renew before expiry.**
+- For a lease-bound (v2) token the handler additionally re-checks the invoke lease (authoritative, uncached) and **heartbeats** it; if the lease is gone (session ended, or the supervising silo died and the lease lapsed) it returns `401` and no new token is issued — renewals cannot outlive the session.
+- Token TTL is `renewTokenTtlSeconds` (operator-configured, default 120; `VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS`). The lease's hard ceiling remains `sessionTtlSeconds` from invoke start, regardless of how many times the token is renewed.
+
+### SDK behaviour
+
+The Python SDK's shared `TokenManager` (one per invoke, used by both the LLM and tool clients) renews proactively when the token is within the skew window and reactively on a `401` from any gateway call, then retries the call once with the fresh token. Authors using `request.llm` / `request.tools` get renewal transparently.
