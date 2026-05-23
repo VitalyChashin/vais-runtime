@@ -130,6 +130,17 @@ Author it as an extension to wrap node execution across a graph without baking t
 
 **Short-circuit is journaling-safe.** The wrap sits around the node body, before the orchestrator's state-merge + per-step checkpoint, so a substituted (or transformed) output is recorded exactly as a real run would record it — crash-recovery and HITL resume stay consistent, and P2 (one-node-one-turn) holds (a short-circuited node simply produced its output without an LLM call). It governs the runtime's MAF orchestrator path; the in-process `InProcessGraphOrchestrator` (the library-embedding path) has no extension system and is not wrapped. Note: fan-in *join* nodes are wrapped (their body runs through the same executor); pure barrier accumulation is not a node body.
 
+## Session lifecycle hook
+
+**Base class:** `SessionLifecycleHook` (in `Vais.Agents.Abstractions`)
+**What it intercepts:** session **open** and **close** — the agent grain's Orleans activation/deactivation. Observe-only (a session opening/closing has nothing to mutate).
+**Seam name:** `sessionLifecycle` — DI or hot-published `kind: Extension`. **Cold** (once per activation/deactivation): no latency gate, container is allowed without `--accept-latency-cost`.
+**Reference impls:** `samples/extensions/ext-sessionsum-csharp` (`host: csharp`) + `ext-sessionsum-python` (`host: container`) — log open/close + summarize from the history on close.
+
+Author it as an extension for session-scoped side effects without baking them into the agent: audit/alerting on open, and **summarize-on-close** (the `closing` context carries the conversation history so a handler can summarize and persist it to a memory store). The anchor case is conversation summarization.
+
+**Honest limitations.** The phases are *grain activated / grain deactivating*: because grains deactivate after idle and reactivate on the next message, a long-lived session can produce multiple `opened`/`closing` pairs. **Close is best-effort (P1)** — deactivation runs on idle-timeout, shutdown, or explicit session removal, but a hard crash skips it, so summarize-on-close is inherently lossy. A hook failure is swallowed + logged at WARN and never aborts the grain's activation/deactivation. The container projection delivers history as role+text (tool-call detail omitted).
+
 ## Picking the right seam
 
 | You want to… | Seam |
@@ -138,6 +149,7 @@ Author it as an extension to wrap node execution across a graph without baking t
 | Gate every tool call | [MCP gateway middleware](author-an-mcp-gateway-middleware.md) — DI or hot-published `kind: Extension` (`toolGatewayMiddleware` seam) |
 | Rewrite or audit a failure message (without hiding the failure) | Error interceptor — DI or hot-published `kind: Extension` (`errorInterceptor` seam) |
 | Wrap, time, cache, or transform graph node execution | Graph node middleware — DI or hot-published `kind: Extension` (`graphNode` seam) |
+| Audit session open, or summarize the conversation on close | Session lifecycle hook — DI or hot-published `kind: Extension` (`sessionLifecycle` seam) |
 | Inject memory or retrieval before the model sees the prompt | Input middleware |
 | Add a named contribution (tenant policy, RAG hits, observability-only metadata) to every turn | Context provider |
 | Customise how the section list fits a budget | Section window packer |

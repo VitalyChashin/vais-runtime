@@ -271,6 +271,32 @@ internal sealed class HttpContainerHandlerProxy
         }
     }
 
+    // ── sessionLifecycle (single fire-and-forget notification) ────────────────
+    // No self-instrumentation (the composer's InstrumentedSessionLifecycleHook emits the span). A
+    // handler failure is ALWAYS swallowed — a lifecycle observer must never break grain
+    // activation/deactivation. There is no response body (observe-only).
+
+    internal async Task InvokeSessionLifecycleAsync(SessionLifecycleContext ctx, CancellationToken ct)
+    {
+        var callId = Guid.NewGuid().ToString("N");
+        var wire = new SessionLifecycleContextWire(
+            ctx.AgentId, ctx.SessionId, ctx.Phase, ctx.TurnCount,
+            ctx.History?.Select(t => new SessionTurnWire(t.Role, t.Text)).ToArray());
+        var req = new SessionLifecycleRequest(callId, wire);
+        try
+        {
+            using var msg = CreateTracedRequest(_preEndpoint, req, ctx.AgentId, ctx.SessionId, nodeId: null);
+            using var resp = await _http.SendAsync(msg, ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex,
+                "session-lifecycle handler {Endpoint} failed; agentId={AgentId} phase={Phase}; ignoring.",
+                _preEndpoint, ctx.AgentId, ctx.Phase);
+        }
+    }
+
     // ── graphNode (node-body wrap, pre/post) ──────────────────────────────────
     // No self-instrumentation: the composer's InstrumentedGraphNodeMiddleware emits the span.
 
@@ -653,4 +679,18 @@ internal sealed class GraphNodeHandlerProxy : GraphNodeMiddleware
     /// <inheritdoc />
     public override Task<GraphNodeOutcome> InvokeAsync(GraphNodeContext context, Func<Task<GraphNodeOutcome>> next, CancellationToken cancellationToken = default)
         => _proxy.InvokeGraphNodeAsync(context, next, cancellationToken);
+}
+
+/// <summary>
+/// <see cref="SessionLifecycleHook"/> adapter that delegates to an <see cref="HttpContainerHandlerProxy"/>.
+/// </summary>
+internal sealed class SessionLifecycleHandlerProxy : SessionLifecycleHook
+{
+    private readonly HttpContainerHandlerProxy _proxy;
+
+    internal SessionLifecycleHandlerProxy(HttpContainerHandlerProxy proxy) => _proxy = proxy;
+
+    /// <inheritdoc />
+    public override Task OnSessionAsync(SessionLifecycleContext context, CancellationToken cancellationToken = default)
+        => _proxy.InvokeSessionLifecycleAsync(context, cancellationToken);
 }

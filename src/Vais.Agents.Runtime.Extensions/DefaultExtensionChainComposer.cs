@@ -88,6 +88,15 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<SessionLifecycleHook>(ExtensionSeams.SessionLifecycle);
+    }
+
+    /// <inheritdoc />
     public void InvalidateAgent(string agentId) => _cache.TryRemove(agentId, out _);
 
     /// <inheritdoc />
@@ -135,6 +144,10 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 snapshot, manifest, agentId, ExtensionSeams.GraphNode,
                 (inst, desc, fm) => inst is GraphNodeMiddleware mw
                     ? new InstrumentedGraphNodeMiddleware(mw, desc, fm, agentId) : null),
+            [ExtensionSeams.SessionLifecycle] = BuildChain<SessionLifecycleHook>(
+                snapshot, manifest, agentId, ExtensionSeams.SessionLifecycle,
+                (inst, desc, fm) => inst is SessionLifecycleHook hook
+                    ? new InstrumentedSessionLifecycleHook(hook, desc, fm, agentId) : null),
         };
 
         var built = new CachedChains(chains);
@@ -429,6 +442,42 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 },
                 ct).ConfigureAwait(false);
             return captured!;
+        }
+    }
+
+    private sealed class InstrumentedSessionLifecycleHook(
+        SessionLifecycleHook inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode,
+        string agentId) : SessionLifecycleHook
+    {
+        public override async Task OnSessionAsync(SessionLifecycleContext ctx, CancellationToken ct = default)
+        {
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor,
+                string.IsNullOrEmpty(ctx.AgentId) ? agentId : ctx.AgentId,
+                runId: null, nodeId: null,
+                async () =>
+                {
+                    if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            await inner.OnSessionAsync(ctx, ct).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (!ct.IsCancellationRequested)
+                        {
+                            return HandlerOutcome.Skip(ex);
+                        }
+                    }
+                    else
+                    {
+                        await inner.OnSessionAsync(ctx, ct).ConfigureAwait(false);
+                    }
+
+                    return HandlerOutcome.Next();
+                },
+                ct).ConfigureAwait(false);
         }
     }
 

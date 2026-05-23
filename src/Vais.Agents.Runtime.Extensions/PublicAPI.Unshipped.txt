@@ -65,6 +65,7 @@ Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetToolChainAsync(string!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetLlmChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.LlmGatewayMiddleware!>!>!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetErrorInterceptorChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ErrorInterceptor!>!>!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetGraphNodeChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.GraphNodeMiddleware!>!>!
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetSessionLifecycleChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.SessionLifecycleHook!>!>!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAgent(string! agentId) -> void
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAll() -> void
 Vais.Agents.Runtime.Extensions.IExtensionReloader

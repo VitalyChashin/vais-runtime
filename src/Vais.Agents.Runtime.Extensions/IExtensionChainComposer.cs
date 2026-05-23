@@ -51,6 +51,13 @@ public interface IExtensionChainComposer
     /// </summary>
     Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the ordered <see cref="SessionLifecycleHook"/> chain for <paramref name="agentId"/>.
+    /// Empty when no extensions scope to this agent on the <c>sessionLifecycle</c> seam. Consumers
+    /// fire this (best-effort) on session open / close.
+    /// </summary>
+    Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(string agentId, CancellationToken cancellationToken = default);
+
     /// <summary>Invalidate the cached chain for <paramref name="agentId"/>.</summary>
     void InvalidateAgent(string agentId);
 

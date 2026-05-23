@@ -16,6 +16,7 @@ from vais_extension import (
     GraphNodeMiddleware,
     Host,
     LlmGatewayMiddleware,
+    SessionLifecycleHook,
     ToolGatewayMiddleware,
 )
 from vais_extension.wire import (
@@ -26,6 +27,7 @@ from vais_extension.wire import (
     GraphNodeContext,
     GraphNodePostResponse,
     GraphNodePreResponse,
+    SessionLifecycleContext,
     LlmContext,
     LlmGatewayPostResponse,
     LlmGatewayPreResponse,
@@ -137,6 +139,16 @@ class _RecordingGraphNode(GraphNodeMiddleware):
                    output: dict) -> GraphNodePostResponse:
         self.post_output_in = output
         return GraphNodePostResponse(action=self._post_action, output=self._post_output)
+
+
+class _RecordingSession(SessionLifecycleHook):
+    def __init__(self) -> None:
+        self.ctx: SessionLifecycleContext | None = None
+        self.call_id: str | None = None
+
+    async def on_session(self, context: SessionLifecycleContext, call_id: str) -> None:
+        self.ctx = context
+        self.call_id = call_id
 
 
 def _client(handlers: dict) -> TestClient:
@@ -421,3 +433,47 @@ def test_graph_node_post_receives_output_and_mutates():
     assert data["action"] == "mutate"
     assert data["output"] == {"marker": "transformed"}
     assert node.post_output_in == {"marker": "body"}
+
+
+def test_discovery_advertises_session_lifecycle_seam():
+    body = _client({"sess": _RecordingSession()}).get("/v1/handlers").json()
+    advertised = {h["id"]: h for h in body["handlers"]}
+    assert advertised["sess"]["seam"] == "sessionLifecycle"
+
+
+def test_session_lifecycle_opened_has_no_history():
+    sess = _RecordingSession()
+    client = _client({"sess": sess})
+
+    resp = client.post("/handlers/sess/pre", json={
+        "callId": "c1",
+        "context": {"agentId": "a1", "sessionId": "s1", "phase": "opened", "turnCount": 0, "history": None},
+    })
+
+    assert resp.status_code == 200
+    assert isinstance(sess.ctx, SessionLifecycleContext)
+    assert (sess.ctx.agent_id, sess.ctx.session_id, sess.ctx.phase) == ("a1", "s1", "opened")
+    assert sess.ctx.turn_count == 0
+    assert sess.ctx.history is None
+    assert sess.call_id == "c1"
+
+
+def test_session_lifecycle_closing_carries_history():
+    sess = _RecordingSession()
+    client = _client({"sess": sess})
+
+    resp = client.post("/handlers/sess/pre", json={
+        "callId": "c2",
+        "context": {
+            "agentId": "a1", "sessionId": "s1", "phase": "closing", "turnCount": 2,
+            "history": [{"role": "user", "text": "hi"}, {"role": "assistant", "text": "yo"}],
+        },
+    })
+
+    assert resp.status_code == 200
+    assert sess.ctx.phase == "closing"
+    assert sess.ctx.turn_count == 2
+    assert sess.ctx.history is not None
+    assert len(sess.ctx.history) == 2
+    assert (sess.ctx.history[0].role, sess.ctx.history[0].text) == ("user", "hi")
+    assert sess.ctx.history[1].text == "yo"

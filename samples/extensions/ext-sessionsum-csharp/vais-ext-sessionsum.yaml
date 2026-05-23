@@ -1,0 +1,16 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-sessionsum-csharp
+  version: "1.0.0"
+  description: "Logs session open/close and summarizes the conversation on close via the session lifecycle seam."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: csharp
+  handlers:
+    - id: session-summary
+      seam: sessionLifecycle
+      priority: 100
+      failureMode: skip

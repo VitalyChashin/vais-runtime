@@ -390,6 +390,47 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
     private static IReadOnlyDictionary<string, JsonElement> Output(string key, string value) =>
         new Dictionary<string, JsonElement> { [key] = JsonDocument.Parse($"\"{value}\"").RootElement.Clone() };
 
+    // ── sessionLifecycle seam: fire-and-forget notification over HTTP ─────────
+
+    // CSL-1. The hook fires and the closing context (phase, turn count, history) reaches the container.
+    [Fact]
+    public async Task SessionLifecycleProxy_Fires_And_SendsHistory()
+    {
+        using var server = new MockContainerServer();
+        var mw = new SessionLifecycleHandlerProxy(MakeSessionLifecycleProxy(server));
+
+        await mw.OnSessionAsync(new SessionLifecycleContext(
+            "agent-a", "s1", SessionPhase.Closing, 2,
+            new[] { new SessionTurn("user", "hi"), new SessionTurn("assistant", "yo") }));
+
+        server.LastPreRequestBody.Should().NotBeNull();
+        server.LastPreRequestBody!.Should().Contain("\"phase\":\"closing\"");
+        server.LastPreRequestBody.Should().Contain("\"turnCount\":2");
+        server.LastPreRequestBody.Should().Contain("\"history\"");
+        server.LastPreRequestBody.Should().Contain("yo", "the conversation history must round-trip for summarize-on-close");
+    }
+
+    // CSL-2. An unreachable handler is swallowed — a lifecycle observer never breaks the grain.
+    [Fact]
+    public async Task SessionLifecycleProxy_Unreachable_Swallowed()
+    {
+        var proxy = new HttpContainerHandlerProxy(
+            new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
+            preEndpoint:  "/handlers/h-sess/pre",
+            postEndpoint: "/handlers/h-sess/post",
+            failureMode:  "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-sess", ExtensionSeams.SessionLifecycle, "container"));
+        var mw = new SessionLifecycleHandlerProxy(proxy);
+
+        // Must complete without throwing.
+        await mw.OnSessionAsync(new SessionLifecycleContext("agent-a", "s1", SessionPhase.Opened, 0, null));
+    }
+
+    private static HttpContainerHandlerProxy MakeSessionLifecycleProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-sess/pre", "/handlers/h-sess/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-sess", ExtensionSeams.SessionLifecycle, "container"));
+
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private static HttpContainerHandlerProxy MakeErrorProxy(MockContainerServer server) =>
@@ -492,6 +533,9 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             }
         }
 
+        /// <summary>The last request body received on a <c>/pre</c> call (for payload assertions).</summary>
+        public string? LastPreRequestBody { get; private set; }
+
         private async Task HandleAsync(HttpListenerContext ctx)
         {
             ctx.Response.ContentType = "application/json";
@@ -499,6 +543,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
 
             if (path.EndsWith("/pre", StringComparison.OrdinalIgnoreCase))
             {
+                using (var reader = new StreamReader(ctx.Request.InputStream))
+                    LastPreRequestBody = await reader.ReadToEndAsync();
                 var body = JsonSerializer.Serialize(new
                 {
                     action            = _preAction,

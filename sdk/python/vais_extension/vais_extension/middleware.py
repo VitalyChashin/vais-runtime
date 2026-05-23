@@ -12,6 +12,7 @@ from .wire import (
     LlmContext, LlmResponse, LlmGatewayPreResponse, LlmGatewayPostResponse,
     ErrorContext, ErrorOutcome,
     GraphNodeContext, GraphNodePreResponse, GraphNodePostResponse,
+    SessionLifecycleContext,
 )
 
 
@@ -182,3 +183,17 @@ class GraphNodeMiddleware(ABC):
         output; return GraphNodePostResponse(action="mutate", output={...}) to replace it.
         """
         return GraphNodePostResponse()
+
+
+class SessionLifecycleHook(ABC):
+    """
+    Abstract base for sessionLifecycle seam handlers. A fire-and-forget observe hook fired on session
+    open (grain activation) and close (grain deactivation). On 'closing' the context carries the
+    conversation history for summarize-on-close. Best-effort: a hard crash skips close, and idle grain
+    cycles produce extra open/close pairs. A hook failure never aborts the grain lifecycle.
+    """
+
+    @abstractmethod
+    async def on_session(self, context: SessionLifecycleContext, call_id: str) -> None:
+        """Observe a session lifecycle transition (phase = 'opened' | 'closing')."""
+        ...
