@@ -101,6 +101,20 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Register <see cref="OrleansInvokeLeaseStore"/> as the singleton
+    /// <see cref="Vais.Agents.Core.IInvokeLeaseStore"/>, making session-mode call-token liveness
+    /// reachable from any silo (P1). Register before the in-process/in-memory fallback so it wins in a
+    /// clustered runtime. The call-token sibling of <see cref="AddOrleansGraphRunCoordinator"/>.
+    /// </summary>
+    public static IServiceCollection AddOrleansInvokeLeaseStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<Vais.Agents.Core.IInvokeLeaseStore>(sp =>
+            new OrleansInvokeLeaseStore(sp.GetRequiredService<IGrainFactory>()));
+        return services;
+    }
+
+    /// <summary>
     /// Register the silo-side dependencies required by <see cref="AiAgentGrain"/>:
     /// a <see cref="Func{String, CancellationToken, ValueTask}"/> that produces per-agent options.
     /// Expects <see cref="ICompletionProvider"/> to be registered separately (consumers

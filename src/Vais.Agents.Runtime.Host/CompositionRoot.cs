@@ -228,6 +228,9 @@ internal static class CompositionRoot
         // Grain-backed run registry — cross-silo graph cancel/status/conflict (P1). Registered
         // before the in-process TryAdd fallback below so it wins in the runtime.
         services.AddOrleansGraphRunCoordinator();
+        // Grain-backed invoke-lease store — session-mode call-token liveness reachable from any silo
+        // (P1). Registered before the in-memory fallback in AddContainerGatewayCallToken so it wins.
+        services.AddOrleansInvokeLeaseStore();
 
         // Background agent-as-tool tracker — durable, grain-backed, cluster-wide.
         // Required by AgentManifestTranslator when any localAgents entry sets

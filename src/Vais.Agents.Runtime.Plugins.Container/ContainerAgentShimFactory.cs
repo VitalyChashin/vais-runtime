@@ -51,7 +51,8 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             ? new ContainerSessionTokenConfig(
                 SessionTtlSeconds: sessionTtl,
                 RenewTokenTtlSeconds: _options.RenewTokenTtlSeconds,
-                RenewTokenUrl: $"{internalBase}/v1/container-gateway/token/renew")
+                RenewTokenUrl: $"{internalBase}/v1/container-gateway/token/renew",
+                LeaseStore: serviceProvider.GetRequiredService<IInvokeLeaseStore>())
             : null;
 
         var shim = new ContainerAgentShim(

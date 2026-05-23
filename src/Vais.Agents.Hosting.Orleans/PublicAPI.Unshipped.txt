@@ -1,4 +1,34 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain
+Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.HeartbeatAsync(int heartbeatTtlSeconds) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.IsLiveAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.StartAsync(string! runId, string! agentId, int sessionTtlSeconds, int heartbeatTtlSeconds) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain.HeartbeatAsync(int heartbeatTtlSeconds) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain.InvokeLeaseGrain(Orleans.Runtime.IPersistentState<Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState!>! state) -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain.IsLiveAsync() -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain.ReleaseAsync() -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrain.StartAsync(string! runId, string! agentId, int sessionTtlSeconds, int heartbeatTtlSeconds) -> System.Threading.Tasks.Task!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.Active.get -> bool
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.Active.set -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.AgentId.get -> string!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.AgentId.set -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.ExpiresAt.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.ExpiresAt.set -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.HardDeadline.get -> System.DateTimeOffset
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.HardDeadline.set -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.InvokeLeaseGrainState() -> void
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.RunId.get -> string!
+Vais.Agents.Hosting.Orleans.InvokeLeaseGrainState.RunId.set -> void
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore.HeartbeatAsync(string! leaseId, int heartbeatTtlSeconds, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore.IsLiveAsync(string! leaseId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore.OrleansInvokeLeaseStore(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore.ReleaseAsync(string! leaseId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Hosting.Orleans.OrleansInvokeLeaseStore.StartAsync(string! leaseId, string! runId, string! agentId, int sessionTtlSeconds, int heartbeatTtlSeconds, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais.Agents.Hosting.Orleans.AgenticHostingOrleansServiceCollectionExtensions.AddOrleansInvokeLeaseStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState
 Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.AgentGraphRunGrainState() -> void
 Vais.Agents.Hosting.Orleans.AgentGraphRunGrainState.Active.get -> bool

@@ -65,6 +65,18 @@ public class CompositionRootTests
     }
 
     [Fact]
+    public void Composition_Registers_OrleansBacked_InvokeLeaseStore()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IInvokeLeaseStore>().Should().BeOfType<OrleansInvokeLeaseStore>(
+            because: "the runtime registers the grain-backed lease store (P1) ahead of the in-memory fallback, "
+                   + "so session-mode call-token liveness is reachable from any silo.");
+    }
+
+    [Fact]
     public void Composition_Idempotency_OrleansStore_Wins_Over_PreRegistered_Default()
     {
         // M1 order-independence: even if a competing IIdempotencyStore is already in the
