@@ -30,6 +30,7 @@ internal sealed class ContainerAgentShim
     private readonly string _internalLlmGatewayUrl;
     private readonly string _internalToolGatewayUrl;
     private readonly int _invokeTimeoutSeconds;
+    private readonly ContainerSessionTokenConfig? _sessionConfig;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -45,6 +46,7 @@ internal sealed class ContainerAgentShim
         string internalLlmGatewayUrl,
         string internalToolGatewayUrl,
         int invokeTimeoutSeconds,
+        ContainerSessionTokenConfig? sessionConfig,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -55,6 +57,7 @@ internal sealed class ContainerAgentShim
         _internalLlmGatewayUrl = internalLlmGatewayUrl;
         _internalToolGatewayUrl = internalToolGatewayUrl;
         _invokeTimeoutSeconds = invokeTimeoutSeconds;
+        _sessionConfig = sessionConfig;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -111,17 +114,25 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(graphRunId ?? "", _manifest.Id, _invokeTimeoutSeconds);
-        var request = BuildInvokeRequest(messages, callToken, graphRunId);
+        var (callToken, renewTokenUrl, leaseId) =
+            await OpenSessionAsync(graphRunId ?? "", cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
 
-        var response = await InvokeWithRetryAsync(messages, request, cancellationToken).ConfigureAwait(false);
+            var response = await InvokeWithRetryAsync(messages, request, cancellationToken).ConfigureAwait(false);
 
-        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
-        _history.Add(BuildAssistantTurn(response));
-        _opaqueStateJson = SerialiseOpaqueState(response.OpaqueState);
+            _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
+            _history.Add(BuildAssistantTurn(response));
+            _opaqueStateJson = SerialiseOpaqueState(response.OpaqueState);
 
-        activity?.SetTag("gen_ai.completion", response.AssistantMessage);
-        return response.AssistantMessage;
+            activity?.SetTag("gen_ai.completion", response.AssistantMessage);
+            return response.AssistantMessage;
+        }
+        finally
+        {
+            await ReleaseSessionAsync(leaseId).ConfigureAwait(false);
+        }
     }
 
     public async IAsyncEnumerable<AgentEvent> StreamAsync(
@@ -147,46 +158,55 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(graphRunId ?? "", _manifest.Id, _invokeTimeoutSeconds);
-        var request = BuildInvokeRequest(messages, callToken, graphRunId);
-
-        var start = DateTimeOffset.UtcNow;
-        yield return new TurnStarted(start, context, userMessage);
-
-        // Collect SSE events into a buffer first: C# does not allow yield inside try-with-catch.
-        var collected = await CollectStreamAsync(request, cancellationToken).ConfigureAwait(false);
-
-        if (collected.Error is OperationCanceledException)
-            yield break;
-
-        if (collected.Error is not null)
+        var (callToken, renewTokenUrl, leaseId) =
+            await OpenSessionAsync(graphRunId ?? "", cancellationToken).ConfigureAwait(false);
+        try
         {
-            yield return new TurnFailed(DateTimeOffset.UtcNow, context,
-                collected.Error.GetType().Name, collected.Error.Message,
-                DateTimeOffset.UtcNow - start);
-            yield break;
+            var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
+
+            var start = DateTimeOffset.UtcNow;
+            yield return new TurnStarted(start, context, userMessage);
+
+            // Collect SSE events into a buffer first: C# does not allow yield inside try-with-catch
+            // (try-with-finally, used here for lease release, is fine).
+            var collected = await CollectStreamAsync(request, cancellationToken).ConfigureAwait(false);
+
+            if (collected.Error is OperationCanceledException)
+                yield break;
+
+            if (collected.Error is not null)
+            {
+                yield return new TurnFailed(DateTimeOffset.UtcNow, context,
+                    collected.Error.GetType().Name, collected.Error.Message,
+                    DateTimeOffset.UtcNow - start);
+                yield break;
+            }
+
+            foreach (var text in collected.DeltaTexts)
+                yield return new CompletionDelta(DateTimeOffset.UtcNow, context, text);
+
+            if (collected.FinalResponse is null)
+            {
+                yield return new TurnFailed(DateTimeOffset.UtcNow, context,
+                    "StreamError", "No final response from container.", DateTimeOffset.UtcNow - start);
+                yield break;
+            }
+
+            _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
+            _history.Add(BuildAssistantTurn(collected.FinalResponse));
+            _opaqueStateJson = SerialiseOpaqueState(collected.FinalResponse.OpaqueState);
+
+            yield return new TurnCompleted(
+                DateTimeOffset.UtcNow, context, collected.FinalResponse.AssistantMessage,
+                ModelId: null,
+                PromptTokens: collected.FinalResponse.Usage?.InputTokens,
+                CompletionTokens: collected.FinalResponse.Usage?.OutputTokens,
+                Duration: DateTimeOffset.UtcNow - start);
         }
-
-        foreach (var text in collected.DeltaTexts)
-            yield return new CompletionDelta(DateTimeOffset.UtcNow, context, text);
-
-        if (collected.FinalResponse is null)
+        finally
         {
-            yield return new TurnFailed(DateTimeOffset.UtcNow, context,
-                "StreamError", "No final response from container.", DateTimeOffset.UtcNow - start);
-            yield break;
+            await ReleaseSessionAsync(leaseId).ConfigureAwait(false);
         }
-
-        _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
-        _history.Add(BuildAssistantTurn(collected.FinalResponse));
-        _opaqueStateJson = SerialiseOpaqueState(collected.FinalResponse.OpaqueState);
-
-        yield return new TurnCompleted(
-            DateTimeOffset.UtcNow, context, collected.FinalResponse.AssistantMessage,
-            ModelId: null,
-            PromptTokens: collected.FinalResponse.Usage?.InputTokens,
-            CompletionTokens: collected.FinalResponse.Usage?.OutputTokens,
-            Duration: DateTimeOffset.UtcNow - start);
     }
 
     private sealed record StreamCollectResult(
@@ -283,7 +303,8 @@ internal sealed class ContainerAgentShim
                 "[{Urn}] Container plugin '{Name}' returned OpaqueStateDeserializationError — retrying with fresh state.",
                 ContainerPluginUrns.OpaqueStateDeserializationError, _manifest.Id);
             _opaqueStateJson = null;
-            var retryRequest = BuildInvokeRequest(originalMessages, request.Context.CallToken, request.Context.RunId, opaqueState: null);
+            var retryRequest = BuildInvokeRequest(originalMessages, request.Context.CallToken, request.Context.RunId,
+                opaqueState: null, renewTokenUrl: request.Context.RenewTokenUrl);
             try
             {
                 return await PostInvokeAsync(retryRequest, ct).ConfigureAwait(false);
@@ -356,11 +377,38 @@ internal sealed class ContainerAgentShim
         _ => ContainerPluginUrns.InvokeFailed,
     };
 
+    /// <summary>
+    /// Opens an invoke for one turn and mints its call token. Session-mode plugins (config present)
+    /// open an invoke lease, mint a short renewable token bound to that lease (carrying its leaseId),
+    /// and receive the renewal URL; short-turn plugins get a single full-TTL token, no lease, no URL.
+    /// The returned <c>leaseId</c> must be passed to <see cref="ReleaseSessionAsync"/> in a finally.
+    /// </summary>
+    private async Task<(string CallToken, string? RenewTokenUrl, string? LeaseId)> OpenSessionAsync(
+        string runId, CancellationToken ct)
+    {
+        if (_sessionConfig is not { } sc)
+            return (_callTokenService.Generate(runId, _manifest.Id, _invokeTimeoutSeconds + 30), null, null);
+
+        var leaseId = Guid.NewGuid().ToString("N");
+        await sc.LeaseStore.StartAsync(
+            leaseId, runId, _manifest.Id, sc.SessionTtlSeconds,
+            ContainerLeasePolicy.HeartbeatTtlSeconds(sc.RenewTokenTtlSeconds), ct).ConfigureAwait(false);
+        var token = _callTokenService.Generate(runId, _manifest.Id, leaseId, sc.RenewTokenTtlSeconds);
+        return (token, sc.RenewTokenUrl, leaseId);
+    }
+
+    private async Task ReleaseSessionAsync(string? leaseId)
+    {
+        if (leaseId is not null && _sessionConfig is { } sc)
+            await sc.LeaseStore.ReleaseAsync(leaseId).ConfigureAwait(false);
+    }
+
     private PluginInvokeRequest BuildInvokeRequest(
         IReadOnlyList<ChatTurn> messages,
         string callToken,
         string? runId,
-        JsonElement? opaqueState = default)
+        JsonElement? opaqueState = default,
+        string? renewTokenUrl = null)
     {
         var stateElement = opaqueState ?? ParseOpaqueState(_opaqueStateJson);
         return new PluginInvokeRequest
@@ -378,6 +426,7 @@ internal sealed class ContainerAgentShim
                 RunId = runId,
                 CorrelationId = null,
                 CallToken = callToken,
+                RenewTokenUrl = renewTokenUrl,
             }
         };
     }
@@ -479,3 +528,32 @@ internal sealed class ContainerAgentShim
 }
 
 internal readonly record struct SseEvent(string Event, string Data);
+
+/// <summary>
+/// Session-mode token wiring for a container plugin (present iff <c>spec.sessionTtlSeconds</c> is set).
+/// When null the shim runs in short-turn mode: one full-TTL token per invoke, no renewal, no lease.
+/// </summary>
+/// <param name="SessionTtlSeconds">Maximum lifetime of one session; the invoke-lease ceiling.</param>
+/// <param name="RenewTokenTtlSeconds">Lifetime of each short token the plugin renews before expiry.</param>
+/// <param name="RenewTokenUrl">Absolute URL the plugin SDK POSTs to for a fresh token.</param>
+/// <param name="LeaseStore">Store the invoke lease is opened in, heartbeaten via, and released from.</param>
+internal sealed record ContainerSessionTokenConfig(
+    int SessionTtlSeconds,
+    int RenewTokenTtlSeconds,
+    string RenewTokenUrl,
+    IInvokeLeaseStore LeaseStore);
+
+/// <summary>Shared invoke-lease policy constants used by the shim and the renewal endpoint.</summary>
+internal static class ContainerLeasePolicy
+{
+    /// <summary>
+    /// Seconds added to the renew TTL when setting a lease's soft (heartbeat) deadline, so the lease
+    /// always outlives the renewal interval. If renewals stop (session ended or silo crashed) the
+    /// lease lapses within this window — bounding how long a leaked token can still be renewed.
+    /// </summary>
+    public const int HeartbeatMarginSeconds = 60;
+
+    /// <summary>The soft heartbeat deadline a renew-TTL implies.</summary>
+    public static int HeartbeatTtlSeconds(int renewTokenTtlSeconds) =>
+        renewTokenTtlSeconds + HeartbeatMarginSeconds;
+}

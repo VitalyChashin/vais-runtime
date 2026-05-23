@@ -31,8 +31,8 @@ public sealed class HmacCallTokenServiceTests
     public void Validate_ExpiredToken_ReturnsFalse()
     {
         var svc = MakeService();
-        // timeoutSeconds = -31 → expiresAt = UtcNow - 1 s (already past)
-        var token = svc.Generate("run-1", "agent-1", -31);
+        // ttlSeconds = -1 → expiresAt = UtcNow - 1 s (already past)
+        var token = svc.Generate("run-1", "agent-1", -1);
         svc.Validate(token, "run-1", "agent-1").Should().BeFalse();
     }
 
@@ -121,7 +121,7 @@ public sealed class HmacCallTokenServiceTests
     public void TryExtract_ExpiredToken_ReturnsFalse()
     {
         var svc = MakeService();
-        var token = svc.Generate("run-1", "agent-1", -31);
+        var token = svc.Generate("run-1", "agent-1", -1);
         svc.TryExtract(token, out _, out _).Should().BeFalse();
     }
 

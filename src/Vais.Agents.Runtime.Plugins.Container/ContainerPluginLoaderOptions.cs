@@ -16,11 +16,21 @@ public sealed class ContainerPluginLoaderOptions
     public string SupportedApiVersionMin { get; set; } = "0.24";
 
     /// <summary>Maximum supported container API version (inclusive). 0.25 adds the 502/503/504 error
-    /// codes additively over 0.24; 0.24 plugins remain accepted.</summary>
-    public string SupportedApiVersionMax { get; set; } = "0.25";
+    /// codes; 0.26 adds the optional session-mode <c>context.renewTokenUrl</c> field — both additive
+    /// over 0.24, and 0.24 plugins remain accepted.</summary>
+    public string SupportedApiVersionMax { get; set; } = "0.26";
 
     /// <summary>Operator-configured upper bounds for per-plugin resource requests.</summary>
     public ContainerPluginResourceBounds ResourceBounds { get; set; } = new();
+
+    /// <summary>
+    /// Lifetime in seconds of the short, renewable call tokens issued in session mode
+    /// (when a plugin sets <c>spec.sessionTtlSeconds</c>). The plugin SDK refreshes the token via
+    /// the renewal endpoint before it expires. Smaller = smaller blast radius for a leaked token,
+    /// at the cost of more frequent renewals. Ignored by short-turn plugins (single full-TTL token).
+    /// Set via <c>VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS</c>. Default 120.
+    /// </summary>
+    public int RenewTokenTtlSeconds { get; set; } = 120;
 
     /// <summary>
     /// Docker network name for internal-network mode (Phase 2 egress isolation).

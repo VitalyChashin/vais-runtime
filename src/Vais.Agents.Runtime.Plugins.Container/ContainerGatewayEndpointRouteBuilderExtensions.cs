@@ -31,6 +31,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         this IEndpointRouteBuilder builder)
     {
         var callTokenService = builder.ServiceProvider.GetRequiredService<ICallTokenService>();
+        var livenessCache = builder.ServiceProvider.GetService<LeaseLivenessCache>();
 
         var group = builder.MapGroup("/v1/container-gateway");
 
@@ -42,7 +43,16 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             var bearerToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
                 ? authHeader["Bearer ".Length..] : "";
 
-            if (string.IsNullOrEmpty(bearerToken) || !callTokenService.Validate(bearerToken, runId, agentId))
+            if (string.IsNullOrEmpty(bearerToken)
+                || !callTokenService.TryExtract(bearerToken, out var r, out var a, out var leaseId)
+                || r != runId || a != agentId)
+                return Results.Unauthorized();
+
+            // Session-mode (v2) tokens carry a leaseId and are honoured only while the invoke lease is
+            // live (Phase 3). v1 tokens (short-turn plugins, telemetry) carry none and skip the check.
+            // Fail closed if a leaseId is present but no liveness store is wired — an unverifiable lease.
+            if (!string.IsNullOrEmpty(leaseId)
+                && (livenessCache is null || !await livenessCache.IsLiveAsync(leaseId)))
                 return Results.Unauthorized();
 
             return await next(ctx);
@@ -53,6 +63,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         group.MapPost("tools/invoke", HandleToolInvokeAsync);
         group.MapGet("tools/list", HandleToolsListAsync);
         group.MapPost("sections/build", HandleSectionsBuildAsync);
+        group.MapPost("token/renew", HandleTokenRenew);
 
         // Telemetry endpoints: OTLP spans + structured logs.
         // Both self-validate the vais-plugin-token — no outer filter needed.
@@ -60,6 +71,43 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         builder.MapPluginStructuredLogEndpoints();
 
         return builder;
+    }
+
+    /// <summary>
+    /// Issues a fresh short-lived call token to a session-mode plugin. The outer filter has already
+    /// validated the presented (current) token — so the plugin must renew before it expires — and
+    /// confirmed it matches the X-Run-Id / X-Agent-Id headers. For a lease-bound (v2) token the handler
+    /// re-checks the invoke lease directly (authoritative, uncached) and heartbeats it, then mints a
+    /// fresh token carrying the same leaseId; for a v1 token it simply re-mints.
+    /// </summary>
+    private static async Task<IResult> HandleTokenRenew(HttpContext ctx, ICallTokenService callTokenService)
+    {
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        var ttl = ctx.RequestServices.GetService<ContainerPluginLoaderOptions>()?.RenewTokenTtlSeconds ?? 120;
+
+        var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
+        var bearerToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
+            ? authHeader["Bearer ".Length..] : "";
+        callTokenService.TryExtract(bearerToken, out _, out _, out var leaseId);
+
+        string token;
+        if (!string.IsNullOrEmpty(leaseId))
+        {
+            var leaseStore = ctx.RequestServices.GetService<IInvokeLeaseStore>();
+            if (leaseStore is null || !await leaseStore.IsLiveAsync(leaseId))
+                return Results.Unauthorized();
+
+            await leaseStore.HeartbeatAsync(leaseId, ContainerLeasePolicy.HeartbeatTtlSeconds(ttl));
+            token = callTokenService.Generate(runId, agentId, leaseId, ttl);
+        }
+        else
+        {
+            token = callTokenService.Generate(runId, agentId, ttl);
+        }
+
+        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(ttl).ToUnixTimeSeconds();
+        return Results.Ok(new TokenRenewResponse { Token = token, ExpiresAt = expiresAt });
     }
 
     private static async Task<IResult> HandleLlmCompleteAsync(

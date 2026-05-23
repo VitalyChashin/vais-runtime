@@ -281,6 +281,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 },
                 StartupTimeoutSeconds = descriptor.StartupTimeoutSeconds,
                 InvokeTimeoutSeconds = descriptor.InvokeTimeoutSeconds,
+                SessionTtlSeconds = descriptor.SessionTtlSeconds,
                 RetryPolicy = descriptor.RetryPolicy is { } rp
                     ? new ContainerPluginRetryPolicy(rp.MaxAttempts, rp.BackoffSeconds, rp.RetryOn)
                     : null,
@@ -326,6 +327,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             Topology = topology,
             StartupTimeoutSeconds = spec.StartupTimeoutSeconds,
             InvokeTimeoutSeconds = spec.InvokeTimeoutSeconds,
+            SessionTtlSeconds = spec.SessionTtlSeconds,
             RetryPolicy = retryPolicy,
             SecretRefs = spec.Secrets is not null
                 ? new Dictionary<string, string>(spec.Secrets)
@@ -426,6 +428,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 Topology = topology,
                 StartupTimeoutSeconds = spec.StartupTimeoutSeconds,
                 InvokeTimeoutSeconds = spec.InvokeTimeoutSeconds,
+                SessionTtlSeconds = spec.SessionTtlSeconds,
                 RetryPolicy = retryPolicy,
                 SecretRefs = new Dictionary<string, string>(spec.Secrets),
                 InvokeBaseUrl = invokeBaseUrl,

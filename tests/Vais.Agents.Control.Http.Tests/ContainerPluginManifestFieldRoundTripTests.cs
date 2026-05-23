@@ -33,6 +33,7 @@ public sealed class ContainerPluginManifestFieldRoundTripTests
             Topology = "kubernetes",
             StartupTimeoutSeconds = 45,
             InvokeTimeoutSeconds = 120,
+            SessionTtlSeconds = 1800,
             ImagePullPolicy = "Always",
             RetryPolicy = new ContainerPluginRetryPolicy(5, 3, new[] { "timeout" }),
             Kubernetes = new ContainerPluginKubernetesConfig
@@ -61,6 +62,7 @@ public sealed class ContainerPluginManifestFieldRoundTripTests
         yield return Row("Spec.Topology", m => m.Spec.Topology, "kubernetes");
         yield return Row("Spec.StartupTimeoutSeconds", m => m.Spec.StartupTimeoutSeconds, (object?)45);
         yield return Row("Spec.InvokeTimeoutSeconds", m => m.Spec.InvokeTimeoutSeconds, (object?)120);
+        yield return Row("Spec.SessionTtlSeconds", m => m.Spec.SessionTtlSeconds, (object?)1800);
         yield return Row("Spec.ImagePullPolicy", m => m.Spec.ImagePullPolicy, "Always");
         yield return Row("Spec.RetryPolicy.MaxAttempts", m => m.Spec.RetryPolicy!.MaxAttempts, (object?)5);
         yield return Row("Spec.RetryPolicy.BackoffSeconds", m => m.Spec.RetryPolicy!.BackoffSeconds, (object?)3);

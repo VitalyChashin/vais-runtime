@@ -274,7 +274,7 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
         {
             var effectiveRunId = runId ?? "";
             var callToken = _callTokenService.Generate(
-                effectiveRunId, Session.AgentId, _supervisor.Descriptor.InvokeTimeoutSeconds);
+                effectiveRunId, Session.AgentId, _supervisor.Descriptor.InvokeTimeoutSeconds + 30);
             ctx = new Dictionary<string, string>
             {
                 ["llmGatewayUrl"] = _internalBaseUrl,

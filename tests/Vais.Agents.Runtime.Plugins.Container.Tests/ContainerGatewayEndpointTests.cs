@@ -53,6 +53,9 @@ public sealed class ContainerGatewayEndpointTests : IAsyncLifetime
                         .Build();
                     services.AddSingleton<IConfiguration>(config);
                     services.AddSingleton<ICallTokenService, HmacCallTokenService>();
+                    services.AddSingleton(new ContainerPluginLoaderOptions { RenewTokenTtlSeconds = 90 });
+                    services.AddSingleton<IInvokeLeaseStore, InMemoryInvokeLeaseStore>();
+                    services.AddSingleton(sp => new LeaseLivenessCache(sp.GetRequiredService<IInvokeLeaseStore>()));
 
                     services.AddSingleton<ICompletionProviderPool>(new FakeProviderPool(_provider));
                     services.AddSingleton<LlmGatewayMiddleware>(_middleware);
@@ -194,6 +197,132 @@ public sealed class ContainerGatewayEndpointTests : IAsyncLifetime
         var resp = await _client.SendAsync(req);
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         _middleware.NonStreamInvocations.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TokenRenew_ValidToken_ReturnsFreshTokenForSameIdentity()
+    {
+        var (runId, agentId) = ("run-renew", "agent-renew");
+        var token = MintToken(runId, agentId);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await resp.Content.ReadFromJsonAsync<RenewBody>();
+        body!.Token.Should().NotBeNullOrEmpty();
+        body.Token.Should().NotBe(token, "renewal mints a fresh token with a later expiry");
+        _host.Services.GetRequiredService<ICallTokenService>()
+            .Validate(body.Token, runId, agentId).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TokenRenew_ExpiredToken_Returns401()
+    {
+        var (runId, agentId) = ("run-exp", "agent-exp");
+        var expired = _host.Services.GetRequiredService<ICallTokenService>().Generate(runId, agentId, -1);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", expired);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private sealed record RenewBody(string Token, long ExpiresAt);
+
+    // ── Phase 3: lease-bound (v2) tokens ──────────────────────────────────────
+
+    [Fact]
+    public async Task LlmComplete_SessionToken_LiveLease_Succeeds()
+    {
+        var (runId, agentId) = ("run-live", "agent-live");
+        var leaseId = await OpenLeaseAsync(runId, agentId);
+        var token = MintSessionToken(runId, agentId, leaseId);
+
+        var resp = await PostLlmComplete(token, runId, agentId);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task LlmComplete_SessionToken_ReleasedLease_Returns401()
+    {
+        var (runId, agentId) = ("run-dead", "agent-dead");
+        var leaseId = await OpenLeaseAsync(runId, agentId);
+        await _host.Services.GetRequiredService<IInvokeLeaseStore>().ReleaseAsync(leaseId);
+        var token = MintSessionToken(runId, agentId, leaseId);
+
+        var resp = await PostLlmComplete(token, runId, agentId);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _middleware.NonStreamInvocations.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TokenRenew_SessionToken_LiveLease_ReturnsSessionToken()
+    {
+        var (runId, agentId) = ("run-renew2", "agent-renew2");
+        var leaseId = await OpenLeaseAsync(runId, agentId);
+        var token = MintSessionToken(runId, agentId, leaseId);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await resp.Content.ReadFromJsonAsync<RenewBody>();
+        _host.Services.GetRequiredService<ICallTokenService>()
+            .TryExtract(body!.Token, out _, out _, out var renewedLeaseId).Should().BeTrue();
+        renewedLeaseId.Should().Be(leaseId, "the renewed token carries the same lease");
+    }
+
+    [Fact]
+    public async Task TokenRenew_SessionToken_ReleasedLease_Returns401()
+    {
+        var (runId, agentId) = ("run-renewdead", "agent-renewdead");
+        var leaseId = await OpenLeaseAsync(runId, agentId);
+        await _host.Services.GetRequiredService<IInvokeLeaseStore>().ReleaseAsync(leaseId);
+        var token = MintSessionToken(runId, agentId, leaseId);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<string> OpenLeaseAsync(string runId, string agentId)
+    {
+        var leaseId = Guid.NewGuid().ToString("N");
+        await _host.Services.GetRequiredService<IInvokeLeaseStore>()
+            .StartAsync(leaseId, runId, agentId, sessionTtlSeconds: 300, heartbeatTtlSeconds: 180);
+        return leaseId;
+    }
+
+    private string MintSessionToken(string runId, string agentId, string leaseId)
+        => _host.Services.GetRequiredService<ICallTokenService>().Generate(runId, agentId, leaseId, 60);
+
+    private async Task<HttpResponseMessage> PostLlmComplete(string token, string runId, string agentId)
+    {
+        var body = new { modelId = "gpt-4o-mini", messages = new[] { new { role = "user", content = "hi" } } };
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/llm/complete")
+        {
+            Content = JsonContent.Create(body),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+        return await _client.SendAsync(req);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

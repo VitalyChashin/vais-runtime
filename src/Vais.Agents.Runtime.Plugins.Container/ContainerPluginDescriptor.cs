@@ -19,6 +19,7 @@ internal sealed class ContainerPluginDescriptor
     public ContainerTopology Topology { get; init; } = ContainerTopology.Standalone;
     public int StartupTimeoutSeconds { get; init; } = 30;
     public int InvokeTimeoutSeconds { get; init; } = 60;
+    public int? SessionTtlSeconds { get; init; }
     public ContainerRetryPolicy? RetryPolicy { get; init; }
     public IReadOnlyDictionary<string, string> SecretRefs { get; init; } =
         new Dictionary<string, string>();

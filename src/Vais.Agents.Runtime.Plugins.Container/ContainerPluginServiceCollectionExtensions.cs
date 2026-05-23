@@ -27,6 +27,11 @@ public static class ContainerPluginServiceCollectionExtensions
     public static IServiceCollection AddContainerGatewayCallToken(this IServiceCollection services)
     {
         services.TryAddSingleton<ICallTokenService, HmacCallTokenService>();
+        // Session-mode lease binding (Phase 3). In-memory default is correct for a single silo; a
+        // clustered runtime registers the Orleans-backed store earlier (AddOrleansInvokeLeaseStore)
+        // so it wins this TryAdd. The liveness cache fronts whichever store is registered.
+        services.TryAddSingleton<IInvokeLeaseStore, InMemoryInvokeLeaseStore>();
+        services.TryAddSingleton(sp => new LeaseLivenessCache(sp.GetRequiredService<IInvokeLeaseStore>()));
         return services;
     }
 
