@@ -46,6 +46,26 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         [CommandOption("--image-pull-policy")]
         public string ImagePullPolicy { get; init; } = "IfNotPresent";
 
+        [Description("Enable an opt-in writable workspace of this size (MiB) mounted at --workspace-path. Omit to deploy with no workspace (default).")]
+        [CommandOption("--workspace-size-mb")]
+        public int? WorkspaceSizeMb { get; init; }
+
+        [Description("Workspace mount path inside the container. Default: /workspace.")]
+        [CommandOption("--workspace-path")]
+        public string WorkspacePath { get; init; } = "/workspace";
+
+        [Description("Workspace storage backend: disk | memory. Default: disk.")]
+        [CommandOption("--workspace-medium")]
+        public string WorkspaceMedium { get; init; } = "disk";
+
+        [Description("Back the workspace with a PersistentVolumeClaim that survives pod restarts (otherwise an emptyDir).")]
+        [CommandOption("--workspace-persist")]
+        public bool WorkspacePersist { get; init; }
+
+        [Description("StorageClass for the persistent workspace PVC. Empty = cluster default.")]
+        [CommandOption("--workspace-storage-class")]
+        public string? WorkspaceStorageClass { get; init; }
+
         [Description("Path to a custom Helm values file. When omitted, uses the built-in chart defaults.")]
         [CommandOption("-f|--values")]
         public string? ValuesFile { get; init; }
@@ -149,6 +169,17 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         sb.Append($" --set replicaCount={settings.Replicas}");
         sb.Append($" --set pluginPort={settings.Port}");
 
+        if (settings.WorkspaceSizeMb is { } workspaceSizeMb)
+        {
+            sb.Append($" --set workspace.enabled=true");
+            sb.Append($" --set workspace.path={settings.WorkspacePath}");
+            sb.Append($" --set workspace.sizeMb={workspaceSizeMb}");
+            sb.Append($" --set workspace.medium={settings.WorkspaceMedium}");
+            sb.Append($" --set workspace.persist={(settings.WorkspacePersist ? "true" : "false")}");
+            if (!string.IsNullOrEmpty(settings.WorkspaceStorageClass))
+                sb.Append($" --set workspace.storageClassName={settings.WorkspaceStorageClass}");
+        }
+
         if (settings.ValuesFile is not null)
             sb.Append($" -f {settings.ValuesFile}");
 
@@ -162,7 +193,7 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
         return sb.ToString();
     }
 
-    private static ContainerPluginManifest BuildManifest(Settings settings)
+    internal static ContainerPluginManifest BuildManifest(Settings settings)
     {
         var serviceUrl = $"http://{settings.ReleaseName}.{settings.Namespace}.svc.cluster.local:{settings.Port}";
         return new ContainerPluginManifest(settings.ReleaseName, Version: "1.0")
@@ -178,6 +209,15 @@ internal sealed class PluginDeployCommand : AsyncCommand<PluginDeployCommand.Set
                     DeploymentName = settings.ReleaseName,
                     Namespace = settings.Namespace,
                 },
+                Workspace = settings.WorkspaceSizeMb is { } sizeMb
+                    ? new ContainerPluginWorkspaceSpec
+                    {
+                        Path = settings.WorkspacePath,
+                        SizeMb = sizeMb,
+                        Medium = settings.WorkspaceMedium,
+                        Persist = settings.WorkspacePersist,
+                    }
+                    : null,
             },
         };
     }

@@ -280,6 +280,11 @@ Aggregate command — `helm upgrade --install <release-name> <built-in-chart>` a
 | `--replicas <n>` | Deployment replicas. Default: 1. |
 | `--port <port>` | Plugin container port. Default: 8080. |
 | `--image-pull-policy <policy>` | `Always` / `IfNotPresent` / `Never`. Default: `IfNotPresent`. |
+| `--workspace-size-mb <n>` | Enable an opt-in writable workspace of this size (MiB). Omit for no workspace. |
+| `--workspace-path <path>` | Workspace mount path. Default: `/workspace`. |
+| `--workspace-medium <m>` | `disk` / `memory`. Default: `disk`. |
+| `--workspace-persist` | Back the workspace with a PVC that survives pod restarts (else an `emptyDir`). |
+| `--workspace-storage-class <sc>` | StorageClass for the persistent PVC. Empty = cluster default. |
 | `-f <values.yaml>` | Helm values overrides. |
 | Exit codes | `0`, `1`, `2`, `4` |
 

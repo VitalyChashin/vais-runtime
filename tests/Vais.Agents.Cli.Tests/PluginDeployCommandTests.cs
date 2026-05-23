@@ -21,7 +21,12 @@ public sealed class PluginDeployCommandTests
         string imagePullPolicy = "IfNotPresent",
         string? valuesFile = null,
         string[]? setValues = null,
-        bool dryRun = false) =>
+        bool dryRun = false,
+        int? workspaceSizeMb = null,
+        string workspacePath = "/workspace",
+        string workspaceMedium = "disk",
+        bool workspacePersist = false,
+        string? workspaceStorageClass = null) =>
         new()
         {
             ReleaseName = releaseName,
@@ -33,6 +38,11 @@ public sealed class PluginDeployCommandTests
             ValuesFile = valuesFile,
             SetValues = setValues,
             DryRun = dryRun,
+            WorkspaceSizeMb = workspaceSizeMb,
+            WorkspacePath = workspacePath,
+            WorkspaceMedium = workspaceMedium,
+            WorkspacePersist = workspacePersist,
+            WorkspaceStorageClass = workspaceStorageClass,
         };
 
     [Fact]
@@ -145,5 +155,60 @@ public sealed class PluginDeployCommandTests
             DefaultSettings(imagePullPolicy: "Never"), "/tmp/chart");
 
         args.Should().Contain("--set image.pullPolicy=Never");
+    }
+
+    // ── Workspace ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildHelmArgs_NoWorkspaceSize_OmitsWorkspaceFlags()
+    {
+        var args = PluginDeployCommand.BuildHelmArgs(DefaultSettings(), "/tmp/chart");
+
+        args.Should().NotContain("workspace.enabled");
+    }
+
+    [Fact]
+    public void BuildHelmArgs_WithWorkspaceSize_EnablesAndSetsWorkspace()
+    {
+        var args = PluginDeployCommand.BuildHelmArgs(
+            DefaultSettings(workspaceSizeMb: 4096, workspacePath: "/repo", workspaceMedium: "disk", workspacePersist: true),
+            "/tmp/chart");
+
+        args.Should().Contain("--set workspace.enabled=true");
+        args.Should().Contain("--set workspace.path=/repo");
+        args.Should().Contain("--set workspace.sizeMb=4096");
+        args.Should().Contain("--set workspace.medium=disk");
+        args.Should().Contain("--set workspace.persist=true");
+    }
+
+    [Fact]
+    public void BuildHelmArgs_WithWorkspaceStorageClass_IncludesIt()
+    {
+        var args = PluginDeployCommand.BuildHelmArgs(
+            DefaultSettings(workspaceSizeMb: 1024, workspacePersist: true, workspaceStorageClass: "fast-ssd"),
+            "/tmp/chart");
+
+        args.Should().Contain("--set workspace.storageClassName=fast-ssd");
+    }
+
+    [Fact]
+    public void BuildManifest_NoWorkspaceSize_LeavesWorkspaceNull()
+    {
+        var manifest = PluginDeployCommand.BuildManifest(DefaultSettings());
+
+        manifest.Spec.Workspace.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuildManifest_WithWorkspace_PopulatesSpecWorkspace()
+    {
+        var manifest = PluginDeployCommand.BuildManifest(
+            DefaultSettings(workspaceSizeMb: 2048, workspacePath: "/repo", workspaceMedium: "memory", workspacePersist: false));
+
+        manifest.Spec.Workspace.Should().NotBeNull();
+        manifest.Spec.Workspace!.Path.Should().Be("/repo");
+        manifest.Spec.Workspace.SizeMb.Should().Be(2048);
+        manifest.Spec.Workspace.Medium.Should().Be("memory");
+        manifest.Spec.Workspace.Persist.Should().BeFalse();
     }
 }

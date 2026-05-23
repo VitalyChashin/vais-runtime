@@ -10,7 +10,7 @@ public sealed class DockerContainerSupervisorHostConfigTests
 {
     private static ContainerPluginDescriptor MakeDescriptor(
         long? memoryBytes = null, long? nanoCpus = null, long? pidsLimit = null,
-        string? dockerPluginNetwork = null) =>
+        string? dockerPluginNetwork = null, ContainerWorkspaceConfig? workspace = null) =>
         new()
         {
             Name = "test-plugin",
@@ -21,6 +21,7 @@ public sealed class DockerContainerSupervisorHostConfigTests
             NanoCpus = nanoCpus,
             PidsLimit = pidsLimit,
             DockerPluginNetwork = dockerPluginNetwork,
+            Workspace = workspace,
         };
 
     [Fact]
@@ -124,6 +125,50 @@ public sealed class DockerContainerSupervisorHostConfigTests
     public void BuildHostConfig_InternalNetwork_HardnessSettingsUnchanged()
     {
         var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(dockerPluginNetwork: "vais-internal"));
+        cfg.ReadonlyRootfs.Should().BeTrue();
+        cfg.CapDrop.Should().Contain("ALL");
+        cfg.SecurityOpt.Should().Contain("no-new-privileges:true");
+    }
+
+    // ── Workspace mount ───────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildHostConfig_NoWorkspace_HasNoExtraMount()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor());
+        cfg.Mounts.Should().BeNullOrEmpty();
+        cfg.Tmpfs.Should().ContainSingle().Which.Key.Should().Be("/tmp");
+    }
+
+    [Fact]
+    public void BuildHostConfig_MemoryWorkspace_AddsTmpfsAtPath()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(
+            workspace: new ContainerWorkspaceConfig("/workspace", 4096, WorkspaceMedium.Memory, false)));
+        cfg.Tmpfs.Should().ContainKey("/workspace");
+        cfg.Tmpfs["/workspace"].Should().Be("rw,size=4096m,mode=1777");
+        cfg.Tmpfs.Should().ContainKey("/tmp"); // existing tmpfs preserved
+        cfg.Mounts.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public void BuildHostConfig_DiskWorkspace_AddsNamedVolumeMount()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(
+            workspace: new ContainerWorkspaceConfig("/workspace", 4096, WorkspaceMedium.Disk, true)));
+        var mount = cfg.Mounts.Should().ContainSingle().Subject;
+        mount.Type.Should().Be("volume");
+        mount.Source.Should().Be("vais-plugin-test-plugin-workspace");
+        mount.Target.Should().Be("/workspace");
+        cfg.Tmpfs.Should().ContainKey("/tmp");
+        cfg.Tmpfs.Should().NotContainKey("/workspace");
+    }
+
+    [Fact]
+    public void BuildHostConfig_Workspace_HardnessSettingsUnchanged()
+    {
+        var cfg = DockerContainerSupervisor.BuildHostConfig(MakeDescriptor(
+            workspace: new ContainerWorkspaceConfig("/workspace", 4096, WorkspaceMedium.Disk, false)));
         cfg.ReadonlyRootfs.Should().BeTrue();
         cfg.CapDrop.Should().Contain("ALL");
         cfg.SecurityOpt.Should().Contain("no-new-privileges:true");

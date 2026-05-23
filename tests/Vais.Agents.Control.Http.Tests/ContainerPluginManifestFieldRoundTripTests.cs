@@ -44,6 +44,15 @@ public sealed class ContainerPluginManifestFieldRoundTripTests
                 Namespace = "plugins",
             },
             Secrets = new Dictionary<string, string> { ["TOK"] = "secret://x" },
+            // Each value differs from its default so a dropped field is caught. This exercises
+            // serialization only; semantic validation (e.g. persist+memory) lives in ContainerWorkspaceParser.
+            Workspace = new ContainerPluginWorkspaceSpec
+            {
+                Path = "/work",
+                SizeMb = 4096,
+                Medium = "memory",
+                Persist = true,
+            },
         },
     };
 
@@ -73,6 +82,10 @@ public sealed class ContainerPluginManifestFieldRoundTripTests
         yield return Row("Spec.Kubernetes.DeploymentName", m => m.Spec.Kubernetes!.DeploymentName, "dep");
         yield return Row("Spec.Kubernetes.Namespace", m => m.Spec.Kubernetes!.Namespace, "plugins");
         yield return Row("Spec.Secrets", m => m.Spec.Secrets!["TOK"], "secret://x");
+        yield return Row("Spec.Workspace.Path", m => m.Spec.Workspace!.Path, "/work");
+        yield return Row("Spec.Workspace.SizeMb", m => m.Spec.Workspace!.SizeMb, (object?)4096);
+        yield return Row("Spec.Workspace.Medium", m => m.Spec.Workspace!.Medium, "memory");
+        yield return Row("Spec.Workspace.Persist", m => m.Spec.Workspace!.Persist, (object?)true);
     }
 
     [Theory]

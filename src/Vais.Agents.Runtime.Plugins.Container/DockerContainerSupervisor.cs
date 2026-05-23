@@ -98,6 +98,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
 
         var containerName = DockerNaming.ContainerName(_descriptor.Name);
         await RemoveExistingContainerAsync(containerName, ct).ConfigureAwait(false);
+        await EnsureWorkspaceVolumeAsync(ct).ConfigureAwait(false);
 
         var createResp = await _docker.Containers.CreateContainerAsync(
             new CreateContainerParameters
@@ -140,6 +141,56 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         }
         _containerId = null;
         _status = ContainerPluginStatus.Stopped;
+
+        // Ephemeral disk workspaces are reclaimed with the container; persistent ones survive
+        // (DrainAndReplace = Stop+Start, so ephemeral resets on replace, persistent is kept).
+        if (_descriptor.Workspace is { Medium: WorkspaceMedium.Disk, Persist: false })
+            await RemoveWorkspaceVolumeAsync(DockerNaming.WorkspaceVolumeName(_descriptor.Name)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates the disk-medium workspace volume before container start. Idempotent for persistent
+    /// volumes (reused across restarts); ephemeral volumes are removed first so each start is clean.
+    /// Memory-medium workspaces are tmpfs and need no volume.
+    /// </summary>
+    internal async Task EnsureWorkspaceVolumeAsync(CancellationToken ct)
+    {
+        if (_descriptor.Workspace is not { Medium: WorkspaceMedium.Disk } ws) return;
+        var volumeName = DockerNaming.WorkspaceVolumeName(_descriptor.Name);
+        if (!ws.Persist)
+            await RemoveWorkspaceVolumeAsync(volumeName).ConfigureAwait(false);
+        await _docker.Volumes.CreateAsync(
+            new VolumesCreateParameters
+            {
+                Name = volumeName,
+                Labels = new Dictionary<string, string>
+                {
+                    ["vais.plugin"] = _descriptor.Name,
+                    ["vais.workspace"] = "true",
+                },
+            }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Removes a persistent disk workspace volume on explicit plugin removal (not on stop/restart).
+    /// No-op for ephemeral, memory, or no-workspace plugins. Called by the host on unregister.
+    /// </summary>
+    internal async Task RemovePersistentWorkspaceAsync()
+    {
+        if (_descriptor.Workspace is { Medium: WorkspaceMedium.Disk, Persist: true })
+            await RemoveWorkspaceVolumeAsync(DockerNaming.WorkspaceVolumeName(_descriptor.Name)).ConfigureAwait(false);
+    }
+
+    private async Task RemoveWorkspaceVolumeAsync(string volumeName)
+    {
+        try
+        {
+            await _docker.Volumes.RemoveAsync(volumeName, force: true).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not remove workspace volume '{Volume}'", volumeName);
+        }
     }
 
     public async Task<ContainerReplaceResult> DrainAndReplaceAsync(string? newImage, CancellationToken ct)
@@ -284,6 +335,29 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             NanoCPUs       = descriptor.NanoCpus    ?? DefaultNanoCpus,
             PidsLimit      = descriptor.PidsLimit   ?? DefaultPidsLimit,
         };
+
+        // Opt-in writable workspace: the only added writable path; rootfs stays read-only.
+        if (descriptor.Workspace is { } ws)
+        {
+            if (ws.Medium == WorkspaceMedium.Memory)
+            {
+                // RAM-backed tmpfs: size is a hard kernel cap (counts against the memory limit).
+                hostConfig.Tmpfs[ws.Path] = $"rw,size={ws.SizeMb}m,mode=1777";
+            }
+            else
+            {
+                // Disk-backed named volume (created/removed in StartAsync/StopAsync); size is advisory.
+                hostConfig.Mounts = new List<Mount>
+                {
+                    new()
+                    {
+                        Type = "volume",
+                        Source = DockerNaming.WorkspaceVolumeName(descriptor.Name),
+                        Target = ws.Path,
+                    },
+                };
+            }
+        }
 
         if (descriptor.DockerPluginNetwork is { Length: > 0 } networkName)
         {

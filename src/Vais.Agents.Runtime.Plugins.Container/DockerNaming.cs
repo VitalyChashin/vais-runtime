@@ -13,6 +13,9 @@ internal static class DockerNaming
 {
     internal static string ContainerName(string pluginName) => $"vais-plugin-{pluginName}";
 
+    /// <summary>Name of the disk-medium workspace volume for a plugin (one per plugin id).</summary>
+    internal static string WorkspaceVolumeName(string pluginName) => $"vais-plugin-{pluginName}-workspace";
+
     /// <summary>
     /// Returns the base URL the runtime uses to invoke the plugin.
     /// In internal-network mode (<paramref name="networkName"/> is set) the URL uses

@@ -31,6 +31,8 @@ Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxNanoCpus.init -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.get -> long
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxPidsLimit.init -> void
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxWorkspaceSizeMb.get -> long
+Vais.Agents.Runtime.Plugins.Container.ContainerPluginResourceBounds.MaxWorkspaceSizeMb.init -> void
 Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions
 Vais.Agents.Runtime.Plugins.Container.ContainerGatewayEndpointRouteBuilderExtensions
 static Vais.Agents.Runtime.Plugins.Container.ContainerPluginServiceCollectionExtensions.AddContainerGatewayCallToken(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

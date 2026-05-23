@@ -129,6 +129,10 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
         try
         {
             await supervisor.StopAsync(ct).ConfigureAwait(false);
+            // Explicit removal also reclaims a persistent disk workspace (StopAsync only reclaims
+            // ephemeral). K8s PVCs are operator/Helm-owned, so only the Docker supervisor acts.
+            if (supervisor is DockerContainerSupervisor docker)
+                await docker.RemovePersistentWorkspaceAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -290,11 +294,20 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                 Secrets = descriptor.SecretRefs.Count > 0
                     ? new Dictionary<string, string>(descriptor.SecretRefs)
                     : null,
+                Workspace = descriptor.Workspace is { } w
+                    ? new ContainerPluginWorkspaceSpec
+                    {
+                        Path = w.Path,
+                        SizeMb = w.SizeMb,
+                        Medium = w.Medium == WorkspaceMedium.Memory ? "memory" : "disk",
+                        Persist = w.Persist,
+                    }
+                    : null,
             }
         };
     }
 
-    private static ContainerPluginDescriptor ManifestToDescriptor(ContainerPluginManifest manifest, string? pluginNetwork = null)
+    private ContainerPluginDescriptor ManifestToDescriptor(ContainerPluginManifest manifest, string? pluginNetwork = null)
     {
         var spec = manifest.Spec;
         ContainerTopology topology;
@@ -337,6 +350,7 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
             InvokeBaseUrl = invokeBaseUrl,
             KubernetesConfig = k8sConfig,
             DockerPluginNetwork = dockerNetwork,
+            Workspace = ContainerWorkspaceParser.FromSpec(spec.Workspace, _options.ResourceBounds),
         };
     }
 
@@ -443,6 +457,9 @@ internal sealed class ContainerPluginHostService : IHostedService, IContainerPlu
                     ContainerPluginResourceParser.ParseNanoCpus(spec.Resources?.Cpu), bounds.MaxNanoCpus),
                 PidsLimit = ContainerPluginResourceParser.Clamp(
                     spec.Resources?.PidsLimit, bounds.MaxPidsLimit),
+                Workspace = spec.Workspace is { } ws
+                    ? ContainerWorkspaceParser.Parse(ws.Path, ws.SizeMb, ws.Medium, ws.Persist, bounds)
+                    : null,
             };
             result.Add(descriptor);
         }

@@ -152,6 +152,10 @@ Applied by `DockerContainerSupervisor.BuildHostConfig()`:
 - Resource limits — `Memory`, `MemorySwap`, `NanoCPUs`, `PidsLimit` (defaults 256 MiB / 0.5 CPU / 128 PIDs).
 - Host port binding pinned to `127.0.0.1` (legacy mode) — never exposed on the host's external interfaces.
 
+A plugin may add **one** writable mount via an opt-in `spec.workspace` (disk or memory; ephemeral or
+persistent) — the only relaxation of the read-only rootfs. See
+[Harden Docker Container Plugins → Writable workspace](../guides/harden-docker-container-plugins.md#writable-workspace-opt-in).
+
 ### Phase 2 — egress isolation (opt-in)
 
 Set `VAIS_DOCKER_PLUGIN_NETWORK=vais-internal` in the runtime environment and the supervisor switches to `HostConfig.NetworkMode = "vais-internal"`, drops `PortBindings` entirely, and reaches plugins via Docker DNS (`vais-plugin-<name>`). The internal bridge has no NAT path to the host or internet — outbound calls must round-trip through the runtime gateway, which is the entire point of P12. Create the bridge once: `docker network create --internal vais-internal`.

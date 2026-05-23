@@ -71,8 +71,25 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.workspace.enabled }}
+            - name: workspace
+              mountPath: {{ .Values.workspace.path }}
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir:
             medium: Memory
             sizeLimit: 64Mi
+        {{- if .Values.workspace.enabled }}
+        - name: workspace
+          {{- if .Values.workspace.persist }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.workspace.existingClaim | default (printf "%s-workspace" .Values.pluginName) }}
+          {{- else }}
+          emptyDir:
+            {{- if eq .Values.workspace.medium "memory" }}
+            medium: Memory
+            {{- end }}
+            sizeLimit: {{ .Values.workspace.sizeMb }}Mi
+          {{- end }}
+        {{- end }}

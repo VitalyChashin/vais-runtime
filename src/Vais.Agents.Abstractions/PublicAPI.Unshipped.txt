@@ -879,6 +879,25 @@ override Vais.Agents.ContainerPluginBuildSpec.GetHashCode() -> int
 override Vais.Agents.ContainerPluginBuildSpec.ToString() -> string!
 static Vais.Agents.ContainerPluginBuildSpec.operator !=(Vais.Agents.ContainerPluginBuildSpec? left, Vais.Agents.ContainerPluginBuildSpec? right) -> bool
 static Vais.Agents.ContainerPluginBuildSpec.operator ==(Vais.Agents.ContainerPluginBuildSpec? left, Vais.Agents.ContainerPluginBuildSpec? right) -> bool
+Vais.Agents.ContainerPluginSpec.Workspace.get -> Vais.Agents.ContainerPluginWorkspaceSpec?
+Vais.Agents.ContainerPluginSpec.Workspace.init -> void
+Vais.Agents.ContainerPluginWorkspaceSpec
+Vais.Agents.ContainerPluginWorkspaceSpec.<Clone>$() -> Vais.Agents.ContainerPluginWorkspaceSpec!
+Vais.Agents.ContainerPluginWorkspaceSpec.ContainerPluginWorkspaceSpec() -> void
+Vais.Agents.ContainerPluginWorkspaceSpec.Equals(Vais.Agents.ContainerPluginWorkspaceSpec? other) -> bool
+Vais.Agents.ContainerPluginWorkspaceSpec.Medium.get -> string!
+Vais.Agents.ContainerPluginWorkspaceSpec.Medium.init -> void
+Vais.Agents.ContainerPluginWorkspaceSpec.Path.get -> string!
+Vais.Agents.ContainerPluginWorkspaceSpec.Path.init -> void
+Vais.Agents.ContainerPluginWorkspaceSpec.Persist.get -> bool
+Vais.Agents.ContainerPluginWorkspaceSpec.Persist.init -> void
+Vais.Agents.ContainerPluginWorkspaceSpec.SizeMb.get -> int
+Vais.Agents.ContainerPluginWorkspaceSpec.SizeMb.init -> void
+override Vais.Agents.ContainerPluginWorkspaceSpec.Equals(object? obj) -> bool
+override Vais.Agents.ContainerPluginWorkspaceSpec.GetHashCode() -> int
+override Vais.Agents.ContainerPluginWorkspaceSpec.ToString() -> string!
+static Vais.Agents.ContainerPluginWorkspaceSpec.operator !=(Vais.Agents.ContainerPluginWorkspaceSpec? left, Vais.Agents.ContainerPluginWorkspaceSpec? right) -> bool
+static Vais.Agents.ContainerPluginWorkspaceSpec.operator ==(Vais.Agents.ContainerPluginWorkspaceSpec? left, Vais.Agents.ContainerPluginWorkspaceSpec? right) -> bool
 Vais.Agents.ContainerPluginRetryPolicy
 Vais.Agents.ContainerPluginRetryPolicy.<Clone>$() -> Vais.Agents.ContainerPluginRetryPolicy!
 Vais.Agents.ContainerPluginRetryPolicy.BackoffSeconds.get -> int
