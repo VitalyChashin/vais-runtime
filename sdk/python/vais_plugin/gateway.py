@@ -9,7 +9,19 @@ from typing import Any, AsyncIterator
 
 import httpx
 
+from ._tokens import TokenManager
 from .models import LlmGatewayError, Message, RequestContext, ToolCall, ToolError, UsageCounts
+
+
+async def _send(base_url: str, path: str, body: dict[str, Any], tokens: TokenManager) -> httpx.Response:
+    """POSTs ``body`` with the manager's auth headers, retrying once after a 401 with a fresh token."""
+    token_used = tokens.current_token
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        resp = await client.post(path, json=body, headers=await tokens.auth_headers())
+        if resp.status_code == 401 and tokens.can_renew:
+            await tokens.refresh_if_stale(token_used)
+            resp = await client.post(path, json=body, headers=await tokens.auth_headers())
+    return resp
 
 
 @dataclass
@@ -42,21 +54,18 @@ class AsyncLlmClient:
     direct LLM calls violate architectural principle P4.
     """
 
-    def __init__(self, llm_gateway_url: str, context: RequestContext, agent_id: str) -> None:
+    def __init__(
+        self,
+        llm_gateway_url: str,
+        context: RequestContext,
+        agent_id: str,
+        tokens: TokenManager | None = None,
+    ) -> None:
         self._base_url = llm_gateway_url.rstrip("/") + "/"
-        self._context = context
         self._agent_id = agent_id
-
-    def _headers(self) -> dict[str, str]:
-        h: dict[str, str] = {
-            "Authorization": f"Bearer {self._context.call_token}",
-            "X-Agent-Id": self._agent_id,
-        }
-        if self._context.run_id:
-            h["X-Run-Id"] = self._context.run_id
-        if self._context.traceparent:
-            h["traceparent"] = self._context.traceparent
-        return h
+        # Share a TokenManager across the LLM + tool clients when the caller provides one; otherwise
+        # build a per-client manager (pass-through unless context.renew_url is set).
+        self._tokens = tokens or TokenManager(context, agent_id)
 
     async def complete(
         self,
@@ -68,13 +77,11 @@ class AsyncLlmClient:
     ) -> LlmResponse:
         """Sends a completion request and returns the full response."""
         body = _serialise_llm_request(messages, model_id, temperature, max_tokens)
-        async with httpx.AsyncClient(base_url=self._base_url, headers=self._headers()) as client:
-            resp = client.post("complete", json=body)
-            resp = await resp
-            if resp.status_code >= 400:
-                raise LlmGatewayError(
-                    f"LLM gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
-                )
+        resp = await _send(self._base_url, "complete", body, self._tokens)
+        if resp.status_code >= 400:
+            raise LlmGatewayError(
+                f"LLM gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
+            )
         data = resp.json()
         msg = data.get("message") or {}
         usage = data.get("usage")
@@ -115,21 +122,16 @@ class AsyncToolClient:
     Calls route through the ``IToolGateway`` middleware chain on the runtime side.
     """
 
-    def __init__(self, tool_gateway_url: str, context: RequestContext, agent_id: str) -> None:
+    def __init__(
+        self,
+        tool_gateway_url: str,
+        context: RequestContext,
+        agent_id: str,
+        tokens: TokenManager | None = None,
+    ) -> None:
         self._base_url = tool_gateway_url.rstrip("/") + "/"
-        self._context = context
         self._agent_id = agent_id
-
-    def _headers(self) -> dict[str, str]:
-        h: dict[str, str] = {
-            "Authorization": f"Bearer {self._context.call_token}",
-            "X-Agent-Id": self._agent_id,
-        }
-        if self._context.run_id:
-            h["X-Run-Id"] = self._context.run_id
-        if self._context.traceparent:
-            h["traceparent"] = self._context.traceparent
-        return h
+        self._tokens = tokens or TokenManager(context, agent_id)
 
     async def invoke(self, tool_call: ToolCall) -> ToolResult:
         """Invokes a single tool call and returns the result."""
@@ -138,12 +140,11 @@ class AsyncToolClient:
             "toolCallId": tool_call.id,
             "arguments": tool_call.arguments,
         }
-        async with httpx.AsyncClient(base_url=self._base_url, headers=self._headers()) as client:
-            resp = await client.post("invoke", json=body)
-            if resp.status_code >= 400:
-                raise ToolError(
-                    f"Tool gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
-                )
+        resp = await _send(self._base_url, "invoke", body, self._tokens)
+        if resp.status_code >= 400:
+            raise ToolError(
+                f"Tool gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
+            )
         data = resp.json()
         return ToolResult(
             tool_call_id=data["toolCallId"],

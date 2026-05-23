@@ -14,6 +14,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from ._tokens import TokenManager
 from .gateway import AsyncLlmClient, AsyncToolClient
 from .models import (
     InvokeRequest,
@@ -136,8 +137,9 @@ class PluginAgent(ABC):
         async def invoke_endpoint(raw: Request) -> JSONResponse:
             body = await raw.json()
             request = _parse_request(body)
-            request.llm = AsyncLlmClient(request.llm_gateway_url, request.context, request.agent_id)
-            request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id)
+            tokens = TokenManager(request.context, request.agent_id)
+            request.llm = AsyncLlmClient(request.llm_gateway_url, request.context, request.agent_id, tokens=tokens)
+            request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id, tokens=tokens)
             try:
                 async with asyncio.timeout(request.timeout_seconds):
                     response = await agent.invoke(request)
@@ -157,8 +159,9 @@ class PluginAgent(ABC):
         async def stream_endpoint(raw: Request) -> StreamingResponse:
             body = await raw.json()
             request = _parse_request(body)
-            request.llm = AsyncLlmClient(request.llm_gateway_url, request.context, request.agent_id)
-            request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id)
+            tokens = TokenManager(request.context, request.agent_id)
+            request.llm = AsyncLlmClient(request.llm_gateway_url, request.context, request.agent_id, tokens=tokens)
+            request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id, tokens=tokens)
 
             async def generate() -> AsyncIterator[bytes]:
                 error_type: str | None = None
@@ -244,6 +247,7 @@ def _parse_request(body: dict[str, Any]) -> InvokeRequest:
         run_id=ctx_raw.get("runId"),
         correlation_id=ctx_raw.get("correlationId"),
         call_token=ctx_raw.get("callToken", ""),
+        renew_url=ctx_raw.get("renewTokenUrl"),
     )
     messages = [
         Message(

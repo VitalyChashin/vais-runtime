@@ -47,6 +47,13 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             Timeout = TimeSpan.FromSeconds(_descriptor.InvokeTimeoutSeconds + 10),
         };
 
+        ContainerSessionTokenConfig? sessionConfig = _descriptor.SessionTtlSeconds is { } sessionTtl
+            ? new ContainerSessionTokenConfig(
+                SessionTtlSeconds: sessionTtl,
+                RenewTokenTtlSeconds: _options.RenewTokenTtlSeconds,
+                RenewTokenUrl: $"{internalBase}/v1/container-gateway/token/renew")
+            : null;
+
         var shim = new ContainerAgentShim(
             supervisor: _supervisor,
             invokeClient: invokeClient,
@@ -56,7 +63,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             internalLlmGatewayUrl: $"{internalBase}/v1/container-gateway/llm/complete",
             internalToolGatewayUrl: $"{internalBase}/v1/container-gateway/tools/invoke",
             invokeTimeoutSeconds: _descriptor.InvokeTimeoutSeconds,
-            sessionTtlSeconds: _descriptor.SessionTtlSeconds,
+            sessionConfig: sessionConfig,
             logger: _loggerFactory.CreateLogger<ContainerAgentShim>());
 
         return ValueTask.FromResult<IAiAgent>(shim);

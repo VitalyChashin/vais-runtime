@@ -53,6 +53,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         group.MapPost("tools/invoke", HandleToolInvokeAsync);
         group.MapGet("tools/list", HandleToolsListAsync);
         group.MapPost("sections/build", HandleSectionsBuildAsync);
+        group.MapPost("token/renew", HandleTokenRenew);
 
         // Telemetry endpoints: OTLP spans + structured logs.
         // Both self-validate the vais-plugin-token — no outer filter needed.
@@ -60,6 +61,23 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         builder.MapPluginStructuredLogEndpoints();
 
         return builder;
+    }
+
+    /// <summary>
+    /// Issues a fresh short-lived call token to a session-mode plugin. The outer filter has already
+    /// validated the presented (current) token — so the plugin must renew before it expires — and
+    /// confirmed it matches the X-Run-Id / X-Agent-Id headers. The renewed token carries the same
+    /// identity (and, in lease mode, the same leaseId) with a new expiry.
+    /// </summary>
+    private static IResult HandleTokenRenew(HttpContext ctx, ICallTokenService callTokenService)
+    {
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        var ttl = ctx.RequestServices.GetService<ContainerPluginLoaderOptions>()?.RenewTokenTtlSeconds ?? 120;
+
+        var token = callTokenService.Generate(runId, agentId, ttl);
+        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(ttl).ToUnixTimeSeconds();
+        return Results.Ok(new TokenRenewResponse { Token = token, ExpiresAt = expiresAt });
     }
 
     private static async Task<IResult> HandleLlmCompleteAsync(

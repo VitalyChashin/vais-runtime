@@ -309,6 +309,7 @@ internal static class CompositionRoot
             {
                 o.PluginsDirectory = options.ContainerPluginsDirectory;
                 o.PluginNetwork    = options.DockerPluginNetwork;
+                o.RenewTokenTtlSeconds = options.ContainerPluginRenewTokenTtlSeconds;
             });
             services.AddContainerMcpServers();
         }

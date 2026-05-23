@@ -23,6 +23,15 @@ public sealed class ContainerPluginLoaderOptions
     public ContainerPluginResourceBounds ResourceBounds { get; set; } = new();
 
     /// <summary>
+    /// Lifetime in seconds of the short, renewable call tokens issued in session mode
+    /// (when a plugin sets <c>spec.sessionTtlSeconds</c>). The plugin SDK refreshes the token via
+    /// the renewal endpoint before it expires. Smaller = smaller blast radius for a leaked token,
+    /// at the cost of more frequent renewals. Ignored by short-turn plugins (single full-TTL token).
+    /// Set via <c>VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS</c>. Default 120.
+    /// </summary>
+    public int RenewTokenTtlSeconds { get; set; } = 120;
+
+    /// <summary>
     /// Docker network name for internal-network mode (Phase 2 egress isolation).
     /// When set, plugin containers are attached to this network and addressed via container-DNS;
     /// no host port is published. Null or empty = legacy host-runtime mode.

@@ -53,6 +53,7 @@ public sealed class ContainerGatewayEndpointTests : IAsyncLifetime
                         .Build();
                     services.AddSingleton<IConfiguration>(config);
                     services.AddSingleton<ICallTokenService, HmacCallTokenService>();
+                    services.AddSingleton(new ContainerPluginLoaderOptions { RenewTokenTtlSeconds = 90 });
 
                     services.AddSingleton<ICompletionProviderPool>(new FakeProviderPool(_provider));
                     services.AddSingleton<LlmGatewayMiddleware>(_middleware);
@@ -195,6 +196,44 @@ public sealed class ContainerGatewayEndpointTests : IAsyncLifetime
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         _middleware.NonStreamInvocations.Should().Be(0);
     }
+
+    [Fact]
+    public async Task TokenRenew_ValidToken_ReturnsFreshTokenForSameIdentity()
+    {
+        var (runId, agentId) = ("run-renew", "agent-renew");
+        var token = MintToken(runId, agentId);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await resp.Content.ReadFromJsonAsync<RenewBody>();
+        body!.Token.Should().NotBeNullOrEmpty();
+        body.Token.Should().NotBe(token, "renewal mints a fresh token with a later expiry");
+        _host.Services.GetRequiredService<ICallTokenService>()
+            .Validate(body.Token, runId, agentId).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TokenRenew_ExpiredToken_Returns401()
+    {
+        var (runId, agentId) = ("run-exp", "agent-exp");
+        var expired = _host.Services.GetRequiredService<ICallTokenService>().Generate(runId, agentId, -1);
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/token/renew");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", expired);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private sealed record RenewBody(string Token, long ExpiresAt);
 
     // ── helpers ──────────────────────────────────────────────────────────────
 

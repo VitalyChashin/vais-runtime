@@ -24,6 +24,13 @@ internal sealed class PluginRequestContext
     public string? RunId { get; init; }
     public string? CorrelationId { get; init; }
     public string CallToken { get; init; } = "";
+
+    /// <summary>
+    /// Session mode only: absolute URL the plugin SDK POSTs to (with the current token as a
+    /// Bearer header) to obtain a fresh short-lived token before the current one expires.
+    /// Null for short-turn plugins, which receive a single full-TTL token and never renew.
+    /// </summary>
+    public string? RenewTokenUrl { get; init; }
 }
 
 internal sealed class PluginMessage
@@ -106,6 +113,14 @@ internal sealed class GatewayLlmCompleteResponse
 {
     public PluginMessage Message { get; init; } = new();
     public PluginUsageCounts? Usage { get; init; }
+}
+
+// Token renewal response for POST /v1/container-gateway/token/renew (session mode).
+internal sealed class TokenRenewResponse
+{
+    public string Token { get; init; } = "";
+    /// <summary>Absolute expiry of the new token as Unix seconds (UTC).</summary>
+    public long ExpiresAt { get; init; }
 }
 
 internal sealed class GatewayToolInvokeRequest

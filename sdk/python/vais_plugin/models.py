@@ -41,6 +41,9 @@ class RequestContext:
     run_id: str | None = None
     correlation_id: str | None = None
     call_token: str = ""
+    # Session mode only: URL the SDK POSTs to (current token as Bearer) for a fresh token.
+    # None for short-turn plugins, which use the single call_token and never renew.
+    renew_url: str | None = None
 
 
 @dataclass

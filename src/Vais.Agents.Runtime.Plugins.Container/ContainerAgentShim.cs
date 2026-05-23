@@ -30,7 +30,7 @@ internal sealed class ContainerAgentShim
     private readonly string _internalLlmGatewayUrl;
     private readonly string _internalToolGatewayUrl;
     private readonly int _invokeTimeoutSeconds;
-    private readonly int? _sessionTtlSeconds;
+    private readonly ContainerSessionTokenConfig? _sessionConfig;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -46,7 +46,7 @@ internal sealed class ContainerAgentShim
         string internalLlmGatewayUrl,
         string internalToolGatewayUrl,
         int invokeTimeoutSeconds,
-        int? sessionTtlSeconds,
+        ContainerSessionTokenConfig? sessionConfig,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -57,7 +57,7 @@ internal sealed class ContainerAgentShim
         _internalLlmGatewayUrl = internalLlmGatewayUrl;
         _internalToolGatewayUrl = internalToolGatewayUrl;
         _invokeTimeoutSeconds = invokeTimeoutSeconds;
-        _sessionTtlSeconds = sessionTtlSeconds;
+        _sessionConfig = sessionConfig;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -114,9 +114,8 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(
-            graphRunId ?? "", _manifest.Id, _sessionTtlSeconds ?? _invokeTimeoutSeconds + 30);
-        var request = BuildInvokeRequest(messages, callToken, graphRunId);
+        var callToken = MintCallToken(graphRunId ?? "", out var renewTokenUrl);
+        var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
 
         var response = await InvokeWithRetryAsync(messages, request, cancellationToken).ConfigureAwait(false);
 
@@ -151,9 +150,8 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(
-            graphRunId ?? "", _manifest.Id, _sessionTtlSeconds ?? _invokeTimeoutSeconds + 30);
-        var request = BuildInvokeRequest(messages, callToken, graphRunId);
+        var callToken = MintCallToken(graphRunId ?? "", out var renewTokenUrl);
+        var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
 
         var start = DateTimeOffset.UtcNow;
         yield return new TurnStarted(start, context, userMessage);
@@ -288,7 +286,8 @@ internal sealed class ContainerAgentShim
                 "[{Urn}] Container plugin '{Name}' returned OpaqueStateDeserializationError — retrying with fresh state.",
                 ContainerPluginUrns.OpaqueStateDeserializationError, _manifest.Id);
             _opaqueStateJson = null;
-            var retryRequest = BuildInvokeRequest(originalMessages, request.Context.CallToken, request.Context.RunId, opaqueState: null);
+            var retryRequest = BuildInvokeRequest(originalMessages, request.Context.CallToken, request.Context.RunId,
+                opaqueState: null, renewTokenUrl: request.Context.RenewTokenUrl);
             try
             {
                 return await PostInvokeAsync(retryRequest, ct).ConfigureAwait(false);
@@ -361,11 +360,29 @@ internal sealed class ContainerAgentShim
         _ => ContainerPluginUrns.InvokeFailed,
     };
 
+    /// <summary>
+    /// Mints the call token for one invoke. Session-mode plugins (config present) get a short,
+    /// renewable token plus the renewal URL; short-turn plugins get a single full-TTL token and
+    /// no renewal URL.
+    /// </summary>
+    private string MintCallToken(string runId, out string? renewTokenUrl)
+    {
+        if (_sessionConfig is { } sc)
+        {
+            renewTokenUrl = sc.RenewTokenUrl;
+            return _callTokenService.Generate(runId, _manifest.Id, sc.RenewTokenTtlSeconds);
+        }
+
+        renewTokenUrl = null;
+        return _callTokenService.Generate(runId, _manifest.Id, _invokeTimeoutSeconds + 30);
+    }
+
     private PluginInvokeRequest BuildInvokeRequest(
         IReadOnlyList<ChatTurn> messages,
         string callToken,
         string? runId,
-        JsonElement? opaqueState = default)
+        JsonElement? opaqueState = default,
+        string? renewTokenUrl = null)
     {
         var stateElement = opaqueState ?? ParseOpaqueState(_opaqueStateJson);
         return new PluginInvokeRequest
@@ -383,6 +400,7 @@ internal sealed class ContainerAgentShim
                 RunId = runId,
                 CorrelationId = null,
                 CallToken = callToken,
+                RenewTokenUrl = renewTokenUrl,
             }
         };
     }
@@ -484,3 +502,15 @@ internal sealed class ContainerAgentShim
 }
 
 internal readonly record struct SseEvent(string Event, string Data);
+
+/// <summary>
+/// Session-mode token wiring for a container plugin (present iff <c>spec.sessionTtlSeconds</c> is set).
+/// When null the shim runs in short-turn mode: one full-TTL token per invoke, no renewal, no lease.
+/// </summary>
+/// <param name="SessionTtlSeconds">Maximum lifetime of one session; the invoke-lease ceiling.</param>
+/// <param name="RenewTokenTtlSeconds">Lifetime of each short token the plugin renews before expiry.</param>
+/// <param name="RenewTokenUrl">Absolute URL the plugin SDK POSTs to for a fresh token.</param>
+internal sealed record ContainerSessionTokenConfig(
+    int SessionTtlSeconds,
+    int RenewTokenTtlSeconds,
+    string RenewTokenUrl);

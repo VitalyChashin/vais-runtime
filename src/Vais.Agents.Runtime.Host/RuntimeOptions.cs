@@ -128,6 +128,13 @@ internal sealed record RuntimeOptions
     public string? DockerPluginNetwork { get; init; }
 
     /// <summary>
+    /// Lifetime in seconds of the short, renewable call tokens issued to session-mode container
+    /// plugins (those with <c>spec.sessionTtlSeconds</c> set). Set via
+    /// <c>VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS</c>. Default 120.
+    /// </summary>
+    public int ContainerPluginRenewTokenTtlSeconds { get; init; } = 120;
+
+    /// <summary>
     /// Base URL of this runtime host as seen by Python plugin subprocesses.
     /// Python plugins call back to <c>{InternalGatewayBaseUrl}/v1/container-gateway/...</c>
     /// for LLM completions and tool invocations (P12 gateway contract).
@@ -338,6 +345,8 @@ internal sealed record RuntimeOptions
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
             DockerPluginNetwork = Env("VAIS_DOCKER_PLUGIN_NETWORK"),
+            ContainerPluginRenewTokenTtlSeconds =
+                int.TryParse(Env("VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS"), out var renewTtl) ? renewTtl : 120,
             InternalGatewayBaseUrl = Env("VAIS_INTERNAL_GATEWAY_URL") ?? "http://localhost:8080",
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
