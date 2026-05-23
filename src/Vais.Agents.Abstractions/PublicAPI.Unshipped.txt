@@ -839,6 +839,8 @@ Vais.Agents.ContainerPluginSpec.Image.get -> string!
 Vais.Agents.ContainerPluginSpec.Image.init -> void
 Vais.Agents.ContainerPluginSpec.ImagePullPolicy.get -> string!
 Vais.Agents.ContainerPluginSpec.ImagePullPolicy.init -> void
+Vais.Agents.ContainerPluginSpec.InvokeIdleTimeoutSeconds.get -> int?
+Vais.Agents.ContainerPluginSpec.InvokeIdleTimeoutSeconds.init -> void
 Vais.Agents.ContainerPluginSpec.InvokeTimeoutSeconds.get -> int
 Vais.Agents.ContainerPluginSpec.InvokeTimeoutSeconds.init -> void
 Vais.Agents.ContainerPluginSpec.Kubernetes.get -> Vais.Agents.ContainerPluginKubernetesConfig?

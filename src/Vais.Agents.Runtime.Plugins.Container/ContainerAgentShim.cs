@@ -31,6 +31,7 @@ internal sealed class ContainerAgentShim
     private readonly string _internalToolGatewayUrl;
     private readonly int _invokeTimeoutSeconds;
     private readonly ContainerSessionTokenConfig? _sessionConfig;
+    private readonly int? _invokeIdleTimeoutSeconds;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -47,6 +48,7 @@ internal sealed class ContainerAgentShim
         string internalToolGatewayUrl,
         int invokeTimeoutSeconds,
         ContainerSessionTokenConfig? sessionConfig,
+        int? invokeIdleTimeoutSeconds,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -58,6 +60,7 @@ internal sealed class ContainerAgentShim
         _internalToolGatewayUrl = internalToolGatewayUrl;
         _invokeTimeoutSeconds = invokeTimeoutSeconds;
         _sessionConfig = sessionConfig;
+        _invokeIdleTimeoutSeconds = invokeIdleTimeoutSeconds;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -220,6 +223,18 @@ internal sealed class ContainerAgentShim
         var deltas = new List<string>();
         PluginInvokeResponse? finalResponse = null;
 
+        // Bound the stream-body read ourselves: under ResponseHeadersRead the HttpClient total timeout
+        // only covers getting the headers, so the body is otherwise open-ended. hardCts = the absolute
+        // cap (sessionTtl in session mode); idleCts (reset on every SSE line, incl. ':' heartbeats) =
+        // the idle/progress reclaim. Neither is armed for a short-turn plugin with no caps set, so its
+        // behaviour is unchanged (bounded only by the caller's ct, as before).
+        using var hardCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (_sessionConfig is { } sc)
+            hardCts.CancelAfter(TimeSpan.FromSeconds(sc.SessionTtlSeconds));
+        using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(hardCts.Token);
+        var idleMs = _invokeIdleTimeoutSeconds is { } idle ? idle * 1000 : (int?)null;
+        var readToken = idleCts.Token;
+
         try
         {
             using var httpReq = new HttpRequestMessage(HttpMethod.Post, "/v1/stream")
@@ -230,11 +245,11 @@ internal sealed class ContainerAgentShim
                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/event-stream"));
 
             using var httpResp = await _invokeClient.SendAsync(
-                httpReq, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                httpReq, HttpCompletionOption.ResponseHeadersRead, readToken).ConfigureAwait(false);
 
             if (!httpResp.IsSuccessStatusCode)
             {
-                var rawBody = await httpResp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                var rawBody = await httpResp.Content.ReadAsStringAsync(readToken).ConfigureAwait(false);
                 PluginErrorResponse? errorBody = null;
                 try { errorBody = JsonSerializer.Deserialize<PluginErrorResponse>(rawBody, ContainerJsonOptions.Default); }
                 catch { /* fall through */ }
@@ -248,8 +263,8 @@ internal sealed class ContainerAgentShim
                     httpResp.StatusCode, errorBody.ErrorType, errorBody.ErrorMessage, errorBody.DiagnosticTail);
             }
 
-            using var stream = await httpResp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            await foreach (var ev in ReadSseEventsAsync(stream, ct))
+            using var stream = await httpResp.Content.ReadAsStreamAsync(readToken).ConfigureAwait(false);
+            await foreach (var ev in ReadSseEventsAsync(stream, readToken, idleCts, idleMs))
             {
                 if (ev.Event == "delta")
                 {
@@ -265,6 +280,17 @@ internal sealed class ContainerAgentShim
             }
 
             return new StreamCollectResult(deltas, finalResponse, null);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // The watchdog fired, not the caller — surface a TimeoutException so StreamAsync emits a
+            // TurnFailed (a caller-cancellation, by contrast, falls through to the OCE yield-break path).
+            var error = hardCts.IsCancellationRequested
+                ? new TimeoutException(
+                    $"[{ContainerPluginUrns.Timeout}] Invoke exceeded its maximum duration of {_sessionConfig?.SessionTtlSeconds}s.")
+                : new TimeoutException(
+                    $"[{ContainerPluginUrns.Timeout}] Invoke idle: no streamed activity for {_invokeIdleTimeoutSeconds}s.");
+            return new StreamCollectResult(deltas, finalResponse, error);
         }
         catch (Exception ex)
         {
@@ -419,7 +445,10 @@ internal sealed class ContainerAgentShim
             LlmGatewayUrl = _internalLlmGatewayUrl,
             ToolGatewayUrl = _internalToolGatewayUrl,
             OpaqueState = stateElement,
-            TimeoutSeconds = _invokeTimeoutSeconds,
+            // The plugin's own self-enforcement budget = the invoke's absolute bound: sessionTtl in
+            // session mode (so a long session isn't self-aborted at the short invoke timeout), else
+            // invokeTimeout. Idle reclaim is the runtime's job, not the plugin's.
+            TimeoutSeconds = _sessionConfig?.SessionTtlSeconds ?? _invokeTimeoutSeconds,
             Context = new PluginRequestContext
             {
                 Traceparent = Activity.Current?.Id,
@@ -500,8 +529,13 @@ internal sealed class ContainerAgentShim
 
     private static async IAsyncEnumerable<SseEvent> ReadSseEventsAsync(
         Stream stream,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct,
+        CancellationTokenSource? idleCts = null,
+        int? idleTimeoutMs = null)
     {
+        // Arm the idle deadline before the first read so a container that never sends a byte still trips.
+        if (idleCts is not null && idleTimeoutMs is { } armMs) idleCts.CancelAfter(armMs);
+
         using var reader = new StreamReader(stream);
         string? eventName = null;
         var dataLines = new System.Text.StringBuilder();
@@ -510,6 +544,9 @@ internal sealed class ContainerAgentShim
         {
             var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
             if (line is null) break;
+
+            // Any line — delta, done, or a ':' heartbeat comment — is liveness; push the idle deadline.
+            if (idleCts is not null && idleTimeoutMs is { } resetMs) idleCts.CancelAfter(resetMs);
 
             if (line.StartsWith(':')) continue; // heartbeat comment
 

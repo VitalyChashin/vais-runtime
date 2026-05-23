@@ -48,6 +48,15 @@ public sealed record ContainerPluginSpec
     /// </summary>
     public int? SessionTtlSeconds { get; init; }
 
+    /// <summary>
+    /// Idle/progress timeout in seconds for a streaming invoke: the runtime aborts the invoke if no
+    /// streamed activity (a delta or an SSE heartbeat) arrives for this long, reclaiming a wedged
+    /// container fast without capping a healthy long session. Applies to the <c>/v1/stream</c> path only
+    /// (the non-streaming path has no liveness channel — long-lived plugins should stream). When null,
+    /// no idle watchdog runs. Independent of the absolute cap, which is <see cref="SessionTtlSeconds"/>.
+    /// </summary>
+    public int? InvokeIdleTimeoutSeconds { get; init; }
+
     /// <summary>Docker image pull policy: <c>Always</c> | <c>IfNotPresent</c> | <c>Never</c>. Default: IfNotPresent.</summary>
     public string ImagePullPolicy { get; init; } = "IfNotPresent";
 

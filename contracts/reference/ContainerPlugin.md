@@ -46,6 +46,7 @@ spec:
 | `spec.startupTimeoutSeconds` | integer | no | Seconds to wait for the container health check on startup. Default: 30. |
 | `spec.invokeTimeoutSeconds` | integer | no | Seconds allowed per invoke call before timing out. Default: 60. |
 | `spec.sessionTtlSeconds` | integer | no | Full call-token lifetime in seconds for one invoke/session. When null, defaults to InvokeTimeoutSeconds + 30 (today's coupled behaviour). Set this to support a single long-lived invoke (e.g. a co-tenant coding session) without inflating the kill-timeout: in session mode the runtime issues short, renewable tokens whose validity is bound to a live invoke lease, up to this lifetime. |
+| `spec.invokeIdleTimeoutSeconds` | integer | no | Idle/progress timeout in seconds for a streaming invoke: the runtime aborts the invoke if no streamed activity (a delta or an SSE heartbeat) arrives for this long, reclaiming a wedged container fast without capping a healthy long session. Applies to the /v1/stream path only (the non-streaming path has no liveness channel — long-lived plugins should stream). When null, no idle watchdog runs. Independent of the absolute cap, which is SessionTtlSeconds. |
 | `spec.imagePullPolicy` | string | no | Docker image pull policy: Always \| IfNotPresent \| Never. Default: IfNotPresent. |
 | `spec.retryPolicy` | object | no | Optional retry policy for failed invocations. |
 | `spec.retryPolicy.maxAttempts` | integer | no |  |
