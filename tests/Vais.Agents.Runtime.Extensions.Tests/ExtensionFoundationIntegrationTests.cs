@@ -173,6 +173,57 @@ public sealed class ExtensionFoundationIntegrationTests
         outScope.Should().BeEmpty("agent id not in scope list");
     }
 
+    // ── 7b. Tool seam: GetToolChainAsync builds the chain; deny middleware short-circuits ──
+    [Fact]
+    public async Task ChainComposer_ToolSeam_DenyMiddleware_ShortCircuits()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-tool", "1.0.0", scope: null,
+            ("tool-deny", ExtensionSeams.ToolGatewayMiddleware, new DenyToolMiddleware(), 100));
+        await registry.SwapAsync("ext-tool", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetToolChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered toolGatewayMiddleware handler must appear in the chain");
+
+        var nextCalled = false;
+        var ctx = new ToolGatewayContext(
+            "some_tool", "call-1", default, new AgentContext(AgentName: "any-agent") { RunId = "r1" });
+        var outcome = await chain[0].InvokeAsync(ctx, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real", null));
+        });
+
+        nextCalled.Should().BeFalse("deny middleware must not dispatch the tool");
+        outcome.Error.Should().Be("denied-by-ext");
+    }
+
+    // ── 7c. Tool seam: pass-through middleware dispatches the tool and returns its outcome ──
+    [Fact]
+    public async Task ChainComposer_ToolSeam_PassThrough_CallsNext()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-tool", "1.0.0", scope: null,
+            ("tool-observe", ExtensionSeams.ToolGatewayMiddleware, new NoOpToolMiddleware(), 100));
+        await registry.SwapAsync("ext-tool", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetToolChainAsync("any-agent");
+
+        var nextCalled = false;
+        var ctx = new ToolGatewayContext(
+            "some_tool", "call-1", default, new AgentContext(AgentName: "any-agent") { RunId = "r1" });
+        var outcome = await chain[0].InvokeAsync(ctx, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real", null));
+        });
+
+        nextCalled.Should().BeTrue("pass-through middleware must dispatch the tool");
+        outcome.Result.Should().Be("real");
+    }
+
     // ── 8. YAML deserializer: parses a valid Extension manifest ───────────
     [Fact]
     public void YamlDeserializer_ValidManifest_ParsesAllFields()
@@ -298,5 +349,17 @@ public sealed class ExtensionFoundationIntegrationTests
     {
         public string Tag { get; } = tag;
         public override Task InvokeAsync(AgentInputContext ctx, Func<Task> next, CancellationToken ct = default) => next();
+    }
+
+    private sealed class NoOpToolMiddleware : ToolGatewayMiddleware
+    {
+        // Base InvokeAsync passes through (returns next()).
+    }
+
+    private sealed class DenyToolMiddleware : ToolGatewayMiddleware
+    {
+        public override Task<ToolCallOutcome> InvokeAsync(
+            ToolGatewayContext ctx, Func<Task<ToolCallOutcome>> next, CancellationToken ct = default)
+            => Task.FromResult(new ToolCallOutcome(ctx.CallId, Result: null, Error: "denied-by-ext"));
     }
 }

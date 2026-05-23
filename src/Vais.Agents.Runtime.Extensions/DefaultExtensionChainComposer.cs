@@ -52,6 +52,15 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<ToolGatewayMiddleware>(ExtensionSeams.ToolGatewayMiddleware);
+    }
+
+    /// <inheritdoc />
     public void InvalidateAgent(string agentId) => _cache.TryRemove(agentId, out _);
 
     /// <inheritdoc />
@@ -83,6 +92,10 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 snapshot, manifest, agentId, ExtensionSeams.AgentOutput,
                 (inst, desc, fm) => inst is AgentOutputMiddleware mw
                     ? new InstrumentedOutputMiddleware(mw, desc, fm) : null),
+            [ExtensionSeams.ToolGatewayMiddleware] = BuildChain<ToolGatewayMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.ToolGatewayMiddleware,
+                (inst, desc, fm) => inst is ToolGatewayMiddleware mw
+                    ? new InstrumentedToolMiddleware(mw, desc, fm) : null),
         };
 
         var built = new CachedChains(chains);
@@ -184,6 +197,69 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         }
 
         return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+    }
+
+    /// <summary>
+    /// Value-returning analogue of <see cref="RunWithFailureModeAsync"/> for seams whose handler
+    /// returns a result (tool/llm gateway). Returns both the produced result and the
+    /// <see cref="HandlerOutcome"/> (next when the handler delegated, shortCircuit when it produced
+    /// its own result without calling next). On <c>failureMode=skip</c> a handler exception is
+    /// swallowed and the underlying result is used (calling <c>next</c> if the handler had not).
+    /// </summary>
+    private static async Task<(T Result, HandlerOutcome Handler)> RunValueWithFailureModeAsync<T>(
+        Func<Func<Task<T>>, Task<T>> invokeInner,
+        Func<Task<T>> next,
+        string failureMode,
+        CancellationToken ct)
+    {
+        var nextCalled = false;
+        T nextResult = default!;
+        async Task<T> TrackingNext()
+        {
+            nextCalled = true;
+            nextResult = await next().ConfigureAwait(false);
+            return nextResult;
+        }
+
+        if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var result = await invokeInner(TrackingNext).ConfigureAwait(false);
+                return (result, nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit());
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                var fallback = nextCalled ? nextResult : await next().ConfigureAwait(false);
+                return (fallback, HandlerOutcome.Skip(ex));
+            }
+        }
+
+        var ok = await invokeInner(TrackingNext).ConfigureAwait(false);
+        return (ok, nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit());
+    }
+
+    private sealed class InstrumentedToolMiddleware(
+        ToolGatewayMiddleware inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode) : ToolGatewayMiddleware
+    {
+        public override async Task<ToolCallOutcome> InvokeAsync(
+            ToolGatewayContext ctx, Func<Task<ToolCallOutcome>> next, CancellationToken ct = default)
+        {
+            ToolCallOutcome? captured = null;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor, ctx.AgentContext.AgentName ?? "", ctx.AgentContext.RunId, nodeId: null,
+                async () =>
+                {
+                    var (outcome, handler) = await RunValueWithFailureModeAsync(
+                        tn => inner.InvokeAsync(ctx, tn, ct), next, failureMode, ct).ConfigureAwait(false);
+                    captured = outcome;
+                    return handler;
+                },
+                ct).ConfigureAwait(false);
+            return captured!;
+        }
     }
 
     private sealed class InstrumentedInputMiddleware(

@@ -61,6 +61,7 @@ const Vais.Agents.Runtime.Extensions.ExtensionUrns.ExtensionReloadFailed = "urn:
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetInputChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentInputMiddleware!>!>!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetOutputChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.AgentOutputMiddleware!>!>!
+Vais.Agents.Runtime.Extensions.IExtensionChainComposer.GetToolChainAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.ToolGatewayMiddleware!>!>!
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAgent(string! agentId) -> void
 Vais.Agents.Runtime.Extensions.IExtensionChainComposer.InvalidateAll() -> void
 Vais.Agents.Runtime.Extensions.IExtensionReloader

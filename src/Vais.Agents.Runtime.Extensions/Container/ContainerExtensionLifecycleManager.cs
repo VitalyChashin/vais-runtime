@@ -27,8 +27,9 @@ internal sealed class ContainerExtensionLifecycleManager
     private static readonly IReadOnlyDictionary<string, Func<HttpContainerHandlerProxy, object>> SeamAdapters =
         new Dictionary<string, Func<HttpContainerHandlerProxy, object>>(StringComparer.Ordinal)
         {
-            [ExtensionSeams.AgentInput]  = proxy => new AgentInputHandlerProxy(proxy),
-            [ExtensionSeams.AgentOutput] = proxy => new AgentOutputHandlerProxy(proxy),
+            [ExtensionSeams.AgentInput]            = proxy => new AgentInputHandlerProxy(proxy),
+            [ExtensionSeams.AgentOutput]          = proxy => new AgentOutputHandlerProxy(proxy),
+            [ExtensionSeams.ToolGatewayMiddleware] = proxy => new ToolGatewayHandlerProxy(proxy),
         };
 
     private readonly ExtensionHandlerRegistry _registry;
