@@ -995,6 +995,49 @@ public sealed class MafGraphOrchestratorTests
         completed.FinalState!["marker"].GetString().Should().Be("transformed");
     }
 
+    [Fact]
+    public async Task Run_Evicts_Session_Grains_At_Completion()
+    {
+        var registry = new InMemoryAgentRegistry();
+        var recording = new RecordingRuntime(
+            new InMemoryAgentRuntime(new FakeCompletionProvider(_ => new CompletionResponse("ok"))));
+        var lifecycle = new AgentLifecycleManager(registry, recording);
+        await lifecycle.CreateAsync(ManifestFor("worker"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "maf-evict", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Agent", Ref: new GraphAgentRef("worker")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, runIdFactory: () => "fixed-run");
+        await foreach (var _ in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+        {
+        }
+
+        recording.RemovedSessions.Should().Contain(("worker", "fixed-run"),
+            "the orchestrator must evict each Agent node's per-run session grain at completion");
+    }
+
+    private sealed class RecordingRuntime : IAgentRuntime
+    {
+        private readonly IAgentRuntime _inner;
+        public List<(string AgentId, string SessionId)> RemovedSessions { get; } = new();
+        public RecordingRuntime(IAgentRuntime inner) => _inner = inner;
+        public IAiAgent GetOrCreate(string agentId) => _inner.GetOrCreate(agentId);
+        public IAiAgent GetOrCreateForSession(string agentId, string sessionId) => _inner.GetOrCreateForSession(agentId, sessionId);
+        public bool TryGet(string agentId, out IAiAgent? agent) => _inner.TryGet(agentId, out agent);
+        public bool Remove(string agentId) => _inner.Remove(agentId);
+        public bool RemoveSession(string agentId, string sessionId)
+        {
+            RemovedSessions.Add((agentId, sessionId));
+            return _inner.RemoveSession(agentId, sessionId);
+        }
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();

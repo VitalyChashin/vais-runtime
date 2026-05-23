@@ -320,91 +320,100 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         // Buffered GraphInterrupted from the emitter; matched to RequestInfoEvent by node-id.
         GraphInterrupted? pendingInterrupted = null;
 
-        await foreach (var wfEvent in run.WatchStreamAsync(cancellationToken).ConfigureAwait(false))
+        try
         {
-            // Buffer the translated GraphInterrupted so we can pass it to the handler
-            // when the matching RequestInfoEvent fires (emitter fires AddEventAsync before
-            // SendMessageAsync, so GraphInterruptedEvent always precedes RequestInfoEvent).
-            if (wfEvent is GraphInterruptedEvent intEvt)
+            await foreach (var wfEvent in run.WatchStreamAsync(cancellationToken).ConfigureAwait(false))
             {
-                pendingInterrupted = new GraphInterrupted(
-                    DateTimeOffset.UtcNow, context, runId, superStep,
-                    intEvt.NodeId, intEvt.InterruptId, intEvt.Reason);
-                await _graphEventBus.PublishAsync(pendingInterrupted, cancellationToken).ConfigureAwait(false);
-                yield return pendingInterrupted;
-                continue;
-            }
-
-            // RequestPort blocked — call HITL handler inline and feed response back.
-            if (wfEvent is RequestInfoEvent reqInfo &&
-                portIdToNodeId.TryGetValue(reqInfo.Request.PortInfo.PortId, out var hitlNodeId))
-            {
-                // Extract accumulated graph state before calling the handler so it can
-                // be surfaced via GraphInterrupted.CurrentState for approval prompts.
-                reqInfo.Request.TryGetDataAs<GraphMessage>(out var blockedMsg);
-                var currentState = (IReadOnlyDictionary<string, JsonElement>)(blockedMsg?.State ?? state);
-
-                var interruptedEvt = (pendingInterrupted
-                    ?? new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
-                        hitlNodeId, Guid.NewGuid().ToString("N"), Reason: null))
-                    with { CurrentState = currentState };
-                pendingInterrupted = null;
-
-                var handlerResult = await handleInterrupt(interruptedEvt, cancellationToken).ConfigureAwait(false);
-                if (handlerResult is null)
+                // Buffer the translated GraphInterrupted so we can pass it to the handler
+                // when the matching RequestInfoEvent fires (emitter fires AddEventAsync before
+                // SendMessageAsync, so GraphInterruptedEvent always precedes RequestInfoEvent).
+                if (wfEvent is GraphInterruptedEvent intEvt)
                 {
-                    await run.CancelRunAsync().ConfigureAwait(false);
-                    var abortExc = new GraphHitlAbortedException(hitlNodeId);
-                    var failEvt = await FoldGraphFailedAsync(new GraphFailed(
+                    pendingInterrupted = new GraphInterrupted(
                         DateTimeOffset.UtcNow, context, runId, superStep,
-                        nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed,
-                        FailedNodeId: hitlNodeId), cancellationToken).ConfigureAwait(false);
-                    await _graphEventBus.PublishAsync(failEvt, cancellationToken).ConfigureAwait(false);
-                    yield return failEvt;
-                    throw abortExc;
+                        intEvt.NodeId, intEvt.InterruptId, intEvt.Reason);
+                    await _graphEventBus.PublishAsync(pendingInterrupted, cancellationToken).ConfigureAwait(false);
+                    yield return pendingInterrupted;
+                    continue;
                 }
 
-                // Merge handler result under "hitl.response" and emit StateUpdated.
-                var mergedState = new Dictionary<string, JsonElement>(currentState, StringComparer.Ordinal);
-                mergedState["hitl.response"] = JsonSerializer.SerializeToElement(handlerResult);
-                var stateEvt = new StateUpdated(
+                // RequestPort blocked — call HITL handler inline and feed response back.
+                if (wfEvent is RequestInfoEvent reqInfo &&
+                    portIdToNodeId.TryGetValue(reqInfo.Request.PortInfo.PortId, out var hitlNodeId))
+                {
+                    // Extract accumulated graph state before calling the handler so it can
+                    // be surfaced via GraphInterrupted.CurrentState for approval prompts.
+                    reqInfo.Request.TryGetDataAs<GraphMessage>(out var blockedMsg);
+                    var currentState = (IReadOnlyDictionary<string, JsonElement>)(blockedMsg?.State ?? state);
+
+                    var interruptedEvt = (pendingInterrupted
+                        ?? new GraphInterrupted(DateTimeOffset.UtcNow, context, runId, superStep,
+                            hitlNodeId, Guid.NewGuid().ToString("N"), Reason: null))
+                        with { CurrentState = currentState };
+                    pendingInterrupted = null;
+
+                    var handlerResult = await handleInterrupt(interruptedEvt, cancellationToken).ConfigureAwait(false);
+                    if (handlerResult is null)
+                    {
+                        await run.CancelRunAsync().ConfigureAwait(false);
+                        var abortExc = new GraphHitlAbortedException(hitlNodeId);
+                        var failEvt = await FoldGraphFailedAsync(new GraphFailed(
+                            DateTimeOffset.UtcNow, context, runId, superStep,
+                            nameof(GraphHitlAbortedException), abortExc.Message, watch.Elapsed,
+                            FailedNodeId: hitlNodeId), cancellationToken).ConfigureAwait(false);
+                        await _graphEventBus.PublishAsync(failEvt, cancellationToken).ConfigureAwait(false);
+                        yield return failEvt;
+                        throw abortExc;
+                    }
+
+                    // Merge handler result under "hitl.response" and emit StateUpdated.
+                    var mergedState = new Dictionary<string, JsonElement>(currentState, StringComparer.Ordinal);
+                    mergedState["hitl.response"] = JsonSerializer.SerializeToElement(handlerResult);
+                    var stateEvt = new StateUpdated(
+                        DateTimeOffset.UtcNow, context, runId, superStep,
+                        new[] { "hitl.response" });
+                    await _graphEventBus.PublishAsync(stateEvt, cancellationToken).ConfigureAwait(false);
+                    yield return stateEvt;
+
+                    var responseMsg = (blockedMsg ?? initialMessage) with { State = mergedState };
+                    await run.SendResponseAsync(reqInfo.Request.CreateResponse(responseMsg)).ConfigureAwait(false);
+                    continue;
+                }
+
+                foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
+                {
+                    var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
+                    await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
+                    yield return emit;
+                }
+            }
+
+            if (recursionFailure is not null)
+            {
+                throw recursionFailure;
+            }
+
+            if (finalMessage is not null)
+            {
+                state.Clear();
+                foreach (var (k, v) in finalMessage.State)
+                {
+                    state[k] = v;
+                }
+
+                var completedEvt = new GraphCompleted(
                     DateTimeOffset.UtcNow, context, runId, superStep,
-                    new[] { "hitl.response" });
-                await _graphEventBus.PublishAsync(stateEvt, cancellationToken).ConfigureAwait(false);
-                yield return stateEvt;
-
-                var responseMsg = (blockedMsg ?? initialMessage) with { State = mergedState };
-                await run.SendResponseAsync(reqInfo.Request.CreateResponse(responseMsg)).ConfigureAwait(false);
-                continue;
-            }
-
-            foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
-            {
-                var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
-                await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
-                yield return emit;
+                    finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
+                    FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
+                await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
+                yield return completedEvt;
             }
         }
-
-        if (recursionFailure is not null)
+        finally
         {
-            throw recursionFailure;
-        }
-
-        if (finalMessage is not null)
-        {
-            state.Clear();
-            foreach (var (k, v) in finalMessage.State)
-            {
-                state[k] = v;
-            }
-
-            var completedEvt = new GraphCompleted(
-                DateTimeOffset.UtcNow, context, runId, superStep,
-                finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
-                FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
-            await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
-            yield return completedEvt;
+            // Release per-run session grains for all local Agent-kind nodes at run completion
+            // (mirrors InProcessGraphOrchestrator).
+            await EvictRunSessionsAsync(runId).ConfigureAwait(false);
         }
     }
 
@@ -500,43 +509,79 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
         GraphRecursionException? recursionFailure = null;
         bool interrupted = false;
 
-        await foreach (var wfEvent in run.WatchStreamAsync(cancellationToken).ConfigureAwait(false))
+        try
         {
-            if (wfEvent is GraphInterruptedEvent)
+            await foreach (var wfEvent in run.WatchStreamAsync(cancellationToken).ConfigureAwait(false))
             {
-                interrupted = true;
+                if (wfEvent is GraphInterruptedEvent)
+                {
+                    interrupted = true;
+                }
+                foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
+                {
+                    var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
+                    await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
+                    yield return emit;
+                }
             }
-            foreach (var translated in TranslateEvent(wfEvent, context, runId, ref superStep, ref finalMessage, ref recursionFailure))
+
+            if (recursionFailure is not null)
             {
-                var emit = await FoldGraphFailedAsync(translated, cancellationToken).ConfigureAwait(false);
-                await _graphEventBus.PublishAsync(emit, cancellationToken).ConfigureAwait(false);
-                yield return emit;
+                throw recursionFailure;
+            }
+
+            if (finalMessage is not null)
+            {
+                // Copy final state back to caller's bag so InvokeAsync / ResumeAsync see the result.
+                state.Clear();
+                foreach (var (k, v) in finalMessage.State)
+                {
+                    state[k] = v;
+                }
+
+                // Interrupted runs already emitted GraphInterrupted — don't also mark them Completed.
+                if (!interrupted)
+                {
+                    graphActivity?.SetTag("langfuse.observation.output", JsonSerializer.Serialize(finalMessage.State));
+                    var completedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
+                        finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
+                        FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
+                    await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
+                    yield return completedEvt;
+                }
             }
         }
-
-        if (recursionFailure is not null)
+        finally
         {
-            throw recursionFailure;
+            // Release per-run session grains for all local Agent-kind nodes at run completion
+            // (mirrors InProcessGraphOrchestrator — without this, per-run grains leak until idle collection).
+            await EvictRunSessionsAsync(runId).ConfigureAwait(false);
         }
+    }
 
-        if (finalMessage is not null)
+    /// <summary>
+    /// Releases the per-run session grains for every local Agent-kind node at run completion, mirroring
+    /// <c>InProcessGraphOrchestrator</c>. Node agents are invoked session-scoped by <paramref name="runId"/>,
+    /// so without this the per-run grains (and their <c>sessionLifecycle</c> close) would linger until
+    /// Orleans idle collection. Remote / A2A nodes have no local grain to evict. Best-effort.
+    /// </summary>
+    private async Task EvictRunSessionsAsync(string runId)
+    {
+        foreach (var node in _manifest.Nodes)
         {
-            // Copy final state back to caller's bag so InvokeAsync / ResumeAsync see the result.
-            state.Clear();
-            foreach (var (k, v) in finalMessage.State)
+            if (string.Equals(node.Kind, "Agent", StringComparison.Ordinal)
+                && node.Ref?.Id is { } agentId
+                && node.Ref.RuntimeUrl is null
+                && node.Ref.A2AUrl is null)
             {
-                state[k] = v;
-            }
-
-            // Interrupted runs already emitted GraphInterrupted — don't also mark them Completed.
-            if (!interrupted)
-            {
-                graphActivity?.SetTag("langfuse.observation.output", JsonSerializer.Serialize(finalMessage.State));
-                var completedEvt = new GraphCompleted(DateTimeOffset.UtcNow, context, runId, superStep,
-                    finalMessage.SourceNodeId ?? _manifest.Entry, watch.Elapsed,
-                    FinalState: (IReadOnlyDictionary<string, JsonElement>)finalMessage.State);
-                await _graphEventBus.PublishAsync(completedEvt, cancellationToken).ConfigureAwait(false);
-                yield return completedEvt;
+                try
+                {
+                    await _lifecycle.EvictSessionAsync(agentId, runId).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "session eviction failed; agentId={AgentId} runId={RunId}", agentId, runId);
+                }
             }
         }
     }
