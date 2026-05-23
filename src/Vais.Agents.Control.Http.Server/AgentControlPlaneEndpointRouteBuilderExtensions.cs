@@ -1500,10 +1500,13 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         Exception? producerError = null;
         var producerTask = Task.Run(async () =>
         {
+            var terminalSeen = false;
             try
             {
                 await foreach (var evt in streamable.StreamAsync(request.Text, principal, writerCt).ConfigureAwait(false))
                 {
+                    if (evt is TurnCompleted or TurnFailed)
+                        terminalSeen = true;
                     var (eventName, dataJson) = AgentEventSerializer.Serialize(evt);
                     var frame = $"event: {eventName}\ndata: {dataJson}\n\n";
                     await channel.Writer.WriteAsync(frame, writerCt).ConfigureAwait(false);
@@ -1513,13 +1516,18 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             catch (Exception ex)
             {
                 producerError = ex;
-                // Mid-stream exception the agent didn't translate to TurnFailed — emit a
-                // synthetic turn.failed event so the client sees a clean terminal.
-                var turnFailed = new TurnFailed(DateTimeOffset.UtcNow, principal, ex.GetType().Name, ex.Message, TimeSpan.Zero);
-                var (eventName, dataJson) = AgentEventSerializer.Serialize(turnFailed);
-                var frame = $"event: {eventName}\ndata: {dataJson}\n\n";
-                try { await channel.Writer.WriteAsync(frame, writerCt).ConfigureAwait(false); }
-                catch { /* swallow — writer already gone */ }
+                // StatefulAiAgent.StreamAsync yields a TurnFailed and then re-throws (P9), so when a
+                // terminal event was already streamed, that yielded event is the terminal — don't emit
+                // a second one (it would bypass the errorInterceptor rewrite and break the single-
+                // TurnFailed contract). Synthesize only when the producer threw without a terminal.
+                if (!terminalSeen)
+                {
+                    var turnFailed = new TurnFailed(DateTimeOffset.UtcNow, principal, ex.GetType().Name, ex.Message, TimeSpan.Zero);
+                    var (eventName, dataJson) = AgentEventSerializer.Serialize(turnFailed);
+                    var frame = $"event: {eventName}\ndata: {dataJson}\n\n";
+                    try { await channel.Writer.WriteAsync(frame, writerCt).ConfigureAwait(false); }
+                    catch { /* swallow — writer already gone */ }
+                }
             }
             finally
             {

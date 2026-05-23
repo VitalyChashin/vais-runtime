@@ -273,6 +273,32 @@ public sealed class AgentControlPlaneStreamingInvokeTests
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // ---- 11: producer throws after yielding TurnFailed → exactly one terminal event ----
+
+    [Fact]
+    public async Task Streaming_Failure_Yields_Single_TurnFailed()
+    {
+        using var host = await StartHostAsync(useThrowingProvider: true);
+        await RegisterAgentAsync(host, StreamingAgentManifest);
+        var client = new AgentControlPlaneClient(host.GetTestClient());
+
+        var events = new List<AgentEvent>();
+        await foreach (var e in client.InvokeStreamEventsAsync(
+            StreamingAgentManifest.Id,
+            new AgentInvocationRequest("hi"),
+            version: null,
+            idempotencyKey: null,
+            cancellationToken: default))
+        {
+            events.Add(e);
+        }
+
+        // StatefulAiAgent.StreamAsync yields TurnFailed and then re-throws (P9); the SSE endpoint
+        // must NOT add a second synthetic turn.failed when a terminal was already streamed.
+        events.OfType<TurnFailed>().Should().HaveCount(1);
+        events[^1].Should().BeOfType<TurnFailed>();
+    }
+
     // ---- helpers ----
 
     private static async Task RegisterAgentAsync(IHost host, AgentManifest manifest)
@@ -286,6 +312,7 @@ public sealed class AgentControlPlaneStreamingInvokeTests
         IEnumerable<CompletionUpdate>[]? turns = null,
         IReadOnlyList<ITool>? toolRegistry = null,
         bool useNonStreamingProvider = false,
+        bool useThrowingProvider = false,
         bool mountIdempotency = false,
         bool mountOpenApi = false)
     {
@@ -297,9 +324,11 @@ public sealed class AgentControlPlaneStreamingInvokeTests
                 {
                     ICompletionProvider provider = useNonStreamingProvider
                         ? new NonStreamingProvider()
-                        : (turns is not null
-                            ? new MultiTurnStreamingProvider(turns)
-                            : new SingleTurnStreamingProvider(singleTurn ?? new[] { new CompletionUpdate("default") }));
+                        : useThrowingProvider
+                            ? new ThrowingStreamingProvider()
+                            : (turns is not null
+                                ? new MultiTurnStreamingProvider(turns)
+                                : new SingleTurnStreamingProvider(singleTurn ?? new[] { new CompletionUpdate("default") }));
                     services.AddSingleton<ICompletionProvider>(provider);
 
                     services.AddSingleton<IAgentRuntime>(sp =>
@@ -414,6 +443,26 @@ public sealed class AgentControlPlaneStreamingInvokeTests
         public string ProviderName => "fake-nonstream";
         public Task<CompletionResponse> CompleteAsync(CompletionRequest request, CancellationToken cancellationToken = default)
             => Task.FromResult(new CompletionResponse("hi"));
+    }
+
+    /// <summary>
+    /// Streams one delta and then throws mid-stream, so <see cref="StatefulAiAgent"/>'s streaming
+    /// path yields a <see cref="TurnFailed"/> and re-throws (P9) — the exact case where the SSE
+    /// endpoint must not add a second synthetic terminal.
+    /// </summary>
+    private sealed class ThrowingStreamingProvider : ICompletionProvider, IStreamingCompletionProvider
+    {
+        public string ProviderName => "fake-throwing";
+
+        public Task<CompletionResponse> CompleteAsync(CompletionRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public async IAsyncEnumerable<CompletionUpdate> StreamAsync(CompletionRequest request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new CompletionUpdate("partial ");
+            await Task.Yield();
+            throw new InvalidOperationException("boom mid-stream");
+        }
     }
 
     /// <summary>
