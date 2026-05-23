@@ -849,6 +849,8 @@ Vais.Agents.ContainerPluginSpec.RetryPolicy.get -> Vais.Agents.ContainerPluginRe
 Vais.Agents.ContainerPluginSpec.RetryPolicy.init -> void
 Vais.Agents.ContainerPluginSpec.Secrets.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
 Vais.Agents.ContainerPluginSpec.Secrets.init -> void
+Vais.Agents.ContainerPluginSpec.SessionTtlSeconds.get -> int?
+Vais.Agents.ContainerPluginSpec.SessionTtlSeconds.init -> void
 Vais.Agents.ContainerPluginSpec.StartupTimeoutSeconds.get -> int
 Vais.Agents.ContainerPluginSpec.StartupTimeoutSeconds.init -> void
 Vais.Agents.ContainerPluginSpec.Topology.get -> string!

@@ -56,6 +56,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             internalLlmGatewayUrl: $"{internalBase}/v1/container-gateway/llm/complete",
             internalToolGatewayUrl: $"{internalBase}/v1/container-gateway/tools/invoke",
             invokeTimeoutSeconds: _descriptor.InvokeTimeoutSeconds,
+            sessionTtlSeconds: _descriptor.SessionTtlSeconds,
             logger: _loggerFactory.CreateLogger<ContainerAgentShim>());
 
         return ValueTask.FromResult<IAiAgent>(shim);

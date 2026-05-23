@@ -45,6 +45,7 @@ spec:
 | `spec.topology` | string | no | Deployment topology: standalone \| sidecar \| kubernetes. Default: standalone. |
 | `spec.startupTimeoutSeconds` | integer | no | Seconds to wait for the container health check on startup. Default: 30. |
 | `spec.invokeTimeoutSeconds` | integer | no | Seconds allowed per invoke call before timing out. Default: 60. |
+| `spec.sessionTtlSeconds` | integer | no | Full call-token lifetime in seconds for one invoke/session. When null, defaults to InvokeTimeoutSeconds + 30 (today's coupled behaviour). Set this to support a single long-lived invoke (e.g. a co-tenant coding session) without inflating the kill-timeout: in session mode the runtime issues short, renewable tokens whose validity is bound to a live invoke lease, up to this lifetime. |
 | `spec.imagePullPolicy` | string | no | Docker image pull policy: Always \| IfNotPresent \| Never. Default: IfNotPresent. |
 | `spec.retryPolicy` | object | no | Optional retry policy for failed invocations. |
 | `spec.retryPolicy.maxAttempts` | integer | no |  |

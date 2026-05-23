@@ -45,7 +45,8 @@ public sealed class ContainerErrorClassificationTests
         var shim = new ContainerAgentShim(
             supervisor, httpClient, [],
             new AgentManifest("a", "1.0", new AgentHandlerRef("Test"), [], []),
-            tokenSvc, "http://gw/llm", "http://gw/tools", invokeTimeoutSeconds: 60, NullLogger.Instance);
+            tokenSvc, "http://gw/llm", "http://gw/tools", invokeTimeoutSeconds: 60,
+            sessionTtlSeconds: null, logger: NullLogger.Instance);
 
         var act = () => shim.AskAsync("hi");
         var ex = (await act.Should().ThrowAsync<ContainerInvokeException>()).Which;

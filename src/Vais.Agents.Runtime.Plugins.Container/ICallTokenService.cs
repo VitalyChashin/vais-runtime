@@ -28,9 +28,9 @@ internal sealed class HmacCallTokenService : ICallTokenService
         _keyBytes = Encoding.UTF8.GetBytes(secret);
     }
 
-    public string Generate(string runId, string agentId, int timeoutSeconds)
+    public string Generate(string runId, string agentId, int ttlSeconds)
     {
-        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(timeoutSeconds + 30).ToUnixTimeSeconds();
+        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(ttlSeconds).ToUnixTimeSeconds();
         var payload = $"{runId}:{agentId}:{expiresAt}";
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
         var hmac = HMACSHA256.HashData(_keyBytes, payloadBytes);

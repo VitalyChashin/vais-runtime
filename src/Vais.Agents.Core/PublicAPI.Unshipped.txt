@@ -1,6 +1,6 @@
 #nullable enable
 Vais.Agents.Core.ICallTokenService
-Vais.Agents.Core.ICallTokenService.Generate(string! runId, string! agentId, int timeoutSeconds) -> string!
+Vais.Agents.Core.ICallTokenService.Generate(string! runId, string! agentId, int ttlSeconds) -> string!
 Vais.Agents.Core.ICallTokenService.Validate(string! token, string! runId, string! agentId) -> bool
 Vais.Agents.Core.ICallTokenService.TryExtract(string! token, out string! runId, out string! agentId) -> bool
 Vais.Agents.Core.IGraphExpressionEvaluator

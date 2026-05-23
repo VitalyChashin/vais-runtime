@@ -10,9 +10,11 @@ namespace Vais.Agents.Core;
 public interface ICallTokenService
 {
     /// <summary>
-    /// Generates a token valid for <paramref name="timeoutSeconds"/> + 30 seconds.
+    /// Generates a token whose lifetime is exactly <paramref name="ttlSeconds"/> seconds.
+    /// The caller owns any safety margin: the per-invoke path passes the kill-timeout + 30,
+    /// while a long-lived session passes a short, renewable TTL (see the renewal endpoint).
     /// </summary>
-    string Generate(string runId, string agentId, int timeoutSeconds);
+    string Generate(string runId, string agentId, int ttlSeconds);
 
     /// <summary>Returns true when the token is valid, unexpired, and matches runId + agentId.</summary>
     bool Validate(string token, string runId, string agentId);

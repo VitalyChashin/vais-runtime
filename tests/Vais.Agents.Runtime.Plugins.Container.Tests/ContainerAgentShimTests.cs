@@ -89,6 +89,7 @@ public sealed class ContainerAgentShimTests
             internalLlmGatewayUrl: "http://gateway/llm",
             internalToolGatewayUrl: "http://gateway/tools",
             invokeTimeoutSeconds: 60,
+            sessionTtlSeconds: null,
             logger: NullLogger.Instance);
 
         return (shim, handler);

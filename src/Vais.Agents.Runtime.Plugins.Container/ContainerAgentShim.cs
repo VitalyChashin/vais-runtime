@@ -30,6 +30,7 @@ internal sealed class ContainerAgentShim
     private readonly string _internalLlmGatewayUrl;
     private readonly string _internalToolGatewayUrl;
     private readonly int _invokeTimeoutSeconds;
+    private readonly int? _sessionTtlSeconds;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -45,6 +46,7 @@ internal sealed class ContainerAgentShim
         string internalLlmGatewayUrl,
         string internalToolGatewayUrl,
         int invokeTimeoutSeconds,
+        int? sessionTtlSeconds,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -55,6 +57,7 @@ internal sealed class ContainerAgentShim
         _internalLlmGatewayUrl = internalLlmGatewayUrl;
         _internalToolGatewayUrl = internalToolGatewayUrl;
         _invokeTimeoutSeconds = invokeTimeoutSeconds;
+        _sessionTtlSeconds = sessionTtlSeconds;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -111,7 +114,8 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(graphRunId ?? "", _manifest.Id, _invokeTimeoutSeconds);
+        var callToken = _callTokenService.Generate(
+            graphRunId ?? "", _manifest.Id, _sessionTtlSeconds ?? _invokeTimeoutSeconds + 30);
         var request = BuildInvokeRequest(messages, callToken, graphRunId);
 
         var response = await InvokeWithRetryAsync(messages, request, cancellationToken).ConfigureAwait(false);
@@ -147,7 +151,8 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
-        var callToken = _callTokenService.Generate(graphRunId ?? "", _manifest.Id, _invokeTimeoutSeconds);
+        var callToken = _callTokenService.Generate(
+            graphRunId ?? "", _manifest.Id, _sessionTtlSeconds ?? _invokeTimeoutSeconds + 30);
         var request = BuildInvokeRequest(messages, callToken, graphRunId);
 
         var start = DateTimeOffset.UtcNow;

@@ -39,6 +39,15 @@ public sealed record ContainerPluginSpec
     /// <summary>Seconds allowed per invoke call before timing out. Default: 60.</summary>
     public int InvokeTimeoutSeconds { get; init; } = 60;
 
+    /// <summary>
+    /// Full call-token lifetime in seconds for one invoke/session. When null, defaults to
+    /// <see cref="InvokeTimeoutSeconds"/> + 30 (today's coupled behaviour). Set this to support a
+    /// single long-lived invoke (e.g. a co-tenant coding session) without inflating the kill-timeout:
+    /// in session mode the runtime issues short, renewable tokens whose validity is bound to a live
+    /// invoke lease, up to this lifetime.
+    /// </summary>
+    public int? SessionTtlSeconds { get; init; }
+
     /// <summary>Docker image pull policy: <c>Always</c> | <c>IfNotPresent</c> | <c>Never</c>. Default: IfNotPresent.</summary>
     public string ImagePullPolicy { get; init; } = "IfNotPresent";
 

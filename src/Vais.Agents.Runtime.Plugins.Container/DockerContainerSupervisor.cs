@@ -74,7 +74,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
             // Token uses the plugin name in both slots — the OTLP receiver validates via TryExtract
             // (it doesn't need to match a specific runId/agentId pair, just be a valid signed token).
             var otlpToken = _callTokenService.Generate(
-                runId: _descriptor.Name, agentId: _descriptor.Name, timeoutSeconds: 86_400);
+                runId: _descriptor.Name, agentId: _descriptor.Name, ttlSeconds: 86_400);
             envVars.Add($"OTEL_EXPORTER_OTLP_ENDPOINT={_otlpEndpointUrl}");
             envVars.Add("OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf");
             envVars.Add($"OTEL_EXPORTER_OTLP_HEADERS=Authorization=vais-plugin-token {otlpToken}");
@@ -84,7 +84,7 @@ internal sealed class DockerContainerSupervisor : IContainerSupervisor
         if (_logEndpointUrl is not null && _callTokenService is not null)
         {
             var logToken = _callTokenService.Generate(
-                runId: _descriptor.Name, agentId: _descriptor.Name, timeoutSeconds: 86_400);
+                runId: _descriptor.Name, agentId: _descriptor.Name, ttlSeconds: 86_400);
             // Include the source discriminator in the URL; the Python SDK posts directly to this URL.
             var fullLogUrl = $"{_logEndpointUrl}?source=plugin&id={Uri.EscapeDataString(_descriptor.Name)}";
             envVars.Add($"VAIS_LOG_ENDPOINT={fullLogUrl}");
