@@ -1,6 +1,6 @@
 # Extension Handler Protocol
 
-**Version:** 0.33  
+**Version:** 0.34  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the language SDKs and runtime proxy.
 
 ---
@@ -271,6 +271,58 @@ Pre-response:
 A non-empty `message` replaces the surfaced error message; `null` (or absent) observes only. The
 runtime never reads `errorType` back from the response — it is fixed.
 
+### `graphNode`
+
+Hot, per-node — a `host: container` handler on this seam requires the apply-time latency
+acknowledgment (`X-Vais-Accept-Latency-Cost: true`). Wraps a graph node's **body** execution (Agent
+and Code kinds; control nodes are not wrapped). The pre/post pair carries the node's output state.
+
+Pre-request:
+
+```json
+{
+  "callId": "call-node",
+  "context": {
+    "runId": "run-123",
+    "nodeId": "plan",
+    "nodeKind": "Agent",
+    "agentId": "research-planner",
+    "superStep": 2,
+    "input": { "topic": "..." }
+  }
+}
+```
+
+`agentId` is empty for `Code` nodes. `input` is the node's binding-filtered input state (its keys are
+domain state keys, preserved verbatim).
+
+Pre-response:
+
+```json
+{
+  "action": "next" | "shortCircuit",
+  "continuationToken": "<opaque>",
+  "output": { "...": "shortCircuit: substitute node output, merged as if the node ran" }
+}
+```
+
+`shortCircuit` returns `output` as the node's result **without running the node body** (the cache /
+deny path); the `/post` endpoint is NOT called. The substitute output flows through the runtime's
+normal state-merge + per-step checkpoint, so a short-circuited node is journaled exactly like a real
+run — **resume stays consistent and P2 (one-node-one-turn) holds**.
+
+Post-request carries the body output:
+
+```json
+{ "callId": "call-node", "continuationToken": "<from pre>", "output": { "lastAssistantText": "..." } }
+```
+
+Post-response (`mutate` replaces the node output before it merges into graph state):
+
+```json
+{ "action": "next" | "mutate", "output": { "...": "replacement node output" } }
+```
+
 ---
 
 ## Wire constraints
@@ -336,6 +388,7 @@ Response headers MUST NOT include `traceparent` — the runtime owns the parent 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.34 | 2026-05-24 | Added `graphNode` seam — a per-node `/pre` + `/post` hook wrapping graph node body execution. `pre` may short-circuit with a substitute `output` (journaled like a real run, resume-safe); `post` may transform the node `output`. Hot seam (per-node). Additive — earlier seams remain compatible. |
 | 0.33 | 2026-05-23 | Added `errorInterceptor` seam — a single-call (`/pre` only) failure hook that observes and optionally rewrites the user-facing message without changing `errorType` or suppressing the failure (P9). Additive — earlier seams remain compatible. |
 | 0.32 | 2026-05-23 | Added `toolGatewayMiddleware` + `llmGatewayMiddleware` seam contexts and their outcome/response-carrying pre/post shapes. Additive — `agentInput`/`agentOutput` extensions targeting 0.30/0.31 remain compatible. |
 | 0.31 | 2026-05-20 | Added §Trace context: `traceparent`, `X-Vais-*` headers, OTLP URL discriminator format |
