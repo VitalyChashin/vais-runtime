@@ -69,10 +69,7 @@ internal sealed class HttpContainerHandlerProxy
         HandlerPreResponse? preResp;
         try
         {
-            using var preMsg = CreateTracedRequest(_preEndpoint, preReq, ctx.AgentId, ctx.RunId, ctx.NodeId);
-            using var httpResp = await _http.SendAsync(preMsg, ct).ConfigureAwait(false);
-            httpResp.EnsureSuccessStatusCode();
-            preResp = await httpResp.Content.ReadFromJsonAsync<HandlerPreResponse>(JsonOptions, ct).ConfigureAwait(false);
+            preResp = await SendPreAsync(preReq, ctx.AgentId, ctx.RunId, ctx.NodeId, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
@@ -100,22 +97,11 @@ internal sealed class HttpContainerHandlerProxy
         }
 
         var postReq = new AgentInputPostRequest(callId, preResp.ContinuationToken);
-        try
+        var postBody = await TrySendPostAsync(postReq, ctx.AgentId, ctx.RunId, ctx.NodeId, ct).ConfigureAwait(false);
+        if (postBody is { Action: var action } && string.Equals(action, "mutate", StringComparison.OrdinalIgnoreCase) && postBody.ContextPatch is { } pp)
         {
-            using var postMsg = CreateTracedRequest(_postEndpoint, postReq, ctx.AgentId, ctx.RunId, ctx.NodeId);
-            using var postResp = await _http.SendAsync(postMsg, ct).ConfigureAwait(false);
-            postResp.EnsureSuccessStatusCode();
-            var postBody = await postResp.Content.ReadFromJsonAsync<HandlerPostResponse>(JsonOptions, ct).ConfigureAwait(false);
-            if (postBody is { Action: var action } && string.Equals(action, "mutate", StringComparison.OrdinalIgnoreCase) && postBody.ContextPatch is { } pp)
-            {
-                ApplyPatch(ctx.Properties, pp);
-                actionLabel = "mutate";
-            }
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "post call to {Endpoint} failed; agentId={AgentId} runId={RunId}; swallowing.",
-                _postEndpoint, ctx.AgentId, ctx.RunId);
+            ApplyPatch(ctx.Properties, pp);
+            actionLabel = "mutate";
         }
 
         return actionLabel == "mutate" ? HandlerOutcome.Mutate() : HandlerOutcome.Next();
@@ -132,10 +118,7 @@ internal sealed class HttpContainerHandlerProxy
         HandlerPreResponse? preResp;
         try
         {
-            using var preMsg = CreateTracedRequest(_preEndpoint, preReq, ctx.AgentId, ctx.RunId, nodeId: null);
-            using var httpResp = await _http.SendAsync(preMsg, ct).ConfigureAwait(false);
-            httpResp.EnsureSuccessStatusCode();
-            preResp = await httpResp.Content.ReadFromJsonAsync<HandlerPreResponse>(JsonOptions, ct).ConfigureAwait(false);
+            preResp = await SendPreAsync(preReq, ctx.AgentId, ctx.RunId, nodeId: null, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
@@ -155,19 +138,46 @@ internal sealed class HttpContainerHandlerProxy
         await next().ConfigureAwait(false);
 
         var postReq = new AgentOutputPostRequest(callId, preResp.ContinuationToken);
+        await TrySendPostAsync(postReq, ctx.AgentId, ctx.RunId, nodeId: null, ct).ConfigureAwait(false);
+
+        return HandlerOutcome.Next();
+    }
+
+    // ── Shared /pre + /post envelope ──────────────────────────────────────────
+
+    /// <summary>
+    /// Sends the <c>/pre</c> request and parses the <see cref="HandlerPreResponse"/>. Transport and
+    /// non-success HTTP errors propagate to the caller, which applies the seam's failure-mode policy.
+    /// </summary>
+    private async Task<HandlerPreResponse?> SendPreAsync<TReq>(
+        TReq preReq, string agentId, string? runId, string? nodeId, CancellationToken ct)
+    {
+        using var preMsg = CreateTracedRequest(_preEndpoint, preReq, agentId, runId, nodeId);
+        using var httpResp = await _http.SendAsync(preMsg, ct).ConfigureAwait(false);
+        httpResp.EnsureSuccessStatusCode();
+        return await httpResp.Content.ReadFromJsonAsync<HandlerPreResponse>(JsonOptions, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sends the best-effort <c>/post</c> request. The post phase never aborts the chain: any error is
+    /// logged at WARN and swallowed (returns null), matching the shipped input/output semantics.
+    /// </summary>
+    private async Task<HandlerPostResponse?> TrySendPostAsync<TReq>(
+        TReq postReq, string agentId, string? runId, string? nodeId, CancellationToken ct)
+    {
         try
         {
-            using var postMsg = CreateTracedRequest(_postEndpoint, postReq, ctx.AgentId, ctx.RunId, nodeId: null);
+            using var postMsg = CreateTracedRequest(_postEndpoint, postReq, agentId, runId, nodeId);
             using var postResp = await _http.SendAsync(postMsg, ct).ConfigureAwait(false);
             postResp.EnsureSuccessStatusCode();
+            return await postResp.Content.ReadFromJsonAsync<HandlerPostResponse>(JsonOptions, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "post call to {Endpoint} failed; agentId={AgentId} runId={RunId}; swallowing.",
-                _postEndpoint, ctx.AgentId, ctx.RunId);
+                _postEndpoint, agentId, runId);
+            return null;
         }
-
-        return HandlerOutcome.Next();
     }
 
     private async Task<HandlerOutcome> HandleFailureModeAsync(
