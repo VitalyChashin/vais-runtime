@@ -48,6 +48,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly IExtensionChainComposer? _extensionChainComposer;
     private string? _agentId;
     private string? _sessionId;
+    private bool _sessionClosed;
     private IAiAgent? _agent;
     // Non-null only in plugin mode — signals that AskAsync should record tool calls from history delta.
     private ToolGatewayMiddleware[]? _pluginToolGatewayMiddleware;
@@ -231,11 +232,15 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Grain deactivating — agentId={AgentId} reason={Reason}", _agentId, reason.ReasonCode);
-        // Run the close hooks on a bounded token of our own, not the deactivation token: the latter
-        // may already be cancelled on shutdown/collection, which would silently skip summarize-on-close
-        // (the case that matters most). Best-effort + fast — capped so a slow hook can't stall the silo.
-        using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await FireSessionLifecycleAsync(SessionPhase.Closing, closeCts.Token).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        // Fire closing here only for the idle/shutdown path. The explicit-removal path (DeleteAsync)
+        // already fired it BEFORE clearing state — re-firing here would deliver empty history.
+        // Run on a bounded token of our own, not the deactivation token: the latter may already be
+        // cancelled on shutdown/collection, which would silently skip summarize-on-close.
+        if (!_sessionClosed)
+        {
+            using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await FireSessionLifecycleAsync(SessionPhase.Closing, closeCts.Token).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -433,6 +438,15 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     /// <inheritdoc />
     public async Task DeleteAsync()
     {
+        // Fire the session-close hooks with the conversation history intact, BEFORE clearing state
+        // (ClearStateAsync wipes _state.State.History, which OnDeactivateAsync would otherwise read as
+        // empty). This is the run-completion eviction path — the common close trigger — so it must
+        // deliver real history for summarize-on-close.
+        using (var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+        {
+            await FireSessionLifecycleAsync(SessionPhase.Closing, closeCts.Token).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
+        _sessionClosed = true;
         await _state.ClearStateAsync();
         _agent = null;
         DeactivateOnIdle();
