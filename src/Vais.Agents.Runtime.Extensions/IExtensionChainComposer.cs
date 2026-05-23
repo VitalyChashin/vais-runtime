@@ -44,6 +44,13 @@ public interface IExtensionChainComposer
     /// </summary>
     Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the ordered <see cref="GraphNodeMiddleware"/> chain for <paramref name="agentId"/>
+    /// (the node's agent ref id). Empty when no extensions scope to this agent on the
+    /// <c>graphNode</c> seam. Consumers wrap node body execution with this chain.
+    /// </summary>
+    Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string agentId, CancellationToken cancellationToken = default);
+
     /// <summary>Invalidate the cached chain for <paramref name="agentId"/>.</summary>
     void InvalidateAgent(string agentId);
 

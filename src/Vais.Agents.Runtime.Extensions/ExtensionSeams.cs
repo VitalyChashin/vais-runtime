@@ -11,4 +11,5 @@ internal static class ExtensionSeams
     public const string ToolGatewayMiddleware = "toolGatewayMiddleware";
     public const string LlmGatewayMiddleware = "llmGatewayMiddleware";
     public const string ErrorInterceptor = "errorInterceptor";
+    public const string GraphNode = "graphNode";
 }

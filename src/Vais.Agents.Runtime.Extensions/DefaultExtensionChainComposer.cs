@@ -79,6 +79,15 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<GraphNodeMiddleware>(ExtensionSeams.GraphNode);
+    }
+
+    /// <inheritdoc />
     public void InvalidateAgent(string agentId) => _cache.TryRemove(agentId, out _);
 
     /// <inheritdoc />
@@ -122,6 +131,10 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 snapshot, manifest, agentId, ExtensionSeams.ErrorInterceptor,
                 (inst, desc, fm) => inst is ErrorInterceptor ei
                     ? new InstrumentedErrorInterceptor(ei, desc, fm, agentId) : null),
+            [ExtensionSeams.GraphNode] = BuildChain<GraphNodeMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.GraphNode,
+                (inst, desc, fm) => inst is GraphNodeMiddleware mw
+                    ? new InstrumentedGraphNodeMiddleware(mw, desc, fm, agentId) : null),
         };
 
         var built = new CachedChains(chains);
@@ -390,6 +403,32 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                 },
                 ct).ConfigureAwait(false);
             return outcome;
+        }
+    }
+
+    private sealed class InstrumentedGraphNodeMiddleware(
+        GraphNodeMiddleware inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode,
+        string agentId) : GraphNodeMiddleware
+    {
+        public override async Task<GraphNodeOutcome> InvokeAsync(
+            GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct = default)
+        {
+            GraphNodeOutcome? captured = null;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor,
+                string.IsNullOrEmpty(ctx.AgentId) ? agentId : ctx.AgentId,
+                ctx.RunId, ctx.NodeId,
+                async () =>
+                {
+                    var (outcome, handler) = await RunValueWithFailureModeAsync(
+                        tn => inner.InvokeAsync(ctx, tn, ct), next, failureMode, ct).ConfigureAwait(false);
+                    captured = outcome;
+                    return handler;
+                },
+                ct).ConfigureAwait(false);
+            return captured!;
         }
     }
 

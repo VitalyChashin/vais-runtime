@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
@@ -290,6 +291,48 @@ public sealed class ExtensionFoundationIntegrationTests
         message.Should().Be("[tagged] boom", "the chain folds the rewritten message");
     }
 
+    // ── 7g. graphNode seam: GetGraphNodeChainAsync builds the chain; pre short-circuits ──
+    [Fact]
+    public async Task ChainComposer_GraphNodeSeam_ShortCircuits()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-node", "1.0.0", scope: null,
+            ("cache", ExtensionSeams.GraphNode, new ShortCircuitGraphNode(), 100));
+        await registry.SwapAsync("ext-node", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetGraphNodeChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered graphNode handler must appear in the chain");
+
+        var ctx = new GraphNodeContext("r1", "n1", "Agent", "any-agent", 0,
+            new Dictionary<string, JsonElement>());
+        var bodyRan = false;
+        Func<Task<GraphNodeOutcome>> body = () =>
+        {
+            bodyRan = true;
+            return Task.FromResult(new GraphNodeOutcome(
+                new Dictionary<string, JsonElement> { ["k"] = JsonDocument.Parse("\"real\"").RootElement.Clone() }));
+        };
+
+        var outcome = await RunGraphNodeChain(chain, ctx, body);
+
+        bodyRan.Should().BeFalse("the handler short-circuits without running the node body");
+        outcome.Output["k"].GetString().Should().Be("cached");
+    }
+
+    private static Task<GraphNodeOutcome> RunGraphNodeChain(
+        IReadOnlyList<GraphNodeMiddleware> chain, GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> body)
+    {
+        var next = body;
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            var mw = chain[i];
+            var inner = next;
+            next = () => mw.InvokeAsync(ctx, inner, default);
+        }
+        return next();
+    }
+
     // ── 8. YAML deserializer: parses a valid Extension manifest ───────────
     [Fact]
     public void YamlDeserializer_ValidManifest_ParsesAllFields()
@@ -447,5 +490,13 @@ public sealed class ExtensionFoundationIntegrationTests
     {
         public override Task<ErrorOutcome> OnErrorAsync(ErrorContext ctx, CancellationToken ct = default)
             => Task.FromResult(new ErrorOutcome($"[tagged] {ctx.ErrorMessage}"));
+    }
+
+    private sealed class ShortCircuitGraphNode : GraphNodeMiddleware
+    {
+        public override Task<GraphNodeOutcome> InvokeAsync(
+            GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct = default)
+            => Task.FromResult(new GraphNodeOutcome(
+                new Dictionary<string, JsonElement> { ["k"] = JsonDocument.Parse("\"cached\"").RootElement.Clone() }));
     }
 }

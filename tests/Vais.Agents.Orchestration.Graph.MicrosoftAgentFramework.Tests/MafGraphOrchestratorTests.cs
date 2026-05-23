@@ -894,6 +894,8 @@ public sealed class MafGraphOrchestratorTests
             => Task.FromResult<IReadOnlyList<LlmGatewayMiddleware>>(Array.Empty<LlmGatewayMiddleware>());
         public Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string a, CancellationToken c = default)
             => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(new[] { interceptor });
+        public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(Array.Empty<GraphNodeMiddleware>());
         public void InvalidateAgent(string a) { }
         public void InvalidateAll() { }
     }
