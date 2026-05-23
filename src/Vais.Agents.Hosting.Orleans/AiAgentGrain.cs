@@ -47,6 +47,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly ILogger<AiAgentGrain> _logger;
     private readonly IExtensionChainComposer? _extensionChainComposer;
     private string? _agentId;
+    private string? _sessionId;
     private IAiAgent? _agent;
     // Non-null only in plugin mode — signals that AskAsync should record tool calls from history delta.
     private ToolGatewayMiddleware[]? _pluginToolGatewayMiddleware;
@@ -89,6 +90,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         // agentId for manifest lookup; the full key is the grain's unique identity.
         var slash = grainKey.IndexOf('/');
         _agentId = slash > 0 ? grainKey[..slash] : grainKey;
+        _sessionId = slash > 0 ? grainKey[(slash + 1)..] : string.Empty;
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
         // OnActivateAsync runs on the Orleans grain scheduler with no ambient Activity.Current.
         // Skip the span when there's no parent — an orphan root trace adds no observability value.
@@ -141,6 +143,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                 consumer.SetGrainState(_state.State);
             }
             _logger.LogInformation("Grain activated — agentId={AgentId} mode=plugin elapsedMs={ElapsedMs}", _agentId, sw.ElapsedMilliseconds);
+            await FireSessionLifecycleAsync(SessionPhase.Opened, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             await base.OnActivateAsync(cancellationToken);
             return;
         }
@@ -220,14 +223,66 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             sw.ElapsedMilliseconds,
             string.Join(", ", seeded.GatewayMiddleware?.Select(m => m.GetType().Name) ?? Array.Empty<string>()),
             string.Join(", ", seeded.ToolGatewayMiddleware?.Select(m => m.GetType().Name) ?? Array.Empty<string>()));
+        await FireSessionLifecycleAsync(SessionPhase.Opened, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc />
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Grain deactivating — agentId={AgentId} reason={Reason}", _agentId, reason.ReasonCode);
-        return base.OnDeactivateAsync(reason, cancellationToken);
+        await FireSessionLifecycleAsync(SessionPhase.Closing, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        await base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fires the <c>sessionLifecycle</c> extension chain (best-effort) for the given phase. On
+    /// <see cref="SessionPhase.Closing"/> the conversation history is projected to <see cref="SessionTurn"/>
+    /// for summarize-on-close. A hook failure is logged at WARN and never aborts the grain lifecycle.
+    /// </summary>
+    private async Task FireSessionLifecycleAsync(string phase, CancellationToken cancellationToken)
+    {
+        if (_extensionChainComposer is null || _agentId is null)
+            return;
+
+        IReadOnlyList<SessionLifecycleHook> hooks;
+        try
+        {
+            hooks = await _extensionChainComposer.GetSessionLifecycleChainAsync(_agentId, cancellationToken)
+                .ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "sessionLifecycle chain resolution failed; agentId={AgentId} phase={Phase}", _agentId, phase);
+            return;
+        }
+
+        if (hooks.Count == 0)
+            return;
+
+        IReadOnlyList<SessionTurn>? history = null;
+        if (string.Equals(phase, SessionPhase.Closing, StringComparison.Ordinal) && _state.State.History.Count > 0)
+        {
+            history = _state.State.History
+                .Select(t => new SessionTurn(t.Role.ToString().ToLowerInvariant(), t.Text))
+                .ToArray();
+        }
+
+        var ctx = new SessionLifecycleContext(
+            _agentId, _sessionId ?? string.Empty, phase, _state.State.History.Count, history);
+
+        foreach (var hook in hooks)
+        {
+            try
+            {
+                await hook.OnSessionAsync(ctx, cancellationToken)
+                    .ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "sessionLifecycle hook failed; agentId={AgentId} phase={Phase}", _agentId, phase);
+            }
+        }
     }
 
     /// <inheritdoc />
