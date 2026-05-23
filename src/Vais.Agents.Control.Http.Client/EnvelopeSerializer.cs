@@ -358,39 +358,57 @@ internal static class EnvelopeSerializer
         }
         if (s.Baseline is { } b)
             spec["baseline"] = new JsonObject { ["runId"] = b.RunId };
-        var casesArr = new JsonArray();
-        foreach (var c in s.Cases ?? [])
+        // Cases (batch mode) and Sampling (continuous mode) are mutually exclusive — emit
+        // whichever is set. Emitting an empty cases array in continuous mode would fail the
+        // loader's "cases required" check, dropping the sampling config on apply.
+        if (s.Cases is { } cases)
         {
-            var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
-            if (c.Name is not null) caseObj["name"] = c.Name;
-            if (c.Description is not null) caseObj["description"] = c.Description;
-            if (c.ExpectedOutput is not null) caseObj["expectedOutput"] = c.ExpectedOutput;
-            if (c.Replay is { } cr) caseObj["replay"] = cr.ToString().ToLowerInvariant();
-            if (c.InitialHistory is { Count: > 0 })
+            var casesArr = new JsonArray();
+            foreach (var c in cases)
             {
-                var histArr = new JsonArray();
-                foreach (var turn in c.InitialHistory)
-                    histArr.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Content });
-                caseObj["initialHistory"] = histArr;
-            }
-            if (c.Variables is { Count: > 0 })
-                caseObj["variables"] = JsonSerializer.SerializeToNode(c.Variables, JsonOptions);
-            if (c.Assertions.Count > 0)
-            {
-                var assertArr = new JsonArray();
-                foreach (var a in c.Assertions)
+                var caseObj = new JsonObject { ["id"] = c.Id, ["input"] = c.Input };
+                if (c.Name is not null) caseObj["name"] = c.Name;
+                if (c.Description is not null) caseObj["description"] = c.Description;
+                if (c.ExpectedOutput is not null) caseObj["expectedOutput"] = c.ExpectedOutput;
+                if (c.Replay is { } cr) caseObj["replay"] = cr.ToString().ToLowerInvariant();
+                if (c.InitialHistory is { Count: > 0 })
                 {
-                    var assertObj = new JsonObject { ["kind"] = a.Kind };
-                    if (a.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
-                        assertObj["params"] = JsonNode.Parse(p.GetRawText());
-                    assertArr.Add(assertObj);
+                    var histArr = new JsonArray();
+                    foreach (var turn in c.InitialHistory)
+                        histArr.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Content });
+                    caseObj["initialHistory"] = histArr;
                 }
-                caseObj["assertions"] = assertArr;
+                if (c.Variables is { Count: > 0 })
+                    caseObj["variables"] = JsonSerializer.SerializeToNode(c.Variables, JsonOptions);
+                if (c.Assertions.Count > 0)
+                    caseObj["assertions"] = SerializeEvalAssertions(c.Assertions);
+                casesArr.Add(caseObj);
             }
-            casesArr.Add(caseObj);
+            spec["cases"] = casesArr;
         }
-        spec["cases"] = casesArr;
+        if (s.Sampling is { } sampling)
+        {
+            var samplingObj = new JsonObject { ["rate"] = sampling.Rate };
+            if (sampling.MinPerHour is int mph) samplingObj["minPerHour"] = mph;
+            samplingObj["windowDuration"] = sampling.WindowDuration.ToString();
+            spec["sampling"] = samplingObj;
+        }
+        if (s.Assertions is { Count: > 0 } specAssertions)
+            spec["assertions"] = SerializeEvalAssertions(specAssertions);
         return WrapEnvelope("EvalSuite", metadata, spec).ToJsonString(JsonOptions);
+    }
+
+    private static JsonArray SerializeEvalAssertions(IReadOnlyList<EvalAssertion> assertions)
+    {
+        var arr = new JsonArray();
+        foreach (var a in assertions)
+        {
+            var obj = new JsonObject { ["kind"] = a.Kind };
+            if (a.Params is System.Text.Json.JsonElement p && p.ValueKind != System.Text.Json.JsonValueKind.Null)
+                obj["params"] = JsonNode.Parse(p.GetRawText());
+            arr.Add(obj);
+        }
+        return arr;
     }
 
     private static JsonObject BuildGatewayMetadata(string id, string version, string? description,

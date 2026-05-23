@@ -1,7 +1,6 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
 using Vais.Agents.Control.Manifests;
@@ -157,69 +156,16 @@ public sealed class GraphManifestFieldRoundTripTests
     {
         var covered = new HashSet<string>(
             RoundTripCases().Select(r => (string)r[0]!), StringComparer.Ordinal);
-        var discovered = DiscoverFieldPaths(typeof(AgentGraphManifest), prefix: "");
+        var discovered = ManifestRoundTripWalker.Discover(typeof(AgentGraphManifest), AlwaysSerialized);
         var uncovered = discovered.Distinct().Except(covered).OrderBy(p => p).ToList();
         uncovered.Should().BeEmpty(
             because: "every optional field in the AgentGraphManifest record graph must have a round-trip " +
                      $"case in {nameof(RoundTripCases)}() — add the missing dotted path(s)");
     }
 
-    // ── nested reflection walker ───────────────────────────────────────────────
-
     // Structural required scalars always written by both serializers — not at risk of silent loss.
     private static readonly IReadOnlySet<string> AlwaysSerialized = new HashSet<string>(StringComparer.Ordinal)
     {
         "Id", "Version", "Entry", "Nodes.Id", "Nodes.Kind", "Edges.From", "Edges.To",
     };
-
-    private static IReadOnlyList<string> DiscoverFieldPaths(Type type, string prefix)
-    {
-        var results = new List<string>();
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            var path = prefix.Length == 0 ? prop.Name : $"{prefix}.{prop.Name}";
-            if (AlwaysSerialized.Contains(path)) continue;
-
-            var underlying = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-            if (underlying.IsEnum) continue; // covered by ManifestEnumRoundTripTests
-
-            var recordToRecurse = ConcreteGraphRecordElement(prop.PropertyType);
-            if (recordToRecurse is not null)
-            {
-                results.AddRange(DiscoverFieldPaths(recordToRecurse, path));
-                continue;
-            }
-
-            // Leaf: scalar, string map/list, JsonElement, or an abstract closed-hierarchy sentinel.
-            results.Add(path);
-        }
-        return results;
-    }
-
-    // Returns the concrete graph-record type to recurse into for a property typed as
-    // such a record (directly, or as the element of IReadOnlyList<>/IReadOnlyDictionary<,>).
-    // Abstract closed hierarchies (predicate/effect/reducer) are NOT concrete → treated as leaves.
-    private static Type? ConcreteGraphRecordElement(Type propType)
-    {
-        var underlying = Nullable.GetUnderlyingType(propType) ?? propType;
-        if (IsConcreteGraphRecord(underlying)) return underlying;
-
-        foreach (var i in new[] { propType }.Concat(propType.GetInterfaces()))
-        {
-            if (!i.IsGenericType) continue;
-            var def = i.GetGenericTypeDefinition();
-            if (def == typeof(IReadOnlyList<>) || def == typeof(IList<>) || def == typeof(IEnumerable<>))
-            {
-                if (IsConcreteGraphRecord(i.GetGenericArguments()[0])) return i.GetGenericArguments()[0];
-            }
-            else if (def == typeof(IReadOnlyDictionary<,>) || def == typeof(IDictionary<,>))
-            {
-                if (IsConcreteGraphRecord(i.GetGenericArguments()[1])) return i.GetGenericArguments()[1];
-            }
-        }
-        return null;
-    }
-
-    private static bool IsConcreteGraphRecord(Type t)
-        => t.IsClass && !t.IsAbstract && t.Namespace == "Vais.Agents";
 }
