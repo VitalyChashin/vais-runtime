@@ -112,8 +112,8 @@ Subscribe to react to events without being on the call path. Audit logs, custom 
 
 | You want to… | Seam |
 |---|---|
-| Gate every LLM call | [LLM gateway middleware](author-an-llm-gateway-middleware.md) |
-| Gate every tool call | [MCP gateway middleware](author-an-mcp-gateway-middleware.md) |
+| Gate every LLM call | [LLM gateway middleware](author-an-llm-gateway-middleware.md) — DI or hot-published `kind: Extension` (`llmGatewayMiddleware` seam) |
+| Gate every tool call | [MCP gateway middleware](author-an-mcp-gateway-middleware.md) — DI or hot-published `kind: Extension` (`toolGatewayMiddleware` seam) |
 | Inject memory or retrieval before the model sees the prompt | Input middleware |
 | Add a named contribution (tenant policy, RAG hits, observability-only metadata) to every turn | Context provider |
 | Customise how the section list fits a budget | Section window packer |
