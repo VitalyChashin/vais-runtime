@@ -13,13 +13,17 @@ namespace Vais.Agents.Runtime.Extensions;
 /// In-process middleware instances are wrapped in instrumented decorators that emit
 /// <c>vais.extension.handler.invoke</c> spans and metrics per invocation.
 /// </summary>
+/// <remarks>
+/// Chains are built by a single seam-agnostic loop (<see cref="BuildChain{TSeam}"/>); each
+/// seam contributes only a decorator factory. Adding a seam = one cache entry + one accessor.
+/// </remarks>
 internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
 {
     private readonly ExtensionHandlerRegistry _registry;
     private readonly IAgentRegistry? _agentRegistry;
 
     // Per-agentId caches. Null value = pending resolution.
-    private readonly ConcurrentDictionary<string, CachedChain> _cache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CachedChains> _cache = new(StringComparer.Ordinal);
 
     public DefaultExtensionChainComposer(
         ExtensionHandlerRegistry registry,
@@ -34,8 +38,8 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         string agentId,
         CancellationToken cancellationToken = default)
     {
-        var chain = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
-        return chain.Input;
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<AgentInputMiddleware>(ExtensionSeams.AgentInput);
     }
 
     /// <inheritdoc />
@@ -43,8 +47,26 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         string agentId,
         CancellationToken cancellationToken = default)
     {
-        var chain = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
-        return chain.Output;
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<AgentOutputMiddleware>(ExtensionSeams.AgentOutput);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<ToolGatewayMiddleware>(ExtensionSeams.ToolGatewayMiddleware);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var chains = await GetOrBuildAsync(agentId, cancellationToken).ConfigureAwait(false);
+        return chains.Get<LlmGatewayMiddleware>(ExtensionSeams.LlmGatewayMiddleware);
     }
 
     /// <inheritdoc />
@@ -53,7 +75,7 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
     /// <inheritdoc />
     public void InvalidateAll() => _cache.Clear();
 
-    private async Task<CachedChain> GetOrBuildAsync(string agentId, CancellationToken cancellationToken)
+    private async Task<CachedChains> GetOrBuildAsync(string agentId, CancellationToken cancellationToken)
     {
         if (_cache.TryGetValue(agentId, out var cached))
         {
@@ -67,14 +89,59 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         }
 
         var snapshot = _registry.Snapshot();
-        var inputs = new List<(int Priority, AgentInputMiddleware Middleware)>();
-        var outputs = new List<(int Priority, AgentOutputMiddleware Middleware)>();
+
+        // One entry per seam. Each seam supplies a decorator factory; the build loop is shared.
+        var chains = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [ExtensionSeams.AgentInput] = BuildChain<AgentInputMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.AgentInput,
+                (inst, desc, fm) => inst is AgentInputMiddleware mw
+                    ? new InstrumentedInputMiddleware(mw, desc, fm) : null),
+            [ExtensionSeams.AgentOutput] = BuildChain<AgentOutputMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.AgentOutput,
+                (inst, desc, fm) => inst is AgentOutputMiddleware mw
+                    ? new InstrumentedOutputMiddleware(mw, desc, fm) : null),
+            [ExtensionSeams.ToolGatewayMiddleware] = BuildChain<ToolGatewayMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.ToolGatewayMiddleware,
+                (inst, desc, fm) => inst is ToolGatewayMiddleware mw
+                    ? new InstrumentedToolMiddleware(mw, desc, fm) : null),
+            [ExtensionSeams.LlmGatewayMiddleware] = BuildChain<LlmGatewayMiddleware>(
+                snapshot, manifest, agentId, ExtensionSeams.LlmGatewayMiddleware,
+                (inst, desc, fm) => inst is LlmGatewayMiddleware mw
+                    ? new InstrumentedLlmMiddleware(mw, desc, fm, agentId) : null),
+        };
+
+        var built = new CachedChains(chains);
+        _cache.TryAdd(agentId, built);
+        return _cache.TryGetValue(agentId, out var winner) ? winner : built;
+    }
+
+    /// <summary>
+    /// Seam-agnostic chain builder: filters the registry snapshot by scope, selects bindings on
+    /// <paramref name="seamName"/>, decorates each via <paramref name="decorate"/> (which returns
+    /// null when the bound instance does not match the seam type — that binding is skipped), and
+    /// returns them sorted by ascending priority.
+    /// </summary>
+    private IReadOnlyList<TSeam> BuildChain<TSeam>(
+        IReadOnlyDictionary<string, ExtensionDescriptor> snapshot,
+        AgentManifest? manifest,
+        string agentId,
+        string seamName,
+        Func<object, HandlerBindingDescriptor, string, TSeam?> decorate)
+        where TSeam : class
+    {
+        var items = new List<(int Priority, TSeam Middleware)>();
 
         foreach (var descriptor in snapshot.Values)
         {
+            if (!ExtensionScopeMatcher.Matches(descriptor.Manifest.Spec.Scope, manifest, agentId))
+            {
+                continue;
+            }
+
             foreach (var binding in descriptor.Handlers)
             {
-                if (!ExtensionScopeMatcher.Matches(descriptor.Manifest.Spec.Scope, manifest, agentId))
+                if (!string.Equals(binding.Seam, seamName, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -83,36 +150,197 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
                     descriptor.ExtensionId, descriptor.Version,
                     binding.HandlerId, binding.Seam, "csharp");
 
-                switch (binding.Seam)
+                var decorated = decorate(binding.HandlerInstance, bindingDescriptor, binding.FailureMode);
+                if (decorated is not null)
                 {
-                    case ExtensionSeams.AgentInput when binding.HandlerInstance is AgentInputMiddleware inputMw:
-                        inputs.Add((binding.Priority,
-                            new InstrumentedInputMiddleware(inputMw, bindingDescriptor, binding.FailureMode)));
-                        break;
-                    case ExtensionSeams.AgentOutput when binding.HandlerInstance is AgentOutputMiddleware outputMw:
-                        outputs.Add((binding.Priority,
-                            new InstrumentedOutputMiddleware(outputMw, bindingDescriptor, binding.FailureMode)));
-                        break;
+                    items.Add((binding.Priority, decorated));
                 }
             }
         }
 
-        inputs.Sort((a, b) => a.Priority.CompareTo(b.Priority));
-        outputs.Sort((a, b) => a.Priority.CompareTo(b.Priority));
-
-        var built = new CachedChain(
-            Input: inputs.Select(x => x.Middleware).ToArray(),
-            Output: outputs.Select(x => x.Middleware).ToArray());
-
-        _cache.TryAdd(agentId, built);
-        return _cache.TryGetValue(agentId, out var winner) ? winner : built;
+        items.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+        return items.Select(x => x.Middleware).ToArray();
     }
 
-    private sealed record CachedChain(
-        IReadOnlyList<AgentInputMiddleware> Input,
-        IReadOnlyList<AgentOutputMiddleware> Output);
+    /// <summary>Per-agent composed chains, keyed by seam name. Each value is a typed <c>TSeam[]</c>.</summary>
+    private sealed class CachedChains
+    {
+        private readonly IReadOnlyDictionary<string, object> _chains;
+
+        public CachedChains(IReadOnlyDictionary<string, object> chains) => _chains = chains;
+
+        public IReadOnlyList<TSeam> Get<TSeam>(string seamName)
+            => _chains.TryGetValue(seamName, out var list)
+                ? (IReadOnlyList<TSeam>)list
+                : Array.Empty<TSeam>();
+    }
 
     // ── Instrumented decorators ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Runs <paramref name="invokeInner"/> (a void-returning seam handler), honouring
+    /// <paramref name="failureMode"/>: <c>skip</c> swallows a handler exception and ensures the chain
+    /// continues, returning <see cref="HandlerOutcome.Skip"/>; otherwise the exception propagates.
+    /// The returned outcome distinguishes pass-through (<c>next</c> called) from short-circuit.
+    /// </summary>
+    private static async Task<HandlerOutcome> RunWithFailureModeAsync(
+        Func<Func<Task>, Task> invokeInner,
+        Func<Task> next,
+        string failureMode,
+        CancellationToken ct)
+    {
+        var nextCalled = false;
+        Task TrackingNext() { nextCalled = true; return next(); }
+
+        if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await invokeInner(TrackingNext).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                if (!nextCalled) await next().ConfigureAwait(false);
+                return HandlerOutcome.Skip(ex);
+            }
+        }
+        else
+        {
+            await invokeInner(TrackingNext).ConfigureAwait(false);
+        }
+
+        return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+    }
+
+    /// <summary>
+    /// Value-returning analogue of <see cref="RunWithFailureModeAsync"/> for seams whose handler
+    /// returns a result (tool/llm gateway). Returns both the produced result and the
+    /// <see cref="HandlerOutcome"/> (next when the handler delegated, shortCircuit when it produced
+    /// its own result without calling next). On <c>failureMode=skip</c> a handler exception is
+    /// swallowed and the underlying result is used (calling <c>next</c> if the handler had not).
+    /// </summary>
+    private static async Task<(T Result, HandlerOutcome Handler)> RunValueWithFailureModeAsync<T>(
+        Func<Func<Task<T>>, Task<T>> invokeInner,
+        Func<Task<T>> next,
+        string failureMode,
+        CancellationToken ct)
+    {
+        var nextCalled = false;
+        T nextResult = default!;
+        async Task<T> TrackingNext()
+        {
+            nextCalled = true;
+            nextResult = await next().ConfigureAwait(false);
+            return nextResult;
+        }
+
+        if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var result = await invokeInner(TrackingNext).ConfigureAwait(false);
+                return (result, nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit());
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                var fallback = nextCalled ? nextResult : await next().ConfigureAwait(false);
+                return (fallback, HandlerOutcome.Skip(ex));
+            }
+        }
+
+        var ok = await invokeInner(TrackingNext).ConfigureAwait(false);
+        return (ok, nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit());
+    }
+
+    private sealed class InstrumentedToolMiddleware(
+        ToolGatewayMiddleware inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode) : ToolGatewayMiddleware
+    {
+        public override async Task<ToolCallOutcome> InvokeAsync(
+            ToolGatewayContext ctx, Func<Task<ToolCallOutcome>> next, CancellationToken ct = default)
+        {
+            ToolCallOutcome? captured = null;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor, ctx.AgentContext.AgentName ?? "", ctx.AgentContext.RunId, nodeId: null,
+                async () =>
+                {
+                    var (outcome, handler) = await RunValueWithFailureModeAsync(
+                        tn => inner.InvokeAsync(ctx, tn, ct), next, failureMode, ct).ConfigureAwait(false);
+                    captured = outcome;
+                    return handler;
+                },
+                ct).ConfigureAwait(false);
+            return captured!;
+        }
+    }
+
+    private sealed class InstrumentedLlmMiddleware(
+        LlmGatewayMiddleware inner,
+        HandlerBindingDescriptor descriptor,
+        string failureMode,
+        string agentId) : LlmGatewayMiddleware
+    {
+        // Non-streaming path: instrumented with the per-call span (capture pattern). runId is not
+        // available here (CompletionRequest carries no run identity), so the span is tagged with the
+        // build-time agentId only.
+        protected override async Task<CompletionResponse> InvokeAsync(
+            CompletionRequest request,
+            Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+            CancellationToken cancellationToken)
+        {
+            CompletionResponse? captured = null;
+            await ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
+                descriptor, agentId, runId: null, nodeId: null,
+                async () =>
+                {
+                    var nextCalled = false;
+                    CompletionResponse nextResult = default!;
+                    async Task<CompletionResponse> TrackingNext(CompletionRequest req, CancellationToken ct)
+                    {
+                        nextCalled = true;
+                        nextResult = await next(req, ct).ConfigureAwait(false);
+                        return nextResult;
+                    }
+
+                    if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            captured = await ((IAgentFilter)inner).InvokeAsync(request, TrackingNext, cancellationToken).ConfigureAwait(false);
+                            return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+                        }
+                        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                        {
+                            captured = nextCalled ? nextResult : await next(request, cancellationToken).ConfigureAwait(false);
+                            return HandlerOutcome.Skip(ex);
+                        }
+                    }
+
+                    captured = await ((IAgentFilter)inner).InvokeAsync(request, TrackingNext, cancellationToken).ConfigureAwait(false);
+                    return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
+                },
+                cancellationToken).ConfigureAwait(false);
+            return captured!;
+        }
+
+        // Streaming + observation hooks: delegate to the inner handler to preserve its behavior. The
+        // per-call span covers the non-streaming path; the Task-based instrumentation helper does not
+        // model an enumerable's lifetime, so streaming extension middleware runs uninstrumented.
+        protected override IAsyncEnumerable<CompletionUpdate> InvokeStreamAsync(
+            CompletionRequest request,
+            Func<CompletionRequest, CancellationToken, IAsyncEnumerable<CompletionUpdate>> next,
+            CancellationToken cancellationToken)
+            => ((IStreamingAgentFilter)inner).InvokeAsync(request, next, cancellationToken);
+
+        protected override ValueTask<CompletionUpdate> OnDeltaAsync(
+            CompletionUpdate update, CancellationToken cancellationToken = default)
+            => ((IStreamingAgentFilter)inner).OnStreamDeltaAsync(update, cancellationToken);
+
+        protected override ValueTask OnStreamCompleteAsync(
+            CompletionResponse final, CancellationToken cancellationToken = default)
+            => ((IStreamingAgentFilter)inner).OnStreamCompleteAsync(final, cancellationToken);
+    }
 
     private sealed class InstrumentedInputMiddleware(
         AgentInputMiddleware inner,
@@ -122,34 +350,8 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         public override Task InvokeAsync(AgentInputContext ctx, Func<Task> next, CancellationToken ct = default)
             => ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
                 descriptor, ctx.AgentId, ctx.RunId, ctx.NodeId,
-                () => InvokeCoreAsync(ctx, next, ct),
+                () => RunWithFailureModeAsync(tn => inner.InvokeAsync(ctx, tn, ct), next, failureMode, ct),
                 ct);
-
-        private async Task<HandlerOutcome> InvokeCoreAsync(
-            AgentInputContext ctx, Func<Task> next, CancellationToken ct)
-        {
-            var nextCalled = false;
-            Task TrackingNext() { nextCalled = true; return next(); }
-
-            if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    await inner.InvokeAsync(ctx, TrackingNext, ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (!ct.IsCancellationRequested)
-                {
-                    if (!nextCalled) await next().ConfigureAwait(false);
-                    return HandlerOutcome.Skip(ex);
-                }
-            }
-            else
-            {
-                await inner.InvokeAsync(ctx, TrackingNext, ct).ConfigureAwait(false);
-            }
-
-            return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
-        }
     }
 
     private sealed class InstrumentedOutputMiddleware(
@@ -160,33 +362,7 @@ internal sealed class DefaultExtensionChainComposer : IExtensionChainComposer
         public override Task InvokeAsync(AgentOutputContext ctx, Func<Task> next, CancellationToken ct = default)
             => ExtensionInvocationInstrumentation.InvokeWithInstrumentationAsync(
                 descriptor, ctx.AgentId, ctx.RunId, nodeId: null,
-                () => InvokeCoreAsync(ctx, next, ct),
+                () => RunWithFailureModeAsync(tn => inner.InvokeAsync(ctx, tn, ct), next, failureMode, ct),
                 ct);
-
-        private async Task<HandlerOutcome> InvokeCoreAsync(
-            AgentOutputContext ctx, Func<Task> next, CancellationToken ct)
-        {
-            var nextCalled = false;
-            Task TrackingNext() { nextCalled = true; return next(); }
-
-            if (string.Equals(failureMode, "skip", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    await inner.InvokeAsync(ctx, TrackingNext, ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (!ct.IsCancellationRequested)
-                {
-                    if (!nextCalled) await next().ConfigureAwait(false);
-                    return HandlerOutcome.Skip(ex);
-                }
-            }
-            else
-            {
-                await inner.InvokeAsync(ctx, TrackingNext, ct).ConfigureAwait(false);
-            }
-
-            return nextCalled ? HandlerOutcome.Next() : HandlerOutcome.ShortCircuit();
-        }
     }
 }

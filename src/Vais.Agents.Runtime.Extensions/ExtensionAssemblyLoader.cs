@@ -15,18 +15,22 @@ namespace Vais.Agents.Runtime.Extensions;
 /// </summary>
 internal sealed class ExtensionAssemblyLoader
 {
-    /// <summary>Seam base types the loader recognises (Phase A: input + output).</summary>
+    /// <summary>Seam base types the loader recognises. Add a seam = add it here and to <see cref="SeamNames"/>.</summary>
     private static readonly IReadOnlyList<Type> KnownSeamTypes =
     [
         typeof(AgentInputMiddleware),
         typeof(AgentOutputMiddleware),
+        typeof(ToolGatewayMiddleware),
+        typeof(LlmGatewayMiddleware),
     ];
 
     /// <summary>Map from seam base type to the canonical seam name used in manifests.</summary>
     private static readonly Dictionary<Type, string> SeamNames = new()
     {
-        [typeof(AgentInputMiddleware)]  = ExtensionSeams.AgentInput,
-        [typeof(AgentOutputMiddleware)] = ExtensionSeams.AgentOutput,
+        [typeof(AgentInputMiddleware)]      = ExtensionSeams.AgentInput,
+        [typeof(AgentOutputMiddleware)]     = ExtensionSeams.AgentOutput,
+        [typeof(ToolGatewayMiddleware)]     = ExtensionSeams.ToolGatewayMiddleware,
+        [typeof(LlmGatewayMiddleware)]      = ExtensionSeams.LlmGatewayMiddleware,
     };
 
     private readonly ExtensionLoaderOptions _options;

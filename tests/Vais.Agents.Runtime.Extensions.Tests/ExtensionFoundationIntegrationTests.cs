@@ -173,6 +173,104 @@ public sealed class ExtensionFoundationIntegrationTests
         outScope.Should().BeEmpty("agent id not in scope list");
     }
 
+    // ── 7b. Tool seam: GetToolChainAsync builds the chain; deny middleware short-circuits ──
+    [Fact]
+    public async Task ChainComposer_ToolSeam_DenyMiddleware_ShortCircuits()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-tool", "1.0.0", scope: null,
+            ("tool-deny", ExtensionSeams.ToolGatewayMiddleware, new DenyToolMiddleware(), 100));
+        await registry.SwapAsync("ext-tool", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetToolChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered toolGatewayMiddleware handler must appear in the chain");
+
+        var nextCalled = false;
+        var ctx = new ToolGatewayContext(
+            "some_tool", "call-1", default, new AgentContext(AgentName: "any-agent") { RunId = "r1" });
+        var outcome = await chain[0].InvokeAsync(ctx, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real", null));
+        });
+
+        nextCalled.Should().BeFalse("deny middleware must not dispatch the tool");
+        outcome.Error.Should().Be("denied-by-ext");
+    }
+
+    // ── 7c. Tool seam: pass-through middleware dispatches the tool and returns its outcome ──
+    [Fact]
+    public async Task ChainComposer_ToolSeam_PassThrough_CallsNext()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-tool", "1.0.0", scope: null,
+            ("tool-observe", ExtensionSeams.ToolGatewayMiddleware, new NoOpToolMiddleware(), 100));
+        await registry.SwapAsync("ext-tool", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetToolChainAsync("any-agent");
+
+        var nextCalled = false;
+        var ctx = new ToolGatewayContext(
+            "some_tool", "call-1", default, new AgentContext(AgentName: "any-agent") { RunId = "r1" });
+        var outcome = await chain[0].InvokeAsync(ctx, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real", null));
+        });
+
+        nextCalled.Should().BeTrue("pass-through middleware must dispatch the tool");
+        outcome.Result.Should().Be("real");
+    }
+
+    // ── 7d. LLM seam: GetLlmChainAsync builds the chain; short-circuit skips the model ──
+    [Fact]
+    public async Task ChainComposer_LlmSeam_ShortCircuit_SkipsModel()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-llm", "1.0.0", scope: null,
+            ("llm-sc", ExtensionSeams.LlmGatewayMiddleware, new ShortCircuitLlmMiddleware(), 100));
+        await registry.SwapAsync("ext-llm", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetLlmChainAsync("any-agent");
+        chain.Should().ContainSingle("the registered llmGatewayMiddleware handler must appear in the chain");
+
+        var nextCalled = false;
+        var req = new CompletionRequest(Array.Empty<ChatTurn>());
+        var resp = await ((IAgentFilter)chain[0]).InvokeAsync(
+            req,
+            (r, c) => { nextCalled = true; return Task.FromResult(new CompletionResponse("real")); },
+            CancellationToken.None);
+
+        nextCalled.Should().BeFalse("short-circuit LLM middleware must not call the model");
+        resp.Text.Should().Be("synthetic");
+    }
+
+    // ── 7e. LLM seam: pass-through middleware calls the model and returns its response ──
+    [Fact]
+    public async Task ChainComposer_LlmSeam_PassThrough_CallsModel()
+    {
+        var registry = new ExtensionHandlerRegistry();
+        var descriptor = MakeDescriptorWithHandlers("ext-llm", "1.0.0", scope: null,
+            ("llm-observe", ExtensionSeams.LlmGatewayMiddleware, new NoOpLlmMiddleware(), 100));
+        await registry.SwapAsync("ext-llm", descriptor);
+
+        var composer = new DefaultExtensionChainComposer(registry, agentRegistry: null);
+        var chain = await composer.GetLlmChainAsync("any-agent");
+
+        var nextCalled = false;
+        var req = new CompletionRequest(Array.Empty<ChatTurn>());
+        var resp = await ((IAgentFilter)chain[0]).InvokeAsync(
+            req,
+            (r, c) => { nextCalled = true; return Task.FromResult(new CompletionResponse("real")); },
+            CancellationToken.None);
+
+        nextCalled.Should().BeTrue("pass-through middleware must call the model");
+        resp.Text.Should().Be("real");
+    }
+
     // ── 8. YAML deserializer: parses a valid Extension manifest ───────────
     [Fact]
     public void YamlDeserializer_ValidManifest_ParsesAllFields()
@@ -298,5 +396,31 @@ public sealed class ExtensionFoundationIntegrationTests
     {
         public string Tag { get; } = tag;
         public override Task InvokeAsync(AgentInputContext ctx, Func<Task> next, CancellationToken ct = default) => next();
+    }
+
+    private sealed class NoOpToolMiddleware : ToolGatewayMiddleware
+    {
+        // Base InvokeAsync passes through (returns next()).
+    }
+
+    private sealed class DenyToolMiddleware : ToolGatewayMiddleware
+    {
+        public override Task<ToolCallOutcome> InvokeAsync(
+            ToolGatewayContext ctx, Func<Task<ToolCallOutcome>> next, CancellationToken ct = default)
+            => Task.FromResult(new ToolCallOutcome(ctx.CallId, Result: null, Error: "denied-by-ext"));
+    }
+
+    private sealed class NoOpLlmMiddleware : LlmGatewayMiddleware
+    {
+        // Base InvokeAsync passes through (calls the model).
+    }
+
+    private sealed class ShortCircuitLlmMiddleware : LlmGatewayMiddleware
+    {
+        protected override Task<CompletionResponse> InvokeAsync(
+            CompletionRequest request,
+            Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
+            CancellationToken cancellationToken)
+            => Task.FromResult(new CompletionResponse("synthetic"));
     }
 }

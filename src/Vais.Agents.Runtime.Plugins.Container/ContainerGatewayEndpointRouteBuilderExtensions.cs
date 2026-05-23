@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins.Container.Otlp;
 using Vais.Agents.Runtime.Plugins.Container.StructuredLog;
@@ -110,6 +111,21 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         return Results.Ok(new TokenRenewResponse { Token = token, ExpiresAt = expiresAt });
     }
 
+    /// <summary>
+    /// Concatenates the agent's <c>llmGatewayMiddleware</c> extension chain after the statically-registered
+    /// (DI) LLM gateway middleware, so a co-tenant container agent's LLM calls are governed by
+    /// <c>kind: Extension</c> exactly like C# agents. No-op when the extension runtime is absent.
+    /// </summary>
+    private static async Task<IEnumerable<LlmGatewayMiddleware>> MergeLlmExtensionsAsync(
+        HttpContext ctx, IEnumerable<LlmGatewayMiddleware> gatewayMiddleware, string agentId, CancellationToken ct)
+    {
+        var composer = ctx.RequestServices.GetService<IExtensionChainComposer>();
+        if (composer is null)
+            return gatewayMiddleware;
+        var extChain = await composer.GetLlmChainAsync(agentId, ct).ConfigureAwait(false);
+        return extChain.Count == 0 ? gatewayMiddleware : gatewayMiddleware.Concat(extChain);
+    }
+
     private static async Task<IResult> HandleLlmCompleteAsync(
         HttpContext ctx,
         GatewayLlmCompleteRequest body,
@@ -138,6 +154,8 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
+
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
 
         var modelId = string.IsNullOrEmpty(body.ModelId) ? "gpt-4o-mini" : body.ModelId;
         var provider = await pool.GetAsync(
@@ -188,12 +206,12 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                     statusCode: StatusCodes.Status422UnprocessableEntity,
                     title: "Provider does not support streaming.");
             }
-            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, effectiveMiddleware, ct);
             await ContainerGatewayVaisSseWriter.WriteAsync(ctx.Response, stream, ct).ConfigureAwait(false);
             return Results.Empty;
         }
 
-        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, effectiveMiddleware, ct)
             .ConfigureAwait(false);
 
         return Results.Ok(new GatewayLlmCompleteResponse
@@ -355,6 +373,8 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
             ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
 
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
+
         var completionId = $"chatcmpl-{Guid.NewGuid():N}";
 
         if (body.Stream == true)
@@ -362,13 +382,13 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             if (provider is not IStreamingCompletionProvider streamingProvider)
                 return Results.StatusCode(StatusCodes.Status422UnprocessableEntity);
 
-            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, gatewayMiddleware, ct);
+            var stream = LlmGatewayPipeline.StreamAsync(request, streamingProvider, effectiveMiddleware, ct);
             await ContainerGatewaySseWriter.WriteAsync(ctx.Response, completionId, body.Model, stream, ct)
                 .ConfigureAwait(false);
             return Results.Empty;
         }
 
-        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, gatewayMiddleware, ct)
+        var response = await LlmGatewayPipeline.InvokeAsync(request, provider, effectiveMiddleware, ct)
             .ConfigureAwait(false);
 
         return Results.Ok(new OpenAiChatResponse
@@ -413,6 +433,17 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
+        // Extension-authored tool governance: concatenate the agent's toolGatewayMiddleware
+        // extension chain AFTER the statically-registered (DI) middleware, so a co-tenant
+        // container agent's tool calls are governed by `kind: Extension` exactly like C# agents.
+        var composer = ctx.RequestServices.GetService<IExtensionChainComposer>();
+        var extToolChain = composer is null
+            ? (IReadOnlyList<ToolGatewayMiddleware>)Array.Empty<ToolGatewayMiddleware>()
+            : await composer.GetToolChainAsync(agentId, ct).ConfigureAwait(false);
+        var mergedToolMiddleware = extToolChain.Count == 0
+            ? toolMiddleware
+            : toolMiddleware.Concat(extToolChain);
+
         // DefaultToolCallDispatcher gives us: IToolGuardrail Before/After hooks,
         // IAgentJournal append (when RunId is set), IAgentEventBus ToolCallStarted/Completed,
         // ToolGatewayMiddleware chain — same path C# agents use via StatefulAiAgent.
@@ -421,7 +452,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             toolGuardrails:    guardrails.ToArray(),
             eventBus:          ctx.RequestServices.GetService<IAgentEventBus>(),
             journal:           ctx.RequestServices.GetService<IAgentJournal>(),
-            gatewayMiddleware: toolMiddleware);
+            gatewayMiddleware: mergedToolMiddleware);
 
         ToolCallOutcome outcome;
         try

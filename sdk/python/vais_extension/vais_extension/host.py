@@ -4,13 +4,19 @@ for every registered handler. Implements GET /v1/handlers for discovery.
 """
 from __future__ import annotations
 import uuid
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
-from .middleware import AgentInputMiddleware, AgentOutputMiddleware
+from pydantic.alias_generators import to_camel
+from .middleware import (
+    AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
+)
 from .wire import (
     AgentInputContext, AgentOutputContext,
     PreResponse, PostResponse,
+    ToolGatewayContext, ToolOutcome,
+    LlmContext, LlmResponse, LlmMessage, LlmToolCall, LlmToolDecl, LlmResponseFormat,
     AdvertisedHandler, HandlerAdvertisement,
 )
 
@@ -33,25 +39,282 @@ class _OutputContextBody(BaseModel):
     input_tokens: int | None = None
 
 
-class _PreRequestBody(BaseModel):
+# The handler protocol envelope is camelCase on the wire (matches the C# runtime proxy,
+# the inner context object, and every other vais manifest/wire shape). populate_by_name
+# keeps snake_case construction working in Python; FastAPI serializes responses by alias.
+class _CamelModel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class _PreRequestBody(_CamelModel):
     call_id: str
     context: dict[str, Any]
 
 
-class _PostRequestBody(BaseModel):
+class _PostRequestBody(_CamelModel):
     call_id: str
     continuation_token: str | None = None
 
 
-class _PreResponseBody(BaseModel):
+class _PreResponseBody(_CamelModel):
     action: str
     continuation_token: str | None = None
     context_patch: dict[str, Any] | None = None
 
 
-class _PostResponseBody(BaseModel):
+class _PostResponseBody(_CamelModel):
     action: str
     context_patch: dict[str, Any] | None = None
+
+
+class _ToolPreResponseBody(_CamelModel):
+    action: str
+    continuation_token: str | None = None
+    result: str | None = None
+    error: str | None = None
+
+
+class _ToolPostRequestBody(_CamelModel):
+    call_id: str
+    continuation_token: str | None = None
+    outcome_result: str | None = None
+    outcome_error: str | None = None
+
+
+class _ToolPostResponseBody(_CamelModel):
+    action: str
+    result: str | None = None
+    error: str | None = None
+
+
+class _LlmResponseBody(_CamelModel):
+    text: str = ""
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+
+class _LlmPreRequestBody(_CamelModel):
+    call_id: str
+    request: dict[str, Any]
+
+
+class _LlmPreResponseBody(_CamelModel):
+    action: str
+    continuation_token: str | None = None
+    response: _LlmResponseBody | None = None
+    request: dict[str, Any] | None = None       # mutate: replacement request (camelCase keys, tools ignored)
+
+
+class _LlmPostRequestBody(_CamelModel):
+    call_id: str
+    continuation_token: str | None = None
+    response: _LlmResponseBody | None = None
+
+
+class _LlmPostResponseBody(_CamelModel):
+    action: str
+    response: _LlmResponseBody | None = None
+
+
+# ── Context builders ──────────────────────────────────────────────────────────
+
+def _build_input_context(c: dict[str, Any]) -> AgentInputContext:
+    return AgentInputContext(
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId"),
+        node_id=c.get("nodeId"),
+        message=c.get("message", ""),
+    )
+
+
+def _build_output_context(c: dict[str, Any]) -> AgentOutputContext:
+    return AgentOutputContext(
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId", ""),
+        session_id=c.get("sessionId"),
+        output_tokens=c.get("outputTokens"),
+        input_tokens=c.get("inputTokens"),
+    )
+
+
+def _build_tool_context(c: dict[str, Any]) -> ToolGatewayContext:
+    return ToolGatewayContext(
+        tool_name=c.get("toolName", ""),
+        call_id=c.get("callId", ""),
+        arguments=c.get("arguments"),
+        agent_id=c.get("agentId", ""),
+        run_id=c.get("runId"),
+        privilege_level=c.get("privilegeLevel"),
+        workspace_id=c.get("workspaceId"),
+        allowed_tools=c.get("allowedTools"),
+    )
+
+
+def _build_llm_context(r: dict[str, Any]) -> LlmContext:
+    return LlmContext(
+        messages=[_llm_message_from_dict(m) for m in r.get("messages") or []],
+        system_prompt=r.get("systemPrompt"),
+        temperature=r.get("temperature"),
+        max_tokens=r.get("maxTokens"),
+        tools=None if r.get("tools") is None else [
+            LlmToolDecl(name=t.get("name", ""), description=t.get("description"),
+                        parameters_schema=t.get("parametersSchema"))
+            for t in r["tools"]
+        ],
+        response_format=None if r.get("responseFormat") is None else LlmResponseFormat(
+            schema=r["responseFormat"].get("schema"),
+            name=r["responseFormat"].get("name"),
+            strict=r["responseFormat"].get("strict", True),
+        ),
+        agent_id=r.get("agentId", ""),
+        run_id=r.get("runId"),
+    )
+
+
+def _llm_message_from_dict(m: dict[str, Any]) -> LlmMessage:
+    return LlmMessage(
+        role=m.get("role", "user"),
+        content=m.get("content"),
+        tool_calls=None if m.get("toolCalls") is None else [
+            LlmToolCall(id=tc.get("id", ""), name=tc.get("name", ""), arguments=tc.get("arguments"))
+            for tc in m["toolCalls"]
+        ],
+        tool_call_id=m.get("toolCallId"),
+    )
+
+
+def _llm_response_to_body(r: LlmResponse | None) -> "_LlmResponseBody | None":
+    if r is None:
+        return None
+    return _LlmResponseBody(text=r.text, prompt_tokens=r.prompt_tokens, completion_tokens=r.completion_tokens)
+
+
+def _llm_context_to_request_dict(ctx: LlmContext | None) -> dict[str, Any] | None:
+    if ctx is None:
+        return None
+    return {
+        "messages": [_llm_message_to_dict(m) for m in ctx.messages],
+        "systemPrompt": ctx.system_prompt,
+        "temperature": ctx.temperature,
+        "maxTokens": ctx.max_tokens,
+        "tools": None if ctx.tools is None else [
+            {"name": t.name, "description": t.description, "parametersSchema": t.parameters_schema}
+            for t in ctx.tools
+        ],
+        "responseFormat": None if ctx.response_format is None else {
+            "schema": ctx.response_format.schema,
+            "name": ctx.response_format.name,
+            "strict": ctx.response_format.strict,
+        },
+        "agentId": ctx.agent_id,
+        "runId": ctx.run_id,
+    }
+
+
+def _llm_message_to_dict(m: LlmMessage) -> dict[str, Any]:
+    return {
+        "role": m.role,
+        "content": m.content,
+        "toolCalls": None if m.tool_calls is None else [
+            {"id": tc.id, "name": tc.name, "arguments": tc.arguments} for tc in m.tool_calls
+        ],
+        "toolCallId": m.tool_call_id,
+    }
+
+
+# ── Route registrars ──────────────────────────────────────────────────────────
+# Handler/build_context are captured by closure (these run once per handler), never as FastAPI
+# endpoint default args — a defaulted parameter would be treated as a request field and a fresh
+# handler instantiated per call, losing handler state.
+
+def _uniform_registrar(
+    build_context: Callable[[dict[str, Any]], Any],
+) -> Callable[[FastAPI, str, Any], None]:
+    """agentInput/agentOutput share a contextPatch-based pre/post protocol."""
+    def register(app: FastAPI, handler_id: str, handler: Any) -> None:
+        @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+        async def handler_pre(body: _PreRequestBody) -> _PreResponseBody:
+            resp = await handler.pre(build_context(body.context), body.call_id)
+            return _PreResponseBody(
+                action=resp.action,
+                continuation_token=resp.continuation_token,
+                context_patch=resp.context_patch,
+            )
+
+        @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+        async def handler_post(body: _PostRequestBody) -> _PostResponseBody:
+            resp = await handler.post(body.call_id, body.continuation_token)
+            return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
+
+    return register
+
+
+def _register_tool_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """toolGatewayMiddleware: pre may deny/short-circuit; post carries + may transform the outcome."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+    async def tool_pre(body: _PreRequestBody) -> _ToolPreResponseBody:
+        resp = await handler.pre(_build_tool_context(body.context), body.call_id)
+        return _ToolPreResponseBody(
+            action=resp.action,
+            continuation_token=resp.continuation_token,
+            result=resp.result,
+            error=resp.error,
+        )
+
+    @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+    async def tool_post(body: _ToolPostRequestBody) -> _ToolPostResponseBody:
+        outcome = ToolOutcome(result=body.outcome_result, error=body.outcome_error)
+        resp = await handler.post(body.call_id, body.continuation_token, outcome)
+        return _ToolPostResponseBody(action=resp.action, result=resp.result, error=resp.error)
+
+
+def _register_llm_routes(app: FastAPI, handler_id: str, handler: Any) -> None:
+    """llmGatewayMiddleware: pre may short-circuit / mutate-request; post carries + may transform the response."""
+    @app.post(f"/handlers/{handler_id}/pre", name=f"{handler_id}_pre")
+    async def llm_pre(body: _LlmPreRequestBody) -> _LlmPreResponseBody:
+        resp = await handler.pre(_build_llm_context(body.request), body.call_id)
+        return _LlmPreResponseBody(
+            action=resp.action,
+            continuation_token=resp.continuation_token,
+            response=_llm_response_to_body(resp.response),
+            request=_llm_context_to_request_dict(resp.request),
+        )
+
+    @app.post(f"/handlers/{handler_id}/post", name=f"{handler_id}_post")
+    async def llm_post(body: _LlmPostRequestBody) -> _LlmPostResponseBody:
+        incoming = body.response
+        response = LlmResponse(
+            text=incoming.text if incoming else "",
+            prompt_tokens=incoming.prompt_tokens if incoming else None,
+            completion_tokens=incoming.completion_tokens if incoming else None,
+        )
+        resp = await handler.post(body.call_id, body.continuation_token, response)
+        return _LlmPostResponseBody(action=resp.action, response=_llm_response_to_body(resp.response))
+
+
+# ── Seam registry ───────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class _SeamSpec:
+    """One row per seam: its wire name, the ABC it matches, and how it registers pre/post routes."""
+    name: str
+    abc: type
+    register_routes: Callable[[FastAPI, str, Any], None]
+
+
+_SEAMS: tuple[_SeamSpec, ...] = (
+    _SeamSpec("agentInput", AgentInputMiddleware, _uniform_registrar(_build_input_context)),
+    _SeamSpec("agentOutput", AgentOutputMiddleware, _uniform_registrar(_build_output_context)),
+    _SeamSpec("toolGatewayMiddleware", ToolGatewayMiddleware, _register_tool_routes),
+    _SeamSpec("llmGatewayMiddleware", LlmGatewayMiddleware, _register_llm_routes),
+)
+
+
+def _spec_for(handler: Any) -> _SeamSpec | None:
+    for spec in _SEAMS:
+        if isinstance(handler, spec.abc):
+            return spec
+    return None
 
 
 # ── Host ──────────────────────────────────────────────────────────────────────
@@ -75,13 +338,13 @@ class Host:
         self,
         extension_id: str,
         version: str,
-        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware],
+        handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware],
         target_api_version: str = "0.30",
     ) -> None:
         self._extension_id = extension_id
         self._version = version
         self._target_api_version = target_api_version
-        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware] = handlers
+        self._handlers: dict[str, AgentInputMiddleware | AgentOutputMiddleware | ToolGatewayMiddleware | LlmGatewayMiddleware] = handlers
         self._app = self._build_app()
 
     @property
@@ -127,68 +390,14 @@ class Host:
 
         return app
 
-    def _register_handler_routes(
-        self,
-        app: FastAPI,
-        handler_id: str,
-        handler: AgentInputMiddleware | AgentOutputMiddleware,
-    ) -> None:
-        pre_path = f"/handlers/{handler_id}/pre"
-        post_path = f"/handlers/{handler_id}/post"
-
-        if isinstance(handler, AgentInputMiddleware):
-            input_handler = handler
-
-            @app.post(pre_path)
-            async def input_pre(body: _PreRequestBody, _h=input_handler) -> _PreResponseBody:
-                ctx_data = body.context
-                ctx = AgentInputContext(
-                    agent_id=ctx_data.get("agentId", ""),
-                    run_id=ctx_data.get("runId"),
-                    node_id=ctx_data.get("nodeId"),
-                    message=ctx_data.get("message", ""),
-                )
-                resp = await _h.pre(ctx, body.call_id)
-                return _PreResponseBody(
-                    action=resp.action,
-                    continuation_token=resp.continuation_token,
-                    context_patch=resp.context_patch,
-                )
-
-            @app.post(post_path)
-            async def input_post(body: _PostRequestBody, _h=input_handler) -> _PostResponseBody:
-                resp = await _h.post(body.call_id, body.continuation_token)
-                return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
-
-        elif isinstance(handler, AgentOutputMiddleware):
-            output_handler = handler
-
-            @app.post(pre_path)
-            async def output_pre(body: _PreRequestBody, _h=output_handler) -> _PreResponseBody:
-                ctx_data = body.context
-                ctx = AgentOutputContext(
-                    agent_id=ctx_data.get("agentId", ""),
-                    run_id=ctx_data.get("runId", ""),
-                    session_id=ctx_data.get("sessionId"),
-                    output_tokens=ctx_data.get("outputTokens"),
-                    input_tokens=ctx_data.get("inputTokens"),
-                )
-                resp = await _h.pre(ctx, body.call_id)
-                return _PreResponseBody(
-                    action=resp.action,
-                    continuation_token=resp.continuation_token,
-                    context_patch=resp.context_patch,
-                )
-
-            @app.post(post_path)
-            async def output_post(body: _PostRequestBody, _h=output_handler) -> _PostResponseBody:
-                resp = await _h.post(body.call_id, body.continuation_token)
-                return _PostResponseBody(action=resp.action, context_patch=resp.context_patch)
+    def _register_handler_routes(self, app: FastAPI, handler_id: str, handler: Any) -> None:
+        spec = _spec_for(handler)
+        if spec is None:
+            # Unknown handler type: advertised as "unknown" with no routes (matches prior behavior).
+            return
+        spec.register_routes(app, handler_id, handler)
 
     @staticmethod
-    def _seam_name(handler: AgentInputMiddleware | AgentOutputMiddleware) -> str:
-        if isinstance(handler, AgentInputMiddleware):
-            return "agentInput"
-        if isinstance(handler, AgentOutputMiddleware):
-            return "agentOutput"
-        return "unknown"
+    def _seam_name(handler: Any) -> str:
+        spec = _spec_for(handler)
+        return spec.name if spec is not None else "unknown"

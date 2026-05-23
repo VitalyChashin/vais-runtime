@@ -149,6 +149,17 @@ public sealed class ContainerExtensionLifecycleTests : IDisposable
         violations.Should().ContainSingle(v => v.HandlerId == "h1" && v.Seam == "agentInput");
     }
 
+    // ── 6b. HotSeamGuard.Default flags an llmGatewayMiddleware container handler ─
+    [Fact]
+    public void HotSeamGuard_Default_FlagsLlmContainerSeam()
+    {
+        var manifest = MakeManifest(handlers: new[] { ("h-llm", ExtensionSeams.LlmGatewayMiddleware) });
+
+        var violations = HotSeamGuard.Default.Evaluate(manifest);
+
+        violations.Should().ContainSingle(v => v.HandlerId == "h-llm" && v.Seam == ExtensionSeams.LlmGatewayMiddleware);
+    }
+
     // ── 7. Proxy shortCircuit: chain does not call next ───────────────────────
     [Fact]
     public async Task AgentInputProxy_ShortCircuit_DoesNotCallNext()

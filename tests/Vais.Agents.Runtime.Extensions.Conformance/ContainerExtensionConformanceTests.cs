@@ -117,11 +117,181 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         nextCalled.Should().BeTrue("failureMode=skip must call next() even when the container is unreachable");
     }
 
+    // ── Tool gateway seam: /pre + /post round-trip over HTTP (impl plan :822) ─
+
+    // CT-1. Round-trip: pre 'next' dispatches the tool, post observes, outcome passes through.
+    [Fact]
+    public async Task ToolProxy_NextAction_RoundTripsAndPassesOutcomeThrough()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "next");
+        var mw = new ToolGatewayHandlerProxy(MakeToolProxy(server));
+
+        var nextCalled = false;
+        var outcome = await mw.InvokeAsync(ToolCtx(), () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real-result", null));
+        });
+
+        nextCalled.Should().BeTrue("'next' must dispatch the tool");
+        outcome.Result.Should().Be("real-result", "the dispatched tool's outcome passes through unchanged");
+        outcome.Error.Should().BeNull();
+    }
+
+    // CT-2. shortCircuit deny: pre 'shortCircuit' returns the handler's outcome; tool never dispatched.
+    [Fact]
+    public async Task ToolProxy_ShortCircuit_DeniesWithoutDispatch()
+    {
+        using var server = new MockContainerServer(preAction: "shortCircuit", preError: "denied-by-policy");
+        var mw = new ToolGatewayHandlerProxy(MakeToolProxy(server));
+
+        var nextCalled = false;
+        var outcome = await mw.InvokeAsync(ToolCtx(), () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real-result", null));
+        });
+
+        nextCalled.Should().BeFalse("shortCircuit must prevent tool dispatch");
+        outcome.Error.Should().Be("denied-by-policy");
+        outcome.Result.Should().BeNull();
+    }
+
+    // CT-3. post mutate: tool dispatched, post replaces the outcome (e.g. redact result).
+    [Fact]
+    public async Task ToolProxy_PostMutate_ReplacesOutcome()
+    {
+        using var server = new MockContainerServer(
+            preAction: "next", postAction: "mutate", postResult: "[redacted]");
+        var mw = new ToolGatewayHandlerProxy(MakeToolProxy(server));
+
+        var nextCalled = false;
+        var outcome = await mw.InvokeAsync(ToolCtx(), () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "secret-result", null));
+        });
+
+        nextCalled.Should().BeTrue("'next' dispatches the tool before the post transform");
+        outcome.Result.Should().Be("[redacted]", "post 'mutate' must replace the tool outcome");
+    }
+
+    // CT-4. failureMode=skip + unreachable container: tool is dispatched as if the handler were absent.
+    [Fact]
+    public async Task ToolProxy_Unreachable_SkipMode_DispatchesTool()
+    {
+        var proxy = new HttpContainerHandlerProxy(
+            new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
+            preEndpoint:  "/handlers/h-tool/pre",
+            postEndpoint: "/handlers/h-tool/post",
+            failureMode:  "skip",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-tool", ExtensionSeams.ToolGatewayMiddleware, "container"));
+        var mw = new ToolGatewayHandlerProxy(proxy);
+
+        var nextCalled = false;
+        var outcome = await mw.InvokeAsync(ToolCtx(), () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ToolCallOutcome("call-1", "real-result", null));
+        });
+
+        nextCalled.Should().BeTrue("failureMode=skip must dispatch the tool when the container is unreachable");
+        outcome.Result.Should().Be("real-result");
+    }
+
+    // ── LLM gateway seam: full request/response /pre + /post round-trip over HTTP ─
+
+    // CL-1. Round-trip: pre 'next' calls the model, post observes, response passes through.
+    [Fact]
+    public async Task LlmProxy_NextAction_RoundTripsAndPassesResponseThrough()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "next");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return Task.FromResult(new CompletionResponse("real-answer")); },
+            CancellationToken.None);
+
+        modelCalled.Should().BeTrue("'next' must call the model");
+        resp.Text.Should().Be("real-answer");
+    }
+
+    // CL-2. shortCircuit: pre returns a synthetic response; the model is never called.
+    [Fact]
+    public async Task LlmProxy_ShortCircuit_ReturnsSyntheticResponseWithoutModel()
+    {
+        using var server = new MockContainerServer(preAction: "shortCircuit", preResponseText: "synthetic");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return Task.FromResult(new CompletionResponse("real-answer")); },
+            CancellationToken.None);
+
+        modelCalled.Should().BeFalse("shortCircuit must skip the model");
+        resp.Text.Should().Be("synthetic");
+    }
+
+    // CL-3. post mutate: model called, post replaces the response (e.g. redact).
+    [Fact]
+    public async Task LlmProxy_PostMutate_ReplacesResponse()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "mutate", postResponseText: "[redacted]");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var resp = await ((IAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => Task.FromResult(new CompletionResponse("secret-answer")),
+            CancellationToken.None);
+
+        resp.Text.Should().Be("[redacted]", "post 'mutate' must replace the model response");
+    }
+
+    // CL-4. Streaming bypasses the container LLM handler (pre/post can't express a stream).
+    [Fact]
+    public async Task LlmProxy_Streaming_PassesThroughWithoutContainer()
+    {
+        using var server = new MockContainerServer(preAction: "shortCircuit", preResponseText: "should-not-apply");
+        var mw = new LlmGatewayHandlerProxy(MakeLlmProxy(server));
+
+        var modelCalled = false;
+        var stream = ((IStreamingAgentFilter)mw).InvokeAsync(LlmReq(),
+            (r, c) => { modelCalled = true; return EmptyUpdates(); },
+            CancellationToken.None);
+        await foreach (var _ in stream) { }
+
+        modelCalled.Should().BeTrue("streaming bypasses the container LLM handler and calls the model directly");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    private static HttpContainerHandlerProxy MakeLlmProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-llm/pre", "/handlers/h-llm/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-llm", ExtensionSeams.LlmGatewayMiddleware, "container"));
+
+    private static CompletionRequest LlmReq() =>
+        new(new[] { new ChatTurn(AgentChatRole.User, "hello") });
+
+    private static async IAsyncEnumerable<CompletionUpdate> EmptyUpdates()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
 
     private static HttpContainerHandlerProxy MakeProxy(MockContainerServer server, string pre, string post) =>
         new(new HttpClient { BaseAddress = server.BaseUri }, pre, post, failureMode: "fail",
             descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h", ExtensionSeams.AgentInput, "container"));
+
+    private static HttpContainerHandlerProxy MakeToolProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-tool/pre", "/handlers/h-tool/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-tool", ExtensionSeams.ToolGatewayMiddleware, "container"));
+
+    private static readonly JsonElement EmptyArgs = JsonDocument.Parse("{}").RootElement.Clone();
+
+    private static ToolGatewayContext ToolCtx() =>
+        new("some_tool", "call-1", EmptyArgs, new AgentContext(AgentName: "agent-a") { RunId = "r1" });
 
     // ── Mock container server ──────────────────────────────────────────────
 
@@ -131,15 +301,36 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         private readonly CancellationTokenSource _cts = new();
         private readonly string _preAction;
         private readonly IReadOnlyDictionary<string, object?>? _preContextPatch;
+        private readonly string? _preResult;
+        private readonly string? _preError;
+        private readonly string _postAction;
+        private readonly string? _postResult;
+        private readonly string? _postError;
+        private readonly string? _preResponseText;
+        private readonly string? _postResponseText;
 
         public Uri BaseUri { get; }
 
         public MockContainerServer(
             string preAction = "next",
-            IReadOnlyDictionary<string, object?>? preContextPatch = null)
+            IReadOnlyDictionary<string, object?>? preContextPatch = null,
+            string? preResult = null,
+            string? preError = null,
+            string postAction = "passThrough",
+            string? postResult = null,
+            string? postError = null,
+            string? preResponseText = null,
+            string? postResponseText = null)
         {
             _preAction = preAction;
             _preContextPatch = preContextPatch;
+            _preResult = preResult;
+            _preError = preError;
+            _postAction = postAction;
+            _postResult = postResult;
+            _postError = postError;
+            _preResponseText = preResponseText;
+            _postResponseText = postResponseText;
 
             var port = FindFreePort();
             BaseUri = new Uri($"http://localhost:{port}");
@@ -172,13 +363,22 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
                     action            = _preAction,
                     continuationToken = (string?)null,
                     contextPatch      = _preContextPatch,
+                    result            = _preResult,
+                    error             = _preError,
+                    response          = _preResponseText is null ? null : new { text = _preResponseText },
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));
             }
             else if (path.EndsWith("/post", StringComparison.OrdinalIgnoreCase))
             {
-                var body = JsonSerializer.Serialize(new { action = "passThrough" });
+                var body = JsonSerializer.Serialize(new
+                {
+                    action   = _postAction,
+                    result   = _postResult,
+                    error    = _postError,
+                    response = _postResponseText is null ? null : new { text = _postResponseText },
+                });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));
             }

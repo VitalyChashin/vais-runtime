@@ -23,6 +23,16 @@ internal sealed class ContainerExtensionLifecycleManager
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
+    /// <summary>Maps a seam name to the C# middleware adapter that fronts its HTTP proxy. Add a seam = add a row.</summary>
+    private static readonly IReadOnlyDictionary<string, Func<HttpContainerHandlerProxy, object>> SeamAdapters =
+        new Dictionary<string, Func<HttpContainerHandlerProxy, object>>(StringComparer.Ordinal)
+        {
+            [ExtensionSeams.AgentInput]            = proxy => new AgentInputHandlerProxy(proxy),
+            [ExtensionSeams.AgentOutput]          = proxy => new AgentOutputHandlerProxy(proxy),
+            [ExtensionSeams.ToolGatewayMiddleware] = proxy => new ToolGatewayHandlerProxy(proxy),
+            [ExtensionSeams.LlmGatewayMiddleware] = proxy => new LlmGatewayHandlerProxy(proxy),
+        };
+
     private readonly ExtensionHandlerRegistry _registry;
     private readonly IExtensionChainComposer _composer;
     private readonly IContainerExtensionHost _containerHost;
@@ -125,12 +135,9 @@ internal sealed class ContainerExtensionLifecycleManager
             var proxy = new HttpContainerHandlerProxy(
                 proxyHttp, preEndpoint, postEndpoint, handler.FailureMode, bindingDescriptor, _logger);
 
-            object instance = handler.Seam switch
-            {
-                ExtensionSeams.AgentInput  => new AgentInputHandlerProxy(proxy),
-                ExtensionSeams.AgentOutput => new AgentOutputHandlerProxy(proxy),
-                _ => throw new NotSupportedException($"Seam '{handler.Seam}' not yet supported in container extensions."),
-            };
+            if (!SeamAdapters.TryGetValue(handler.Seam, out var adapterFactory))
+                throw new NotSupportedException($"Seam '{handler.Seam}' not yet supported in container extensions.");
+            object instance = adapterFactory(proxy);
 
             bindings.Add(new HandlerBinding(handler.Id, handler.Seam, handler.Priority, handler.FailureMode, instance));
         }

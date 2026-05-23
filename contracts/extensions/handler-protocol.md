@@ -1,6 +1,6 @@
 # Extension Handler Protocol
 
-**Version:** 0.30  
+**Version:** 0.32  
 **Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the language SDKs and runtime proxy.
 
 ---
@@ -133,6 +133,105 @@ Pre-request `context` shape:
 
 Fields match `AgentOutputContext` (minus `RequestMessages`, `ResponseMessage`, `Properties` — see §Wire constraints).
 
+### `toolGatewayMiddleware`
+
+Warm, per-tool-call. The pre/post **responses** differ from the input/output seams: they carry the
+tool outcome (`result`/`error`), not a `contextPatch`.
+
+Pre-request `context` shape:
+
+```json
+{
+  "toolName": "shell",
+  "callId": "call-abc",
+  "arguments": { "cmd": "ls" },
+  "agentId": "my-agent",
+  "runId": "run-abc123",
+  "privilegeLevel": "Standard",
+  "workspaceId": "ws-1",
+  "allowedTools": ["shell", "search"]
+}
+```
+
+Pre-response:
+
+```json
+{
+  "action": "next" | "shortCircuit",
+  "continuationToken": "<opaque>",
+  "result": "<shortCircuit: tool result returned to the agent>",
+  "error":  "<shortCircuit: deny/error string>"
+}
+```
+
+`shortCircuit` returns the synthesized outcome (`result`/`error`) without dispatching the tool.
+Arguments cannot be rewritten into the tool — the runtime dispatches the original request.
+
+Post-request carries the produced outcome:
+
+```json
+{ "callId": "call-abc", "continuationToken": "<from pre>", "outcomeResult": "...", "outcomeError": null }
+```
+
+Post-response (`mutate` replaces the outcome — e.g. redact the result):
+
+```json
+{ "action": "next" | "mutate", "result": "<replacement result>", "error": "<replacement error>" }
+```
+
+### `llmGatewayMiddleware`
+
+Hot, per-turn — a `host: container` handler on this seam requires the apply-time latency
+acknowledgment (`X-Vais-Accept-Latency-Cost: true`). **Non-streaming only**; streaming LLM calls
+bypass container handlers. The pre envelope field is `request` (not `context`).
+
+Pre-request:
+
+```json
+{
+  "callId": "call-llm",
+  "request": {
+    "messages": [{ "role": "user", "content": "hi", "toolCalls": null, "toolCallId": null }],
+    "systemPrompt": "...",
+    "temperature": 0.2,
+    "maxTokens": 512,
+    "tools": [{ "name": "search", "description": "...", "parametersSchema": {} }],
+    "responseFormat": { "schema": {}, "name": "R", "strict": true },
+    "agentId": "",
+    "runId": null
+  }
+}
+```
+
+`tools` are read-only — an `ITool` cannot round-trip back into a mutated request. `agentId`/`runId`
+are emitted empty (a completion request carries no run identity at the proxy).
+
+Pre-response:
+
+```json
+{
+  "action": "next" | "shortCircuit" | "mutate",
+  "continuationToken": "<opaque>",
+  "response": { "text": "...", "promptTokens": null, "completionTokens": null },
+  "request":  { "...": "mutate: replacement request, same shape as the pre-request 'request'; tools ignored" }
+}
+```
+
+`shortCircuit` returns `response` without calling the model; `mutate` rewrites the request from
+`request` (messages / params / responseFormat only).
+
+Post-request carries the model response:
+
+```json
+{ "callId": "call-llm", "continuationToken": "<from pre>", "response": { "text": "...", "promptTokens": 100, "completionTokens": 42 } }
+```
+
+Post-response (`mutate` replaces the response — e.g. redact the text):
+
+```json
+{ "action": "next" | "mutate", "response": { "text": "<replacement>", "promptTokens": null, "completionTokens": null } }
+```
+
 ---
 
 ## Wire constraints
@@ -198,5 +297,6 @@ Response headers MUST NOT include `traceparent` — the runtime owns the parent 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.32 | 2026-05-23 | Added `toolGatewayMiddleware` + `llmGatewayMiddleware` seam contexts and their outcome/response-carrying pre/post shapes. Additive — `agentInput`/`agentOutput` extensions targeting 0.30/0.31 remain compatible. |
 | 0.31 | 2026-05-20 | Added §Trace context: `traceparent`, `X-Vais-*` headers, OTLP URL discriminator format |
 | 0.30 | 2026-05-19 | Initial extension handler protocol (Phase B) |

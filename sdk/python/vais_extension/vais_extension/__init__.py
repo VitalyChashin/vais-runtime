@@ -30,13 +30,27 @@ Example::
 from . import _log_handler as _log_handler_module
 _log_handler_module._configure_log_handler()
 
-from .middleware import AgentInputMiddleware, AgentOutputMiddleware
+from .middleware import (
+    AgentInputMiddleware, AgentOutputMiddleware, ToolGatewayMiddleware, LlmGatewayMiddleware,
+)
 from .host import Host
 from .wire import (
     AgentInputContext,
     AgentOutputContext,
     PreResponse,
     PostResponse,
+    ToolGatewayContext,
+    ToolOutcome,
+    ToolGatewayPreResponse,
+    ToolGatewayPostResponse,
+    LlmContext,
+    LlmResponse,
+    LlmMessage,
+    LlmToolCall,
+    LlmToolDecl,
+    LlmResponseFormat,
+    LlmGatewayPreResponse,
+    LlmGatewayPostResponse,
     HandlerAdvertisement,
     AdvertisedHandler,
 )
@@ -45,11 +59,25 @@ from .telemetry import extract_parent_context, span
 __all__ = [
     "AgentInputMiddleware",
     "AgentOutputMiddleware",
+    "ToolGatewayMiddleware",
+    "LlmGatewayMiddleware",
     "Host",
     "AgentInputContext",
     "AgentOutputContext",
     "PreResponse",
     "PostResponse",
+    "ToolGatewayContext",
+    "ToolOutcome",
+    "ToolGatewayPreResponse",
+    "ToolGatewayPostResponse",
+    "LlmContext",
+    "LlmResponse",
+    "LlmMessage",
+    "LlmToolCall",
+    "LlmToolDecl",
+    "LlmResponseFormat",
+    "LlmGatewayPreResponse",
+    "LlmGatewayPostResponse",
     "HandlerAdvertisement",
     "AdvertisedHandler",
     "extract_parent_context",

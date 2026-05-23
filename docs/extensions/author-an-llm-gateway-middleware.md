@@ -185,6 +185,50 @@ The runtime auto-discovers `LlmGatewayMiddleware` registrations. If you're autho
 
 For declarative agents that should opt in explicitly, expose the middleware via an `LlmGatewayConfig` manifest entry — pair the C# registration with a config that references it by name, then bind agents via `llmGatewayRef`. See **[Wire the LLM gateway](../agent-developer/wire-the-llm-gateway.md)** for the declarative path.
 
+## Author it as an extension (hot-publishable)
+
+DI registration bakes the middleware in at build time. To publish, update, or remove LLM
+governance against a **running** runtime — no rebuild, no restart — ship the same
+`LlmGatewayMiddleware` as a `kind: Extension` on the `llmGatewayMiddleware` seam. The runtime binds
+it into each scoped agent's LLM chain after the statically-registered (DI) middleware, on both the
+in-process path and the container-gateway LLM endpoints a co-tenant container agent calls back
+through.
+
+**C# (`host: csharp`)** — the same class, shipped as an extension:
+
+```yaml
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-prompt-guard
+  version: "1.0.0"
+spec:
+  host: csharp
+  handlers:
+    - id: prompt-guard
+      seam: llmGatewayMiddleware
+      priority: 100
+      failureMode: fail
+```
+
+A C# in-process extension keeps the full seam: all four hooks (non-streaming, streaming, per-delta,
+on-complete) and request rewriting.
+
+**Container / Python (`host: container`)** — author with the `vais_extension` SDK's
+`LlmGatewayMiddleware` (`pre` → `shortCircuit` with a synthetic `response`, or `mutate` the request;
+`post` → transform the `response`). The container projection has documented limits the in-process
+seam does not: it is **non-streaming only** (streaming calls bypass container handlers), tools are
+**read-only** (an `ITool` cannot round-trip back into a mutated request), and per-call `agentId` /
+`runId` are not available at the proxy.
+
+> **Latency — hot seam.** `llmGatewayMiddleware` fires on every turn and is classified **hot**. A
+> `host: container` LLM extension adds an HTTP round-trip per LLM call, so `vais apply` rejects it
+> with **412** unless you acknowledge the cost — re-apply with `--accept-latency-cost` (header
+> `X-Vais-Accept-Latency-Cost: true`). Prefer `host: csharp` for hot-path LLM middleware.
+
+Publish with `vais apply -f <manifest>.yaml`. See **[Author an extension](../guides/author-an-extension.md)**
+for the full flow and scoping.
+
 ## Composition rules
 
 Middleware composes right-to-left — index 0 in `GatewayMiddleware` is the outermost. Combine multiple middlewares deliberately:

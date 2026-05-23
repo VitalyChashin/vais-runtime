@@ -206,6 +206,47 @@ public async Task NoLogOnFastDispatch()
 }
 ```
 
+## Author it as an extension (hot-publishable)
+
+DI registration (above) bakes the middleware into the host at build time. To publish, update, or
+remove tool governance against a **running** runtime — no rebuild, no restart — ship the same
+`ToolGatewayMiddleware` as a `kind: Extension` on the `toolGatewayMiddleware` seam. The runtime
+binds it into each scoped agent's tool-dispatch chain after the statically-registered (DI)
+middleware, on both the in-process path and the container-gateway path a co-tenant container agent
+calls back through.
+
+The capability is identical to the DI path: **observe, short-circuit (deny / cached result), or
+transform the outcome**. You cannot rewrite a tool's arguments before it runs — the runtime
+dispatches the original request — so this is governance, not request rewriting.
+
+**C# (`host: csharp`)** — the same class, shipped as a NuGet/DLL extension. See the runnable sample
+[`samples/extensions/ext-tooldeny-csharp`](../../samples/extensions/ext-tooldeny-csharp):
+
+```yaml
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-tooldeny-csharp
+  version: "1.0.0"
+spec:
+  host: csharp
+  handlers:
+    - id: tool-deny
+      seam: toolGatewayMiddleware
+      priority: 100       # lower = outermost; runs before higher-priority extension middleware
+      failureMode: fail   # 'fail' propagates a handler error; 'skip' logs + dispatches the tool
+```
+
+**Container / Python (`host: container`)** — author the same deny in Python with the
+`vais_extension` SDK (`ToolGatewayMiddleware.pre` returns `shortCircuit` with an `error`). See
+[`samples/extensions/ext-tooldeny-python`](../../samples/extensions/ext-tooldeny-python). The tool
+seam is **warm** (per-tool-call): the HTTP round-trip cost is documented but not gated — unlike the
+hot LLM seam, applying a `host: container` tool extension does not require a latency acknowledgment.
+
+Publish with `vais apply -f vais-ext-tooldeny.yaml`; updates take effect on the next agent
+activation. See **[Author an extension](../guides/author-an-extension.md)** for the full
+build → push → apply flow and scoping (`spec.scope`).
+
 ## Composition rules
 
 Like the LLM gateway, middleware composes right-to-left. First registered = outermost. A typical stack:
