@@ -1640,3 +1640,40 @@ static Vais.Agents.ErrorOutcome.operator !=(Vais.Agents.ErrorOutcome? left, Vais
 static Vais.Agents.ErrorOutcome.operator ==(Vais.Agents.ErrorOutcome? left, Vais.Agents.ErrorOutcome? right) -> bool
 Vais.Agents.ErrorInterceptorChain
 static Vais.Agents.ErrorInterceptorChain.RunAsync(System.Collections.Generic.IReadOnlyList<Vais.Agents.ErrorInterceptor!>! interceptors, Vais.Agents.ErrorContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+Vais.Agents.GraphNodeMiddleware
+Vais.Agents.GraphNodeMiddleware.GraphNodeMiddleware() -> void
+virtual Vais.Agents.GraphNodeMiddleware.InvokeAsync(Vais.Agents.GraphNodeContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.GraphNodeOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.GraphNodeOutcome!>!
+Vais.Agents.GraphNodeContext
+Vais.Agents.GraphNodeContext.<Clone>$() -> Vais.Agents.GraphNodeContext!
+Vais.Agents.GraphNodeContext.AgentId.get -> string!
+Vais.Agents.GraphNodeContext.AgentId.init -> void
+Vais.Agents.GraphNodeContext.Deconstruct(out string! RunId, out string! NodeId, out string! NodeKind, out string! AgentId, out int SuperStep, out System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>! Input) -> void
+Vais.Agents.GraphNodeContext.Equals(Vais.Agents.GraphNodeContext? other) -> bool
+Vais.Agents.GraphNodeContext.GraphNodeContext(string! RunId, string! NodeId, string! NodeKind, string! AgentId, int SuperStep, System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>! Input) -> void
+Vais.Agents.GraphNodeContext.Input.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>!
+Vais.Agents.GraphNodeContext.Input.init -> void
+Vais.Agents.GraphNodeContext.NodeId.get -> string!
+Vais.Agents.GraphNodeContext.NodeId.init -> void
+Vais.Agents.GraphNodeContext.NodeKind.get -> string!
+Vais.Agents.GraphNodeContext.NodeKind.init -> void
+Vais.Agents.GraphNodeContext.RunId.get -> string!
+Vais.Agents.GraphNodeContext.RunId.init -> void
+Vais.Agents.GraphNodeContext.SuperStep.get -> int
+Vais.Agents.GraphNodeContext.SuperStep.init -> void
+override Vais.Agents.GraphNodeContext.Equals(object? obj) -> bool
+override Vais.Agents.GraphNodeContext.GetHashCode() -> int
+override Vais.Agents.GraphNodeContext.ToString() -> string!
+static Vais.Agents.GraphNodeContext.operator !=(Vais.Agents.GraphNodeContext? left, Vais.Agents.GraphNodeContext? right) -> bool
+static Vais.Agents.GraphNodeContext.operator ==(Vais.Agents.GraphNodeContext? left, Vais.Agents.GraphNodeContext? right) -> bool
+Vais.Agents.GraphNodeOutcome
+Vais.Agents.GraphNodeOutcome.<Clone>$() -> Vais.Agents.GraphNodeOutcome!
+Vais.Agents.GraphNodeOutcome.Deconstruct(out System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>! Output) -> void
+Vais.Agents.GraphNodeOutcome.Equals(Vais.Agents.GraphNodeOutcome? other) -> bool
+Vais.Agents.GraphNodeOutcome.GraphNodeOutcome(System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>! Output) -> void
+Vais.Agents.GraphNodeOutcome.Output.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Text.Json.JsonElement>!
+Vais.Agents.GraphNodeOutcome.Output.init -> void
+override Vais.Agents.GraphNodeOutcome.Equals(object? obj) -> bool
+override Vais.Agents.GraphNodeOutcome.GetHashCode() -> int
+override Vais.Agents.GraphNodeOutcome.ToString() -> string!
+static Vais.Agents.GraphNodeOutcome.operator !=(Vais.Agents.GraphNodeOutcome? left, Vais.Agents.GraphNodeOutcome? right) -> bool
+static Vais.Agents.GraphNodeOutcome.operator ==(Vais.Agents.GraphNodeOutcome? left, Vais.Agents.GraphNodeOutcome? right) -> bool
