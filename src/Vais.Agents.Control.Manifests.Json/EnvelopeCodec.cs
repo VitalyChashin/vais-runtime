@@ -33,7 +33,7 @@ namespace Vais.Agents.Control.Manifests;
 /// (AgentGraph rewraps <c>stateSchema</c> → <c>state.schema</c>).
 /// </para>
 /// </remarks>
-internal static class EnvelopeCodec
+public static class EnvelopeCodec
 {
     private const string ApiVersion = "vais.agents/v1";
 

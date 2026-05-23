@@ -55,12 +55,10 @@ internal sealed class GetEvalSuitesCommand : AsyncCommand<GetEvalSuitesCommand.S
             {
                 var format = OutputFormatter.Parse(settings.Output, OutputFormat.Table);
                 var response = await client.ListEvalSuitesAsync(settings.LabelPrefix, settings.Limit, cancellationToken);
-                if (format == OutputFormat.Json)
-                    OutputFormatter.WriteJson(response, AnsiConsole.Console);
-                else if (format == OutputFormat.Yaml)
-                    OutputFormatter.WriteYaml(response.Items, AnsiConsole.Console);
-                else
+                if (format == OutputFormat.Table)
                     RenderTable(response.Items);
+                else
+                    OutputFormatter.WriteManifestEnvelopeList(response.Items, "EvalSuite", format, AnsiConsole.Console);
                 return ProblemDetailsParser.ExitSuccess;
             }
 
@@ -74,10 +72,8 @@ internal sealed class GetEvalSuitesCommand : AsyncCommand<GetEvalSuitesCommand.S
             var singleFormat = OutputFormatter.Parse(settings.Output, OutputFormat.Yaml);
             if (singleFormat == OutputFormat.Table)
                 RenderTable(new[] { single.Manifest });
-            else if (singleFormat == OutputFormat.Json)
-                OutputFormatter.WriteJson(single, AnsiConsole.Console);
             else
-                OutputFormatter.WriteYaml(single, AnsiConsole.Console);
+                OutputFormatter.WriteManifestEnvelope(single.Manifest, "EvalSuite", singleFormat, AnsiConsole.Console);
             return ProblemDetailsParser.ExitSuccess;
         }
         catch (AgentControlPlaneException ex)

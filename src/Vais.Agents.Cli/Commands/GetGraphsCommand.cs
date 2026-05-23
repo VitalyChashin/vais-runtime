@@ -57,17 +57,13 @@ internal sealed class GetGraphsCommand : AsyncCommand<GetGraphsCommand.Settings>
             {
                 var format = OutputFormatter.Parse(settings.Output, OutputFormat.Table);
                 var response = await client.ListGraphsAsync(settings.LabelPrefix, settings.Limit, cursor: null, cancellationToken);
-                if (format == OutputFormat.Json)
+                if (format == OutputFormat.Table)
                 {
-                    OutputFormatter.WriteJson(response, AnsiConsole.Console);
-                }
-                else if (format == OutputFormat.Yaml)
-                {
-                    OutputFormatter.WriteYaml(response.Items, AnsiConsole.Console);
+                    RenderTable(response.Items);
                 }
                 else
                 {
-                    RenderTable(response.Items);
+                    OutputFormatter.WriteManifestEnvelopeList(response.Items, "AgentGraph", format, AnsiConsole.Console);
                 }
                 return ProblemDetailsParser.ExitSuccess;
             }
@@ -84,13 +80,9 @@ internal sealed class GetGraphsCommand : AsyncCommand<GetGraphsCommand.Settings>
             {
                 RenderTable(new[] { single.Manifest });
             }
-            else if (singleFormat == OutputFormat.Json)
-            {
-                OutputFormatter.WriteJson(single, AnsiConsole.Console);
-            }
             else
             {
-                OutputFormatter.WriteYaml(single, AnsiConsole.Console);
+                OutputFormatter.WriteManifestEnvelope(single.Manifest, "AgentGraph", singleFormat, AnsiConsole.Console);
             }
             return ProblemDetailsParser.ExitSuccess;
         }

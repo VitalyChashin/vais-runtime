@@ -1,2 +1,4 @@
 #nullable enable
+Vais.Agents.Control.Manifests.EnvelopeCodec
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
+static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!
