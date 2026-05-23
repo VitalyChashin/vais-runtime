@@ -8,6 +8,7 @@ using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Core;
+using Vais.Agents.Runtime.Extensions;
 
 namespace Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 
@@ -50,6 +51,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
     private readonly bool _isForkSource;
     private readonly ActivityContext _graphContext;
     private readonly AgentInputMiddleware[]? _inputMiddleware;
+    private readonly IExtensionChainComposer? _graphNodeComposer;
     private readonly ILogger _logger;
 
     private static readonly ActivitySource _activitySource = new("Vais.Agents.Core.Graph", "1.0.0");
@@ -73,6 +75,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         string? hitlPortId = null,
         bool isForkSource = false,
         IReadOnlyList<AgentInputMiddleware>? inputMiddleware = null,
+        IExtensionChainComposer? graphNodeComposer = null,
         ILogger? logger = null)
         : base(id: executorId ?? node.Id)
     {
@@ -94,6 +97,7 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
         _isForkSource = isForkSource;
         _graphContext = Activity.Current?.Context ?? default;
         _inputMiddleware = inputMiddleware is { Count: > 0 } ? inputMiddleware.ToArray() : null;
+        _graphNodeComposer = graphNodeComposer;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -184,50 +188,80 @@ internal class GraphNodeExecutor : Executor<GraphMessage>
             nodeActivity?.SetTag("graph.node.kind", _node.Kind);
             if (_node.Ref?.Id is { } agentRefId) nodeActivity?.SetTag("vais.agent.name", agentRefId);
 
-            IReadOnlyDictionary<string, JsonElement> nodeOutput;
-            if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
+            // The node body (Agent / Code) — wrapped by the graphNode extension seam below. A handler
+            // may short-circuit (substitute output without running this) or transform the output; either
+            // way the result flows through the merge + checkpoint below, so resume stays consistent.
+            async Task<IReadOnlyDictionary<string, JsonElement>> RunNodeBodyAsync()
             {
-                var filteredInput = FilterByInputBinding(state, _node.StateBindings);
-                var prompt = BuildAgentInputText(filteredInput, _node.StateBindings);
-
-                // P12O-8: run input middleware chain (P12 inbound zone) before the agent body.
-                if (_inputMiddleware is { Length: > 0 })
+                if (string.Equals(_node.Kind, "Agent", StringComparison.Ordinal))
                 {
-                    var inputCtx = new AgentInputContext
+                    var filteredInput = FilterByInputBinding(state, _node.StateBindings);
+                    var prompt = BuildAgentInputText(filteredInput, _node.StateBindings);
+
+                    // P12O-8: run input middleware chain (P12 inbound zone) before the agent body.
+                    if (_inputMiddleware is { Length: > 0 })
                     {
-                        AgentId = _node.Ref?.Id ?? _node.Id,
-                        RunId = message.RunId,
-                        NodeId = _node.Id,
-                        Message = prompt,
-                    };
-                    await RunInputMiddlewareAsync(inputCtx, _inputMiddleware, cancellationToken).ConfigureAwait(false);
-                    prompt = inputCtx.Message;
+                        var inputCtx = new AgentInputContext
+                        {
+                            AgentId = _node.Ref?.Id ?? _node.Id,
+                            RunId = message.RunId,
+                            NodeId = _node.Id,
+                            Message = prompt,
+                        };
+                        await RunInputMiddlewareAsync(inputCtx, _inputMiddleware, cancellationToken).ConfigureAwait(false);
+                        prompt = inputCtx.Message;
+                    }
+
+                    nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
+                    var output = await GraphNodeRetry.ExecuteAsync(
+                        _node.RetryPolicy, message.RunId, _node.Id,
+                        (_, ct) => ExecuteAgentNodeAsync(filteredInput, prompt, message.RunId, context, ct),
+                        _logger, cancellationToken).ConfigureAwait(false);
+                    if (output.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
+                        nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
+                    return output;
                 }
 
-                nodeActivity?.SetTag("gen_ai.prompt", TruncateText(prompt));
-                nodeOutput = await GraphNodeRetry.ExecuteAsync(
-                    _node.RetryPolicy, message.RunId, _node.Id,
-                    (_, ct) => ExecuteAgentNodeAsync(filteredInput, prompt, message.RunId, context, ct),
-                    _logger, cancellationToken).ConfigureAwait(false);
-                if (nodeOutput.TryGetValue("lastAssistantText", out var lastText) && lastText.ValueKind == JsonValueKind.String)
-                    nodeActivity?.SetTag("gen_ai.completion", TruncateText(lastText.GetString() ?? string.Empty));
-            }
-            else if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
-            {
-                if (_node.HandlerRef is null || _codeNodeResolver is null)
+                if (string.Equals(_node.Kind, "Code", StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException($"Code-kind node '{_node.Id}' needs a HandlerRef + code-node resolver.");
+                    if (_node.HandlerRef is null || _codeNodeResolver is null)
+                    {
+                        throw new InvalidOperationException($"Code-kind node '{_node.Id}' needs a HandlerRef + code-node resolver.");
+                    }
+                    var handler = _codeNodeResolver(_node.HandlerRef);
+                    var input = FilterByInputBinding(state, _node.StateBindings);
+                    return await GraphNodeRetry.ExecuteAsync(
+                        _node.RetryPolicy, message.RunId, _node.Id,
+                        (_, ct) => handler.ExecuteAsync(input, _context, ct),
+                        _logger, cancellationToken).ConfigureAwait(false);
                 }
-                var handler = _codeNodeResolver(_node.HandlerRef);
-                var input = FilterByInputBinding(state, _node.StateBindings);
-                nodeOutput = await GraphNodeRetry.ExecuteAsync(
-                    _node.RetryPolicy, message.RunId, _node.Id,
-                    (_, ct) => handler.ExecuteAsync(input, _context, ct),
-                    _logger, cancellationToken).ConfigureAwait(false);
+
+                throw new NotSupportedException($"Unknown node kind '{_node.Kind}' on node '{_node.Id}'.");
+            }
+
+            var graphNodeChain = _graphNodeComposer is null
+                ? (IReadOnlyList<GraphNodeMiddleware>)Array.Empty<GraphNodeMiddleware>()
+                : await _graphNodeComposer.GetGraphNodeChainAsync(_node.Ref?.Id ?? _node.Id, cancellationToken).ConfigureAwait(false);
+
+            IReadOnlyDictionary<string, JsonElement> nodeOutput;
+            if (graphNodeChain.Count > 0)
+            {
+                var nodeCtx = new GraphNodeContext(
+                    message.RunId, _node.Id, _node.Kind, _node.Ref?.Id ?? string.Empty, message.SuperStep,
+                    FilterByInputBinding(state, _node.StateBindings));
+                Func<Task<GraphNodeOutcome>> next =
+                    async () => new GraphNodeOutcome(await RunNodeBodyAsync().ConfigureAwait(false));
+                for (var i = graphNodeChain.Count - 1; i >= 0; i--)
+                {
+                    var mw = graphNodeChain[i];
+                    var inner = next;
+                    next = () => mw.InvokeAsync(nodeCtx, inner, cancellationToken);
+                }
+                nodeOutput = (await next().ConfigureAwait(false)).Output;
             }
             else
             {
-                throw new NotSupportedException($"Unknown node kind '{_node.Kind}' on node '{_node.Id}'.");
+                nodeOutput = await RunNodeBodyAsync().ConfigureAwait(false);
             }
 
             // Merge node output into state (same reducer rules as the in-process orchestrator).

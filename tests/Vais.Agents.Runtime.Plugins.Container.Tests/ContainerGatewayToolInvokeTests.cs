@@ -346,6 +346,9 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
         public Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string agentId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ErrorInterceptor>>(Array.Empty<ErrorInterceptor>());
 
+        public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(Array.Empty<GraphNodeMiddleware>());
+
         public void InvalidateAgent(string agentId) { }
 
         public void InvalidateAll() { }

@@ -1,0 +1,21 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-nodetrace-python
+  version: "0.1.0"
+  description: "Python port of ext-nodetrace-csharp. Traces per-node timing and short-circuits cached nodes on the graph node seam."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: container
+  image: ext-nodetrace-python:local
+  port: 8080
+  topology: standalone
+  startupTimeoutSeconds: 30
+  invokeTimeoutSeconds: 5
+  handlers:
+    - id: node-trace
+      seam: graphNode
+      priority: 100
+      failureMode: skip

@@ -271,6 +271,70 @@ internal sealed class HttpContainerHandlerProxy
         }
     }
 
+    // ── graphNode (node-body wrap, pre/post) ──────────────────────────────────
+    // No self-instrumentation: the composer's InstrumentedGraphNodeMiddleware emits the span.
+
+    private static readonly IReadOnlyDictionary<string, JsonElement> EmptyGraphNodeOutput =
+        new Dictionary<string, JsonElement>();
+
+    internal async Task<GraphNodeOutcome> InvokeGraphNodeAsync(
+        GraphNodeContext ctx, Func<Task<GraphNodeOutcome>> next, CancellationToken ct)
+    {
+        var callId = Guid.NewGuid().ToString("N");
+        var wire = new GraphNodeContextWire(ctx.RunId, ctx.NodeId, ctx.NodeKind, ctx.AgentId, ctx.SuperStep, ctx.Input);
+        var preReq = new GraphNodePreRequest(callId, wire);
+
+        GraphNodePreResponse? preResp;
+        try
+        {
+            preResp = await SendPreAsync<GraphNodePreRequest, GraphNodePreResponse>(
+                preReq, ctx.AgentId, ctx.RunId, ctx.NodeId, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            return await HandleGraphNodeFailureAsync(next, ctx, ex).ConfigureAwait(false);
+        }
+
+        if (preResp is null)
+        {
+            _logger.LogWarning(
+                "graphNode pre-response null from {Endpoint}; agentId={AgentId} nodeId={NodeId} failureMode={Mode}",
+                _preEndpoint, ctx.AgentId, ctx.NodeId, _failureMode);
+            return await HandleGraphNodeFailureAsync(next, ctx, null).ConfigureAwait(false);
+        }
+
+        if (string.Equals(preResp.Action, "shortCircuit", StringComparison.OrdinalIgnoreCase))
+            return new GraphNodeOutcome(preResp.Output ?? EmptyGraphNodeOutput);
+
+        var outcome = await next().ConfigureAwait(false);
+
+        var postReq = new GraphNodePostRequest(callId, preResp.ContinuationToken, outcome.Output);
+        var postResp = await TrySendPostAsync<GraphNodePostRequest, GraphNodePostResponse>(
+            postReq, ctx.AgentId, ctx.RunId, ctx.NodeId, ct).ConfigureAwait(false);
+
+        if (postResp is { Output: not null } && string.Equals(postResp.Action, "mutate", StringComparison.OrdinalIgnoreCase))
+            return new GraphNodeOutcome(postResp.Output);
+
+        return outcome;
+    }
+
+    // graphNode never fails a node closed: skip / null pre-response runs the body (handler absent);
+    // only an explicit failureMode=fail + transport error propagates. Silently substituting empty
+    // output would corrupt graph state.
+    private async Task<GraphNodeOutcome> HandleGraphNodeFailureAsync(
+        Func<Task<GraphNodeOutcome>> next, GraphNodeContext ctx, Exception? ex)
+    {
+        if (ex is not null)
+            _logger.LogWarning(ex,
+                "graphNode handler proxy {Endpoint} failed; agentId={AgentId} nodeId={NodeId} failureMode={Mode}",
+                _preEndpoint, ctx.AgentId, ctx.NodeId, _failureMode);
+
+        if (ex is not null && !string.Equals(_failureMode, "skip", StringComparison.OrdinalIgnoreCase))
+            throw new ExtensionHandlerProxyException(_preEndpoint, ex);
+
+        return await next().ConfigureAwait(false);
+    }
+
     // ── llmGatewayMiddleware (non-streaming) ──────────────────────────────────
     // No self-instrumentation here: the composer's InstrumentedLlmMiddleware emits the
     // vais.extension.handler.invoke span with the build-time agentId (which the proxy lacks).
@@ -575,4 +639,18 @@ internal sealed class ErrorInterceptorHandlerProxy : ErrorInterceptor
     /// <inheritdoc />
     public override Task<ErrorOutcome> OnErrorAsync(ErrorContext context, CancellationToken cancellationToken = default)
         => _proxy.InvokeErrorAsync(context, cancellationToken);
+}
+
+/// <summary>
+/// <see cref="GraphNodeMiddleware"/> adapter that delegates to an <see cref="HttpContainerHandlerProxy"/>.
+/// </summary>
+internal sealed class GraphNodeHandlerProxy : GraphNodeMiddleware
+{
+    private readonly HttpContainerHandlerProxy _proxy;
+
+    internal GraphNodeHandlerProxy(HttpContainerHandlerProxy proxy) => _proxy = proxy;
+
+    /// <inheritdoc />
+    public override Task<GraphNodeOutcome> InvokeAsync(GraphNodeContext context, Func<Task<GraphNodeOutcome>> next, CancellationToken cancellationToken = default)
+        => _proxy.InvokeGraphNodeAsync(context, next, cancellationToken);
 }

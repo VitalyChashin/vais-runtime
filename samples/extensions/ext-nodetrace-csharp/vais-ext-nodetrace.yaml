@@ -1,0 +1,16 @@
+apiVersion: vais.agents/v1
+kind: Extension
+metadata:
+  name: ext-nodetrace-csharp
+  version: "1.0.0"
+  description: "Traces per-node timing and demonstrates a node-level cache short-circuit on the graph node seam."
+  labels:
+    team: platform
+    sample: "true"
+spec:
+  host: csharp
+  handlers:
+    - id: node-trace
+      seam: graphNode
+      priority: 100
+      failureMode: skip

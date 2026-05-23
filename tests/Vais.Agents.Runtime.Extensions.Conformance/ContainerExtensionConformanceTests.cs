@@ -296,6 +296,100 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         outcome.Message.Should().BeNull("an unreachable interceptor must never mask or replace the failure");
     }
 
+    // ── graphNode seam: node-body wrap /pre + /post round-trip over HTTP ──────
+
+    // CGN-1. Round-trip: pre 'next' runs the body, post observes, output passes through.
+    [Fact]
+    public async Task GraphNodeProxy_NextAction_RunsBodyAndPassesOutputThrough()
+    {
+        using var server = new MockContainerServer(preAction: "next", postAction: "next");
+        var mw = new GraphNodeHandlerProxy(MakeGraphNodeProxy(server));
+
+        var bodyRan = false;
+        var outcome = await mw.InvokeAsync(GraphNodeCtx(), () =>
+        {
+            bodyRan = true;
+            return Task.FromResult(new GraphNodeOutcome(Output("marker", "body")));
+        });
+
+        bodyRan.Should().BeTrue("'next' must run the node body");
+        outcome.Output["marker"].GetString().Should().Be("body");
+    }
+
+    // CGN-2. shortCircuit: pre returns a substitute output; the node body never runs.
+    [Fact]
+    public async Task GraphNodeProxy_ShortCircuit_SubstitutesWithoutRunningBody()
+    {
+        using var server = new MockContainerServer(
+            preAction: "shortCircuit",
+            preOutput: new Dictionary<string, object?> { ["marker"] = "cached" });
+        var mw = new GraphNodeHandlerProxy(MakeGraphNodeProxy(server));
+
+        var bodyRan = false;
+        var outcome = await mw.InvokeAsync(GraphNodeCtx(), () =>
+        {
+            bodyRan = true;
+            return Task.FromResult(new GraphNodeOutcome(Output("marker", "body")));
+        });
+
+        bodyRan.Should().BeFalse("shortCircuit must prevent the node body from running");
+        outcome.Output["marker"].GetString().Should().Be("cached");
+    }
+
+    // CGN-3. post mutate: body runs, post replaces the node output.
+    [Fact]
+    public async Task GraphNodeProxy_PostMutate_ReplacesOutput()
+    {
+        using var server = new MockContainerServer(
+            preAction: "next", postAction: "mutate",
+            postOutput: new Dictionary<string, object?> { ["marker"] = "transformed" });
+        var mw = new GraphNodeHandlerProxy(MakeGraphNodeProxy(server));
+
+        var bodyRan = false;
+        var outcome = await mw.InvokeAsync(GraphNodeCtx(), () =>
+        {
+            bodyRan = true;
+            return Task.FromResult(new GraphNodeOutcome(Output("marker", "body")));
+        });
+
+        bodyRan.Should().BeTrue("'next' runs the body before the post transform");
+        outcome.Output["marker"].GetString().Should().Be("transformed");
+    }
+
+    // CGN-4. failureMode=skip + unreachable container: the node body runs as if the handler were absent.
+    [Fact]
+    public async Task GraphNodeProxy_Unreachable_SkipMode_RunsBody()
+    {
+        var proxy = new HttpContainerHandlerProxy(
+            new HttpClient { BaseAddress = new Uri("http://localhost:19999") },
+            preEndpoint:  "/handlers/h-node/pre",
+            postEndpoint: "/handlers/h-node/post",
+            failureMode:  "skip",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-node", ExtensionSeams.GraphNode, "container"));
+        var mw = new GraphNodeHandlerProxy(proxy);
+
+        var bodyRan = false;
+        var outcome = await mw.InvokeAsync(GraphNodeCtx(), () =>
+        {
+            bodyRan = true;
+            return Task.FromResult(new GraphNodeOutcome(Output("marker", "body")));
+        });
+
+        bodyRan.Should().BeTrue("failureMode=skip must run the node body when the container is unreachable");
+        outcome.Output["marker"].GetString().Should().Be("body");
+    }
+
+    private static HttpContainerHandlerProxy MakeGraphNodeProxy(MockContainerServer server) =>
+        new(new HttpClient { BaseAddress = server.BaseUri }, "/handlers/h-node/pre", "/handlers/h-node/post",
+            failureMode: "fail",
+            descriptor: new HandlerBindingDescriptor("test-ext", "1.0.0", "h-node", ExtensionSeams.GraphNode, "container"));
+
+    private static GraphNodeContext GraphNodeCtx() =>
+        new("r1", "n1", "Agent", "agent-a", 0, new Dictionary<string, JsonElement>());
+
+    private static IReadOnlyDictionary<string, JsonElement> Output(string key, string value) =>
+        new Dictionary<string, JsonElement> { [key] = JsonDocument.Parse($"\"{value}\"").RootElement.Clone() };
+
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private static HttpContainerHandlerProxy MakeErrorProxy(MockContainerServer server) =>
@@ -347,6 +441,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
         private readonly string? _preResponseText;
         private readonly string? _postResponseText;
         private readonly string? _preMessage;
+        private readonly IReadOnlyDictionary<string, object?>? _preOutput;
+        private readonly IReadOnlyDictionary<string, object?>? _postOutput;
 
         public Uri BaseUri { get; }
 
@@ -360,7 +456,9 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             string? postError = null,
             string? preResponseText = null,
             string? postResponseText = null,
-            string? preMessage = null)
+            string? preMessage = null,
+            IReadOnlyDictionary<string, object?>? preOutput = null,
+            IReadOnlyDictionary<string, object?>? postOutput = null)
         {
             _preAction = preAction;
             _preContextPatch = preContextPatch;
@@ -372,6 +470,8 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
             _preResponseText = preResponseText;
             _postResponseText = postResponseText;
             _preMessage = preMessage;
+            _preOutput = preOutput;
+            _postOutput = postOutput;
 
             var port = FindFreePort();
             BaseUri = new Uri($"http://localhost:{port}");
@@ -408,6 +508,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
                     error             = _preError,
                     response          = _preResponseText is null ? null : new { text = _preResponseText },
                     message           = _preMessage,
+                    output            = _preOutput,
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));
@@ -420,6 +521,7 @@ public sealed class ContainerExtensionConformanceTests : ExtensionConformanceBas
                     result   = _postResult,
                     error    = _postError,
                     response = _postResponseText is null ? null : new { text = _postResponseText },
+                    output   = _postOutput,
                 });
                 await ctx.Response.OutputStream.WriteAsync(
                     System.Text.Encoding.UTF8.GetBytes(body));
