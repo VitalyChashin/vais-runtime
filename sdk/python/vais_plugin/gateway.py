@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator
 
 import httpx
 
-from .models import Message, RequestContext, ToolCall, UsageCounts
+from .models import LlmGatewayError, Message, RequestContext, ToolCall, ToolError, UsageCounts
 
 
 @dataclass
@@ -71,7 +71,10 @@ class AsyncLlmClient:
         async with httpx.AsyncClient(base_url=self._base_url, headers=self._headers()) as client:
             resp = client.post("complete", json=body)
             resp = await resp
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                raise LlmGatewayError(
+                    f"LLM gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
+                )
         data = resp.json()
         msg = data.get("message") or {}
         usage = data.get("usage")
@@ -137,7 +140,10 @@ class AsyncToolClient:
         }
         async with httpx.AsyncClient(base_url=self._base_url, headers=self._headers()) as client:
             resp = await client.post("invoke", json=body)
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                raise ToolError(
+                    f"Tool gateway returned HTTP {resp.status_code}: {resp.text[:500]}"
+                )
         data = resp.json()
         return ToolResult(
             tool_call_id=data["toolCallId"],

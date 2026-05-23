@@ -1576,3 +1576,6 @@ override Vais.Agents.LabelSelector.GetHashCode() -> int
 override Vais.Agents.LabelSelector.ToString() -> string!
 static Vais.Agents.LabelSelector.operator !=(Vais.Agents.LabelSelector? left, Vais.Agents.LabelSelector? right) -> bool
 static Vais.Agents.LabelSelector.operator ==(Vais.Agents.LabelSelector? left, Vais.Agents.LabelSelector? right) -> bool
+Vais.Agents.IClassifiedAgentError
+Vais.Agents.IClassifiedAgentError.ErrorType.get -> string!
+Vais.Agents.IClassifiedAgentError.IsTransient.get -> bool

@@ -340,12 +340,21 @@ internal sealed class ContainerAgentShim
         _logger.LogError(
             "[{Urn}] Container invoke failed — agentId={AgentId} runId={RunId} " +
             "status={Status} errorType={ErrorType} diagnosticTail={DiagnosticTail}",
-            ContainerPluginUrns.InvokeFailed, _manifest.Id, request.Context.RunId,
+            UrnForErrorType(errorBody.ErrorType), _manifest.Id, request.Context.RunId,
             (int)httpResp.StatusCode, errorBody.ErrorType, errorBody.DiagnosticTail);
 
         throw new ContainerInvokeException(
             httpResp.StatusCode, errorBody.ErrorType, errorBody.ErrorMessage, errorBody.DiagnosticTail);
     }
+
+    private static string UrnForErrorType(string errorType) => errorType switch
+    {
+        "LlmGatewayError" => ContainerPluginUrns.LlmGatewayError,
+        "ToolError" => ContainerPluginUrns.ToolError,
+        "Timeout" => ContainerPluginUrns.Timeout,
+        "OpaqueStateDeserializationError" => ContainerPluginUrns.OpaqueStateDeserializationError,
+        _ => ContainerPluginUrns.InvokeFailed,
+    };
 
     private PluginInvokeRequest BuildInvokeRequest(
         IReadOnlyList<ChatTurn> messages,

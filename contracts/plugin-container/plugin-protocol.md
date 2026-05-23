@@ -1,7 +1,7 @@
 # Container Plugin Protocol
 
-**Version:** 0.24  
-**Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3).
+**Version:** 0.25  
+**Status:** Frozen — breaking-change boundary. Changes require a version bump and coordinated update to the SDK (IP-2) and runtime shim (IP-3). v0.25 adds the 502/503/504 error codes additively over 0.24; the runtime accepts both versions and 0.24 plugins need no change.
 
 ---
 
@@ -171,7 +171,7 @@ Any HTTP 4xx/5xx from `/v1/invoke` or `/v1/stream` must carry:
 
 ```json
 {
-  "errorType": "OpaqueStateDeserializationError | InternalError | <reserved>",
+  "errorType": "OpaqueStateDeserializationError | InternalError | LlmGatewayError | ToolError | Timeout",
   "errorMessage": "Full exception message with stack trace if available.",
   "diagnosticTail": "Trailing portion of container stderr / internal log."
 }
@@ -179,24 +179,21 @@ Any HTTP 4xx/5xx from `/v1/invoke` or `/v1/stream` must carry:
 
 `diagnosticTail` is a free-form string. The runtime truncates whatever the container returns to ~500 chars before logging — earlier drafts said "last 20 lines" but the actual cap is byte-based; the runtime does not parse line counts. Containers should emit the most recent ~20 log lines and stay under ~500 chars per line where possible.
 
-### Shipping HTTP status → `errorType` mapping
+### HTTP status → `errorType` mapping
 
 | HTTP status | `errorType` | Grain behaviour |
 |---|---|---|
 | 422 | `OpaqueStateDeserializationError` | Clear `OpaqueState`; retry with `opaqueState: null` (fresh-start) |
-| 500 | `InternalError` | Propagate; fail the graph node |
+| 500 | `InternalError` | Propagate; fail the graph node. **Terminal** — not retried even when the node declares a `retryPolicy` (a plugin code bug should not loop). |
+| 502 | `LlmGatewayError` | Propagate; **retryable** under the graph node's `retryPolicy`. |
+| 503 | `ToolError` | Propagate; **retryable** under the graph node's `retryPolicy`. |
+| 504 | `Timeout` | Propagate; **retryable** under the graph node's `retryPolicy`. Aborts the in-flight invocation only — the container is not drained or restarted. |
 
-Any other 4xx / 5xx returned by the container is treated as `InternalError` by `ContainerAgentShim` today.
+Any other 4xx / 5xx returned by the container is treated as `InternalError` by `ContainerAgentShim`.
 
-### Reserved for future use — not yet wired
+`retryPolicy` is the per-node retry policy on the graph node (`GraphNodeRetryPolicy`: `maxAttempts`, `initialBackoffSeconds`, `backoffMultiplier`, `maxBackoffSeconds`). With no `retryPolicy`, every status above propagates after a single attempt. The plugin's `errorType` is preserved in `GraphFailed.ErrorType` (P9), so retry, alerting, and telemetry can distinguish the failure class instead of seeing every failure as `InternalError`.
 
-| HTTP status | `errorType` (planned) | Planned grain behaviour |
-|---|---|---|
-| 502 | `LlmGatewayError` | Propagate; fail the graph node |
-| 503 | `ToolError` | Propagate; fail the graph node |
-| 504 | `Timeout` | Propagate; fail the graph node (retry governed by `retryPolicy`) |
-
-These three status codes are reserved for the planned LLM-gateway / tool / timeout error distinctions. Neither the shipped .NET SDK (`Vais.Plugin.Sdk`) nor the Python SDK (`vais-plugin`) exposes a mechanism to emit them today, and `ContainerAgentShim` does not currently branch on them — it folds anything other than 422 into `InternalError`. Plugins **should not** rely on the runtime distinguishing 502 / 503 / 504 from 500 until the SDKs and shim are updated. Follow-up tracked at `research/plugin-container-error-codes-followup.md`.
+The SDKs emit these codes both automatically and on demand: the LLM gateway client raises `LlmGatewayError` on an upstream non-2xx, the tool gateway client raises `ToolError` when a tool call cannot be dispatched (a tool that *runs* and returns an error result is handed back to the plugin so the agent loop can continue), and the SDK raises `Timeout` when `timeoutSeconds` elapses. Plugin authors may also raise any of them directly — `LlmGatewayError`/`ToolError`/`Timeout` in the Python `vais-plugin` SDK, `LlmGatewayException`/`ToolException`/`PluginTimeoutException` in the .NET `Vais.Plugin.Sdk`.
 
 ### Shim error-handling contract
 

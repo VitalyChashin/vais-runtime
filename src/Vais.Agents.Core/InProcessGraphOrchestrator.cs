@@ -477,7 +477,8 @@ public class InProcessGraphOrchestrator<TState> : IAgentGraph<TState>, IResumabl
                     nodeActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
                     graphActivity?.SetStatus(ActivityStatusCode.Error, nodeFailure.Message);
                     var nodeFailEvt = new GraphFailed(DateTimeOffset.UtcNow, context, runId, superStep,
-                        nodeFailure.GetType().Name, nodeFailure.ToString(), watch.Elapsed, FailedNodeId: currentNodeId);
+                        (nodeFailure as IClassifiedAgentError)?.ErrorType ?? nodeFailure.GetType().Name,
+                        nodeFailure.ToString(), watch.Elapsed, FailedNodeId: currentNodeId);
                     await _graphEventBus.PublishAsync(nodeFailEvt, cancellationToken).ConfigureAwait(false);
                     yield return nodeFailEvt;
                     throw nodeFailure;

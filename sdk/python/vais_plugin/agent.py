@@ -18,10 +18,13 @@ from .gateway import AsyncLlmClient, AsyncToolClient
 from .models import (
     InvokeRequest,
     InvokeResponse,
+    LlmGatewayError,
     Message,
     OpaqueStateDeserializationError,
     RequestContext,
+    Timeout,
     ToolCall,
+    ToolError,
     UsageCounts,
     JournalEntry,
 )
@@ -136,22 +139,19 @@ class PluginAgent(ABC):
             request.llm = AsyncLlmClient(request.llm_gateway_url, request.context, request.agent_id)
             request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id)
             try:
-                response = await agent.invoke(request)
+                async with asyncio.timeout(request.timeout_seconds):
+                    response = await agent.invoke(request)
                 return JSONResponse(content=_serialise_response(response))
             except OpaqueStateDeserializationError as exc:
-                return JSONResponse(
-                    status_code=422,
-                    content={"errorType": "OpaqueStateDeserializationError", "errorMessage": str(exc), "diagnosticTail": None},
-                )
+                return _error_json(422, "OpaqueStateDeserializationError", exc, with_trace=False)
+            except LlmGatewayError as exc:
+                return _error_json(502, "LlmGatewayError", exc)
+            except ToolError as exc:
+                return _error_json(503, "ToolError", exc)
+            except (Timeout, asyncio.TimeoutError) as exc:
+                return _error_json(504, "Timeout", exc)
             except Exception as exc:
-                import traceback
-                diag = traceback.format_exc()
-                if len(diag) > 500:
-                    diag = diag[:500]
-                return JSONResponse(
-                    status_code=500,
-                    content={"errorType": "InternalError", "errorMessage": str(exc), "diagnosticTail": diag},
-                )
+                return _error_json(500, "InternalError", exc)
 
         @app.post("/v1/stream")
         async def stream_endpoint(raw: Request) -> StreamingResponse:
@@ -161,16 +161,24 @@ class PluginAgent(ABC):
             request.tools = AsyncToolClient(request.tool_gateway_url, request.context, request.agent_id)
 
             async def generate() -> AsyncIterator[bytes]:
+                error_type: str | None = None
+                error: Exception | None = None
                 try:
-                    async for event in agent.stream(request):
-                        yield event.encode()
+                    async with asyncio.timeout(request.timeout_seconds):
+                        async for event in agent.stream(request):
+                            yield event.encode()
                 except OpaqueStateDeserializationError as exc:
-                    yield _error_event("OpaqueStateDeserializationError", str(exc))
-                    yield SseEvent("done", InvokeResponse(assistant_message="")).encode()
+                    error_type, error = "OpaqueStateDeserializationError", exc
+                except LlmGatewayError as exc:
+                    error_type, error = "LlmGatewayError", exc
+                except ToolError as exc:
+                    error_type, error = "ToolError", exc
+                except (Timeout, asyncio.TimeoutError) as exc:
+                    error_type, error = "Timeout", exc
                 except Exception as exc:
-                    import traceback
-                    diag = traceback.format_exc()[:500]
-                    yield _error_event("InternalError", str(exc))
+                    error_type, error = "InternalError", exc
+                if error is not None:
+                    yield _error_event(error_type, str(error))
                     yield SseEvent("done", InvokeResponse(assistant_message="")).encode()
 
             return StreamingResponse(
@@ -214,6 +222,19 @@ async def _heartbeat_wrapper(source: AsyncIterator[bytes]) -> AsyncIterator[byte
 def _error_event(error_type: str, error_message: str) -> bytes:
     payload = json.dumps({"errorType": error_type, "errorMessage": error_message})
     return f"event: error\ndata: {payload}\n\n".encode()
+
+
+def _error_json(status_code: int, error_type: str, exc: Exception, *, with_trace: bool = True) -> JSONResponse:
+    """Builds an error JSONResponse with the contract error body. ``with_trace`` attaches the current
+    traceback (truncated to 500 chars) as ``diagnosticTail``; off for 422 (no trace is useful there)."""
+    diag: str | None = None
+    if with_trace:
+        import traceback
+        diag = traceback.format_exc()[:500]
+    return JSONResponse(
+        status_code=status_code,
+        content={"errorType": error_type, "errorMessage": str(exc), "diagnosticTail": diag},
+    )
 
 
 def _parse_request(body: dict[str, Any]) -> InvokeRequest:

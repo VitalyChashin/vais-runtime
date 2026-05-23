@@ -70,7 +70,7 @@ async def test_initialize_returns_server_info(monkeypatch):
 
     async def noop(req): ...  # type: ignore[return]
 
-    await _dispatch({"jsonrpc": "2.0", "id": "0", "method": "initialize", "params": {}}, noop, None)
+    await _dispatch({"jsonrpc": "2.0", "id": "0", "method": "initialize", "params": {}}, noop, None, None)
 
     assert len(lines) == 1
     resp = json.loads(lines[0])
@@ -89,7 +89,7 @@ async def test_tools_list_returns_empty(monkeypatch):
 
     async def noop(req): ...  # type: ignore[return]
 
-    await _dispatch({"jsonrpc": "2.0", "id": "1", "method": "tools/list", "params": {}}, noop, None)
+    await _dispatch({"jsonrpc": "2.0", "id": "1", "method": "tools/list", "params": {}}, noop, None, None)
 
     resp = json.loads(lines[0])
     assert resp["result"] == {"tools": []}
@@ -108,7 +108,7 @@ async def test_invoke_calls_user_function_and_returns_response(monkeypatch):
         assert req.state is None
         return AgentResponse(assistantMessage="Hi!", newState='{"count":1}')
 
-    await _dispatch(_req(), my_invoke, None)
+    await _dispatch(_req(), my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert resp["result"]["assistantMessage"] == "Hi!"
@@ -126,7 +126,7 @@ async def test_invoke_passes_state_to_user_function(monkeypatch):
 
     msg = _req()
     msg["params"]["state"] = '{"prior": true}'
-    await _dispatch(msg, my_invoke, None)
+    await _dispatch(msg, my_invoke, None, None)
 
     assert received_state[0] == '{"prior": true}'
 
@@ -138,7 +138,7 @@ async def test_invoke_null_new_state_omitted_from_response(monkeypatch):
     async def my_invoke(req: AgentRequest) -> AgentResponse:
         return AgentResponse(assistantMessage="ok")  # newState defaults to None
 
-    await _dispatch(_req(), my_invoke, None)
+    await _dispatch(_req(), my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert "newState" not in resp["result"]
@@ -155,11 +155,11 @@ async def test_invoke_user_exception_returns_json_rpc_error(monkeypatch):
     async def my_invoke(req: AgentRequest) -> AgentResponse:
         raise ValueError("something went wrong")
 
-    await _dispatch(_req(), my_invoke, None)
+    await _dispatch(_req(), my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert "error" in resp
-    assert "python-agent-invoke-failed" in resp["error"]["message"]
+    assert resp["error"]["data"]["errorType"] == "InternalError"
     assert "ValueError" in resp["error"]["message"]
 
 
@@ -172,7 +172,7 @@ async def test_invoke_error_preserves_request_id(monkeypatch):
 
     msg = _req()
     msg["id"] = "req-42"
-    await _dispatch(msg, my_invoke, None)
+    await _dispatch(msg, my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert resp["id"] == "req-42"
@@ -199,7 +199,7 @@ async def test_reset_calls_on_reset_hook(monkeypatch):
         "method": "vais/agent.reset",
         "params": {"agentId": "agent-1", "sessionId": "sess-99"},
     }
-    await _dispatch(msg, my_invoke, my_reset)
+    await _dispatch(msg, my_invoke, my_reset, None)
 
     assert reset_calls == ["sess-99"]
     resp = json.loads(lines[0])
@@ -219,7 +219,7 @@ async def test_reset_without_hook_returns_empty_result(monkeypatch):
         "method": "vais/agent.reset",
         "params": {"sessionId": "sess-1"},
     }
-    await _dispatch(msg, my_invoke, None)
+    await _dispatch(msg, my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert resp["result"] == {}
@@ -240,6 +240,7 @@ async def test_unknown_method_returns_method_not_found(monkeypatch):
         {"jsonrpc": "2.0", "id": "x", "method": "unknown/method", "params": {}},
         my_invoke,
         None,
+        None,
     )
 
     resp = json.loads(lines[0])
@@ -257,6 +258,7 @@ async def test_notification_does_not_produce_response(monkeypatch):
         {"jsonrpc": "2.0", "method": "initialized"},  # no "id" → notification
         my_invoke,
         None,
+        None,
     )
 
     assert lines == []
@@ -273,7 +275,7 @@ async def test_ping_returns_empty_result(monkeypatch):
     async def my_invoke(req: AgentRequest) -> AgentResponse:  # type: ignore[return]
         ...
 
-    await _dispatch({"jsonrpc": "2.0", "id": "p1", "method": "ping"}, my_invoke, None)
+    await _dispatch({"jsonrpc": "2.0", "id": "p1", "method": "ping"}, my_invoke, None, None)
 
     resp = json.loads(lines[0])
     assert resp["result"] == {}

@@ -1,4 +1,5 @@
 """VAIS Agent SDK — Python-side runtime for vais/agent.* JSON-RPC protocol."""
+from vais_agent_sdk._errors import LlmGatewayError, PluginError, Timeout, ToolError
 from vais_agent_sdk._models import AgentRequest, AgentResponse, AgentUsage, AgentJournalEntry
 from vais_agent_sdk._runner import run, StreamFn
 from vais_agent_sdk.adapters import sections_to_openai_messages, sections_to_openai_request
@@ -16,6 +17,7 @@ from vais_agent_sdk.sections import (
 
 __all__ = [
     "AgentRequest", "AgentResponse", "AgentUsage", "AgentJournalEntry",
+    "PluginError", "LlmGatewayError", "ToolError", "Timeout",
     "run", "StreamFn",
     "ChatOpenAI", "gateway_get_tools",
     "build_sections", "complete_from_sections",

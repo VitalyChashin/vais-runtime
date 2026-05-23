@@ -349,9 +349,14 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
             _logger.LogWarning(ex,
                 "[{Urn}] Python agent '{Name}' invoke failed.{Stderr}",
                 PythonPluginUrns.AgentInvokeFailed, _liveDescriptor.Name, stderrSnippet);
-            throw new InvalidOperationException(
+            var message =
                 $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
-                $"invoke failed: {ex.Message}{stderrSnippet}", ex);
+                $"invoke failed: {ex.Message}{stderrSnippet}";
+            var errorType = PythonAgentInvokeException.TryParseErrorType(ex.Message)
+                ?? PythonAgentInvokeException.TryParseErrorType(ex.InnerException?.Message);
+            if (errorType is not null)
+                throw new PythonAgentInvokeException(errorType, message, ex);
+            throw new InvalidOperationException(message, ex);
         }
         finally
         {
@@ -442,9 +447,14 @@ internal sealed class PythonSubprocessSupervisor : IAsyncDisposable, IPythonAgen
                 lock (_stateLock) signal = _drainSignal;
                 signal?.TrySetResult();
             }
-            throw new InvalidOperationException(
+            var message =
                 $"[{PythonPluginUrns.AgentInvokeFailed}] Python agent '{_liveDescriptor.Name}' " +
-                $"stream failed: {ex.Message}{stderrSnippet}", ex);
+                $"stream failed: {ex.Message}{stderrSnippet}";
+            var errorType = PythonAgentInvokeException.TryParseErrorType(ex.Message)
+                ?? PythonAgentInvokeException.TryParseErrorType(ex.InnerException?.Message);
+            if (errorType is not null)
+                throw new PythonAgentInvokeException(errorType, message, ex);
+            throw new InvalidOperationException(message, ex);
         }
 
         if (Interlocked.Decrement(ref _activeInvokes) == 0)

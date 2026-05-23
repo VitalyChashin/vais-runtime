@@ -79,6 +79,45 @@ public sealed class GraphNodeRetryTests
         GraphNodeRetry.IsRetryable(new OperationCanceledException()).Should().BeFalse();
     }
 
+    private sealed class ClassifiedError : Exception, IClassifiedAgentError
+    {
+        public string ErrorType { get; init; } = "Test";
+        public bool IsTransient { get; init; }
+    }
+
+    [Fact]
+    public void IsRetryable_DefersToClassification()
+    {
+        GraphNodeRetry.IsRetryable(new ClassifiedError { IsTransient = true }).Should().BeTrue();
+        GraphNodeRetry.IsRetryable(new ClassifiedError { IsTransient = false }).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TransientClassifiedError_RetriedToCap()
+    {
+        var calls = 0;
+        var act = async () => await GraphNodeRetry.ExecuteAsync<int>(
+            policy: Fast(3), runId: "r", nodeId: "n",
+            body: (_, _) => { calls++; throw new ClassifiedError { ErrorType = "Timeout", IsTransient = true }; },
+            logger: NullLogger.Instance, ct: default);
+
+        await act.Should().ThrowAsync<ClassifiedError>();
+        calls.Should().Be(3, "transient classified errors retry under the policy");
+    }
+
+    [Fact]
+    public async Task NonTransientClassifiedError_NotRetried_EvenWithPolicy()
+    {
+        var calls = 0;
+        var act = async () => await GraphNodeRetry.ExecuteAsync<int>(
+            policy: Fast(3), runId: "r", nodeId: "n",
+            body: (_, _) => { calls++; throw new ClassifiedError { ErrorType = "InternalError", IsTransient = false }; },
+            logger: NullLogger.Instance, ct: default);
+
+        await act.Should().ThrowAsync<ClassifiedError>();
+        calls.Should().Be(1, "non-transient classified errors fail the node without retry");
+    }
+
     [Fact]
     public void ComputeBackoff_IsExponential_AndCapped()
     {

@@ -17,6 +17,7 @@ import sys
 import traceback
 from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
+from vais_agent_sdk._errors import LlmGatewayError, Timeout, ToolError
 from vais_agent_sdk._models import AgentRequest, AgentResponse
 from vais_agent_sdk._otel import attach_context, detach_context, extract_context, setup_otel
 
@@ -34,6 +35,23 @@ def _result(id_: Any, result: Any) -> str:
 
 def _error(id_: Any, code: int, message: str) -> str:
     return json.dumps({"jsonrpc": "2.0", "id": id_, "error": {"code": code, "message": message}})
+
+
+def _typed_error(id_: Any, error_type: str, detail: str) -> str:
+    """JSON-RPC error carrying a semantic ``errorType`` (parity with the HTTP container SDK).
+
+    The runtime parses ``[vais.errorType=<Type>]`` from the message (and the ``data.errorType`` mirror)
+    to classify the failure for retry/telemetry. ``code`` stays -32000 for all types.
+    """
+    return json.dumps({
+        "jsonrpc": "2.0",
+        "id": id_,
+        "error": {
+            "code": -32000,
+            "message": f"[vais.errorType={error_type}] {detail}",
+            "data": {"errorType": error_type},
+        },
+    })
 
 
 def _send(line: str) -> None:
@@ -80,14 +98,20 @@ async def _dispatch(
             ctx = extract_context(request.context.get("traceparent") if request.context else None)
             token = attach_context(ctx)
             try:
-                response = await invoke_fn(request)
+                async with asyncio.timeout(request.timeout_seconds):
+                    response = await invoke_fn(request)
             finally:
                 detach_context(token)
             _send(_result(id_, response.model_dump(by_alias=True, exclude_none=True)))
+        except LlmGatewayError as exc:
+            _send(_typed_error(id_, "LlmGatewayError", str(exc)))
+        except ToolError as exc:
+            _send(_typed_error(id_, "ToolError", str(exc)))
+        except (Timeout, asyncio.TimeoutError) as exc:
+            _send(_typed_error(id_, "Timeout", str(exc)))
         except Exception as exc:  # noqa: BLE001
             print(f"[vais-agent-sdk] invoke error:\n{traceback.format_exc()}", file=sys.stderr)
-            _send(_error(id_, -32000,
-                f"[python-agent-invoke-failed] {type(exc).__name__}: {exc}"))
+            _send(_typed_error(id_, "InternalError", f"{type(exc).__name__}: {exc}"))
 
     elif method == "vais/agent.stream":
         if stream_fn is None:
@@ -97,25 +121,32 @@ async def _dispatch(
                 ctx = extract_context(request.context.get("traceparent") if request.context else None)
                 token = attach_context(ctx)
                 try:
-                    response = await invoke_fn(request)
+                    async with asyncio.timeout(request.timeout_seconds):
+                        response = await invoke_fn(request)
                 finally:
                     detach_context(token)
                 result_dict = response.model_dump(by_alias=True, exclude_none=True)
                 result_dict["deltas"] = [response.assistant_message]
                 _send(_result(id_, result_dict))
+            except LlmGatewayError as exc:
+                _send(_typed_error(id_, "LlmGatewayError", str(exc)))
+            except ToolError as exc:
+                _send(_typed_error(id_, "ToolError", str(exc)))
+            except (Timeout, asyncio.TimeoutError) as exc:
+                _send(_typed_error(id_, "Timeout", str(exc)))
             except Exception as exc:  # noqa: BLE001
                 print(f"[vais-agent-sdk] stream error:\n{traceback.format_exc()}", file=sys.stderr)
-                _send(_error(id_, -32000,
-                    f"[python-agent-stream-failed] {type(exc).__name__}: {exc}"))
+                _send(_typed_error(id_, "InternalError", f"{type(exc).__name__}: {exc}"))
         else:
             try:
                 request = AgentRequest.model_validate(params)
                 ctx = extract_context(request.context.get("traceparent") if request.context else None)
                 token = attach_context(ctx)
                 try:
-                    chunks: list[str] = []
-                    async for chunk in stream_fn(request):
-                        chunks.append(chunk)
+                    async with asyncio.timeout(request.timeout_seconds):
+                        chunks: list[str] = []
+                        async for chunk in stream_fn(request):
+                            chunks.append(chunk)
                 finally:
                     detach_context(token)
                 assistant_message = "".join(chunks)
@@ -128,10 +159,15 @@ async def _dispatch(
                 result_dict = response.model_dump(by_alias=True, exclude_none=True)
                 result_dict["deltas"] = chunks
                 _send(_result(id_, result_dict))
+            except LlmGatewayError as exc:
+                _send(_typed_error(id_, "LlmGatewayError", str(exc)))
+            except ToolError as exc:
+                _send(_typed_error(id_, "ToolError", str(exc)))
+            except (Timeout, asyncio.TimeoutError) as exc:
+                _send(_typed_error(id_, "Timeout", str(exc)))
             except Exception as exc:  # noqa: BLE001
                 print(f"[vais-agent-sdk] stream error:\n{traceback.format_exc()}", file=sys.stderr)
-                _send(_error(id_, -32000,
-                    f"[python-agent-stream-failed] {type(exc).__name__}: {exc}"))
+                _send(_typed_error(id_, "InternalError", f"{type(exc).__name__}: {exc}"))
 
     elif method == "vais/agent.reset":
         session_id: str = params.get("sessionId", "")

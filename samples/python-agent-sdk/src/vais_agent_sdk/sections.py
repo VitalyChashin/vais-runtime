@@ -19,6 +19,8 @@ from typing import Any, Optional
 import httpx
 from pydantic import BaseModel, Field
 
+from vais_agent_sdk._errors import LlmGatewayError
+
 
 class SectionBudget(BaseModel):
     """Optional per-section budget hint. Priority 0 = critical, 10 = drop first."""
@@ -146,6 +148,9 @@ async def build_sections(
     else:
         resp = await client.post(url, headers=headers, json=payload, timeout=timeout_seconds)
 
+    # build_sections is the optional context-shaping helper — plugins typically catch and fall back to
+    # InvokeRequest.messages, so a failure here stays an httpx.HTTPStatusError rather than auto-raising
+    # LlmGatewayError. The actual LLM call (complete_from_sections) raises LlmGatewayError on non-2xx.
     resp.raise_for_status()
     return RequestSections.model_validate(resp.json())
 
@@ -225,9 +230,10 @@ async def complete_from_sections(
 
     Raises
     ------
-    httpx.HTTPStatusError
-        Non-2xx response. 400 = malformed sections or both/neither body fields; 404 = unknown
-        agent; 500 = provider failure (carries a ``producerId`` Problem-Details extension).
+    LlmGatewayError
+        Non-2xx response (the status code and response body are included in the message). 400 =
+        malformed sections or both/neither body fields; 404 = unknown agent; 500 = provider failure
+        (body carries a ``producerId`` Problem-Details extension).
     """
     section_list = sections.sections if isinstance(sections, RequestSections) else list(sections)
     wire_sections = [s.model_dump(by_alias=True, exclude_none=True) for s in section_list]
@@ -255,5 +261,6 @@ async def complete_from_sections(
     else:
         resp = await client.post(url, headers=headers, json=body, timeout=timeout_seconds)
 
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise LlmGatewayError(f"LLM gateway llm/complete returned HTTP {resp.status_code}: {resp.text[:500]}")
     return CompletionResult.model_validate(resp.json())

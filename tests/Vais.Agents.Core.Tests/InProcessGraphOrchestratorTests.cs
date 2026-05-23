@@ -690,6 +690,91 @@ public sealed class InProcessGraphOrchestratorTests
         events.OfType<GraphFailed>().Should().ContainSingle().Which.FailedNodeId.Should().Be("work");
     }
 
+    // ---- EC-14 / EC-21 / EC-22: classified-error errorType propagation + retry ----
+
+    private sealed class ClassifiedError : Exception, IClassifiedAgentError
+    {
+        public string ErrorType { get; init; } = "Timeout";
+        public bool IsTransient { get; init; }
+    }
+
+    private sealed class ClassifiedCodeNode : IGraphCodeNode
+    {
+        private readonly Exception _ex;
+        public int Calls { get; private set; }
+        public ClassifiedCodeNode(Exception ex) => _ex = ex;
+        public ValueTask<IReadOnlyDictionary<string, JsonElement>> ExecuteAsync(
+            IReadOnlyDictionary<string, JsonElement> input, AgentContext context, CancellationToken cancellationToken)
+        {
+            Calls++;
+            throw _ex;
+        }
+    }
+
+    private static AgentGraphManifest ClassifiedGraph(GraphNodeRetryPolicy? retryPolicy = null) =>
+        new(Id: "classified", Version: "1.0", Entry: "work",
+            Nodes: new[]
+            {
+                new GraphNode("work", "Code", HandlerRef: new GraphHandlerRef("counting"), RetryPolicy: retryPolicy),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("work", "end") });
+
+    private static async Task<(List<AgentGraphEvent> Events, ClassifiedCodeNode Handler)> RunClassifiedAsync(
+        AgentGraphManifest manifest, ClassifiedCodeNode handler, string runId)
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var orchestrator = new InProcessGraphOrchestrator<IDictionary<string, JsonElement>>(
+            manifest, registry, lifecycle, new InMemoryCheckpointer(),
+            codeNodeResolver: _ => handler, runIdFactory: () => runId);
+
+        var events = new List<AgentGraphEvent>();
+        var act = async () =>
+        {
+            await foreach (var e in orchestrator.StreamAsync(new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        };
+        await act.Should().ThrowAsync<Exception>();
+        return (events, handler);
+    }
+
+    [Fact]
+    public async Task ClassifiedError_PropagatesErrorType_To_GraphFailed()
+    {
+        var handler = new ClassifiedCodeNode(new ClassifiedError { ErrorType = "Timeout", IsTransient = false });
+        var (events, h) = await RunClassifiedAsync(ClassifiedGraph(), handler, "run-classified");
+
+        var failed = events.OfType<GraphFailed>().Should().ContainSingle().Subject;
+        failed.ErrorType.Should().Be("Timeout", "the plugin's semantic errorType, not the .NET exception type name");
+        failed.FailedNodeId.Should().Be("work");
+        failed.RunId.Should().Be("run-classified");
+        h.Calls.Should().Be(1, "no retry policy → single attempt");
+    }
+
+    [Fact]
+    public async Task TransientClassifiedError_WithRetryPolicy_RetriesThenGraphFailedTimeout()
+    {
+        var handler = new ClassifiedCodeNode(new ClassifiedError { ErrorType = "Timeout", IsTransient = true });
+        var (events, h) = await RunClassifiedAsync(
+            ClassifiedGraph(new GraphNodeRetryPolicy(3, 0.001, 1.0, 0.001)), handler, "run-classified-retry");
+
+        h.Calls.Should().Be(3, "a transient 504-equivalent retries up to the cap");
+        events.OfType<GraphFailed>().Should().ContainSingle().Which.ErrorType.Should().Be("Timeout");
+    }
+
+    [Fact]
+    public async Task NonTransientClassifiedError_WithRetryPolicy_NotRetried()
+    {
+        var handler = new ClassifiedCodeNode(new ClassifiedError { ErrorType = "InternalError", IsTransient = false });
+        var (events, h) = await RunClassifiedAsync(
+            ClassifiedGraph(new GraphNodeRetryPolicy(3, 0.001, 1.0, 0.001)), handler, "run-classified-internal");
+
+        h.Calls.Should().Be(1, "an internal error fails the node without retry, even with a policy");
+        events.OfType<GraphFailed>().Should().ContainSingle().Which.ErrorType.Should().Be("InternalError");
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();

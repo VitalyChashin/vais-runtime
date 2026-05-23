@@ -5,11 +5,21 @@ using System.Net;
 
 namespace Vais.Agents.Runtime.Plugins.Container;
 
-internal sealed class ContainerInvokeException : Exception
+internal sealed class ContainerInvokeException : Exception, IClassifiedAgentError
 {
     public HttpStatusCode StatusCode { get; }
     public string ErrorType { get; }
     public string? DiagnosticTail { get; }
+
+    /// <summary>
+    /// Transient (retryable) only for the gateway/tool/timeout statuses. 500 (InternalError) and 422
+    /// (OpaqueStateDeserializationError) are terminal — a plugin code bug or unusable state should fail
+    /// the node rather than loop under a retry policy.
+    /// </summary>
+    public bool IsTransient =>
+        StatusCode is HttpStatusCode.BadGateway          // 502 LlmGatewayError
+            or HttpStatusCode.ServiceUnavailable          // 503 ToolError
+            or HttpStatusCode.GatewayTimeout;             // 504 Timeout
 
     public ContainerInvokeException(
         HttpStatusCode statusCode,

@@ -97,24 +97,37 @@ internal static class PluginEndpointsExtensions
             request.Tools = sp.GetService<IToolGatewayClient>()
                 ?? new DefaultToolGatewayClient(CreateHttpClient(request.ToolGatewayUrl), request.Context, request.AgentId);
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
+
             try
             {
-                var response = await agent.InvokeAsync(request, ctx.RequestAborted).ConfigureAwait(false);
+                var response = await agent.InvokeAsync(request, timeoutCts.Token).ConfigureAwait(false);
                 return Results.Json(response, PluginJsonOptions.Default);
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ctx.RequestAborted.IsCancellationRequested)
+            {
+                return ErrorJson(504, "Timeout", $"Invocation exceeded its {request.TimeoutSeconds}s timeout.", null);
             }
             catch (OpaqueStateDeserializationException ex)
             {
-                return Results.Json(
-                    new { errorType = "OpaqueStateDeserializationError", errorMessage = ex.Message, diagnosticTail = (string?)null },
-                    statusCode: 422);
+                return ErrorJson(422, "OpaqueStateDeserializationError", ex.Message, null);
+            }
+            catch (LlmGatewayException ex)
+            {
+                return ErrorJson(502, "LlmGatewayError", ex.Message, ex);
+            }
+            catch (ToolException ex)
+            {
+                return ErrorJson(503, "ToolError", ex.Message, ex);
+            }
+            catch (PluginTimeoutException ex)
+            {
+                return ErrorJson(504, "Timeout", ex.Message, ex);
             }
             catch (Exception ex)
             {
-                var diag = ex.ToString();
-                if (diag.Length > 500) diag = diag[..500];
-                return Results.Json(
-                    new { errorType = "InternalError", errorMessage = ex.Message, diagnosticTail = diag },
-                    statusCode: 500);
+                return ErrorJson(500, "InternalError", ex.Message, ex);
             }
         });
 
@@ -136,8 +149,18 @@ internal static class PluginEndpointsExtensions
             ctx.Response.ContentType = "text/event-stream";
             ctx.Response.Headers.CacheControl = "no-cache";
 
-            var enumerator = agent.StreamAsync(request, ctx.RequestAborted).GetAsyncEnumerator(ctx.RequestAborted);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
+
+            var enumerator = agent.StreamAsync(request, timeoutCts.Token).GetAsyncEnumerator(timeoutCts.Token);
             await using var _ = enumerator;
+
+            async Task WriteErrorTerminus(string errorType, string message)
+            {
+                await ctx.Response.WriteAsync(SseWriter.EncodeError(errorType, message), ctx.RequestAborted).ConfigureAwait(false);
+                await ctx.Response.WriteAsync(SseWriter.EncodeEvent(new SseEvent("done", new InvokeResponse())), ctx.RequestAborted).ConfigureAwait(false);
+                await ctx.Response.Body.FlushAsync(ctx.RequestAborted).ConfigureAwait(false);
+            }
 
             try
             {
@@ -169,19 +192,29 @@ internal static class PluginEndpointsExtensions
                     await WriteEvent(ctx, enumerator.Current).ConfigureAwait(false);
                 }
             }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ctx.RequestAborted.IsCancellationRequested)
+            {
+                await WriteErrorTerminus("Timeout", $"Invocation exceeded its {request.TimeoutSeconds}s timeout.").ConfigureAwait(false);
+            }
             catch (OpaqueStateDeserializationException ex)
             {
-                await ctx.Response.WriteAsync(SseWriter.EncodeError("OpaqueStateDeserializationError", ex.Message), ctx.RequestAborted).ConfigureAwait(false);
-                await ctx.Response.WriteAsync(SseWriter.EncodeEvent(new SseEvent("done", new InvokeResponse())), ctx.RequestAborted).ConfigureAwait(false);
-                await ctx.Response.Body.FlushAsync(ctx.RequestAborted).ConfigureAwait(false);
+                await WriteErrorTerminus("OpaqueStateDeserializationError", ex.Message).ConfigureAwait(false);
+            }
+            catch (LlmGatewayException ex)
+            {
+                await WriteErrorTerminus("LlmGatewayError", ex.Message).ConfigureAwait(false);
+            }
+            catch (ToolException ex)
+            {
+                await WriteErrorTerminus("ToolError", ex.Message).ConfigureAwait(false);
+            }
+            catch (PluginTimeoutException ex)
+            {
+                await WriteErrorTerminus("Timeout", ex.Message).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                var diag = ex.ToString();
-                if (diag.Length > 500) diag = diag[..500];
-                await ctx.Response.WriteAsync(SseWriter.EncodeError("InternalError", ex.Message), ctx.RequestAborted).ConfigureAwait(false);
-                await ctx.Response.WriteAsync(SseWriter.EncodeEvent(new SseEvent("done", new InvokeResponse())), ctx.RequestAborted).ConfigureAwait(false);
-                await ctx.Response.Body.FlushAsync(ctx.RequestAborted).ConfigureAwait(false);
+                await WriteErrorTerminus("InternalError", ex.Message).ConfigureAwait(false);
             }
         });
     }
@@ -190,6 +223,19 @@ internal static class PluginEndpointsExtensions
     {
         await ctx.Response.WriteAsync(SseWriter.EncodeEvent(evt), ctx.RequestAborted).ConfigureAwait(false);
         await ctx.Response.Body.FlushAsync(ctx.RequestAborted).ConfigureAwait(false);
+    }
+
+    private static IResult ErrorJson(int statusCode, string errorType, string message, Exception? ex)
+    {
+        string? diag = null;
+        if (ex is not null)
+        {
+            diag = ex.ToString();
+            if (diag.Length > 500) diag = diag[..500];
+        }
+        return Results.Json(
+            new { errorType, errorMessage = message, diagnosticTail = diag },
+            statusCode: statusCode);
     }
 
     private static HttpClient CreateHttpClient(string baseUrl)

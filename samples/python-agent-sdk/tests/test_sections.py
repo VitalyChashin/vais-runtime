@@ -13,9 +13,9 @@ from typing import Any
 import httpx
 import pytest
 
+from vais_agent_sdk import LlmGatewayError
 from vais_agent_sdk.sections import (
     RequestSections,
-    Section,
     SectionPayload,
     build_sections,
     complete_from_sections,
@@ -306,7 +306,8 @@ async def test_complete_from_sections_omits_options_when_no_overrides_provided()
 
 async def test_complete_from_sections_propagates_400_input_conflict():
     """Runtime returns 400 with `urn:vais-agents:llm-complete-input-conflict` if a future
-    bug ever ships both `messages` and `sections`. Helper must surface the error."""
+    bug ever ships both `messages` and `sections`. The LLM call surfaces it as LlmGatewayError,
+    carrying the status code and response body in the message."""
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(400, json={
             "title": "Exactly one of 'messages' or 'sections' must be present.",
@@ -315,14 +316,14 @@ async def test_complete_from_sections_propagates_400_input_conflict():
 
     client = _make_client(handler)
     try:
-        with pytest.raises(httpx.HTTPStatusError) as exc:
+        with pytest.raises(LlmGatewayError) as exc:
             await complete_from_sections(
                 gateway_base_url="http://gateway.local",
                 call_token="t", run_id="r", agent_id="a",
                 sections=[],
                 client=client,
             )
-        assert exc.value.response.status_code == 400
-        assert exc.value.response.json()["urn"] == "urn:vais-agents:llm-complete-input-conflict"
+        assert "400" in str(exc.value)
+        assert "urn:vais-agents:llm-complete-input-conflict" in str(exc.value)
     finally:
         await client.aclose()

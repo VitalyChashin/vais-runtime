@@ -5,6 +5,8 @@ from typing import Any
 
 import httpx
 
+from vais_agent_sdk._errors import ToolError
+
 
 def ChatOpenAI(
     *,
@@ -85,7 +87,10 @@ class _GatewayLangChainTool:
                         json=payload,
                         timeout=60.0,
                     )
-                    resp.raise_for_status()
+                    if resp.status_code >= 400:
+                        raise ToolError(
+                            f"Tool gateway tools/invoke returned HTTP {resp.status_code}: {resp.text[:500]}"
+                        )
                     return resp.json().get("content", "")
 
         return _Impl()
@@ -113,7 +118,8 @@ async def gateway_get_tools(
             headers=headers,
             timeout=30.0,
         )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            raise ToolError(f"Tool gateway tools/list returned HTTP {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
 
     return [

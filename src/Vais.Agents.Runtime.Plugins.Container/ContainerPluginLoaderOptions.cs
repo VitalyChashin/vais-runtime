@@ -15,8 +15,9 @@ public sealed class ContainerPluginLoaderOptions
     /// <summary>Minimum supported container API version (inclusive).</summary>
     public string SupportedApiVersionMin { get; set; } = "0.24";
 
-    /// <summary>Maximum supported container API version (inclusive).</summary>
-    public string SupportedApiVersionMax { get; set; } = "0.24";
+    /// <summary>Maximum supported container API version (inclusive). 0.25 adds the 502/503/504 error
+    /// codes additively over 0.24; 0.24 plugins remain accepted.</summary>
+    public string SupportedApiVersionMax { get; set; } = "0.25";
 
     /// <summary>Operator-configured upper bounds for per-plugin resource requests.</summary>
     public ContainerPluginResourceBounds ResourceBounds { get; set; } = new();
