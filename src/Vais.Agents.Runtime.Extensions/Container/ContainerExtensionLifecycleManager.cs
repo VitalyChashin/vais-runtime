@@ -33,6 +33,7 @@ internal sealed class ContainerExtensionLifecycleManager
             [ExtensionSeams.LlmGatewayMiddleware] = proxy => new LlmGatewayHandlerProxy(proxy),
             [ExtensionSeams.ErrorInterceptor]     = proxy => new ErrorInterceptorHandlerProxy(proxy),
             [ExtensionSeams.GraphNode]            = proxy => new GraphNodeHandlerProxy(proxy),
+            [ExtensionSeams.SessionLifecycle]     = proxy => new SessionLifecycleHandlerProxy(proxy),
         };
 
     private readonly ExtensionHandlerRegistry _registry;
