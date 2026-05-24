@@ -1,0 +1,37 @@
+{
+  // Deployment-local overlay for the Vais base ontology.
+  // This file is the EXAMPLE/TEMPLATE — copy it to your deployment config and
+  // supply the path via OntologyOptions.OverlayPath (or equivalent).
+  // Content (org risk tags, author policies) is intentionally NOT in agentic/.
+  "kinds": {
+    "ContainerPlugin": {
+      "tags": ["risk:RunsCode"],
+      "description": "Runs an arbitrary OCI container as a plugin. Carries code-execution risk."
+    },
+    "Extension": {
+      "tags": ["risk:RunsCode"],
+      "manualConcept": "Agent-hosted extension handler. Runs code within the agent process on a declared extension seam (agentInput, toolGateway, graphNode, …). No spec schema — defined by the handler-protocol contract at contracts/extensions/handler-protocol.md.",
+      "description": "In-process agent extension handler."
+    }
+  },
+  "recipes": [
+    {
+      "name": "gateway-before-agent",
+      "description": "Always apply gateways before the agents that reference them. Agents resolve gateway refs at grain activation; applying an agent before its gateway results in a dangling ref error.",
+      "steps": [
+        { "kind": "LlmGatewayConfig",  "action": "apply",    "note": "LLM gateway must exist before any agent that sets spec.llmGatewayRef" },
+        { "kind": "McpGatewayConfig",  "action": "apply",    "note": "Tool gateway must exist before any agent that sets spec.mcpGatewayRef" },
+        { "kind": "McpServer",         "action": "apply",    "note": "MCP servers must be registered before agents that list them in spec.mcpServers" },
+        { "kind": "Agent",             "action": "apply" }
+      ]
+    },
+    {
+      "name": "graph-after-agents",
+      "description": "Apply agent nodes before the graph that references them as AgentGraph nodes.",
+      "steps": [
+        { "kind": "Agent",             "action": "apply" },
+        { "kind": "AgentGraph",        "action": "apply" }
+      ]
+    }
+  ]
+}

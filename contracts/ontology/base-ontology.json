@@ -1,5 +1,5 @@
 {
-  "ontologyVersion": "0.0.1-alpha\u002B0c1048f61fc563d120f256cb453ad6f7e32349db",
+  "ontologyVersion": "0.0.1-alpha",
   "apiVersion": "vais.agents/v1",
   "kinds": {
     "Agent": {

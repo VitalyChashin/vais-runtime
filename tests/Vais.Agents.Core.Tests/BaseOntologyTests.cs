@@ -32,9 +32,12 @@ public sealed class BaseOntologyTests
     public void Ontology_IsCheckedIn_AndUpToDate()
     {
         var descriptions = XmlDocSummaries.ForAbstractions();
-        var version = typeof(AgentManifest).Assembly
+        var rawVersion = typeof(AgentManifest).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? "unknown";
+        // Strip the SourceLink "+<commit-hash>" suffix so the version is stable across commits.
+        var plusIdx = rawVersion.IndexOf('+');
+        var version = plusIdx >= 0 ? rawVersion[..plusIdx] : rawVersion;
         var kinds = KindList();
         var generated = ManifestJsonSchemaGenerator.GenerateBaseOntology(kinds, descriptions, version);
         var path = OntologyPath();
