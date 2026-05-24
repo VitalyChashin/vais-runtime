@@ -557,6 +557,13 @@ internal static class CompositionRoot
                 {
                     o.Audience = options.JwtAudience;
                 }
+                else
+                {
+                    // No audience configured ⇒ don't validate it (matches RuntimeOptions.JwtAudience docs).
+                    // Without this, JwtBearer's default ValidateAudience=true rejects every token for lack
+                    // of a configured audience.
+                    o.TokenValidationParameters.ValidateAudience = false;
+                }
             });
 
             if (options.UseSaPrincipalMapper)

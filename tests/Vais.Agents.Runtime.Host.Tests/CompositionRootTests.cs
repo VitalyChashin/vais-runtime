@@ -827,6 +827,34 @@ public class CompositionRootTests
     }
 
     [Fact]
+    public void Governance_Jwt_AudienceValidation_Disabled_When_No_Audience()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "https://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.TokenValidationParameters.ValidateAudience.Should().BeFalse(
+            because: "no VAIS_JWT_AUDIENCE ⇒ audience validation is off, else JwtBearer rejects every token.");
+    }
+
+    [Fact]
+    public void Governance_Jwt_AudienceValidation_On_When_Audience_Set()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions
+        {
+            JwtAuthority = "https://issuer.example/",
+            JwtAudience = "vais-control-plane",
+        });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.Audience.Should().Be("vais-control-plane");
+        opts.TokenValidationParameters.ValidateAudience.Should().BeTrue();
+    }
+
+    [Fact]
     public void Governance_AuthorRolesPolicy_Wired_When_Overlay_Has_Roles()
     {
         var overlayPath = Path.Combine(Path.GetTempPath(), $"vais-overlay-{Guid.NewGuid():N}.json");
