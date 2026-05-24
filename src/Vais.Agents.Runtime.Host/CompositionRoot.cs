@@ -570,6 +570,20 @@ internal static class CompositionRoot
             {
                 services.Replace(ServiceDescriptor.Singleton<IPrincipalMapper, ServiceAccountPrincipalMapper>());
             }
+
+            // Co-hosting fix: AddOrleansAgentRuntime registered OrleansAgentContextAccessor as the
+            // IAgentContextAccessor (silo-side, Orleans RequestContext) and won the slot via first
+            // TryAdd, so AddAgentControlPlaneJwtAuth's AsyncLocalAgentContextAccessor mapping became a
+            // no-op. Control-plane ingress (lifecycle managers, endpoint gate, approval + MCP mutation
+            // handlers) reads the principal the HTTP/MCP middleware pushed onto AsyncLocalAgentContextAccessor;
+            // resolving the Orleans accessor on the ingress thread yields an empty RequestContext, so
+            // authenticated applies would synthesize an anonymous principal and RBAC would deny them.
+            // The composite prefers the ingress principal when present and falls back to the Orleans
+            // accessor on silo grain turns (where the AsyncLocal slot is empty).
+            services.Replace(ServiceDescriptor.Singleton<IAgentContextAccessor>(sp =>
+                new IngressFirstAgentContextAccessor(
+                    sp.GetRequiredService<AsyncLocalAgentContextAccessor>(),
+                    new OrleansAgentContextAccessor())));
         }
 
         // OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.
