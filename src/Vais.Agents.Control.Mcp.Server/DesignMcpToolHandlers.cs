@@ -112,12 +112,83 @@ internal static class DesignMcpToolHandlers
         },
     ];
 
-    // ── List-tools (ND-5) ─────────────────────────────────────────────────────
+    // ── Mutating tool declarations (NB-9, NB-10) ──────────────────────────────
+
+    internal static readonly IReadOnlyList<Tool> MutatingTools =
+    [
+        new Tool
+        {
+            Name = "vais.apply",
+            Title = "Apply manifest",
+            Description = "Create or update a resource from a manifest envelope (Agent, AgentGraph, McpServer, McpGatewayConfig, LlmGatewayConfig, ContainerPlugin). Validates first; on success returns { ok:true, kind, name, version, action }. A high-risk kind (ContainerPlugin) may return { ok:false, status:'pending-approval', requestId } — re-apply after an operator approves. Denied callers get { ok:false, denied:true, reason }.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "manifest": { "type": "string", "description": "Full manifest content as a JSON v0.6 envelope with apiVersion/kind/metadata/spec." }
+                  },
+                  "required": ["manifest"]
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.delete",
+            Title = "Delete resource",
+            Description = "Delete a registered resource by kind + name (+ optional version). Returns { ok:true, action:'deleted' } or { ok:false, error }. Authorization is enforced; an unauthorized caller gets { ok:false, denied:true }.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind":    { "type": "string", "description": "Resource kind." },
+                    "name":    { "type": "string", "description": "Resource name (manifest metadata.id)." },
+                    "version": { "type": "string", "description": "Optional version. Omit for the latest." }
+                  },
+                  "required": ["kind", "name"]
+                }
+                """),
+        },
+    ];
+
+    // ── List-tools (ND-5 + NB-12 scope filter) ────────────────────────────────
 
     internal static ValueTask<ListToolsResult> HandleListToolsAsync(
         RequestContext<ListToolsRequestParams> ctx,
         CancellationToken ct)
-        => new(new ListToolsResult { Tools = [.. DesignTools] });
+        => ListToolsAsync(ctx.Services!, ct);
+
+    /// <summary>Testable overload — returns read verbs, plus mutating verbs when the caller can author something.</summary>
+    internal static async ValueTask<ListToolsResult> ListToolsAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var tools = new List<Tool>(DesignTools);
+        if (await CanMutateAnythingAsync(sp, ct).ConfigureAwait(false))
+            tools.AddRange(MutatingTools);
+        return new ListToolsResult { Tools = tools };
+    }
+
+    private static readonly PolicyOperation[] MutationProbes =
+    [
+        PolicyOperation.Create, PolicyOperation.GraphCreate, PolicyOperation.McpServerCreate,
+        PolicyOperation.McpGatewayConfigCreate, PolicyOperation.LlmGatewayConfigCreate, PolicyOperation.ContainerPluginCreate,
+    ];
+
+    private static async ValueTask<bool> CanMutateAnythingAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var policy = sp.GetService<IAgentPolicyEngine>() ?? NullAgentPolicyEngine.Instance;
+        var principal = BuildPrincipal(sp);
+        foreach (var op in MutationProbes)
+        {
+            var decision = await policy.EvaluateAsync(op, manifest: null, principal, ct).ConfigureAwait(false);
+            if (decision.IsAllowed) return true;
+        }
+        return false;
+    }
+
+    private static AgentPrincipal? BuildPrincipal(IServiceProvider sp)
+    {
+        var ctx = sp.GetService<IAgentContextAccessor>()?.Current ?? AgentContext.Empty;
+        return ctx.UserId is { Length: > 0 } userId ? new AgentPrincipal(userId, ctx.TenantId, ctx.Scopes) : null;
+    }
 
     // ── Call-tool dispatcher (ND-6, ND-7) ────────────────────────────────────
 
@@ -142,6 +213,8 @@ internal static class DesignMcpToolHandlers
                 "vais.describe" => HandleDescribe(args, sp),
                 "vais.diff"     => await HandleDiffAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.validate" => await HandleValidateAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.apply"    => await HandleApplyAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.delete"   => await HandleDeleteAsync(args, sp, ct).ConfigureAwait(false),
                 _               => TextError($"Unknown design tool '{name}'."),
             };
         }
@@ -297,6 +370,90 @@ internal static class DesignMcpToolHandlers
         };
         return TextSuccess(result.ToJsonString());
     }
+
+    // ── vais.apply — NB-9 ─────────────────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleApplyAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var manifest = GetString(args, "manifest");
+        if (string.IsNullOrWhiteSpace(manifest))
+            return TextError("Missing required argument 'manifest'.");
+
+        // Pre-apply: schema + cross-ref validation so the agent gets suggestions before the seam.
+        var (ok, errors, suggestions) = await ManifestValidator.ValidateAsync(manifest, sp, ct).ConfigureAwait(false);
+        if (!ok)
+        {
+            var bad = new JsonObject
+            {
+                ["ok"] = false,
+                ["errors"] = StrArray(errors),
+                ["suggestions"] = StrArray(suggestions),
+            };
+            return TextSuccess(bad.ToJsonString());
+        }
+
+        try
+        {
+            var result = await DesignMutationRouter.ApplyAsync(manifest, sp, ct).ConfigureAwait(false);
+            return TextSuccess(result.ToJsonString());
+        }
+        catch (ApprovalRequiredException are)
+        {
+            return TextSuccess(new JsonObject
+            {
+                ["ok"] = false,
+                ["status"] = "pending-approval",
+                ["requestId"] = are.RequestId,
+                ["kind"] = are.Kind,
+                ["name"] = are.Name,
+            }.ToJsonString());
+        }
+        catch (AgentPolicyDeniedException pd)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = pd.Message }.ToJsonString());
+        }
+    }
+
+    // ── vais.delete — NB-10 ───────────────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleDeleteAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var kind = GetString(args, "kind");
+        var name = GetString(args, "name");
+        var version = GetString(args, "version");
+        if (string.IsNullOrWhiteSpace(kind)) return TextError("Missing required argument 'kind'.");
+        if (string.IsNullOrWhiteSpace(name)) return TextError("Missing required argument 'name'.");
+
+        try
+        {
+            var result = await DesignMutationRouter.DeleteAsync(kind, name, version, sp, ct).ConfigureAwait(false);
+            return TextSuccess(result.ToJsonString());
+        }
+        catch (ApprovalRequiredException are)
+        {
+            return TextSuccess(new JsonObject
+            {
+                ["ok"] = false,
+                ["status"] = "pending-approval",
+                ["requestId"] = are.RequestId,
+                ["kind"] = are.Kind,
+                ["name"] = are.Name,
+            }.ToJsonString());
+        }
+        catch (AgentPolicyDeniedException pd)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = pd.Message }.ToJsonString());
+        }
+    }
+
+    private static JsonArray StrArray(IEnumerable<string> items)
+        => new(items.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray());
 
     // ── Resource handlers (ND-8) ──────────────────────────────────────────────
 
