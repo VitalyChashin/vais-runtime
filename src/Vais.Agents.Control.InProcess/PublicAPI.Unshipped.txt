@@ -36,3 +36,8 @@ Vais.Agents.Control.InProcess.JsonlAuditLog.JsonlAuditLog(System.IO.TextWriter! 
 Vais.Agents.Control.InProcess.JsonlAuditLog.JsonlAuditLog(string! filePath) -> void
 Vais.Agents.Control.InProcess.JsonlAuditLog.AppendAsync(Vais.Agents.Control.AuditLogEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.Control.InProcess.JsonlAuditLog.Dispose() -> void
+Vais.Agents.Control.InProcess.AuthorRolesPolicyEngine
+Vais.Agents.Control.InProcess.AuthorRolesPolicyEngine.AuthorRolesPolicyEngine(Vais.Agents.Control.AuthorRolesPolicy! policy) -> void
+Vais.Agents.Control.InProcess.AuthorRolesPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
+Vais.Agents.Control.InProcess.AuthorRolesPolicyServiceCollectionExtensions
+static Vais.Agents.Control.InProcess.AuthorRolesPolicyServiceCollectionExtensions.AddAuthorRolesPolicy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Control.AuthorRolesPolicy! policy) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

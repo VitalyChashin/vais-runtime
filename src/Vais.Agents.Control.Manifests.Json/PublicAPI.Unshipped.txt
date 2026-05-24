@@ -116,6 +116,8 @@ Vais.Agents.Control.Manifests.OntologyOverlay.Kinds.get -> System.Collections.Ge
 Vais.Agents.Control.Manifests.OntologyOverlay.Kinds.init -> void
 Vais.Agents.Control.Manifests.OntologyOverlay.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>?
 Vais.Agents.Control.Manifests.OntologyOverlay.Recipes.init -> void
+Vais.Agents.Control.Manifests.OntologyOverlay.AuthorRoles.get -> Vais.Agents.Control.AuthorRolesPolicy?
+Vais.Agents.Control.Manifests.OntologyOverlay.AuthorRoles.init -> void
 Vais.Agents.Control.Manifests.OntologyOverlay.<Clone>$() -> Vais.Agents.Control.Manifests.OntologyOverlay!
 Vais.Agents.Control.Manifests.OntologyOverlay.Equals(Vais.Agents.Control.Manifests.OntologyOverlay? other) -> bool
 override Vais.Agents.Control.Manifests.OntologyOverlay.Equals(object? obj) -> bool

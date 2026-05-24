@@ -14,6 +14,34 @@
       "description": "In-process agent extension handler."
     }
   },
+  // RBAC (Plan B): each key is a JWT scope string the caller's bearer token carries;
+  // the value lists per-kind authoring permissions. Action tokens: "write"
+  // (create/update/upsert), "delete", or "*" (all). When the runtime is wired with an
+  // overlay that has authorRoles, mutating verbs are denied unless a scope grants them.
+  // High-risk kinds (ContainerPlugin, Extension — risk:RunsCode) additionally require
+  // approval in Plan B Phase 3. The "vais.approver" scope is the approval grantor.
+  "authorRoles": {
+    "roles": {
+      "vais.author": {
+        "permissions": {
+          "Agent": ["*"],
+          "AgentGraph": ["*"],
+          "McpServer": ["*"],
+          "LlmGatewayConfig": ["*"],
+          "McpGatewayConfig": ["*"],
+          "EvalSuite": ["*"]
+        }
+      },
+      "vais.plugin-admin": {
+        "permissions": {
+          "ContainerPlugin": ["*"],
+          "Extension": ["*"]
+        }
+      },
+      "vais.readonly": { "permissions": {} },
+      "vais.approver": { "permissions": {} }
+    }
+  },
   "recipes": [
     {
       "name": "gateway-before-agent",

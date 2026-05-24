@@ -52,6 +52,34 @@ public sealed class OntologyOverlayTests
         => OntologyOverlayLoader.LoadFromFile("no-such-file.json").Should().BeSameAs(OntologyOverlay.Empty);
 
     [Fact]
+    public void LoadFromJson_Parses_AuthorRoles()
+    {
+        // NB-4: the overlay carries the deployment-local RBAC map (scope -> per-kind permissions).
+        const string json = """
+            {
+              "authorRoles": {
+                "roles": {
+                  "vais.author":   { "permissions": { "Agent": ["*"], "EvalSuite": ["write", "delete"] } },
+                  "vais.readonly": { "permissions": {} }
+                }
+              }
+            }
+            """;
+
+        var overlay = OntologyOverlayLoader.LoadFromJson(json);
+
+        overlay.AuthorRoles.Should().NotBeNull();
+        overlay.AuthorRoles!.Roles.Should().ContainKeys("vais.author", "vais.readonly");
+        overlay.AuthorRoles.Roles!["vais.author"].Permissions!["Agent"].Should().Contain("*");
+        overlay.AuthorRoles.Roles!["vais.author"].Permissions!["EvalSuite"].Should().BeEquivalentTo("write", "delete");
+        overlay.AuthorRoles.Roles!["vais.readonly"].Permissions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LoadFromJson_Without_AuthorRoles_LeavesThemNull()
+        => OntologyOverlayLoader.LoadFromJson(MinimalOverlayJson).AuthorRoles.Should().BeNull();
+
+    [Fact]
     public void LoadFromFile_NullPath_ReturnsEmpty()
         => OntologyOverlayLoader.LoadFromFile(null).Should().BeSameAs(OntologyOverlay.Empty);
 
