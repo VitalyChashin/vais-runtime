@@ -23,6 +23,13 @@ public sealed record OntologyOverlay
     /// <summary>Authoring recipes — ordered sequences of kinds/actions that encode safe deployment patterns.</summary>
     public IReadOnlyList<RecipeEntry>? Recipes { get; init; }
 
+    /// <summary>
+    /// Deployment-local RBAC map (Plan B) keyed by JWT scope string. Consumed by the
+    /// control-plane RBAC policy engine to authorize mutating verbs — not surfaced by
+    /// <c>vais.describe</c>. Null = no roles (RBAC stays opt-in / allow-all).
+    /// </summary>
+    public AuthorRolesPolicy? AuthorRoles { get; init; }
+
     /// <summary>Returns a non-null overlay for <paramref name="kind"/>, or an empty one.</summary>
     public KindOverlay ForKind(string kind)
         => Kinds?.TryGetValue(kind, out var o) == true ? o : KindOverlay.Empty;

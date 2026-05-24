@@ -11,6 +11,7 @@ using Orleans.Configuration;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
+using Vais.Agents.Control.Manifests;
 using Vais.Agents.Control.Mcp;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
@@ -175,6 +176,7 @@ internal static class CompositionRoot
         ConfigureGatewayCatalog(services);
         ConfigureManifestPipeline(services);
         ConfigureLifecycleManagers(services, options, configuration);
+        ConfigureGovernance(services, options);
         ConfigureControlPlaneAndAuth(services, options);
         ConfigureObservabilityStores(services, options);
         ConfigureHostInfra(services, options);
@@ -484,6 +486,42 @@ internal static class CompositionRoot
     }
 
     /// <summary>
+    /// Plan B control-plane governance — all opt-in via runtime config; defaults preserve the
+    /// allow-all, no-audit, no-approval behaviour. Runs after the lifecycle managers (which add the
+    /// default <c>LoggerAuditLog</c>) and before <see cref="ConfigureControlPlaneAndAuth"/> /
+    /// <c>AddMcpDesignServer</c> (which <c>TryAdd</c>s the base-only ontology catalog), so the
+    /// overlay-backed catalog and RBAC engine win.
+    /// </summary>
+    private static void ConfigureGovernance(IServiceCollection services, RuntimeOptions options)
+    {
+        // Ontology overlay → merged catalog (RBAC roles + risk tags + describe overrides).
+        if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
+        {
+            var overlay = OntologyOverlayLoader.LoadFromFile(options.OntologyOverlayPath);
+            services.AddSingleton<IOntologyCatalog>(_ => OntologyCatalog.BuildFromEmbeddedBase(overlay));
+
+            // RBAC: overlay author-roles authorize mutating verbs per JWT scope (replaces allow-all).
+            if (overlay.AuthorRoles is { IsEmpty: false } roles)
+            {
+                services.AddAuthorRolesPolicy(roles);
+            }
+        }
+
+        // JSONL audit trail (replaces the default LoggerAuditLog).
+        if (!string.IsNullOrWhiteSpace(options.AuditLogPath))
+        {
+            services.Replace(ServiceDescriptor.Singleton<IAuditLog>(new JsonlAuditLog(options.AuditLogPath!)));
+        }
+
+        // Approval queue for high-risk mutations — Orleans grain-backed (durable, cluster-wide, P1).
+        if (options.ApprovalsEnabled)
+        {
+            services.AddSingleton<IApprovalStore>(sp => new OrleansApprovalStore(sp.GetRequiredService<IGrainFactory>()));
+            services.AddApprovalGate();
+        }
+    }
+
+    /// <summary>
     /// HTTP control plane (routes + idempotency middleware + OpenAPI), optional JWT auth +
     /// principal mapping, and the OpenAI-compatible gateway. The durable idempotency store and
     /// the ServiceAccount principal mapper are installed via <c>services.Replace</c> so they win
@@ -514,9 +552,17 @@ internal static class CompositionRoot
             services.AddAgentControlPlaneJwtAuth(o =>
             {
                 o.Authority = options.JwtAuthority;
+                o.RequireHttpsMetadata = options.JwtRequireHttpsMetadata;
                 if (!string.IsNullOrWhiteSpace(options.JwtAudience))
                 {
                     o.Audience = options.JwtAudience;
+                }
+                else
+                {
+                    // No audience configured ⇒ don't validate it (matches RuntimeOptions.JwtAudience docs).
+                    // Without this, JwtBearer's default ValidateAudience=true rejects every token for lack
+                    // of a configured audience.
+                    o.TokenValidationParameters.ValidateAudience = false;
                 }
             });
 
@@ -524,6 +570,20 @@ internal static class CompositionRoot
             {
                 services.Replace(ServiceDescriptor.Singleton<IPrincipalMapper, ServiceAccountPrincipalMapper>());
             }
+
+            // Co-hosting fix: AddOrleansAgentRuntime registered OrleansAgentContextAccessor as the
+            // IAgentContextAccessor (silo-side, Orleans RequestContext) and won the slot via first
+            // TryAdd, so AddAgentControlPlaneJwtAuth's AsyncLocalAgentContextAccessor mapping became a
+            // no-op. Control-plane ingress (lifecycle managers, endpoint gate, approval + MCP mutation
+            // handlers) reads the principal the HTTP/MCP middleware pushed onto AsyncLocalAgentContextAccessor;
+            // resolving the Orleans accessor on the ingress thread yields an empty RequestContext, so
+            // authenticated applies would synthesize an anonymous principal and RBAC would deny them.
+            // The composite prefers the ingress principal when present and falls back to the Orleans
+            // accessor on silo grain turns (where the AsyncLocal slot is empty).
+            services.Replace(ServiceDescriptor.Singleton<IAgentContextAccessor>(sp =>
+                new IngressFirstAgentContextAccessor(
+                    sp.GetRequiredService<AsyncLocalAgentContextAccessor>(),
+                    new OrleansAgentContextAccessor())));
         }
 
         // OpenAI-compatible gateway — exposes GET /v1/models and POST /v1/chat/completions.

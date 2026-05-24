@@ -26,6 +26,7 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="NSubstitute" />
   </ItemGroup>
 
 </Project>

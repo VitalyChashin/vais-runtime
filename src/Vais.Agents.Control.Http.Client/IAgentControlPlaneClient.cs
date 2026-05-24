@@ -527,4 +527,16 @@ public interface IAgentControlPlaneClient
     /// <summary>GET /v1/diagnostics/filter-status — per-interface outgoing grain call counters. Default: empty.</summary>
     Task<FilterStatusResponse> GetFilterStatusAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new FilterStatusResponse(Array.Empty<FilterCallEntry>(), 0));
+
+    /// <summary>GET /v1/approvals — list high-risk mutation approval requests (optional status filter). Default: empty.</summary>
+    Task<IReadOnlyList<ApprovalRequest>> ListApprovalsAsync(string? status = null, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ApprovalRequest>>(Array.Empty<ApprovalRequest>());
+
+    /// <summary>POST /v1/approvals/{id}/approve — approve a pending high-risk mutation. Returns null when not found.</summary>
+    Task<ApprovalRequest?> ApproveAsync(string requestId, CancellationToken cancellationToken = default)
+        => Task.FromResult((ApprovalRequest?)null);
+
+    /// <summary>POST /v1/approvals/{id}/reject — reject a pending high-risk mutation. Returns null when not found.</summary>
+    Task<ApprovalRequest?> RejectAsync(string requestId, CancellationToken cancellationToken = default)
+        => Task.FromResult((ApprovalRequest?)null);
 }

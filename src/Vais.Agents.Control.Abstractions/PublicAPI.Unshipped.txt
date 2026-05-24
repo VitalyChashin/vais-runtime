@@ -272,3 +272,72 @@ Vais.Agents.Control.PolicyOperation.ExtensionCreate = 33 -> Vais.Agents.Control.
 Vais.Agents.Control.PolicyOperation.ExtensionUpdate = 34 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.ExtensionQuery = 35 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.ExtensionEvict = 36 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.AuthorRolesPolicy
+Vais.Agents.Control.AuthorRolesPolicy.AuthorRolesPolicy() -> void
+Vais.Agents.Control.AuthorRolesPolicy.Roles.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.AuthorRole!>?
+Vais.Agents.Control.AuthorRolesPolicy.Roles.init -> void
+Vais.Agents.Control.AuthorRolesPolicy.IsEmpty.get -> bool
+Vais.Agents.Control.AuthorRolesPolicy.Equals(Vais.Agents.Control.AuthorRolesPolicy? other) -> bool
+Vais.Agents.Control.AuthorRolesPolicy.<Clone>$() -> Vais.Agents.Control.AuthorRolesPolicy!
+static readonly Vais.Agents.Control.AuthorRolesPolicy.Empty -> Vais.Agents.Control.AuthorRolesPolicy!
+override Vais.Agents.Control.AuthorRolesPolicy.ToString() -> string!
+override Vais.Agents.Control.AuthorRolesPolicy.GetHashCode() -> int
+override Vais.Agents.Control.AuthorRolesPolicy.Equals(object? obj) -> bool
+static Vais.Agents.Control.AuthorRolesPolicy.operator !=(Vais.Agents.Control.AuthorRolesPolicy? left, Vais.Agents.Control.AuthorRolesPolicy? right) -> bool
+static Vais.Agents.Control.AuthorRolesPolicy.operator ==(Vais.Agents.Control.AuthorRolesPolicy? left, Vais.Agents.Control.AuthorRolesPolicy? right) -> bool
+Vais.Agents.Control.AuthorRole
+Vais.Agents.Control.AuthorRole.AuthorRole() -> void
+Vais.Agents.Control.AuthorRole.Permissions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<string!>!>?
+Vais.Agents.Control.AuthorRole.Permissions.init -> void
+Vais.Agents.Control.AuthorRole.Equals(Vais.Agents.Control.AuthorRole? other) -> bool
+Vais.Agents.Control.AuthorRole.<Clone>$() -> Vais.Agents.Control.AuthorRole!
+override Vais.Agents.Control.AuthorRole.ToString() -> string!
+override Vais.Agents.Control.AuthorRole.GetHashCode() -> int
+override Vais.Agents.Control.AuthorRole.Equals(object? obj) -> bool
+static Vais.Agents.Control.AuthorRole.operator !=(Vais.Agents.Control.AuthorRole? left, Vais.Agents.Control.AuthorRole? right) -> bool
+static Vais.Agents.Control.AuthorRole.operator ==(Vais.Agents.Control.AuthorRole? left, Vais.Agents.Control.AuthorRole? right) -> bool
+Vais.Agents.Control.ApprovalStatus
+Vais.Agents.Control.ApprovalStatus.Pending = 0 -> Vais.Agents.Control.ApprovalStatus
+Vais.Agents.Control.ApprovalStatus.Approved = 1 -> Vais.Agents.Control.ApprovalStatus
+Vais.Agents.Control.ApprovalStatus.Rejected = 2 -> Vais.Agents.Control.ApprovalStatus
+Vais.Agents.Control.ApprovalRequest
+Vais.Agents.Control.ApprovalRequest.ApprovalRequest(string! RequestId, string! Kind, string! Name, string! ManifestHash, string! RequestedBy, System.DateTimeOffset RequestedAt, Vais.Agents.Control.ApprovalStatus Status, string? DecidedBy, System.DateTimeOffset? DecidedAt) -> void
+Vais.Agents.Control.ApprovalRequest.RequestId.get -> string!
+Vais.Agents.Control.ApprovalRequest.RequestId.init -> void
+Vais.Agents.Control.ApprovalRequest.Kind.get -> string!
+Vais.Agents.Control.ApprovalRequest.Kind.init -> void
+Vais.Agents.Control.ApprovalRequest.Name.get -> string!
+Vais.Agents.Control.ApprovalRequest.Name.init -> void
+Vais.Agents.Control.ApprovalRequest.ManifestHash.get -> string!
+Vais.Agents.Control.ApprovalRequest.ManifestHash.init -> void
+Vais.Agents.Control.ApprovalRequest.RequestedBy.get -> string!
+Vais.Agents.Control.ApprovalRequest.RequestedBy.init -> void
+Vais.Agents.Control.ApprovalRequest.RequestedAt.get -> System.DateTimeOffset
+Vais.Agents.Control.ApprovalRequest.RequestedAt.init -> void
+Vais.Agents.Control.ApprovalRequest.Status.get -> Vais.Agents.Control.ApprovalStatus
+Vais.Agents.Control.ApprovalRequest.Status.init -> void
+Vais.Agents.Control.ApprovalRequest.DecidedBy.get -> string?
+Vais.Agents.Control.ApprovalRequest.DecidedBy.init -> void
+Vais.Agents.Control.ApprovalRequest.DecidedAt.get -> System.DateTimeOffset?
+Vais.Agents.Control.ApprovalRequest.DecidedAt.init -> void
+Vais.Agents.Control.ApprovalRequest.Deconstruct(out string! RequestId, out string! Kind, out string! Name, out string! ManifestHash, out string! RequestedBy, out System.DateTimeOffset RequestedAt, out Vais.Agents.Control.ApprovalStatus Status, out string? DecidedBy, out System.DateTimeOffset? DecidedAt) -> void
+Vais.Agents.Control.ApprovalRequest.Equals(Vais.Agents.Control.ApprovalRequest? other) -> bool
+Vais.Agents.Control.ApprovalRequest.<Clone>$() -> Vais.Agents.Control.ApprovalRequest!
+override Vais.Agents.Control.ApprovalRequest.Equals(object? obj) -> bool
+override Vais.Agents.Control.ApprovalRequest.GetHashCode() -> int
+override Vais.Agents.Control.ApprovalRequest.ToString() -> string!
+static Vais.Agents.Control.ApprovalRequest.operator !=(Vais.Agents.Control.ApprovalRequest? left, Vais.Agents.Control.ApprovalRequest? right) -> bool
+static Vais.Agents.Control.ApprovalRequest.operator ==(Vais.Agents.Control.ApprovalRequest? left, Vais.Agents.Control.ApprovalRequest? right) -> bool
+Vais.Agents.Control.IApprovalStore
+Vais.Agents.Control.IApprovalStore.FindApprovedAsync(string! kind, string! name, string! manifestHash, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.IApprovalStore.CreatePendingAsync(string! kind, string! name, string! manifestHash, string! requestedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest!>
+Vais.Agents.Control.IApprovalStore.GetAsync(string! requestId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.IApprovalStore.ListAsync(Vais.Agents.Control.ApprovalStatus? status = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ApprovalRequest!>!>
+Vais.Agents.Control.IApprovalStore.DecideAsync(string! requestId, bool approve, string! decidedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.IApprovalGate
+Vais.Agents.Control.IApprovalGate.EnsureApprovedAsync(string! kind, string! name, string! manifestCanonical, string! requestedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.ApprovalRequiredException
+Vais.Agents.Control.ApprovalRequiredException.ApprovalRequiredException(string! kind, string! name, string! requestId) -> void
+Vais.Agents.Control.ApprovalRequiredException.RequestId.get -> string!
+Vais.Agents.Control.ApprovalRequiredException.Kind.get -> string!
+Vais.Agents.Control.ApprovalRequiredException.Name.get -> string!

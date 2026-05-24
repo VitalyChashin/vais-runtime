@@ -20,7 +20,10 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
     private readonly IAgentPolicyEngine _policy;
     private readonly IAuditLog _audit;
     private readonly IAgentContextAccessor _contextAccessor;
+    private readonly IApprovalGate? _approvalGate;
     private readonly ILogger<ContainerPluginLifecycleManager> _logger;
+
+    private static readonly System.Text.Json.JsonSerializerOptions CanonicalJson = new() { WriteIndented = false };
 
     /// <summary>Construct a manager. Registry and host are required; all other dependencies are optional.</summary>
     public ContainerPluginLifecycleManager(
@@ -29,7 +32,8 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
         IAgentPolicyEngine? policy = null,
         IAuditLog? audit = null,
         IAgentContextAccessor? contextAccessor = null,
-        ILogger<ContainerPluginLifecycleManager>? logger = null)
+        ILogger<ContainerPluginLifecycleManager>? logger = null,
+        IApprovalGate? approvalGate = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(host);
@@ -38,6 +42,7 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
         _policy = policy ?? NullAgentPolicyEngine.Instance;
         _audit = audit ?? NullAuditLog.Instance;
         _contextAccessor = contextAccessor ?? new AsyncLocalAgentContextAccessorFallback();
+        _approvalGate = approvalGate;
         _logger = logger ?? NullLogger<ContainerPluginLifecycleManager>.Instance;
     }
 
@@ -48,6 +53,11 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
         ArgumentNullException.ThrowIfNull(manifest);
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.ContainerPluginCreate, manifest.Id, manifest.Version, principal, ct).ConfigureAwait(false);
+
+        // High-risk gate: holds the apply (throws ApprovalRequiredException) until an operator
+        // approves the exact manifest. Runs before any mutation so a held apply changes nothing.
+        if (_approvalGate is not null)
+            await _approvalGate.EnsureApprovedAsync("ContainerPlugin", manifest.Id, Canonical(manifest), principal?.Id ?? "anonymous", ct).ConfigureAwait(false);
 
         string? errorType = null;
         try
@@ -89,6 +99,9 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
         ArgumentNullException.ThrowIfNull(newManifest);
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.ContainerPluginUpdate, handle.Id, handle.Version, principal, ct).ConfigureAwait(false);
+
+        if (_approvalGate is not null)
+            await _approvalGate.EnsureApprovedAsync("ContainerPlugin", newManifest.Id, Canonical(newManifest), principal?.Id ?? "anonymous", ct).ConfigureAwait(false);
 
         string? errorType = null;
         try
@@ -224,11 +237,16 @@ public sealed class ContainerPluginLifecycleManager : IContainerPluginLifecycleM
         }
     }
 
+    // Stable canonical form for approval hashing — System.Text.Json is deterministic per type,
+    // so deserialize→serialize of the same manifest yields the same hash on re-apply.
+    private static string Canonical(ContainerPluginManifest manifest)
+        => System.Text.Json.JsonSerializer.Serialize(manifest, CanonicalJson);
+
     private AgentPrincipal? SynthesizePrincipal()
     {
         var ctx = _contextAccessor.Current;
         if (ctx.UserId is { Length: > 0 } userId)
-            return new AgentPrincipal(userId, ctx.TenantId, Scopes: null);
+            return new AgentPrincipal(userId, ctx.TenantId, ctx.Scopes);
         return null;
     }
 

@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;
 using Xunit;
 
@@ -67,5 +68,51 @@ public sealed class CompositionRootDiResolutionTests
         missing.Should().BeEmpty(
             because: "CompositionRoot must register every service that AddInMemoryAgentRuntime provides; " +
                      "add the missing registration(s) to CompositionRoot.ConfigureServices");
+    }
+
+    // Co-hosting regression: AddOrleansAgentRuntime registers OrleansAgentContextAccessor (silo-side,
+    // reads Orleans RequestContext) as IAgentContextAccessor and wins the slot via first TryAdd. With
+    // JWT on, the control plane pushes the authenticated principal onto AsyncLocalAgentContextAccessor
+    // on the ingress thread, but the control-plane consumers (lifecycle managers, endpoint gate,
+    // approval + MCP mutation handlers) resolve IAgentContextAccessor. Before IngressFirstAgentContextAccessor
+    // that resolved to the Orleans accessor whose RequestContext is empty on the ingress thread, so every
+    // authenticated apply synthesized an anonymous principal and RBAC denied it (NB-13 live failure).
+
+    [Fact]
+    public void Jwt_On_IAgentContextAccessor_Resolves_To_IngressFirst_Composite()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "http://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredService<IAgentContextAccessor>().Should().BeOfType<IngressFirstAgentContextAccessor>(
+            because: "the ingress-first composite must shadow the silo-side OrleansAgentContextAccessor " +
+                     "so the HTTP/MCP principal reaches control-plane RBAC + audit.");
+    }
+
+    [Fact]
+    public void IngressFirst_Surfaces_The_Pushed_Ingress_Principal()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "http://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+        var accessor = sp.GetRequiredService<IAgentContextAccessor>();
+        var ingress = sp.GetRequiredService<AsyncLocalAgentContextAccessor>();
+
+        // No ingress push (e.g. a silo grain turn): falls back to the Orleans accessor, which reads an
+        // empty RequestContext off the grain path → anonymous.
+        accessor.Current.UserId.Should().BeNull();
+
+        // An authenticated control-plane request pushes the principal onto the ingress AsyncLocal.
+        using (ingress.Push(new AgentContext(UserId: "alice") { Scopes = new[] { "vais.author" } }))
+        {
+            accessor.Current.UserId.Should().Be("alice");
+            accessor.Current.Scopes.Should().ContainSingle().Which.Should().Be("vais.author");
+        }
+
+        // Scope disposed → back to the silo fallback.
+        accessor.Current.UserId.Should().BeNull();
     }
 }

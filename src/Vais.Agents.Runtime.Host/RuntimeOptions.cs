@@ -159,6 +159,14 @@ internal sealed record RuntimeOptions
     public string? JwtAudience { get; init; }
 
     /// <summary>
+    /// Whether the JWT bearer middleware requires the OIDC authority's metadata over HTTPS.
+    /// Defaults to <see langword="true"/> (production-safe). Set <c>VAIS_JWT_REQUIRE_HTTPS_METADATA=false</c>
+    /// only for local development / verification against an HTTP issuer (e.g. a local mock issuer).
+    /// Applied only when <see cref="JwtAuthority"/> is set.
+    /// </summary>
+    public bool JwtRequireHttpsMetadata { get; init; } = true;
+
+    /// <summary>
     /// v0.30 Kubernetes ServiceAccount principal mapper opt-in. When <see langword="true"/> and
     /// <see cref="JwtAuthority"/> is set, <c>ServiceAccountPrincipalMapper</c> is registered in
     /// preference to <c>DefaultPrincipalMapper</c> — extracts <c>TenantId</c> from the SA namespace
@@ -205,6 +213,29 @@ internal sealed record RuntimeOptions
     /// (unchanged). Set via <c>VAIS_CHECKPOINTER_CONNECTION</c>.
     /// </summary>
     public string? CheckpointerConnection { get; init; }
+
+    /// <summary>
+    /// Path to a deployment-local ontology overlay JSON (Plan B). When set, the merged ontology
+    /// (base + overlay) backs <c>vais.describe</c>, and any <c>authorRoles</c> in the overlay enable
+    /// control-plane RBAC (mutating verbs are authorized per JWT scope). Null ⇒ base-only ontology,
+    /// no RBAC (allow-all default). Set via <c>VAIS_ONTOLOGY_OVERLAY_PATH</c>.
+    /// </summary>
+    public string? OntologyOverlayPath { get; init; }
+
+    /// <summary>
+    /// Path to a JSON-Lines audit file (Plan B). When set, every control-plane lifecycle verb is
+    /// appended as one JSON object per line. Null ⇒ the default <c>LoggerAuditLog</c>.
+    /// Set via <c>VAIS_AUDIT_LOG_PATH</c>.
+    /// </summary>
+    public string? AuditLogPath { get; init; }
+
+    /// <summary>
+    /// Enables the human-in-the-loop approval queue for high-risk mutations (ContainerPlugin / Extension).
+    /// When true, applying a high-risk kind returns <c>202 pending-approval</c> until an operator approves
+    /// it via <c>vais approvals approve</c>. Default false (mutations proceed). Set via
+    /// <c>VAIS_APPROVALS_ENABLED=true</c>.
+    /// </summary>
+    public bool ApprovalsEnabled { get; init; }
 
     /// <summary>
     /// Postgres connection string for the gateway event store. When set, LLM completion events
@@ -350,11 +381,15 @@ internal sealed record RuntimeOptions
             InternalGatewayBaseUrl = Env("VAIS_INTERNAL_GATEWAY_URL") ?? "http://localhost:8080",
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
+            JwtRequireHttpsMetadata = !string.Equals(Env("VAIS_JWT_REQUIRE_HTTPS_METADATA"), "false", StringComparison.OrdinalIgnoreCase),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
             AgentRunStoreConnection = Env("VAIS_AGENT_RUN_STORE_CONNECTION"),
             CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
+            OntologyOverlayPath = Env("VAIS_ONTOLOGY_OVERLAY_PATH"),
+            AuditLogPath = Env("VAIS_AUDIT_LOG_PATH"),
+            ApprovalsEnabled = string.Equals(Env("VAIS_APPROVALS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase),
             GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),
             GatewayId = Env("VAIS_GATEWAY_ID"),
             McpEventStoreConnection = Env("VAIS_MCP_EVENT_STORE_CONNECTION"),

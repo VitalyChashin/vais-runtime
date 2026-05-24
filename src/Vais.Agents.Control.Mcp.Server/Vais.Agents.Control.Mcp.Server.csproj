@@ -16,6 +16,7 @@
     <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Abstractions\Vais.Agents.Control.Abstractions.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
   </ItemGroup>
 
   <ItemGroup>

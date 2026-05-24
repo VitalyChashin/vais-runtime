@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Eval;
 
 namespace Vais.Agents.Control.Mcp.Server;
 
@@ -31,7 +32,8 @@ internal static class DesignMcpToolHandlers
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "Resource kind — one of Agent, AgentGraph, McpServer, LlmGatewayConfig, McpGatewayConfig, ContainerPlugin, EvalSuite."
+                      "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"],
+                      "description": "Resource kind (case-insensitive; canonical values listed in enum)."
                     },
                     "labelSelector": {
                       "type": "string",
@@ -51,7 +53,7 @@ internal static class DesignMcpToolHandlers
                 {
                   "type": "object",
                   "properties": {
-                    "kind":    { "type": "string", "description": "Resource kind." },
+                    "kind":    { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"], "description": "Resource kind (case-insensitive)." },
                     "name":    { "type": "string", "description": "Resource name (manifest metadata.id)." },
                     "version": { "type": "string", "description": "Optional version. Omit for the latest." }
                   },
@@ -68,7 +70,7 @@ internal static class DesignMcpToolHandlers
                 {
                   "type": "object",
                   "properties": {
-                    "kind": { "type": "string", "description": "Resource kind to describe." }
+                    "kind": { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"], "description": "Resource kind to describe (case-insensitive)." }
                   },
                   "required": ["kind"]
                 }
@@ -112,12 +114,114 @@ internal static class DesignMcpToolHandlers
         },
     ];
 
-    // ── List-tools (ND-5) ─────────────────────────────────────────────────────
+    // ── Mutating tool declarations (NB-9, NB-10) ──────────────────────────────
+
+    internal static readonly IReadOnlyList<Tool> MutatingTools =
+    [
+        new Tool
+        {
+            Name = "vais.apply",
+            Title = "Apply manifest",
+            Description = "Create or update a resource from a manifest envelope (Agent, AgentGraph, McpServer, McpGatewayConfig, LlmGatewayConfig, ContainerPlugin). Validates first; on success returns { ok:true, kind, name, version, action }. A high-risk kind (ContainerPlugin) may return { ok:false, status:'pending-approval', requestId } — re-apply after an operator approves. Denied callers get { ok:false, denied:true, reason }.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "manifest": { "type": "string", "description": "Full manifest content as a JSON v0.6 envelope with apiVersion/kind/metadata/spec." }
+                  },
+                  "required": ["manifest"]
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.delete",
+            Title = "Delete resource",
+            Description = "Delete a registered resource by kind + name (+ optional version). Returns { ok:true, action:'deleted' } or { ok:false, error }. Authorization is enforced; an unauthorized caller gets { ok:false, denied:true }.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind":    { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin"], "description": "Resource kind (case-insensitive)." },
+                    "name":    { "type": "string", "description": "Resource name (manifest metadata.id)." },
+                    "version": { "type": "string", "description": "Optional version. Omit for the latest." }
+                  },
+                  "required": ["kind", "name"]
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.eval",
+            Title = "Run an eval suite",
+            Description = "Start an eval run to verify behavior — close the author→apply→verify loop. Provide either an inline EvalSuite manifest ('suite') or the name of a registered suite ('suiteRef'). Returns { ok:true, runId } immediately; poll vais.eval.status. An inline suite is authored first (requires author scope for EvalSuite).",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "suite":    { "type": "string", "description": "Inline EvalSuite manifest as a JSON v0.6 envelope. Mutually exclusive with suiteRef." },
+                    "suiteRef": { "type": "string", "description": "Name (metadata.id) of an already-registered EvalSuite. Mutually exclusive with suite." }
+                  }
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.eval.status",
+            Title = "Eval run status",
+            Description = "Poll an eval run started by vais.eval. Returns { ok:true, status, totalCases, passedCases, failedCases, cases[] } or { ok:false, error } for an unknown runId.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "runId": { "type": "string", "description": "Eval run id returned by vais.eval." }
+                  },
+                  "required": ["runId"]
+                }
+                """),
+        },
+    ];
+
+    // ── List-tools (ND-5 + NB-12 scope filter) ────────────────────────────────
 
     internal static ValueTask<ListToolsResult> HandleListToolsAsync(
         RequestContext<ListToolsRequestParams> ctx,
         CancellationToken ct)
-        => new(new ListToolsResult { Tools = [.. DesignTools] });
+        => ListToolsAsync(ctx.Services!, ct);
+
+    /// <summary>Testable overload — returns read verbs, plus mutating verbs when the caller can author something.</summary>
+    internal static async ValueTask<ListToolsResult> ListToolsAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var tools = new List<Tool>(DesignTools);
+        if (await CanMutateAnythingAsync(sp, ct).ConfigureAwait(false))
+            tools.AddRange(MutatingTools);
+        return new ListToolsResult { Tools = tools };
+    }
+
+    private static readonly PolicyOperation[] MutationProbes =
+    [
+        PolicyOperation.Create, PolicyOperation.GraphCreate, PolicyOperation.McpServerCreate,
+        PolicyOperation.McpGatewayConfigCreate, PolicyOperation.LlmGatewayConfigCreate, PolicyOperation.ContainerPluginCreate,
+        PolicyOperation.EvalSuiteUpsert,
+    ];
+
+    private static async ValueTask<bool> CanMutateAnythingAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var policy = sp.GetService<IAgentPolicyEngine>() ?? NullAgentPolicyEngine.Instance;
+        var principal = BuildPrincipal(sp);
+        foreach (var op in MutationProbes)
+        {
+            var decision = await policy.EvaluateAsync(op, manifest: null, principal, ct).ConfigureAwait(false);
+            if (decision.IsAllowed) return true;
+        }
+        return false;
+    }
+
+    private static AgentPrincipal? BuildPrincipal(IServiceProvider sp)
+    {
+        var ctx = sp.GetService<IAgentContextAccessor>()?.Current ?? AgentContext.Empty;
+        return ctx.UserId is { Length: > 0 } userId ? new AgentPrincipal(userId, ctx.TenantId, ctx.Scopes) : null;
+    }
 
     // ── Call-tool dispatcher (ND-6, ND-7) ────────────────────────────────────
 
@@ -142,6 +246,10 @@ internal static class DesignMcpToolHandlers
                 "vais.describe" => HandleDescribe(args, sp),
                 "vais.diff"     => await HandleDiffAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.validate" => await HandleValidateAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.apply"    => await HandleApplyAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.delete"   => await HandleDeleteAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.eval"     => await HandleEvalAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.eval.status" => await HandleEvalStatusAsync(args, sp, ct).ConfigureAwait(false),
                 _               => TextError($"Unknown design tool '{name}'."),
             };
         }
@@ -163,6 +271,7 @@ internal static class DesignMcpToolHandlers
             return TextError("Missing required argument 'kind'.");
         if (!DesignRegistryRouter.IsSupported(kind))
             return TextError($"Kind '{kind}' is not supported. Supported: Agent, AgentGraph, McpServer, LlmGatewayConfig, McpGatewayConfig, ContainerPlugin, EvalSuite.");
+        kind = DesignRegistryRouter.Normalize(kind)!;
 
         var labelSelector = GetString(args, "labelSelector");
         var items = await DesignRegistryRouter.ListAsync(kind, sp, labelSelector, ct).ConfigureAwait(false);
@@ -203,6 +312,7 @@ internal static class DesignMcpToolHandlers
         var kind = GetString(args, "kind");
         if (string.IsNullOrWhiteSpace(kind))
             return TextError("Missing required argument 'kind'.");
+        kind = DesignRegistryRouter.Normalize(kind) ?? kind;
 
         var catalog = sp.GetRequiredService<IOntologyCatalog>();
         if (!catalog.TryGet(kind, out var entry))
@@ -297,6 +407,207 @@ internal static class DesignMcpToolHandlers
         };
         return TextSuccess(result.ToJsonString());
     }
+
+    // ── vais.eval + vais.eval.status — NB-11 ──────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleEvalAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var manager = sp.GetService<IEvalRunLifecycleManager>();
+        if (manager is null) return TextError("Eval runs are not enabled on this runtime.");
+
+        var inline = GetString(args, "suite");
+        var suiteRef = GetString(args, "suiteRef");
+
+        string suiteName;
+        if (!string.IsNullOrWhiteSpace(inline))
+        {
+            // Inline suite: parse → RBAC-gate (EvalSuiteUpsert) → register, so the run can resolve it by name.
+            EvalSuiteManifest suite;
+            try
+            {
+                var resources = await new JsonAgentGraphManifestLoader().LoadAllResourcesFromStringAsync(inline, ct).ConfigureAwait(false);
+                var found = resources.OfType<ManifestResource.EvalSuiteCase>().Select(c => c.Suite).FirstOrDefault();
+                if (found is null)
+                    return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = "inline 'suite' must be a single EvalSuite manifest." }.ToJsonString());
+                suite = found;
+            }
+            catch (Exception ex) when (ex is AgentManifestValidationException or JsonException)
+            {
+                return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"suite parse failed: {ex.Message}" }.ToJsonString());
+            }
+
+            var principal = BuildPrincipal(sp);
+            var policy = sp.GetService<IAgentPolicyEngine>() ?? NullAgentPolicyEngine.Instance;
+            var decision = await policy.EvaluateAsync(PolicyOperation.EvalSuiteUpsert, manifest: null, principal, ct).ConfigureAwait(false);
+            await AuditEvalUpsertAsync(sp, suite, principal, decision).ConfigureAwait(false);
+            if (!decision.IsAllowed)
+                return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = decision.Reason ?? "policy denied" }.ToJsonString());
+
+            await sp.GetRequiredService<IEvalSuiteRegistry>().UpsertAsync(suite, ct).ConfigureAwait(false);
+            suiteName = suite.Id;
+        }
+        else if (!string.IsNullOrWhiteSpace(suiteRef))
+        {
+            suiteName = suiteRef;
+        }
+        else
+        {
+            return TextError("Provide either 'suite' (inline EvalSuite manifest) or 'suiteRef' (registered suite name).");
+        }
+
+        var workspace = (sp.GetService<IAgentContextAccessor>()?.Current.WorkspaceId) ?? "default";
+        try
+        {
+            var runId = await manager.StartRunAsync(suiteName, workspace, ct).ConfigureAwait(false);
+            return TextSuccess(new JsonObject { ["ok"] = true, ["runId"] = runId, ["suite"] = suiteName }.ToJsonString());
+        }
+        catch (KeyNotFoundException)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"eval-suite '{suiteName}' is not registered." }.ToJsonString());
+        }
+    }
+
+    private static async ValueTask<CallToolResult> HandleEvalStatusAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var runId = GetString(args, "runId");
+        if (string.IsNullOrWhiteSpace(runId)) return TextError("Missing required argument 'runId'.");
+
+        var manager = sp.GetService<IEvalRunLifecycleManager>();
+        if (manager is null) return TextError("Eval runs are not enabled on this runtime.");
+
+        var detail = await manager.GetRunDetailAsync(runId, ct).ConfigureAwait(false);
+        if (detail is null)
+            return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"eval run '{runId}' not found." }.ToJsonString());
+
+        var s = detail.Summary;
+        var cases = new JsonArray(detail.Cases
+            .Select(c => (JsonNode?)new JsonObject { ["caseId"] = c.CaseId, ["status"] = c.Status.ToString() })
+            .ToArray());
+        return TextSuccess(new JsonObject
+        {
+            ["ok"] = true,
+            ["runId"] = s.EvalRunId,
+            ["suite"] = s.SuiteName,
+            ["status"] = s.Status.ToString(),
+            ["totalCases"] = s.TotalCases,
+            ["passedCases"] = s.PassedCases,
+            ["failedCases"] = s.FailedCases,
+            ["completedAt"] = s.CompletedAt?.ToString("o"),
+            ["cases"] = cases,
+        }.ToJsonString());
+    }
+
+    private static async ValueTask AuditEvalUpsertAsync(IServiceProvider sp, EvalSuiteManifest suite, AgentPrincipal? principal, PolicyDecision decision)
+    {
+        var audit = sp.GetService<IAuditLog>() ?? NullAuditLog.Instance;
+        try
+        {
+            await audit.AppendAsync(new AuditLogEntry(
+                At: DateTimeOffset.UtcNow,
+                Operation: PolicyOperation.EvalSuiteUpsert,
+                AgentId: suite.Id,
+                AgentVersion: suite.Version,
+                PrincipalId: principal?.Id ?? "anonymous",
+                TenantId: principal?.TenantId,
+                Allowed: decision.IsAllowed,
+                DenyReason: decision.IsAllowed ? null : (decision.Reason ?? "policy denied"),
+                ErrorType: null)).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Audit-write failures must not break the verb.
+        }
+    }
+
+    // ── vais.apply — NB-9 ─────────────────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleApplyAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var manifest = GetString(args, "manifest");
+        if (string.IsNullOrWhiteSpace(manifest))
+            return TextError("Missing required argument 'manifest'.");
+
+        // Pre-apply: schema + cross-ref validation so the agent gets suggestions before the seam.
+        var (ok, errors, suggestions) = await ManifestValidator.ValidateAsync(manifest, sp, ct).ConfigureAwait(false);
+        if (!ok)
+        {
+            var bad = new JsonObject
+            {
+                ["ok"] = false,
+                ["errors"] = StrArray(errors),
+                ["suggestions"] = StrArray(suggestions),
+            };
+            return TextSuccess(bad.ToJsonString());
+        }
+
+        try
+        {
+            var result = await DesignMutationRouter.ApplyAsync(manifest, sp, ct).ConfigureAwait(false);
+            return TextSuccess(result.ToJsonString());
+        }
+        catch (ApprovalRequiredException are)
+        {
+            return TextSuccess(new JsonObject
+            {
+                ["ok"] = false,
+                ["status"] = "pending-approval",
+                ["requestId"] = are.RequestId,
+                ["kind"] = are.Kind,
+                ["name"] = are.Name,
+            }.ToJsonString());
+        }
+        catch (AgentPolicyDeniedException pd)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = pd.Message }.ToJsonString());
+        }
+    }
+
+    // ── vais.delete — NB-10 ───────────────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleDeleteAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var kind = GetString(args, "kind");
+        var name = GetString(args, "name");
+        var version = GetString(args, "version");
+        if (string.IsNullOrWhiteSpace(kind)) return TextError("Missing required argument 'kind'.");
+        if (string.IsNullOrWhiteSpace(name)) return TextError("Missing required argument 'name'.");
+
+        try
+        {
+            var result = await DesignMutationRouter.DeleteAsync(kind, name, version, sp, ct).ConfigureAwait(false);
+            return TextSuccess(result.ToJsonString());
+        }
+        catch (ApprovalRequiredException are)
+        {
+            return TextSuccess(new JsonObject
+            {
+                ["ok"] = false,
+                ["status"] = "pending-approval",
+                ["requestId"] = are.RequestId,
+                ["kind"] = are.Kind,
+                ["name"] = are.Name,
+            }.ToJsonString());
+        }
+        catch (AgentPolicyDeniedException pd)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = pd.Message }.ToJsonString());
+        }
+    }
+
+    private static JsonArray StrArray(IEnumerable<string> items)
+        => new(items.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray());
 
     // ── Resource handlers (ND-8) ──────────────────────────────────────────────
 

@@ -4,9 +4,11 @@
 using A2A;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
@@ -751,6 +753,127 @@ public class CompositionRootTests
         hostedServices.Should().NotContain(
             s => s is BootManifestApplyService,
             because: "null BootManifestsDirectory disables boot-apply — BootManifestApplyService must not be registered.");
+    }
+
+    // ── Plan B Phase 5 governance wiring ──────────────────────────────────────
+
+    [Fact]
+    public void Governance_Approvals_Registered_When_Enabled()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { ApprovalsEnabled = true });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IApprovalStore>().Should().NotBeNull();
+        sp.GetService<IApprovalGate>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Governance_Approvals_NotRegistered_By_Default()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IApprovalGate>().Should().BeNull(
+            because: "approvals are opt-in — without VAIS_APPROVALS_ENABLED high-risk mutations proceed.");
+    }
+
+    [Fact]
+    public void Governance_JsonlAuditLog_When_Path_Set()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"vais-audit-{Guid.NewGuid():N}.jsonl");
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { AuditLogPath = path });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IAuditLog>().Should().BeOfType<JsonlAuditLog>();
+    }
+
+    [Fact]
+    public void Governance_LoggerAuditLog_By_Default()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IAuditLog>().Should().BeOfType<LoggerAuditLog>();
+    }
+
+    [Fact]
+    public void Governance_Jwt_RequireHttpsMetadata_Defaults_True()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "https://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.RequireHttpsMetadata.Should().BeTrue(because: "production-safe default.");
+    }
+
+    [Fact]
+    public void Governance_Jwt_RequireHttpsMetadata_Overridable_For_Dev()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions
+        {
+            JwtAuthority = "http://nb13-issuer/",
+            JwtRequireHttpsMetadata = false,
+        });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.RequireHttpsMetadata.Should().BeFalse(because: "VAIS_JWT_REQUIRE_HTTPS_METADATA=false allows a local HTTP issuer for verification.");
+    }
+
+    [Fact]
+    public void Governance_Jwt_AudienceValidation_Disabled_When_No_Audience()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "https://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.TokenValidationParameters.ValidateAudience.Should().BeFalse(
+            because: "no VAIS_JWT_AUDIENCE ⇒ audience validation is off, else JwtBearer rejects every token.");
+    }
+
+    [Fact]
+    public void Governance_Jwt_AudienceValidation_On_When_Audience_Set()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions
+        {
+            JwtAuthority = "https://issuer.example/",
+            JwtAudience = "vais-control-plane",
+        });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.Audience.Should().Be("vais-control-plane");
+        opts.TokenValidationParameters.ValidateAudience.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Governance_AuthorRolesPolicy_Wired_When_Overlay_Has_Roles()
+    {
+        var overlayPath = Path.Combine(Path.GetTempPath(), $"vais-overlay-{Guid.NewGuid():N}.json");
+        File.WriteAllText(overlayPath, """
+            { "authorRoles": { "roles": { "vais.author": { "permissions": { "Agent": ["*"] } } } } }
+            """);
+        try
+        {
+            var services = BuildBaseline();
+            CompositionRoot.ConfigureServices(services, new RuntimeOptions { OntologyOverlayPath = overlayPath });
+
+            using var sp = services.BuildServiceProvider();
+            sp.GetRequiredService<IAgentPolicyEngine>().Should().BeOfType<AuthorRolesPolicyEngine>(
+                because: "an overlay with authorRoles enables RBAC, replacing the allow-all default.");
+        }
+        finally
+        {
+            File.Delete(overlayPath);
+        }
     }
 
     [Fact]
