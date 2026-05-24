@@ -219,6 +219,34 @@ public sealed class DesignMcpToolsTests
         after.Should().Be(before);
     }
 
+    // ── vais-ontology:// resources (ND-8) ────────────────────────────────────
+
+    [Fact]
+    public async Task OntologyResources_ListReturnsAllKinds()
+    {
+        var result = await DesignMcpToolHandlers.ListOntologyResourcesAsync(_services);
+        result.Resources.Should().HaveCount(7);
+        result.Resources.Select(r => r.Uri).Should().OnlyContain(u => u.StartsWith("vais-ontology://"));
+    }
+
+    [Fact]
+    public async Task OntologyResources_ReadAgent_ReturnsOntologyJson()
+    {
+        var result = await DesignMcpToolHandlers.ReadOntologyResourceAsync("vais-ontology://Agent", _services);
+        result.Contents.Should().HaveCount(1);
+        var text = ((TextResourceContents)result.Contents[0]).Text;
+        var doc = JsonDocument.Parse(text);
+        doc.RootElement.GetProperty("kind").GetString().Should().Be("Agent");
+        doc.RootElement.GetProperty("crossRefs").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void OntologyResources_ReadUnknownKind_Throws()
+    {
+        var act = () => DesignMcpToolHandlers.ReadOntologyResourceAsync("vais-ontology://NoSuchKind", _services);
+        act.Should().Throw<ArgumentException>().WithMessage("*NoSuchKind*");
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private async Task<CallToolResult> InvokeAsync(string toolName, object argsObj)

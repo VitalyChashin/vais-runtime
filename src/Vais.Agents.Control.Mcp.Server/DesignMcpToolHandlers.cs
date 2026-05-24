@@ -208,6 +208,11 @@ internal static class DesignMcpToolHandlers
         if (!catalog.TryGet(kind, out var entry))
             return TextError($"Kind '{kind}' is not in the ontology catalog.");
 
+        return TextSuccess(BuildOntologyJson(entry).ToJsonString());
+    }
+
+    private static JsonObject BuildOntologyJson(KindOntologyEntry entry)
+    {
         var fieldsObj = new JsonObject();
         foreach (var (fieldName, fi) in entry.Fields)
         {
@@ -254,8 +259,7 @@ internal static class DesignMcpToolHandlers
         };
         if (entry.ManualConcept is not null)
             result["manualConcept"] = entry.ManualConcept;
-
-        return TextSuccess(result.ToJsonString());
+        return result;
     }
 
     // ── vais.diff ─────────────────────────────────────────────────────────────
@@ -299,17 +303,52 @@ internal static class DesignMcpToolHandlers
     internal static ValueTask<ListResourcesResult> HandleListResourcesAsync(
         RequestContext<ListResourcesRequestParams> ctx,
         CancellationToken ct)
-    {
-        // Full ontology resources land in ND-8.
-        return new(new ListResourcesResult { Resources = [] });
-    }
+        => ListOntologyResourcesAsync(ctx.Services!);
 
     internal static ValueTask<ReadResourceResult> HandleReadResourceAsync(
         RequestContext<ReadResourceRequestParams> ctx,
         CancellationToken ct)
+        => ReadOntologyResourceAsync(ctx.Params?.Uri ?? string.Empty, ctx.Services!);
+
+    /// <summary>Testable overload — returns all vais-ontology:// resources.</summary>
+    internal static ValueTask<ListResourcesResult> ListOntologyResourcesAsync(IServiceProvider sp)
     {
-        var uri = ctx.Params?.Uri ?? string.Empty;
-        throw new ArgumentException($"Resource '{uri}' not found. Ontology resources land in ND-8.", nameof(ctx));
+        var catalog = sp.GetRequiredService<IOntologyCatalog>();
+        var resources = catalog.Kinds
+            .Select(kind =>
+            {
+                var entry = catalog.Get(kind);
+                return new Resource
+                {
+                    Uri = $"vais-ontology://{kind}",
+                    Name = kind,
+                    Title = $"{kind} ontology",
+                    Description = entry.Description,
+                    MimeType = "application/json",
+                };
+            })
+            .ToList();
+        return new(new ListResourcesResult { Resources = resources });
+    }
+
+    /// <summary>Testable overload — reads a single <c>vais-ontology://Kind</c> resource.</summary>
+    internal static ValueTask<ReadResourceResult> ReadOntologyResourceAsync(string uri, IServiceProvider sp)
+    {
+        const string prefix = "vais-ontology://";
+        if (!uri.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                $"Unknown resource scheme in '{uri}'. Expected 'vais-ontology://<Kind>'.", nameof(uri));
+
+        var kind = uri[prefix.Length..].Trim('/');
+        var catalog = sp.GetRequiredService<IOntologyCatalog>();
+        if (!catalog.TryGet(kind, out var entry))
+            throw new ArgumentException($"Kind '{kind}' not found in the ontology catalog.", nameof(uri));
+
+        var text = BuildOntologyJson(entry).ToJsonString();
+        return new(new ReadResourceResult
+        {
+            Contents = [new TextResourceContents { Uri = uri, MimeType = "application/json", Text = text }],
+        });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
