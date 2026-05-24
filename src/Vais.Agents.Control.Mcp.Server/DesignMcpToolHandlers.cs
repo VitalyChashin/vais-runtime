@@ -275,55 +275,23 @@ internal static class DesignMcpToolHandlers
 
     // ── vais.validate — ND-7 ─────────────────────────────────────────────────
 
-    private static ValueTask<CallToolResult> HandleValidateAsync(
+    private static async ValueTask<CallToolResult> HandleValidateAsync(
         IDictionary<string, JsonElement>? args,
         IServiceProvider sp,
         CancellationToken ct)
     {
         var manifest = GetString(args, "manifest");
         if (string.IsNullOrWhiteSpace(manifest))
-            return new(TextError("Missing required argument 'manifest'."));
+            return TextError("Missing required argument 'manifest'.");
 
-        // Full implementation lands in ND-7 (cross-ref integrity + policy check).
-        // For now: parse the envelope and confirm it is well-formed JSON with the right shape.
-        try
+        var (ok, errors, suggestions) = await ManifestValidator.ValidateAsync(manifest, sp, ct).ConfigureAwait(false);
+        var result = new JsonObject
         {
-            using var doc = JsonDocument.Parse(manifest);
-            var root = doc.RootElement;
-            var missingKeys = new List<string>(3);
-            if (!root.TryGetProperty("kind", out _)) missingKeys.Add("kind");
-            if (!root.TryGetProperty("metadata", out _)) missingKeys.Add("metadata");
-            if (!root.TryGetProperty("spec", out _)) missingKeys.Add("spec");
-            if (missingKeys.Count > 0)
-            {
-                var errNode = new JsonObject
-                {
-                    ["ok"] = false,
-                    ["errors"] = new JsonArray(missingKeys.Select(k => (JsonNode?)JsonValue.Create($"Missing required envelope key: '{k}'")).ToArray()),
-                    ["suggestions"] = new JsonArray(),
-                };
-                return new(TextSuccess(errNode.ToJsonString()));
-            }
-
-            var okNode = new JsonObject
-            {
-                ["ok"] = true,
-                ["errors"] = new JsonArray(),
-                ["suggestions"] = new JsonArray(
-                    (JsonNode?)JsonValue.Create("Full cross-ref integrity check lands in ND-7.")),
-            };
-            return new(TextSuccess(okNode.ToJsonString()));
-        }
-        catch (JsonException ex)
-        {
-            var errNode = new JsonObject
-            {
-                ["ok"] = false,
-                ["errors"] = new JsonArray((JsonNode?)JsonValue.Create($"Invalid JSON: {ex.Message}")),
-                ["suggestions"] = new JsonArray(),
-            };
-            return new(TextSuccess(errNode.ToJsonString()));
-        }
+            ["ok"] = ok,
+            ["errors"] = new JsonArray(errors.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray()),
+            ["suggestions"] = new JsonArray(suggestions.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray()),
+        };
+        return TextSuccess(result.ToJsonString());
     }
 
     // ── Resource handlers (ND-8) ──────────────────────────────────────────────

@@ -144,6 +144,81 @@ public sealed class DesignMcpToolsTests
         doc.RootElement.GetProperty("registered").GetBoolean().Should().BeFalse();
     }
 
+    // ── vais.validate ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task VaisValidate_ValidManifest_ReturnsOk()
+    {
+        var manifest = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "Agent",
+              "metadata": { "id": "gpt-agent", "version": "1.0" },
+              "spec": { "handler": {"typeName": "maf"}, "protocols": [{"kind": "openai"}] }
+            }
+            """;
+        var result = await InvokeAsync("vais.validate", new { manifest });
+        result.IsError.Should().BeFalse();
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("ok").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("errors").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task VaisValidate_DanglingMcpGatewayRef_ReturnsErrorWithSuggestion()
+    {
+        var manifest = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "Agent",
+              "metadata": { "id": "gpt-agent", "version": "1.0" },
+              "spec": { "handler": {"typeName": "maf"}, "mcpGatewayRef": "ghost-gateway" }
+            }
+            """;
+        var result = await InvokeAsync("vais.validate", new { manifest });
+        result.IsError.Should().BeFalse();
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("ok").GetBoolean().Should().BeFalse();
+        var errors = doc.RootElement.GetProperty("errors");
+        errors.GetArrayLength().Should().BeGreaterThan(0);
+        errors.EnumerateArray().Any(e => e.GetString()!.Contains("ghost-gateway")).Should().BeTrue();
+        var sugg = doc.RootElement.GetProperty("suggestions");
+        sugg.EnumerateArray()
+            .Any(s => s.GetString()!.Contains("vais.list") && s.GetString()!.Contains("McpGatewayConfig"))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task VaisValidate_MissingEnvelopeKey_ReturnsError()
+    {
+        var manifest = """{ "kind": "Agent", "metadata": { "id": "x", "version": "1.0" } }""";
+        var result = await InvokeAsync("vais.validate", new { manifest });
+        result.IsError.Should().BeFalse();
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("ok").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task VaisValidate_ValidManifest_DoesNotChangeRegistrationState()
+    {
+        var beforeResult = await InvokeAsync("vais.list", new { kind = "Agent" });
+        var before = JsonDocument.Parse(Content(beforeResult)).RootElement.GetProperty("count").GetInt32();
+
+        var manifest = """
+            {
+              "apiVersion": "vais.agents/v1",
+              "kind": "Agent",
+              "metadata": { "id": "gpt-agent", "version": "1.0" },
+              "spec": { "handler": {"typeName": "maf"} }
+            }
+            """;
+        await InvokeAsync("vais.validate", new { manifest });
+
+        var afterResult = await InvokeAsync("vais.list", new { kind = "Agent" });
+        var after = JsonDocument.Parse(Content(afterResult)).RootElement.GetProperty("count").GetInt32();
+        after.Should().Be(before);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private async Task<CallToolResult> InvokeAsync(string toolName, object argsObj)
