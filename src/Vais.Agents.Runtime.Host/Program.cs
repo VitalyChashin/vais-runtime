@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Vais.Agents.Control.Http;
+using Vais.Agents.Control.Mcp.Server;
 using Vais.Agents.Gateways.OpenAiCompat;
 using Vais.Agents.Runtime.Host;
 using Vais.Agents.Runtime.Plugins.Container;
@@ -89,6 +90,9 @@ if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
 app.MapAgentControlPlane();
 app.MapAgentControlPlaneOpenApi();
 app.MapOpenAiCompat();
+var designMcpBuilder = app.MapMcpDesignServer();
+if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
+    designMcpBuilder.RequireAuthorization();
 
 if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory) ||
     !string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))

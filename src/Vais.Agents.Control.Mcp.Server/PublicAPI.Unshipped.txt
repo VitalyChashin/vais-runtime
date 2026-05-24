@@ -1,0 +1,4 @@
+#nullable enable
+Vais.Agents.Control.Mcp.Server.DesignMcpServerExtensions
+static Vais.Agents.Control.Mcp.Server.DesignMcpServerExtensions.AddMcpDesignServer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Control.Mcp.Server.DesignMcpServerExtensions.MapMcpDesignServer(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! pattern = "/design-mcp") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!

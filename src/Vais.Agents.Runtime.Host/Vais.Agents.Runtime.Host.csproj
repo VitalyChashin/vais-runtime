@@ -52,6 +52,7 @@
     <ProjectReference Include="..\Vais.Agents.Gateways.McpCache\Vais.Agents.Gateways.McpCache.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.McpTransformation\Vais.Agents.Gateways.McpTransformation.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.OpenAiCompat\Vais.Agents.Gateways.OpenAiCompat.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Control.Mcp.Server\Vais.Agents.Control.Mcp.Server.csproj" />
   </ItemGroup>
 
   <ItemGroup>

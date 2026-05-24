@@ -1,6 +1,163 @@
 #nullable enable
+Vais.Agents.Control.Manifests.IOntologyCatalog
+Vais.Agents.Control.Manifests.IOntologyCatalog.Get(string! kind) -> Vais.Agents.Control.Manifests.KindOntologyEntry!
+Vais.Agents.Control.Manifests.IOntologyCatalog.Kinds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.IOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.IOntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
+Vais.Agents.Control.Manifests.IOntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
+Vais.Agents.Control.Manifests.KindOntologyEntry
+Vais.Agents.Control.Manifests.KindOntologyEntry.KindOntologyEntry(string! Kind, string! Description, System.Collections.Generic.IReadOnlyList<string!>! RequiredFields, System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.OntologyFieldInfo!>! Fields, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.CrossRefEdge!>! CrossRefs, System.Collections.Generic.IReadOnlyList<string!>! Tags, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>! Recipes, string? ManualConcept, string! OntologyVersion) -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.CrossRefs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.CrossRefEdge!>!
+Vais.Agents.Control.Manifests.KindOntologyEntry.CrossRefs.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Description.get -> string!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Description.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Fields.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.OntologyFieldInfo!>!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Fields.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Kind.get -> string!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Kind.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.ManualConcept.get -> string?
+Vais.Agents.Control.Manifests.KindOntologyEntry.ManualConcept.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.KindOntologyEntry.OntologyVersion.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Recipes.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.RequiredFields.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.KindOntologyEntry.RequiredFields.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Tags.init -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.<Clone>$() -> Vais.Agents.Control.Manifests.KindOntologyEntry!
+Vais.Agents.Control.Manifests.KindOntologyEntry.Deconstruct(out string! Kind, out string! Description, out System.Collections.Generic.IReadOnlyList<string!>! RequiredFields, out System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.OntologyFieldInfo!>! Fields, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.CrossRefEdge!>! CrossRefs, out System.Collections.Generic.IReadOnlyList<string!>! Tags, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>! Recipes, out string? ManualConcept, out string! OntologyVersion) -> void
+Vais.Agents.Control.Manifests.KindOntologyEntry.Equals(Vais.Agents.Control.Manifests.KindOntologyEntry? other) -> bool
+override Vais.Agents.Control.Manifests.KindOntologyEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.KindOntologyEntry.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.KindOntologyEntry.ToString() -> string!
+static Vais.Agents.Control.Manifests.KindOntologyEntry.operator !=(Vais.Agents.Control.Manifests.KindOntologyEntry? left, Vais.Agents.Control.Manifests.KindOntologyEntry? right) -> bool
+static Vais.Agents.Control.Manifests.KindOntologyEntry.operator ==(Vais.Agents.Control.Manifests.KindOntologyEntry? left, Vais.Agents.Control.Manifests.KindOntologyEntry? right) -> bool
+Vais.Agents.Control.Manifests.OntologyCatalog
+Vais.Agents.Control.Manifests.OntologyCatalog.Get(string! kind) -> Vais.Agents.Control.Manifests.KindOntologyEntry!
+Vais.Agents.Control.Manifests.OntologyCatalog.Kinds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.OntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.OntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
+Vais.Agents.Control.Manifests.OntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
+static Vais.Agents.Control.Manifests.OntologyCatalog.Build(string! baseOntologyJson, Vais.Agents.Control.Manifests.OntologyOverlay? overlay = null) -> Vais.Agents.Control.Manifests.OntologyCatalog!
+static Vais.Agents.Control.Manifests.OntologyCatalog.BuildFromEmbeddedBase(Vais.Agents.Control.Manifests.OntologyOverlay? overlay = null) -> Vais.Agents.Control.Manifests.OntologyCatalog!
+Vais.Agents.Control.Manifests.OntologyFieldInfo
+Vais.Agents.Control.Manifests.OntologyFieldInfo.OntologyFieldInfo(string! FieldName, string! Type, string! Description, System.Collections.Generic.IReadOnlyList<string!>? EnumValues, System.Collections.Generic.IReadOnlyList<string!>! Tags) -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Description.get -> string!
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Description.init -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.EnumValues.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.OntologyFieldInfo.EnumValues.init -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.FieldName.get -> string!
+Vais.Agents.Control.Manifests.OntologyFieldInfo.FieldName.init -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Tags.init -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Type.get -> string!
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Type.init -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.<Clone>$() -> Vais.Agents.Control.Manifests.OntologyFieldInfo!
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Deconstruct(out string! FieldName, out string! Type, out string! Description, out System.Collections.Generic.IReadOnlyList<string!>? EnumValues, out System.Collections.Generic.IReadOnlyList<string!>! Tags) -> void
+Vais.Agents.Control.Manifests.OntologyFieldInfo.Equals(Vais.Agents.Control.Manifests.OntologyFieldInfo? other) -> bool
+override Vais.Agents.Control.Manifests.OntologyFieldInfo.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.OntologyFieldInfo.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.OntologyFieldInfo.ToString() -> string!
+static Vais.Agents.Control.Manifests.OntologyFieldInfo.operator !=(Vais.Agents.Control.Manifests.OntologyFieldInfo? left, Vais.Agents.Control.Manifests.OntologyFieldInfo? right) -> bool
+static Vais.Agents.Control.Manifests.OntologyFieldInfo.operator ==(Vais.Agents.Control.Manifests.OntologyFieldInfo? left, Vais.Agents.Control.Manifests.OntologyFieldInfo? right) -> bool
+Vais.Agents.Control.Manifests.CrossRefEdge
+Vais.Agents.Control.Manifests.CrossRefEdge.CrossRefEdge(string! FieldPath, string! TargetKind, string! Cardinality) -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.Cardinality.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.Cardinality.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.FieldPath.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.FieldPath.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.TargetKind.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.TargetKind.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.<Clone>$() -> Vais.Agents.Control.Manifests.CrossRefEdge!
+Vais.Agents.Control.Manifests.CrossRefEdge.Deconstruct(out string! FieldPath, out string! TargetKind, out string! Cardinality) -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.Equals(Vais.Agents.Control.Manifests.CrossRefEdge? other) -> bool
+override Vais.Agents.Control.Manifests.CrossRefEdge.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.CrossRefEdge.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.CrossRefEdge.ToString() -> string!
+static Vais.Agents.Control.Manifests.CrossRefEdge.operator !=(Vais.Agents.Control.Manifests.CrossRefEdge? left, Vais.Agents.Control.Manifests.CrossRefEdge? right) -> bool
+static Vais.Agents.Control.Manifests.CrossRefEdge.operator ==(Vais.Agents.Control.Manifests.CrossRefEdge? left, Vais.Agents.Control.Manifests.CrossRefEdge? right) -> bool
 Vais.Agents.Control.Manifests.EnvelopeCodec
 Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator
+Vais.Agents.Control.Manifests.FieldOverlay
+Vais.Agents.Control.Manifests.FieldOverlay.FieldOverlay() -> void
+Vais.Agents.Control.Manifests.FieldOverlay.Description.get -> string?
+Vais.Agents.Control.Manifests.FieldOverlay.Description.init -> void
+Vais.Agents.Control.Manifests.FieldOverlay.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.FieldOverlay.Tags.init -> void
+Vais.Agents.Control.Manifests.FieldOverlay.<Clone>$() -> Vais.Agents.Control.Manifests.FieldOverlay!
+Vais.Agents.Control.Manifests.FieldOverlay.Equals(Vais.Agents.Control.Manifests.FieldOverlay? other) -> bool
+override Vais.Agents.Control.Manifests.FieldOverlay.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.FieldOverlay.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.FieldOverlay.ToString() -> string!
+static Vais.Agents.Control.Manifests.FieldOverlay.operator !=(Vais.Agents.Control.Manifests.FieldOverlay? left, Vais.Agents.Control.Manifests.FieldOverlay? right) -> bool
+static Vais.Agents.Control.Manifests.FieldOverlay.operator ==(Vais.Agents.Control.Manifests.FieldOverlay? left, Vais.Agents.Control.Manifests.FieldOverlay? right) -> bool
+Vais.Agents.Control.Manifests.KindOverlay
+Vais.Agents.Control.Manifests.KindOverlay.KindOverlay() -> void
+Vais.Agents.Control.Manifests.KindOverlay.Description.get -> string?
+Vais.Agents.Control.Manifests.KindOverlay.Description.init -> void
+Vais.Agents.Control.Manifests.KindOverlay.Fields.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.FieldOverlay!>?
+Vais.Agents.Control.Manifests.KindOverlay.Fields.init -> void
+Vais.Agents.Control.Manifests.KindOverlay.ManualConcept.get -> string?
+Vais.Agents.Control.Manifests.KindOverlay.ManualConcept.init -> void
+Vais.Agents.Control.Manifests.KindOverlay.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.KindOverlay.Tags.init -> void
+Vais.Agents.Control.Manifests.KindOverlay.<Clone>$() -> Vais.Agents.Control.Manifests.KindOverlay!
+Vais.Agents.Control.Manifests.KindOverlay.Equals(Vais.Agents.Control.Manifests.KindOverlay? other) -> bool
+override Vais.Agents.Control.Manifests.KindOverlay.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.KindOverlay.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.KindOverlay.ToString() -> string!
+static Vais.Agents.Control.Manifests.KindOverlay.operator !=(Vais.Agents.Control.Manifests.KindOverlay? left, Vais.Agents.Control.Manifests.KindOverlay? right) -> bool
+static Vais.Agents.Control.Manifests.KindOverlay.operator ==(Vais.Agents.Control.Manifests.KindOverlay? left, Vais.Agents.Control.Manifests.KindOverlay? right) -> bool
+Vais.Agents.Control.Manifests.OntologyOverlay
+Vais.Agents.Control.Manifests.OntologyOverlay.OntologyOverlay() -> void
+Vais.Agents.Control.Manifests.OntologyOverlay.ForKind(string! kind) -> Vais.Agents.Control.Manifests.KindOverlay!
+Vais.Agents.Control.Manifests.OntologyOverlay.Kinds.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.KindOverlay!>?
+Vais.Agents.Control.Manifests.OntologyOverlay.Kinds.init -> void
+Vais.Agents.Control.Manifests.OntologyOverlay.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>?
+Vais.Agents.Control.Manifests.OntologyOverlay.Recipes.init -> void
+Vais.Agents.Control.Manifests.OntologyOverlay.<Clone>$() -> Vais.Agents.Control.Manifests.OntologyOverlay!
+Vais.Agents.Control.Manifests.OntologyOverlay.Equals(Vais.Agents.Control.Manifests.OntologyOverlay? other) -> bool
+override Vais.Agents.Control.Manifests.OntologyOverlay.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.OntologyOverlay.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.OntologyOverlay.ToString() -> string!
+static Vais.Agents.Control.Manifests.OntologyOverlay.operator !=(Vais.Agents.Control.Manifests.OntologyOverlay? left, Vais.Agents.Control.Manifests.OntologyOverlay? right) -> bool
+static Vais.Agents.Control.Manifests.OntologyOverlay.operator ==(Vais.Agents.Control.Manifests.OntologyOverlay? left, Vais.Agents.Control.Manifests.OntologyOverlay? right) -> bool
+static readonly Vais.Agents.Control.Manifests.OntologyOverlay.Empty -> Vais.Agents.Control.Manifests.OntologyOverlay!
+Vais.Agents.Control.Manifests.OntologyOverlayLoader
+static Vais.Agents.Control.Manifests.OntologyOverlayLoader.LoadFromFile(string? path) -> Vais.Agents.Control.Manifests.OntologyOverlay!
+static Vais.Agents.Control.Manifests.OntologyOverlayLoader.LoadFromJson(string? json) -> Vais.Agents.Control.Manifests.OntologyOverlay!
+Vais.Agents.Control.Manifests.RecipeEntry
+Vais.Agents.Control.Manifests.RecipeEntry.RecipeEntry() -> void
+Vais.Agents.Control.Manifests.RecipeEntry.Description.get -> string?
+Vais.Agents.Control.Manifests.RecipeEntry.Description.init -> void
+Vais.Agents.Control.Manifests.RecipeEntry.Name.get -> string!
+Vais.Agents.Control.Manifests.RecipeEntry.Name.init -> void
+Vais.Agents.Control.Manifests.RecipeEntry.Steps.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeStep!>!
+Vais.Agents.Control.Manifests.RecipeEntry.Steps.init -> void
+Vais.Agents.Control.Manifests.RecipeEntry.<Clone>$() -> Vais.Agents.Control.Manifests.RecipeEntry!
+Vais.Agents.Control.Manifests.RecipeEntry.Equals(Vais.Agents.Control.Manifests.RecipeEntry? other) -> bool
+override Vais.Agents.Control.Manifests.RecipeEntry.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.RecipeEntry.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.RecipeEntry.ToString() -> string!
+static Vais.Agents.Control.Manifests.RecipeEntry.operator !=(Vais.Agents.Control.Manifests.RecipeEntry? left, Vais.Agents.Control.Manifests.RecipeEntry? right) -> bool
+static Vais.Agents.Control.Manifests.RecipeEntry.operator ==(Vais.Agents.Control.Manifests.RecipeEntry? left, Vais.Agents.Control.Manifests.RecipeEntry? right) -> bool
+Vais.Agents.Control.Manifests.RecipeStep
+Vais.Agents.Control.Manifests.RecipeStep.RecipeStep() -> void
+Vais.Agents.Control.Manifests.RecipeStep.Action.get -> string?
+Vais.Agents.Control.Manifests.RecipeStep.Action.init -> void
+Vais.Agents.Control.Manifests.RecipeStep.Kind.get -> string!
+Vais.Agents.Control.Manifests.RecipeStep.Kind.init -> void
+Vais.Agents.Control.Manifests.RecipeStep.Note.get -> string?
+Vais.Agents.Control.Manifests.RecipeStep.Note.init -> void
+Vais.Agents.Control.Manifests.RecipeStep.<Clone>$() -> Vais.Agents.Control.Manifests.RecipeStep!
+Vais.Agents.Control.Manifests.RecipeStep.Equals(Vais.Agents.Control.Manifests.RecipeStep? other) -> bool
+override Vais.Agents.Control.Manifests.RecipeStep.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.RecipeStep.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.RecipeStep.ToString() -> string!
+static Vais.Agents.Control.Manifests.RecipeStep.operator !=(Vais.Agents.Control.Manifests.RecipeStep? left, Vais.Agents.Control.Manifests.RecipeStep? right) -> bool
+static Vais.Agents.Control.Manifests.RecipeStep.operator ==(Vais.Agents.Control.Manifests.RecipeStep? left, Vais.Agents.Control.Manifests.RecipeStep? right) -> bool
+static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateBaseOntology(System.Collections.Generic.IReadOnlyList<(string! kind, System.Type! recordType)>! kinds, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null, string? ontologyVersion = null) -> string!
 static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(System.Type! recordType, string! kind, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null) -> string!
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
 static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!

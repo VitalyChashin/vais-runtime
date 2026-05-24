@@ -1,0 +1,392 @@
+{
+  "ontologyVersion": "0.0.1-alpha",
+  "apiVersion": "vais.agents/v1",
+  "kinds": {
+    "Agent": {
+      "constraints": {
+        "required": [
+          "handler",
+          "protocols",
+          "tools"
+        ]
+      },
+      "fields": {
+        "handler": {
+          "type": "object",
+          "description": "Code reference (class name / image ref) the runtime instantiates."
+        },
+        "protocols": {
+          "type": "array",
+          "description": "Protocol bindings the agent is exposed on \u2014 HTTP, A2A, MCP, custom."
+        },
+        "tools": {
+          "type": "array",
+          "description": "Tools available to the agent. Each entry names a tool and optionally points at a source."
+        },
+        "memory": {
+          "type": "object",
+          "description": "Memory backing \u2014 pluggable store provider \u002B connection ref. Null for ephemeral."
+        },
+        "identity": {
+          "type": "object",
+          "description": "Inbound/outbound auth configuration. Null for unauthenticated scenarios (dev, single-tenant)."
+        },
+        "autoscaling": {
+          "type": "object",
+          "description": "Replica caps \u002B target concurrency. Null for \u0022whatever the runtime defaults to\u0022."
+        },
+        "model": {
+          "type": "object",
+          "description": "LLM model binding for declarative agents. Null when Handler carries custom behaviour. Set via object-initializer syntax: new AgentManifest(...) { Model = new ModelSpec(...) }."
+        },
+        "systemPrompt": {
+          "type": "object",
+          "description": "System prompt \u2014 inline text, template reference, or file reference. Exactly one shape set when non-null."
+        },
+        "mcpServers": {
+          "type": "array",
+          "description": "Model Context Protocol server bindings. Each server contributes tools to the agent at activation time."
+        },
+        "a2aRemoteAgents": {
+          "type": "array",
+          "description": "Agent2Agent (A2A) remote-agent bindings. Referenced by ToolRef.Source = \u0022a2a:\u003Cname\u003E\u0022. v0.17 Pillar B."
+        },
+        "localAgents": {
+          "type": "array",
+          "description": "Local (same-runtime) agent bindings. Referenced by ToolRef.Source = \u0022agent:\u003Cname\u003E\u0022. v0.18 \u2014 closes P7 agent-as-tool."
+        },
+        "guardrails": {
+          "type": "object",
+          "description": "Three-layer guardrail bindings (input / output / tool) \u2014 projected onto the equivalent StatefulAgentOptions fields at runtime."
+        },
+        "handoffs": {
+          "type": "array",
+          "description": "Declarative handoff targets \u2014 other agents this manifest can delegate to by id."
+        },
+        "budget": {
+          "type": "object",
+          "description": "Per-run budget caps \u2014 projected onto RunBudget at runtime."
+        },
+        "contextProviders": {
+          "type": "array",
+          "description": "Context providers bound to this agent \u2014 resolved against the host DI keyspace."
+        },
+        "outputSchema": {
+          "type": "any",
+          "description": "Structured-output shape for the final assistant turn. Inline JSON Schema."
+        },
+        "agentMode": {
+          "type": "string",
+          "enum": [
+            "ToolCalling",
+            "SchemaGuided",
+            "SchemaGuidedToolCalling"
+          ],
+          "description": "Execution-loop flavour \u2014 ToolCalling by default. Non-default values are contract-only in v0.6."
+        },
+        "reasoning": {
+          "type": "object",
+          "description": "Schema-Guided Reasoning configuration. Contract-only in v0.6 \u2014 engine treats as ToolCalling."
+        },
+        "observability": {
+          "type": "object",
+          "description": "Observability overlays \u2014 Langfuse project, sampling, custom tags."
+        },
+        "llmGatewayRef": {
+          "type": "string",
+          "description": "Optional reference to a deployed LlmGatewayConfigManifest by id. When set, the translator builds a per-agent LlmGatewayPipeline from the referenced config at grain activation, replacing (not appending to) the DI-global chain entirely. Null = DI-global chain applies unchanged (backwards compatible)."
+        },
+        "mcpGatewayRef": {
+          "type": "string",
+          "description": "Optional reference to a deployed McpGatewayConfigManifest by id. When set, a per-agent ToolGatewayMiddleware chain is built from the referenced config at grain activation, replacing the DI-global chain entirely. Null = DI-global chain applies unchanged."
+        }
+      },
+      "crossRefs": [
+        {
+          "field": "llmGatewayRef",
+          "targetKind": "LlmGatewayConfig",
+          "cardinality": "one"
+        },
+        {
+          "field": "mcpGatewayRef",
+          "targetKind": "McpGatewayConfig",
+          "cardinality": "one"
+        },
+        {
+          "field": "mcpServers[].name",
+          "targetKind": "McpServer",
+          "cardinality": "many"
+        },
+        {
+          "field": "localAgents[].agentId",
+          "targetKind": "Agent",
+          "cardinality": "many"
+        },
+        {
+          "field": "handoffs[].toAgent",
+          "targetKind": "Agent",
+          "cardinality": "many"
+        }
+      ],
+      "description": "Declarative specification for an agent. The canonical shape for feeding an CancellationToken) call or for storing in an IAgentRegistry; deliberately minimal \u2014 the intersection of what every surveyed agent runtime requires (AWS Bedrock AgentCore, Dapr Agents, OpenAI Assistants, Temporal, Knative)."
+    },
+    "AgentGraph": {
+      "constraints": {
+        "required": [
+          "entry",
+          "nodes",
+          "edges"
+        ]
+      },
+      "fields": {
+        "entry": {
+          "type": "string",
+          "description": "Id of the entry node. Must exist in Nodes."
+        },
+        "nodes": {
+          "type": "array",
+          "description": "All nodes in the graph. Ids unique within the manifest."
+        },
+        "edges": {
+          "type": "array",
+          "description": "Edges between nodes, order-significant (first-match-wins when a node has multiple outgoing edges)."
+        },
+        "maxSteps": {
+          "type": "integer",
+          "description": "Hard ceiling on super-step count per invocation. Prevents runaway cycles. Defaults to 1000 (matching LangGraph\u0027s recursion_limit) when null. Exceeding this throws GraphRecursionException."
+        },
+        "stateReducers": {
+          "type": "object",
+          "description": "Per-key reducer overrides. Keys not listed here use the runtime defaults: messages appends, every other key last-write-wins. An explicit LastWriteWins entry overrides even the built-in messages append rule."
+        },
+        "state": {
+          "type": "object",
+          "description": "Optional JSON Schema for graph state (nested as spec.state.schema on the wire)."
+        }
+      },
+      "crossRefs": [
+        {
+          "field": "nodes[].ref.id",
+          "targetKind": "Agent",
+          "cardinality": "many"
+        }
+      ],
+      "description": "Declarative specification for a graph of agents. Parallel to AgentManifest: one manifest = one addressable graph in the registry. Loaded from YAML/JSON under apiVersion: vais.agents/v1, kind: AgentGraph."
+    },
+    "McpServer": {
+      "constraints": {
+        "required": []
+      },
+      "fields": {
+        "transport": {
+          "type": "string",
+          "description": "Transport: \u0022streamableHttp\u0022 | \u0022sse\u0022 | \u0022stdio\u0022 | \u0022containerStdio\u0022. Required for physical servers."
+        },
+        "url": {
+          "type": "string",
+          "description": "Server URL for streamableHttp / sse transports."
+        },
+        "command": {
+          "type": "string",
+          "description": "Executable path for stdio transport."
+        },
+        "args": {
+          "type": "array",
+          "description": "Command-line arguments for stdio transport."
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables passed to stdio child processes."
+        },
+        "authRef": {
+          "type": "string",
+          "description": "Optional secret:// URI for bearer / header auth on HTTP transports."
+        },
+        "tools": {
+          "type": "array",
+          "description": "Optional tool allowlist. Null = expose all tools the server lists."
+        },
+        "container": {
+          "type": "object",
+          "description": "Container spec for containerStdio transport. Required when Transport is containerStdio; must be null for other transports."
+        },
+        "virtual": {
+          "type": "boolean",
+          "description": "True = virtual aggregator. False (default) = physical server."
+        },
+        "sources": {
+          "type": "array",
+          "description": "Upstream server refs for virtual mode. Each Ref is an Id in IMcpServerRegistry."
+        },
+        "toolProjection": {
+          "type": "array",
+          "description": "Tool projection for virtual mode. Maps visible tool name \u2192 source server id. Null = expose all tools from all sources (de-duplicated by name, first source wins)."
+        },
+        "mcpGatewayRef": {
+          "type": "string",
+          "description": "Optional Id applied per tool dispatch through this server. Lower precedence than an agent-level McpGatewayRef."
+        }
+      },
+      "crossRefs": [
+        {
+          "field": "mcpGatewayRef",
+          "targetKind": "McpGatewayConfig",
+          "cardinality": "one"
+        },
+        {
+          "field": "sources[].ref",
+          "targetKind": "McpServer",
+          "cardinality": "many"
+        }
+      ],
+      "description": "Registered MCP server \u2014 physical or virtual. Physical: wraps a single upstream server (same fields as McpServerRef plus registry metadata). Virtual: aggregates N upstream registered servers behind one logical name with optional tool projection (IBM Context Forge \u0022virtual server\u0022 concept)."
+    },
+    "LlmGatewayConfig": {
+      "constraints": {
+        "required": [
+          "middleware"
+        ]
+      },
+      "fields": {
+        "middleware": {
+          "type": "array",
+          "description": "Ordered list of middleware layers. Execution order: index 0 = outermost interceptor. Each entry is resolved at activation time via ILlmGatewayMiddlewareFactory."
+        },
+        "rateLimit": {
+          "type": "object",
+          "description": "Optional rate-limit caps applied at the gateway level."
+        }
+      },
+      "crossRefs": [],
+      "description": "Declarative specification for a named LLM gateway pipeline. Stored in ILlmGatewayConfigRegistry; referenced from LlmGatewayRef at agent activation time."
+    },
+    "McpGatewayConfig": {
+      "constraints": {
+        "required": [
+          "middleware"
+        ]
+      },
+      "fields": {
+        "middleware": {
+          "type": "array"
+        },
+        "workspacePolicies": {
+          "type": "object",
+          "description": "Per-workspace allow/deny tool policies. Keys are AgentContext.WorkspaceId values. Absent workspace \u2192 no policy constraint beyond the middleware chain."
+        }
+      },
+      "crossRefs": [],
+      "description": "Declarative specification for a named MCP/tool gateway pipeline. Stored in IMcpGatewayConfigRegistry; referenced from McpGatewayRef or McpGatewayRef."
+    },
+    "ContainerPlugin": {
+      "constraints": {
+        "required": []
+      },
+      "fields": {
+        "image": {
+          "type": "string",
+          "description": "Container image reference (e.g., my-registry/plugin:1.0)."
+        },
+        "build": {
+          "type": "object",
+          "description": "Optional client-side build configuration for build-on-apply. Stored by the server but not acted upon at deploy time."
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port the container exposes for the IP-1 HTTP protocol. Default: 8080."
+        },
+        "topology": {
+          "type": "string",
+          "description": "Deployment topology: standalone | sidecar | kubernetes. Default: standalone."
+        },
+        "startupTimeoutSeconds": {
+          "type": "integer",
+          "description": "Seconds to wait for the container health check on startup. Default: 30."
+        },
+        "invokeTimeoutSeconds": {
+          "type": "integer",
+          "description": "Seconds allowed per invoke call before timing out. Default: 60."
+        },
+        "sessionTtlSeconds": {
+          "type": "integer",
+          "description": "Full call-token lifetime in seconds for one invoke/session. When null, defaults to InvokeTimeoutSeconds \u002B 30 (today\u0027s coupled behaviour). Set this to support a single long-lived invoke (e.g. a co-tenant coding session) without inflating the kill-timeout: in session mode the runtime issues short, renewable tokens whose validity is bound to a live invoke lease, up to this lifetime."
+        },
+        "invokeIdleTimeoutSeconds": {
+          "type": "integer",
+          "description": "Idle/progress timeout in seconds for a streaming invoke: the runtime aborts the invoke if no streamed activity (a delta or an SSE heartbeat) arrives for this long, reclaiming a wedged container fast without capping a healthy long session. Applies to the /v1/stream path only (the non-streaming path has no liveness channel \u2014 long-lived plugins should stream). When null, no idle watchdog runs. Independent of the absolute cap, which is SessionTtlSeconds."
+        },
+        "imagePullPolicy": {
+          "type": "string",
+          "description": "Docker image pull policy: Always | IfNotPresent | Never. Default: IfNotPresent."
+        },
+        "retryPolicy": {
+          "type": "object",
+          "description": "Optional retry policy for failed invocations."
+        },
+        "kubernetes": {
+          "type": "object",
+          "description": "Kubernetes-specific configuration (required when Topology is kubernetes)."
+        },
+        "secrets": {
+          "type": "object",
+          "description": "Secret references injected as environment variables. Key = env-var name; value = secret:// URI."
+        },
+        "workspace": {
+          "type": "object",
+          "description": "Opt-in writable workspace mount. Absent \u21D2 today\u0027s behaviour (read-only rootfs plus the 64 MB ephemeral /tmp tmpfs only). When present, the runtime mounts one writable working tree at Path for the container\u0027s lifetime."
+        }
+      },
+      "crossRefs": [],
+      "description": "Registered container plugin manifest. Describes a containerised agent handler that the runtime discovers via POST /v1/plugins (CLI apply) or filesystem scan at startup (legacy). Mirrors McpServerManifest in shape."
+    },
+    "EvalSuite": {
+      "constraints": {
+        "required": []
+      },
+      "fields": {
+        "agentId": {
+          "type": "string",
+          "description": "Optional id of the target agent to invoke for each case. Mutually exclusive with GraphId."
+        },
+        "graphId": {
+          "type": "string",
+          "description": "Optional id of the target graph to invoke for each case. Mutually exclusive with AgentId."
+        },
+        "target": {
+          "type": "object",
+          "description": "Structured target reference. When present, takes precedence over AgentId / GraphId."
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Suite-level defaults applied to every case unless overridden."
+        },
+        "baseline": {
+          "type": "object",
+          "description": "Baseline run to diff against in vais eval diff."
+        },
+        "cases": {
+          "type": "array",
+          "description": "Test cases that make up this suite (batch mode). Exactly one of Cases or Sampling must be set. Null when Sampling is present."
+        },
+        "replayMode": {
+          "type": "string",
+          "enum": [
+            "Live",
+            "Cached"
+          ],
+          "description": "Suite-level replay mode default. Per-case Replay overrides this. Default: Live."
+        },
+        "sampling": {
+          "type": "object",
+          "description": "Continuous-mode sampling configuration. When set, exactly one of Cases or Sampling must be present. Mutually exclusive with Cases."
+        },
+        "assertions": {
+          "type": "array",
+          "description": "Suite-level assertion list used when Sampling is set (continuous mode). Each sampled production run is evaluated against all assertions here. Must be non-empty when Sampling is present."
+        }
+      },
+      "crossRefs": [],
+      "description": "Declarative specification for an evaluation suite. Contains a named list of test cases that the eval runner executes against registered agents or graphs. Loaded via vais apply -f suite.yaml; stored in Orleans grain state (E1) or Postgres (E2\u002B)."
+    }
+  }
+}

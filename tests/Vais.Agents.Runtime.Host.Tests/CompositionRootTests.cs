@@ -37,6 +37,7 @@ public class CompositionRootTests
         // Minimal ambient DI the composition root expects from the co-hosted silo.
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IClusterClient>());
+        services.AddSingleton(Substitute.For<IHostApplicationLifetime>());
         services.AddLogging();
 
         // IConfiguration is always present in ASP.NET Core; required by HmacCallTokenService
