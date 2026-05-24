@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Eval;
 
 namespace Vais.Agents.Control.Mcp.Server;
 
@@ -148,6 +149,36 @@ internal static class DesignMcpToolHandlers
                 }
                 """),
         },
+        new Tool
+        {
+            Name = "vais.eval",
+            Title = "Run an eval suite",
+            Description = "Start an eval run to verify behavior — close the author→apply→verify loop. Provide either an inline EvalSuite manifest ('suite') or the name of a registered suite ('suiteRef'). Returns { ok:true, runId } immediately; poll vais.eval.status. An inline suite is authored first (requires author scope for EvalSuite).",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "suite":    { "type": "string", "description": "Inline EvalSuite manifest as a JSON v0.6 envelope. Mutually exclusive with suiteRef." },
+                    "suiteRef": { "type": "string", "description": "Name (metadata.id) of an already-registered EvalSuite. Mutually exclusive with suite." }
+                  }
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.eval.status",
+            Title = "Eval run status",
+            Description = "Poll an eval run started by vais.eval. Returns { ok:true, status, totalCases, passedCases, failedCases, cases[] } or { ok:false, error } for an unknown runId.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "runId": { "type": "string", "description": "Eval run id returned by vais.eval." }
+                  },
+                  "required": ["runId"]
+                }
+                """),
+        },
     ];
 
     // ── List-tools (ND-5 + NB-12 scope filter) ────────────────────────────────
@@ -170,6 +201,7 @@ internal static class DesignMcpToolHandlers
     [
         PolicyOperation.Create, PolicyOperation.GraphCreate, PolicyOperation.McpServerCreate,
         PolicyOperation.McpGatewayConfigCreate, PolicyOperation.LlmGatewayConfigCreate, PolicyOperation.ContainerPluginCreate,
+        PolicyOperation.EvalSuiteUpsert,
     ];
 
     private static async ValueTask<bool> CanMutateAnythingAsync(IServiceProvider sp, CancellationToken ct)
@@ -215,6 +247,8 @@ internal static class DesignMcpToolHandlers
                 "vais.validate" => await HandleValidateAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.apply"    => await HandleApplyAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.delete"   => await HandleDeleteAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.eval"     => await HandleEvalAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.eval.status" => await HandleEvalStatusAsync(args, sp, ct).ConfigureAwait(false),
                 _               => TextError($"Unknown design tool '{name}'."),
             };
         }
@@ -369,6 +403,123 @@ internal static class DesignMcpToolHandlers
             ["suggestions"] = new JsonArray(suggestions.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray()),
         };
         return TextSuccess(result.ToJsonString());
+    }
+
+    // ── vais.eval + vais.eval.status — NB-11 ──────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleEvalAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var manager = sp.GetService<IEvalRunLifecycleManager>();
+        if (manager is null) return TextError("Eval runs are not enabled on this runtime.");
+
+        var inline = GetString(args, "suite");
+        var suiteRef = GetString(args, "suiteRef");
+
+        string suiteName;
+        if (!string.IsNullOrWhiteSpace(inline))
+        {
+            // Inline suite: parse → RBAC-gate (EvalSuiteUpsert) → register, so the run can resolve it by name.
+            EvalSuiteManifest suite;
+            try
+            {
+                var resources = await new JsonAgentGraphManifestLoader().LoadAllResourcesFromStringAsync(inline, ct).ConfigureAwait(false);
+                var found = resources.OfType<ManifestResource.EvalSuiteCase>().Select(c => c.Suite).FirstOrDefault();
+                if (found is null)
+                    return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = "inline 'suite' must be a single EvalSuite manifest." }.ToJsonString());
+                suite = found;
+            }
+            catch (Exception ex) when (ex is AgentManifestValidationException or JsonException)
+            {
+                return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"suite parse failed: {ex.Message}" }.ToJsonString());
+            }
+
+            var principal = BuildPrincipal(sp);
+            var policy = sp.GetService<IAgentPolicyEngine>() ?? NullAgentPolicyEngine.Instance;
+            var decision = await policy.EvaluateAsync(PolicyOperation.EvalSuiteUpsert, manifest: null, principal, ct).ConfigureAwait(false);
+            await AuditEvalUpsertAsync(sp, suite, principal, decision).ConfigureAwait(false);
+            if (!decision.IsAllowed)
+                return TextSuccess(new JsonObject { ["ok"] = false, ["denied"] = true, ["reason"] = decision.Reason ?? "policy denied" }.ToJsonString());
+
+            await sp.GetRequiredService<IEvalSuiteRegistry>().UpsertAsync(suite, ct).ConfigureAwait(false);
+            suiteName = suite.Id;
+        }
+        else if (!string.IsNullOrWhiteSpace(suiteRef))
+        {
+            suiteName = suiteRef;
+        }
+        else
+        {
+            return TextError("Provide either 'suite' (inline EvalSuite manifest) or 'suiteRef' (registered suite name).");
+        }
+
+        var workspace = (sp.GetService<IAgentContextAccessor>()?.Current.WorkspaceId) ?? "default";
+        try
+        {
+            var runId = await manager.StartRunAsync(suiteName, workspace, ct).ConfigureAwait(false);
+            return TextSuccess(new JsonObject { ["ok"] = true, ["runId"] = runId, ["suite"] = suiteName }.ToJsonString());
+        }
+        catch (KeyNotFoundException)
+        {
+            return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"eval-suite '{suiteName}' is not registered." }.ToJsonString());
+        }
+    }
+
+    private static async ValueTask<CallToolResult> HandleEvalStatusAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var runId = GetString(args, "runId");
+        if (string.IsNullOrWhiteSpace(runId)) return TextError("Missing required argument 'runId'.");
+
+        var manager = sp.GetService<IEvalRunLifecycleManager>();
+        if (manager is null) return TextError("Eval runs are not enabled on this runtime.");
+
+        var detail = await manager.GetRunDetailAsync(runId, ct).ConfigureAwait(false);
+        if (detail is null)
+            return TextSuccess(new JsonObject { ["ok"] = false, ["error"] = $"eval run '{runId}' not found." }.ToJsonString());
+
+        var s = detail.Summary;
+        var cases = new JsonArray(detail.Cases
+            .Select(c => (JsonNode?)new JsonObject { ["caseId"] = c.CaseId, ["status"] = c.Status.ToString() })
+            .ToArray());
+        return TextSuccess(new JsonObject
+        {
+            ["ok"] = true,
+            ["runId"] = s.EvalRunId,
+            ["suite"] = s.SuiteName,
+            ["status"] = s.Status.ToString(),
+            ["totalCases"] = s.TotalCases,
+            ["passedCases"] = s.PassedCases,
+            ["failedCases"] = s.FailedCases,
+            ["completedAt"] = s.CompletedAt?.ToString("o"),
+            ["cases"] = cases,
+        }.ToJsonString());
+    }
+
+    private static async ValueTask AuditEvalUpsertAsync(IServiceProvider sp, EvalSuiteManifest suite, AgentPrincipal? principal, PolicyDecision decision)
+    {
+        var audit = sp.GetService<IAuditLog>() ?? NullAuditLog.Instance;
+        try
+        {
+            await audit.AppendAsync(new AuditLogEntry(
+                At: DateTimeOffset.UtcNow,
+                Operation: PolicyOperation.EvalSuiteUpsert,
+                AgentId: suite.Id,
+                AgentVersion: suite.Version,
+                PrincipalId: principal?.Id ?? "anonymous",
+                TenantId: principal?.TenantId,
+                Allowed: decision.IsAllowed,
+                DenyReason: decision.IsAllowed ? null : (decision.Reason ?? "policy denied"),
+                ErrorType: null)).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Audit-write failures must not break the verb.
+        }
     }
 
     // ── vais.apply — NB-9 ─────────────────────────────────────────────────────
