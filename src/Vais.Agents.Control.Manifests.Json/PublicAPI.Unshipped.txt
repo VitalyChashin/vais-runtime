@@ -40,6 +40,7 @@ Vais.Agents.Control.Manifests.OntologyCatalog.OntologyVersion.get -> string!
 Vais.Agents.Control.Manifests.OntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
 Vais.Agents.Control.Manifests.OntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
 static Vais.Agents.Control.Manifests.OntologyCatalog.Build(string! baseOntologyJson, Vais.Agents.Control.Manifests.OntologyOverlay? overlay = null) -> Vais.Agents.Control.Manifests.OntologyCatalog!
+static Vais.Agents.Control.Manifests.OntologyCatalog.BuildFromEmbeddedBase(Vais.Agents.Control.Manifests.OntologyOverlay? overlay = null) -> Vais.Agents.Control.Manifests.OntologyCatalog!
 Vais.Agents.Control.Manifests.OntologyFieldInfo
 Vais.Agents.Control.Manifests.OntologyFieldInfo.OntologyFieldInfo(string! FieldName, string! Type, string! Description, System.Collections.Generic.IReadOnlyList<string!>? EnumValues, System.Collections.Generic.IReadOnlyList<string!>! Tags) -> void
 Vais.Agents.Control.Manifests.OntologyFieldInfo.Description.get -> string!

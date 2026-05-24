@@ -54,6 +54,19 @@ public sealed class OntologyCatalog : IOntologyCatalog
     // ── Builder ───────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Builds the catalog from the <c>base-ontology.json</c> embedded in this assembly
+    /// and an optional <paramref name="overlay"/>. Preferred for runtime use (no file-system path needed).
+    /// </summary>
+    public static OntologyCatalog BuildFromEmbeddedBase(OntologyOverlay? overlay = null)
+    {
+        var asm = typeof(OntologyCatalog).Assembly;
+        using var stream = asm.GetManifestResourceStream("Vais.Agents.Control.Manifests.base-ontology.json")
+            ?? throw new InvalidOperationException("Embedded resource 'base-ontology.json' not found in Vais.Agents.Control.Manifests.Json.");
+        using var reader = new System.IO.StreamReader(stream);
+        return Build(reader.ReadToEnd(), overlay);
+    }
+
+    /// <summary>
     /// Builds the catalog from the <paramref name="baseOntologyJson"/> string (the content of
     /// <c>contracts/ontology/base-ontology.json</c>) and an optional <paramref name="overlay"/>.
     /// Merge is additive and deterministic: overlay values win over base for descriptions and

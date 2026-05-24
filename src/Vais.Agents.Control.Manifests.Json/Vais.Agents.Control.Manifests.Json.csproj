@@ -24,4 +24,10 @@
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
+  <!-- Embed the generated base ontology so it is available at runtime without a file-system path. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\contracts\ontology\base-ontology.json"
+                      LogicalName="Vais.Agents.Control.Manifests.base-ontology.json" />
+  </ItemGroup>
+
 </Project>

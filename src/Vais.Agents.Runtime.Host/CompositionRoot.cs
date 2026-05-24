@@ -49,6 +49,7 @@ using System.Text.Json;
 using Vais.Agents.Gateways.McpTransformation;
 using Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework;
 using Vais.Agents.Gateways.OpenAiCompat;
+using Vais.Agents.Control.Mcp.Server;
 
 namespace Vais.Agents.Runtime.Host;
 
@@ -532,6 +533,9 @@ internal static class CompositionRoot
         services.AddPassThroughIdentityResolver();
         services.AddInMemoryModelRouter(_ => { });
         services.AddOpenAiCompatGateway();
+
+        // Read-only design-tools MCP server (Plan A). Mounted at /design-mcp (see Program.cs).
+        services.AddMcpDesignServer();
     }
 
     /// <summary>
