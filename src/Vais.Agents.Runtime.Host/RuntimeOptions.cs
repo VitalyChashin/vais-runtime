@@ -207,6 +207,29 @@ internal sealed record RuntimeOptions
     public string? CheckpointerConnection { get; init; }
 
     /// <summary>
+    /// Path to a deployment-local ontology overlay JSON (Plan B). When set, the merged ontology
+    /// (base + overlay) backs <c>vais.describe</c>, and any <c>authorRoles</c> in the overlay enable
+    /// control-plane RBAC (mutating verbs are authorized per JWT scope). Null ⇒ base-only ontology,
+    /// no RBAC (allow-all default). Set via <c>VAIS_ONTOLOGY_OVERLAY_PATH</c>.
+    /// </summary>
+    public string? OntologyOverlayPath { get; init; }
+
+    /// <summary>
+    /// Path to a JSON-Lines audit file (Plan B). When set, every control-plane lifecycle verb is
+    /// appended as one JSON object per line. Null ⇒ the default <c>LoggerAuditLog</c>.
+    /// Set via <c>VAIS_AUDIT_LOG_PATH</c>.
+    /// </summary>
+    public string? AuditLogPath { get; init; }
+
+    /// <summary>
+    /// Enables the human-in-the-loop approval queue for high-risk mutations (ContainerPlugin / Extension).
+    /// When true, applying a high-risk kind returns <c>202 pending-approval</c> until an operator approves
+    /// it via <c>vais approvals approve</c>. Default false (mutations proceed). Set via
+    /// <c>VAIS_APPROVALS_ENABLED=true</c>.
+    /// </summary>
+    public bool ApprovalsEnabled { get; init; }
+
+    /// <summary>
     /// Postgres connection string for the gateway event store. When set, LLM completion events
     /// are persisted and exposed via <c>GET /v1/llm-gateways/{id}/events</c>.
     /// Null ⇒ store disabled (endpoint returns 503).
@@ -355,6 +378,9 @@ internal sealed record RuntimeOptions
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
             AgentRunStoreConnection = Env("VAIS_AGENT_RUN_STORE_CONNECTION"),
             CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
+            OntologyOverlayPath = Env("VAIS_ONTOLOGY_OVERLAY_PATH"),
+            AuditLogPath = Env("VAIS_AUDIT_LOG_PATH"),
+            ApprovalsEnabled = string.Equals(Env("VAIS_APPROVALS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase),
             GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),
             GatewayId = Env("VAIS_GATEWAY_ID"),
             McpEventStoreConnection = Env("VAIS_MCP_EVENT_STORE_CONNECTION"),

@@ -753,6 +753,73 @@ public class CompositionRootTests
             because: "null BootManifestsDirectory disables boot-apply — BootManifestApplyService must not be registered.");
     }
 
+    // ── Plan B Phase 5 governance wiring ──────────────────────────────────────
+
+    [Fact]
+    public void Governance_Approvals_Registered_When_Enabled()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { ApprovalsEnabled = true });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IApprovalStore>().Should().NotBeNull();
+        sp.GetService<IApprovalGate>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Governance_Approvals_NotRegistered_By_Default()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetService<IApprovalGate>().Should().BeNull(
+            because: "approvals are opt-in — without VAIS_APPROVALS_ENABLED high-risk mutations proceed.");
+    }
+
+    [Fact]
+    public void Governance_JsonlAuditLog_When_Path_Set()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"vais-audit-{Guid.NewGuid():N}.jsonl");
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { AuditLogPath = path });
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IAuditLog>().Should().BeOfType<JsonlAuditLog>();
+    }
+
+    [Fact]
+    public void Governance_LoggerAuditLog_By_Default()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+        sp.GetRequiredService<IAuditLog>().Should().BeOfType<LoggerAuditLog>();
+    }
+
+    [Fact]
+    public void Governance_AuthorRolesPolicy_Wired_When_Overlay_Has_Roles()
+    {
+        var overlayPath = Path.Combine(Path.GetTempPath(), $"vais-overlay-{Guid.NewGuid():N}.json");
+        File.WriteAllText(overlayPath, """
+            { "authorRoles": { "roles": { "vais.author": { "permissions": { "Agent": ["*"] } } } } }
+            """);
+        try
+        {
+            var services = BuildBaseline();
+            CompositionRoot.ConfigureServices(services, new RuntimeOptions { OntologyOverlayPath = overlayPath });
+
+            using var sp = services.BuildServiceProvider();
+            sp.GetRequiredService<IAgentPolicyEngine>().Should().BeOfType<AuthorRolesPolicyEngine>(
+                because: "an overlay with authorRoles enables RBAC, replacing the allow-all default.");
+        }
+        finally
+        {
+            File.Delete(overlayPath);
+        }
+    }
+
     [Fact]
     public void Options_FromEnvironment_Reads_BootManifestsDirectory()
     {

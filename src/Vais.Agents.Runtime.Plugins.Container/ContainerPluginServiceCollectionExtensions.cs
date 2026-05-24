@@ -74,7 +74,8 @@ public static class ContainerPluginServiceCollectionExtensions
                 sp.GetService<IAgentPolicyEngine>(),
                 sp.GetService<IAuditLog>(),
                 sp.GetService<IAgentContextAccessor>(),
-                sp.GetService<ILogger<ContainerPluginLifecycleManager>>()));
+                sp.GetService<ILogger<ContainerPluginLifecycleManager>>(),
+                sp.GetService<IApprovalGate>()));
         return services;
     }
 

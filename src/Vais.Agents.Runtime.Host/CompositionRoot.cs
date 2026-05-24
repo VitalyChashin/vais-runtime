@@ -11,6 +11,7 @@ using Orleans.Configuration;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
 using Vais.Agents.Control.InProcess;
+using Vais.Agents.Control.Manifests;
 using Vais.Agents.Control.Mcp;
 using Vais.Agents.Control.Policy.Opa;
 using Vais.Agents.Core;
@@ -175,6 +176,7 @@ internal static class CompositionRoot
         ConfigureGatewayCatalog(services);
         ConfigureManifestPipeline(services);
         ConfigureLifecycleManagers(services, options, configuration);
+        ConfigureGovernance(services, options);
         ConfigureControlPlaneAndAuth(services, options);
         ConfigureObservabilityStores(services, options);
         ConfigureHostInfra(services, options);
@@ -481,6 +483,42 @@ internal static class CompositionRoot
             audit: sp.GetService<IAuditLog>(),
             contextAccessor: sp.GetService<IAgentContextAccessor>(),
             logger: sp.GetService<ILogger<McpServerLifecycleManager>>()));
+    }
+
+    /// <summary>
+    /// Plan B control-plane governance — all opt-in via runtime config; defaults preserve the
+    /// allow-all, no-audit, no-approval behaviour. Runs after the lifecycle managers (which add the
+    /// default <c>LoggerAuditLog</c>) and before <see cref="ConfigureControlPlaneAndAuth"/> /
+    /// <c>AddMcpDesignServer</c> (which <c>TryAdd</c>s the base-only ontology catalog), so the
+    /// overlay-backed catalog and RBAC engine win.
+    /// </summary>
+    private static void ConfigureGovernance(IServiceCollection services, RuntimeOptions options)
+    {
+        // Ontology overlay → merged catalog (RBAC roles + risk tags + describe overrides).
+        if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
+        {
+            var overlay = OntologyOverlayLoader.LoadFromFile(options.OntologyOverlayPath);
+            services.AddSingleton<IOntologyCatalog>(_ => OntologyCatalog.BuildFromEmbeddedBase(overlay));
+
+            // RBAC: overlay author-roles authorize mutating verbs per JWT scope (replaces allow-all).
+            if (overlay.AuthorRoles is { IsEmpty: false } roles)
+            {
+                services.AddAuthorRolesPolicy(roles);
+            }
+        }
+
+        // JSONL audit trail (replaces the default LoggerAuditLog).
+        if (!string.IsNullOrWhiteSpace(options.AuditLogPath))
+        {
+            services.Replace(ServiceDescriptor.Singleton<IAuditLog>(new JsonlAuditLog(options.AuditLogPath!)));
+        }
+
+        // Approval queue for high-risk mutations — Orleans grain-backed (durable, cluster-wide, P1).
+        if (options.ApprovalsEnabled)
+        {
+            services.AddSingleton<IApprovalStore>(sp => new OrleansApprovalStore(sp.GetRequiredService<IGrainFactory>()));
+            services.AddApprovalGate();
+        }
     }
 
     /// <summary>
