@@ -51,7 +51,10 @@ public static class DesignMcpServerExtensions
                 opts.Handlers.ListResourcesHandler = DesignMcpToolHandlers.HandleListResourcesAsync;
                 opts.Handlers.ReadResourceHandler = DesignMcpToolHandlers.HandleReadResourceAsync;
             })
-            .WithHttpTransport();
+            // Stateless: all design tools are idempotent reads; no session state needed.
+            // Avoids the "Session not found" error when two AddMcpServer() registrations
+            // share the same session store in the runtime host.
+            .WithHttpTransport(o => o.Stateless = true);
 
         return services;
     }

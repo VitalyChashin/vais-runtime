@@ -16,6 +16,7 @@ WORKDIR /src
 
 COPY Directory.Build.props Directory.Packages.props ./
 COPY NuGet.config* ./
+COPY contracts/ contracts/
 COPY src/ src/
 COPY samples/PluginAgentResearchPipeline/planner/ samples/PluginAgentResearchPipeline/planner/
 
