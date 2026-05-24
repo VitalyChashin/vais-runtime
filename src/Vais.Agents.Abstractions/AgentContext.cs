@@ -119,4 +119,13 @@ public sealed record AgentContext(
     /// this limit. <see langword="null"/> = unlimited.
     /// </summary>
     public int? MaxChainDepth { get; init; }
+
+    /// <summary>
+    /// OAuth scopes from the caller's bearer token (the <c>scope</c>/<c>scp</c> claim),
+    /// parsed by the control-plane <c>IPrincipalMapper</c> and carried onto the gating
+    /// <see cref="AgentPrincipal"/> so control-plane RBAC policy engines can authorize
+    /// mutating verbs per scope. <see langword="null"/> = no scopes (unauthenticated /
+    /// localhost dev path), which preserves the pre-RBAC allow-by-default behaviour.
+    /// </summary>
+    public IReadOnlyList<string>? Scopes { get; init; }
 }

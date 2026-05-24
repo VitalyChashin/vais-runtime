@@ -75,7 +75,7 @@ public static class AgentControlPlanePrincipalMiddlewareExtensions
             var current = accessor.Current;
             var overlayed = principal is null
                 ? current
-                : current with { UserId = principal.Id, TenantId = principal.TenantId };
+                : current with { UserId = principal.Id, TenantId = principal.TenantId, Scopes = principal.Scopes };
             using (accessor.Push(overlayed))
             {
                 await next(ctx).ConfigureAwait(false);

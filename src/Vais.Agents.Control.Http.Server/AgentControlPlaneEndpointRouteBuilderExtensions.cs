@@ -3296,6 +3296,12 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                     "manifest.id is required."),
                 statusCode: StatusCodes.Status400BadRequest);
 
+        // Authorize the mutation before any side effects. Apply is create-or-update; gate on
+        // ExtensionUpdate as the representative apply verb (per-verb RBAC granularity is Plan B Phase 2).
+        var denied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.ExtensionUpdate, manifest.Id, manifest.Version, ct).ConfigureAwait(false);
+        if (denied is not null) return denied;
+
         // Hot-seam guard: container extensions on hot seams require explicit acknowledgment.
         var hotSeamGuard = http.RequestServices.GetService<HotSeamGuard>() ?? HotSeamGuard.Default;
         var violations = hotSeamGuard.Evaluate(manifest);
@@ -3357,6 +3363,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return Results.Json(
                 new ExtensionDeleteResponse(name, ExtensionDeleteStatus.NotFound),
                 statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var denied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.ExtensionEvict, name, version: null, ct).ConfigureAwait(false);
+        if (denied is not null) return denied;
 
         var result = await reloader.UnloadAsync(name, ct).ConfigureAwait(false);
 
@@ -3574,6 +3584,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return ProblemDetailsMapping.ToResult(ex, http.Request.Path, operation: PolicyOperation.EvalSuiteUpsert);
         }
 
+        var denied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.EvalSuiteUpsert, manifest.Id, manifest.Version, ct).ConfigureAwait(false);
+        if (denied is not null) return denied;
+
         try
         {
             await registry.UpsertAsync(manifest, ct).ConfigureAwait(false);
@@ -3626,6 +3640,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
     private static async Task<IResult> EvalSuiteEvictAsync(HttpContext http, string id, string? version, CancellationToken ct)
     {
         var registry = http.RequestServices.GetRequiredService<IEvalSuiteRegistry>();
+
+        var denied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.EvalSuiteEvict, id, version, ct).ConfigureAwait(false);
+        if (denied is not null) return denied;
+
         try
         {
             var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;

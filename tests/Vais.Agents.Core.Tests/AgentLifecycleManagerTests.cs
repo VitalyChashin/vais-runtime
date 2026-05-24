@@ -203,6 +203,47 @@ public sealed class AgentLifecycleManagerTests
         recordingPolicy.SeenPrincipals[0]!.TenantId.Should().Be("acme");
     }
 
+    [Fact]
+    public async Task Principal_Carries_Scopes_From_Ambient_Context()
+    {
+        // NB-2: the policy seam must see the caller's JWT scopes — SynthesizePrincipal
+        // now propagates AgentContext.Scopes instead of hard-coding null.
+        var accessor = new AsyncLocalAgentContextAccessor();
+        using var scope = accessor.Push(
+            new AgentContext(UserId: "alice", TenantId: "acme")
+            {
+                Scopes = new[] { "vais.author:Agent", "vais.read" },
+            });
+
+        var recordingPolicy = new RecordingPolicy();
+        var registry = new InMemoryAgentRegistry();
+        var runtime = new InMemoryAgentRuntime(new FakeCompletionProvider(_ => new CompletionResponse("ok")));
+        var manager = new AgentLifecycleManager(registry, runtime, recordingPolicy, audit: null, contextAccessor: accessor);
+
+        await manager.CreateAsync(SupportManifest);
+
+        recordingPolicy.SeenPrincipals.Should().ContainSingle();
+        recordingPolicy.SeenPrincipals[0]!.Scopes.Should().BeEquivalentTo("vais.author:Agent", "vais.read");
+    }
+
+    [Fact]
+    public async Task Principal_Scopes_Null_When_Context_Has_None()
+    {
+        // The no-JWT localhost path must keep Scopes null (allow-by-default preserved).
+        var accessor = new AsyncLocalAgentContextAccessor();
+        using var scope = accessor.Push(new AgentContext(UserId: "bob"));
+
+        var recordingPolicy = new RecordingPolicy();
+        var registry = new InMemoryAgentRegistry();
+        var runtime = new InMemoryAgentRuntime(new FakeCompletionProvider(_ => new CompletionResponse("ok")));
+        var manager = new AgentLifecycleManager(registry, runtime, recordingPolicy, audit: null, contextAccessor: accessor);
+
+        await manager.CreateAsync(SupportManifest);
+
+        recordingPolicy.SeenPrincipals.Should().ContainSingle();
+        recordingPolicy.SeenPrincipals[0]!.Scopes.Should().BeNull();
+    }
+
     // ---- helpers ----
 
     private static (AgentLifecycleManager manager, InMemoryAgentRegistry registry, RecordingAuditLog audit) BuildManager(

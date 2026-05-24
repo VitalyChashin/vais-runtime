@@ -31,3 +31,8 @@ Vais.Agents.Control.InProcess.McpServerLifecycleManager.ListAsync(string? labelP
 Vais.Agents.Control.InProcess.McpServerLifecycleManager.McpServerLifecycleManager(Vais.Agents.IMcpServerRegistry! registry, Vais.Agents.Control.IAgentPolicyEngine? policy = null, Vais.Agents.Control.IAuditLog? audit = null, Vais.Agents.IAgentContextAccessor? contextAccessor = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Control.InProcess.McpServerLifecycleManager!>? logger = null) -> void
 Vais.Agents.Control.InProcess.McpServerLifecycleManager.QueryAsync(Vais.Agents.McpServerHandle! handle, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerStatus!>
 Vais.Agents.Control.InProcess.McpServerLifecycleManager.UpdateAsync(Vais.Agents.McpServerHandle! handle, Vais.Agents.McpServerManifest! newManifest, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.McpServerHandle!>
+Vais.Agents.Control.InProcess.JsonlAuditLog
+Vais.Agents.Control.InProcess.JsonlAuditLog.JsonlAuditLog(System.IO.TextWriter! writer) -> void
+Vais.Agents.Control.InProcess.JsonlAuditLog.JsonlAuditLog(string! filePath) -> void
+Vais.Agents.Control.InProcess.JsonlAuditLog.AppendAsync(Vais.Agents.Control.AuditLogEntry! entry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.InProcess.JsonlAuditLog.Dispose() -> void

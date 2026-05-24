@@ -65,6 +65,8 @@ Vais.Agents.AgentContext.AllowedTools.get -> System.Collections.Generic.IReadOnl
 Vais.Agents.AgentContext.AllowedTools.init -> void
 Vais.Agents.AgentContext.MaxChainDepth.get -> int?
 Vais.Agents.AgentContext.MaxChainDepth.init -> void
+Vais.Agents.AgentContext.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.AgentContext.Scopes.init -> void
 Vais.Agents.AgentContext.BaselineRunId.get -> string?
 Vais.Agents.AgentContext.BaselineRunId.init -> void
 Vais.Agents.IInboundIdentityResolver

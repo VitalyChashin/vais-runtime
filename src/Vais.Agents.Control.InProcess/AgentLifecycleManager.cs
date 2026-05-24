@@ -386,7 +386,7 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         var ctx = _contextAccessor.Current;
         if (ctx.UserId is { Length: > 0 } userId)
         {
-            return new AgentPrincipal(userId, ctx.TenantId, Scopes: null);
+            return new AgentPrincipal(userId, ctx.TenantId, ctx.Scopes);
         }
         return null;
     }
