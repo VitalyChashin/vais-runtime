@@ -1,6 +1,23 @@
 #nullable enable
+Vais.Agents.Control.Manifests.CrossRefEdge
+Vais.Agents.Control.Manifests.CrossRefEdge.CrossRefEdge(string! FieldPath, string! TargetKind, string! Cardinality) -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.Cardinality.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.Cardinality.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.FieldPath.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.FieldPath.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.TargetKind.get -> string!
+Vais.Agents.Control.Manifests.CrossRefEdge.TargetKind.init -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.<Clone>$() -> Vais.Agents.Control.Manifests.CrossRefEdge!
+Vais.Agents.Control.Manifests.CrossRefEdge.Deconstruct(out string! FieldPath, out string! TargetKind, out string! Cardinality) -> void
+Vais.Agents.Control.Manifests.CrossRefEdge.Equals(Vais.Agents.Control.Manifests.CrossRefEdge? other) -> bool
+override Vais.Agents.Control.Manifests.CrossRefEdge.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.CrossRefEdge.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.CrossRefEdge.ToString() -> string!
+static Vais.Agents.Control.Manifests.CrossRefEdge.operator !=(Vais.Agents.Control.Manifests.CrossRefEdge? left, Vais.Agents.Control.Manifests.CrossRefEdge? right) -> bool
+static Vais.Agents.Control.Manifests.CrossRefEdge.operator ==(Vais.Agents.Control.Manifests.CrossRefEdge? left, Vais.Agents.Control.Manifests.CrossRefEdge? right) -> bool
 Vais.Agents.Control.Manifests.EnvelopeCodec
 Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator
+static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateBaseOntology(System.Collections.Generic.IReadOnlyList<(string! kind, System.Type! recordType)>! kinds, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null, string? ontologyVersion = null) -> string!
 static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(System.Type! recordType, string! kind, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null) -> string!
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
 static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!
