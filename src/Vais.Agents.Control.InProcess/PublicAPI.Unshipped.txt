@@ -41,3 +41,19 @@ Vais.Agents.Control.InProcess.AuthorRolesPolicyEngine.AuthorRolesPolicyEngine(Va
 Vais.Agents.Control.InProcess.AuthorRolesPolicyEngine.EvaluateAsync(Vais.Agents.Control.PolicyOperation operation, Vais.Agents.AgentManifest? manifest, Vais.Agents.AgentPrincipal? principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.PolicyDecision>
 Vais.Agents.Control.InProcess.AuthorRolesPolicyServiceCollectionExtensions
 static Vais.Agents.Control.InProcess.AuthorRolesPolicyServiceCollectionExtensions.AddAuthorRolesPolicy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Control.AuthorRolesPolicy! policy) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Control.InProcess.InMemoryApprovalStore
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.InMemoryApprovalStore() -> void
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.FindApprovedAsync(string! kind, string! name, string! manifestHash, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.CreatePendingAsync(string! kind, string! name, string! manifestHash, string! requestedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest!>
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.GetAsync(string! requestId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.ListAsync(Vais.Agents.Control.ApprovalStatus? status = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ApprovalRequest!>!>
+Vais.Agents.Control.InProcess.InMemoryApprovalStore.DecideAsync(string! requestId, bool approve, string! decidedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Control.InProcess.ApprovalHash
+static Vais.Agents.Control.InProcess.ApprovalHash.Compute(string! canonical) -> string!
+Vais.Agents.Control.InProcess.ApprovalGate
+Vais.Agents.Control.InProcess.ApprovalGate.ApprovalGate(Vais.Agents.Control.IApprovalStore! store, System.Collections.Generic.IReadOnlySet<string!>? highRiskKinds = null) -> void
+Vais.Agents.Control.InProcess.ApprovalGate.EnsureApprovedAsync(string! kind, string! name, string! manifestCanonical, string! requestedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static readonly Vais.Agents.Control.InProcess.ApprovalGate.DefaultHighRiskKinds -> System.Collections.Generic.IReadOnlySet<string!>!
+Vais.Agents.Control.InProcess.ApprovalServiceCollectionExtensions
+static Vais.Agents.Control.InProcess.ApprovalServiceCollectionExtensions.AddInMemoryApprovals(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlySet<string!>? highRiskKinds = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Vais.Agents.Control.InProcess.ApprovalServiceCollectionExtensions.AddApprovalGate(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.IReadOnlySet<string!>? highRiskKinds = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -26,6 +26,9 @@ public static class ProblemDetailsMapping
     /// <summary>Policy engine denied the verb.</summary>
     public const string PolicyDeniedType = TypePrefix + "policy-denied";
 
+    /// <summary>A high-risk mutation is held pending operator approval (202).</summary>
+    public const string ApprovalRequiredType = TypePrefix + "approval-required";
+
     /// <summary>Budget cap exceeded mid-invocation.</summary>
     public const string BudgetExceededType = TypePrefix + "budget-exceeded";
 
@@ -117,6 +120,13 @@ public static class ProblemDetailsMapping
         };
         if (agentId is not null) pd.Extensions["agentId"] = agentId;
         if (operation is PolicyOperation op) pd.Extensions["operation"] = op.ToString();
+        if (ex is ApprovalRequiredException approval)
+        {
+            pd.Extensions["requestId"] = approval.RequestId;
+            pd.Extensions["kind"] = approval.Kind;
+            pd.Extensions["name"] = approval.Name;
+            pd.Extensions["status"] = "pending-approval";
+        }
         if (ex is AgentManifestValidationException validation)
         {
             pd.Extensions["errors"] = validation.Errors.ToArray();
@@ -208,6 +218,7 @@ public static class ProblemDetailsMapping
     {
         AgentManifestValidationException => (StatusCodes.Status400BadRequest, ManifestInvalidType, "Manifest validation failed"),
         AgentPolicyDeniedException => (StatusCodes.Status403Forbidden, PolicyDeniedType, "Policy denied"),
+        ApprovalRequiredException => (StatusCodes.Status202Accepted, ApprovalRequiredType, "Approval required"),
         AgentBudgetExceededException => (StatusCodes.Status429TooManyRequests, BudgetExceededType, "Budget exceeded"),
         AgentInterruptedException => (StatusCodes.Status409Conflict, InterruptPendingType, "Interrupt pending"),
         ArgumentException => (StatusCodes.Status400BadRequest, TypePrefix + "bad-request", "Bad request"),

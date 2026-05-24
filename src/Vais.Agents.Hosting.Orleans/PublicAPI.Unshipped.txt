@@ -1,4 +1,11 @@
 #nullable enable
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.OrleansApprovalStore(Orleans.IGrainFactory! grainFactory) -> void
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.FindApprovedAsync(string! kind, string! name, string! manifestHash, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.CreatePendingAsync(string! kind, string! name, string! manifestHash, string! requestedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest!>
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.GetAsync(string! requestId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.ListAsync(Vais.Agents.Control.ApprovalStatus? status = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ApprovalRequest!>!>
+Vais.Agents.Hosting.Orleans.OrleansApprovalStore.DecideAsync(string! requestId, bool approve, string! decidedBy, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.ApprovalRequest?>
 Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain
 Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.HeartbeatAsync(int heartbeatTtlSeconds) -> System.Threading.Tasks.Task!
 Vais.Agents.Hosting.Orleans.IInvokeLeaseGrain.IsLiveAsync() -> System.Threading.Tasks.Task<bool>!

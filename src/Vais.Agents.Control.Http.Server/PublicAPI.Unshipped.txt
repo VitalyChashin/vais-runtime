@@ -1,4 +1,5 @@
 #nullable enable
+const Vais.Agents.Control.Http.ProblemDetailsMapping.ApprovalRequiredType = "urn:vais-agents:approval-required" -> string!
 override Vais.Agents.Control.Http.AgentApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.GetHashCode() -> int

@@ -3302,6 +3302,22 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .CheckAsync(http, PolicyOperation.ExtensionUpdate, manifest.Id, manifest.Version, ct).ConfigureAwait(false);
         if (denied is not null) return denied;
 
+        // High-risk approval gate (Extension runs code). Held applies return 202 + a requestId
+        // and mutate nothing until an operator approves the exact manifest (the raw YAML body).
+        var extApprovalGate = http.RequestServices.GetService<IApprovalGate>();
+        if (extApprovalGate is not null)
+        {
+            var requestedBy = http.RequestServices.GetService<IAgentContextAccessor>()?.Current.UserId ?? "anonymous";
+            try
+            {
+                await extApprovalGate.EnsureApprovedAsync("Extension", manifest.Id, yaml, requestedBy, ct).ConfigureAwait(false);
+            }
+            catch (ApprovalRequiredException are)
+            {
+                return ProblemDetailsMapping.ToResult(are, http.Request.Path, manifest.Id, PolicyOperation.ExtensionUpdate);
+            }
+        }
+
         // Hot-seam guard: container extensions on hot seams require explicit acknowledgment.
         var hotSeamGuard = http.RequestServices.GetService<HotSeamGuard>() ?? HotSeamGuard.Default;
         var violations = hotSeamGuard.Evaluate(manifest);
