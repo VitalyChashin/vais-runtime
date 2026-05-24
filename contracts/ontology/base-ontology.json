@@ -111,6 +111,21 @@
           "field": "mcpGatewayRef",
           "targetKind": "McpGatewayConfig",
           "cardinality": "one"
+        },
+        {
+          "field": "mcpServers[].name",
+          "targetKind": "McpServer",
+          "cardinality": "many"
+        },
+        {
+          "field": "localAgents[].agentId",
+          "targetKind": "Agent",
+          "cardinality": "many"
+        },
+        {
+          "field": "handoffs[].toAgent",
+          "targetKind": "Agent",
+          "cardinality": "many"
         }
       ],
       "description": "Declarative specification for an agent. The canonical shape for feeding an CancellationToken) call or for storing in an IAgentRegistry; deliberately minimal \u2014 the intersection of what every surveyed agent runtime requires (AWS Bedrock AgentCore, Dapr Agents, OpenAI Assistants, Temporal, Knative)."

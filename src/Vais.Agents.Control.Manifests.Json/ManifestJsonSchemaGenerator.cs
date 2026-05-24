@@ -386,8 +386,11 @@ public static class ManifestJsonSchemaGenerator
     {
         ["Agent"] =
         [
-            new("llmGatewayRef",  "LlmGatewayConfig", "one"),
-            new("mcpGatewayRef",  "McpGatewayConfig",  "one"),
+            new("llmGatewayRef",       "LlmGatewayConfig", "one"),
+            new("mcpGatewayRef",       "McpGatewayConfig",  "one"),
+            new("mcpServers[].name",   "McpServer",         "many"),  // registered transport refs
+            new("localAgents[].agentId", "Agent",           "many"),  // agent-as-tool sub-agents
+            new("handoffs[].toAgent",  "Agent",             "many"),  // handoff delegation targets
         ],
         ["McpServer"] =
         [
