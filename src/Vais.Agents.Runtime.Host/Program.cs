@@ -90,7 +90,9 @@ if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
 app.MapAgentControlPlane();
 app.MapAgentControlPlaneOpenApi();
 app.MapOpenAiCompat();
-app.MapMcpDesignServer();
+var designMcpBuilder = app.MapMcpDesignServer();
+if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
+    designMcpBuilder.RequireAuthorization();
 
 if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory) ||
     !string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
