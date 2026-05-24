@@ -1,0 +1,19 @@
+{
+  "name": "@vais/connect",
+  "version": "0.1.0",
+  "description": "Write MCP connection config for the Vais design-tools server",
+  "type": "module",
+  "bin": {
+    "vais-connect": "./vais-connect.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["vais", "mcp", "claude-code", "opencode", "design-tools"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vais-oss/vais.agents",
+    "directory": "tools/vais-connect"
+  }
+}
