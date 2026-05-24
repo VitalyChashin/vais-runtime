@@ -4,9 +4,11 @@
 using A2A;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Vais.Agents.Control;
 using Vais.Agents.Control.Http;
@@ -796,6 +798,32 @@ public class CompositionRootTests
 
         using var sp = services.BuildServiceProvider();
         sp.GetRequiredService<IAuditLog>().Should().BeOfType<LoggerAuditLog>();
+    }
+
+    [Fact]
+    public void Governance_Jwt_RequireHttpsMetadata_Defaults_True()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { JwtAuthority = "https://issuer.example/" });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.RequireHttpsMetadata.Should().BeTrue(because: "production-safe default.");
+    }
+
+    [Fact]
+    public void Governance_Jwt_RequireHttpsMetadata_Overridable_For_Dev()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions
+        {
+            JwtAuthority = "http://nb13-issuer/",
+            JwtRequireHttpsMetadata = false,
+        });
+
+        using var sp = services.BuildServiceProvider();
+        var opts = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        opts.RequireHttpsMetadata.Should().BeFalse(because: "VAIS_JWT_REQUIRE_HTTPS_METADATA=false allows a local HTTP issuer for verification.");
     }
 
     [Fact]

@@ -552,6 +552,7 @@ internal static class CompositionRoot
             services.AddAgentControlPlaneJwtAuth(o =>
             {
                 o.Authority = options.JwtAuthority;
+                o.RequireHttpsMetadata = options.JwtRequireHttpsMetadata;
                 if (!string.IsNullOrWhiteSpace(options.JwtAudience))
                 {
                     o.Audience = options.JwtAudience;

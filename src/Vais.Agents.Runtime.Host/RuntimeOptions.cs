@@ -159,6 +159,14 @@ internal sealed record RuntimeOptions
     public string? JwtAudience { get; init; }
 
     /// <summary>
+    /// Whether the JWT bearer middleware requires the OIDC authority's metadata over HTTPS.
+    /// Defaults to <see langword="true"/> (production-safe). Set <c>VAIS_JWT_REQUIRE_HTTPS_METADATA=false</c>
+    /// only for local development / verification against an HTTP issuer (e.g. a local mock issuer).
+    /// Applied only when <see cref="JwtAuthority"/> is set.
+    /// </summary>
+    public bool JwtRequireHttpsMetadata { get; init; } = true;
+
+    /// <summary>
     /// v0.30 Kubernetes ServiceAccount principal mapper opt-in. When <see langword="true"/> and
     /// <see cref="JwtAuthority"/> is set, <c>ServiceAccountPrincipalMapper</c> is registered in
     /// preference to <c>DefaultPrincipalMapper</c> — extracts <c>TenantId</c> from the SA namespace
@@ -373,6 +381,7 @@ internal sealed record RuntimeOptions
             InternalGatewayBaseUrl = Env("VAIS_INTERNAL_GATEWAY_URL") ?? "http://localhost:8080",
             JwtAuthority = Env("VAIS_JWT_AUTHORITY"),
             JwtAudience = Env("VAIS_JWT_AUDIENCE"),
+            JwtRequireHttpsMetadata = !string.Equals(Env("VAIS_JWT_REQUIRE_HTTPS_METADATA"), "false", StringComparison.OrdinalIgnoreCase),
             UseSaPrincipalMapper = string.Equals(Env("VAIS_SA_PRINCIPAL_MAPPER"), "true", StringComparison.OrdinalIgnoreCase),
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
