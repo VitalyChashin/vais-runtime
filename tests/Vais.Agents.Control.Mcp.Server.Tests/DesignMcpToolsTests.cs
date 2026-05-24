@@ -69,6 +69,51 @@ public sealed class DesignMcpToolsTests
         result.IsError.Should().BeTrue();
     }
 
+    // ── kind is case-insensitive ──────────────────────────────────────────────
+    // LLM coding agents (the audience) reliably write acronym casings ("LLMGatewayConfig",
+    // "MCPServer") or lowercase. The handler must resolve these to the canonical kind rather
+    // than reject them (which previously surfaced as a misleading "0 items" to the agent).
+
+    [Theory]
+    [InlineData("agent")]
+    [InlineData("AGENT")]
+    [InlineData("AgEnT")]
+    public async Task VaisList_KindIsCaseInsensitive_AndNormalizesOutputKind(string kind)
+    {
+        var result = await InvokeAsync("vais.list", new { kind });
+        result.IsError.Should().BeFalse();
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("kind").GetString().Should().Be("Agent");
+        doc.RootElement.GetProperty("count").GetInt32().Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("LLMGatewayConfig")]
+    [InlineData("llmgatewayconfig")]
+    public async Task VaisList_AcronymMisCasedKind_IsAcceptedAndNormalized(string kind)
+    {
+        var result = await InvokeAsync("vais.list", new { kind });
+        result.IsError.Should().BeFalse(because: "an acronym-mis-cased kind must resolve to canonical, not error");
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("kind").GetString().Should().Be("LlmGatewayConfig");
+    }
+
+    [Fact]
+    public async Task VaisGet_KindIsCaseInsensitive()
+    {
+        var result = await InvokeAsync("vais.get", new { kind = "AGENT", name = "gpt-agent" });
+        result.IsError.Should().BeFalse();
+        var doc = JsonDocument.Parse(Content(result));
+        doc.RootElement.GetProperty("metadata").GetProperty("id").GetString().Should().Be("gpt-agent");
+    }
+
+    [Fact]
+    public async Task VaisDescribe_KindIsCaseInsensitive()
+    {
+        var result = await InvokeAsync("vais.describe", new { kind = "mcpserver" });
+        result.IsError.Should().BeFalse();
+    }
+
     // ── vais.get ──────────────────────────────────────────────────────────────
 
     [Fact]

@@ -15,13 +15,27 @@ namespace Vais.Agents.Control.Mcp.Server;
 /// </summary>
 internal static class DesignRegistryRouter
 {
-    private static readonly IReadOnlySet<string> SupportedKinds = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "Agent", "AgentGraph", "McpServer", "LlmGatewayConfig",
-        "McpGatewayConfig", "ContainerPlugin", "EvalSuite",
-    };
+    // Case-insensitive canonical map. The audience for the design-tools MCP is LLM coding agents,
+    // which reliably write acronym casings ("LLMGatewayConfig", "MCPServer", "A2A…"). Match the kind
+    // case-insensitively and resolve to the canonical form so the exact-match registry switches below
+    // still hit — otherwise a mis-cased kind would slip past IsSupported and return an empty list.
+    private static readonly IReadOnlyDictionary<string, string> CanonicalKinds =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Agent"] = "Agent",
+            ["AgentGraph"] = "AgentGraph",
+            ["McpServer"] = "McpServer",
+            ["LlmGatewayConfig"] = "LlmGatewayConfig",
+            ["McpGatewayConfig"] = "McpGatewayConfig",
+            ["ContainerPlugin"] = "ContainerPlugin",
+            ["EvalSuite"] = "EvalSuite",
+        };
 
-    internal static bool IsSupported(string kind) => SupportedKinds.Contains(kind);
+    internal static bool IsSupported(string? kind) => kind is not null && CanonicalKinds.ContainsKey(kind);
+
+    /// <summary>Resolve a (possibly mis-cased) kind to its canonical form, or null if unknown.</summary>
+    internal static string? Normalize(string? kind) =>
+        kind is not null && CanonicalKinds.TryGetValue(kind, out var canonical) ? canonical : null;
 
     /// <summary>List all manifests for <paramref name="kind"/>; returns envelope JSON strings.</summary>
     internal static async ValueTask<IReadOnlyList<string>> ListAsync(
@@ -30,6 +44,7 @@ internal static class DesignRegistryRouter
         string? labelSelector,
         CancellationToken ct)
     {
+        kind = Normalize(kind) ?? kind;
         var results = new List<string>();
         switch (kind)
         {
@@ -94,6 +109,7 @@ internal static class DesignRegistryRouter
         IServiceProvider services,
         CancellationToken ct)
     {
+        kind = Normalize(kind) ?? kind;
         return kind switch
         {
             "Agent" => Wrap(await services.GetRequiredService<IAgentRegistry>()

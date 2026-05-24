@@ -32,7 +32,8 @@ internal static class DesignMcpToolHandlers
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "Resource kind — one of Agent, AgentGraph, McpServer, LlmGatewayConfig, McpGatewayConfig, ContainerPlugin, EvalSuite."
+                      "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"],
+                      "description": "Resource kind (case-insensitive; canonical values listed in enum)."
                     },
                     "labelSelector": {
                       "type": "string",
@@ -52,7 +53,7 @@ internal static class DesignMcpToolHandlers
                 {
                   "type": "object",
                   "properties": {
-                    "kind":    { "type": "string", "description": "Resource kind." },
+                    "kind":    { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"], "description": "Resource kind (case-insensitive)." },
                     "name":    { "type": "string", "description": "Resource name (manifest metadata.id)." },
                     "version": { "type": "string", "description": "Optional version. Omit for the latest." }
                   },
@@ -69,7 +70,7 @@ internal static class DesignMcpToolHandlers
                 {
                   "type": "object",
                   "properties": {
-                    "kind": { "type": "string", "description": "Resource kind to describe." }
+                    "kind": { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin", "EvalSuite"], "description": "Resource kind to describe (case-insensitive)." }
                   },
                   "required": ["kind"]
                 }
@@ -141,7 +142,7 @@ internal static class DesignMcpToolHandlers
                 {
                   "type": "object",
                   "properties": {
-                    "kind":    { "type": "string", "description": "Resource kind." },
+                    "kind":    { "type": "string", "enum": ["Agent", "AgentGraph", "McpServer", "LlmGatewayConfig", "McpGatewayConfig", "ContainerPlugin"], "description": "Resource kind (case-insensitive)." },
                     "name":    { "type": "string", "description": "Resource name (manifest metadata.id)." },
                     "version": { "type": "string", "description": "Optional version. Omit for the latest." }
                   },
@@ -270,6 +271,7 @@ internal static class DesignMcpToolHandlers
             return TextError("Missing required argument 'kind'.");
         if (!DesignRegistryRouter.IsSupported(kind))
             return TextError($"Kind '{kind}' is not supported. Supported: Agent, AgentGraph, McpServer, LlmGatewayConfig, McpGatewayConfig, ContainerPlugin, EvalSuite.");
+        kind = DesignRegistryRouter.Normalize(kind)!;
 
         var labelSelector = GetString(args, "labelSelector");
         var items = await DesignRegistryRouter.ListAsync(kind, sp, labelSelector, ct).ConfigureAwait(false);
@@ -310,6 +312,7 @@ internal static class DesignMcpToolHandlers
         var kind = GetString(args, "kind");
         if (string.IsNullOrWhiteSpace(kind))
             return TextError("Missing required argument 'kind'.");
+        kind = DesignRegistryRouter.Normalize(kind) ?? kind;
 
         var catalog = sp.GetRequiredService<IOntologyCatalog>();
         if (!catalog.TryGet(kind, out var entry))

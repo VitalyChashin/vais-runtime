@@ -60,6 +60,8 @@ internal static class DesignMutationRouter
 
     internal static async ValueTask<JsonObject> DeleteAsync(string kind, string name, string? version, IServiceProvider services, CancellationToken ct)
     {
+        // Resolve acronym-mis-cased kinds (e.g. "LLMGatewayConfig") to canonical before the exact-match switch.
+        kind = DesignRegistryRouter.Normalize(kind) ?? kind;
         switch (kind)
         {
             case "Agent":
