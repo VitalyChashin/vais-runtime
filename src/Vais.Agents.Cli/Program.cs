@@ -77,6 +77,20 @@ app.Configure(config =>
             .WithDescription("Compare two eval runs case-by-case and show assertion deltas.");
     });
 
+    config.AddBranch("approvals", branch =>
+    {
+        branch.SetDescription("List and decide high-risk mutation approval requests.");
+
+        branch.AddCommand<ApprovalListCommand>("list")
+            .WithDescription("List approval requests, optionally filtered by status.");
+
+        branch.AddCommand<ApprovalApproveCommand>("approve")
+            .WithDescription("Approve a pending high-risk mutation by request id.");
+
+        branch.AddCommand<ApprovalRejectCommand>("reject")
+            .WithDescription("Reject a pending high-risk mutation by request id.");
+    });
+
     config.AddCommand<LlmGatewayValidateCommand>("llm-gateway-validate")
         .WithDescription("Validate an LLM gateway config manifest without registering it.");
 

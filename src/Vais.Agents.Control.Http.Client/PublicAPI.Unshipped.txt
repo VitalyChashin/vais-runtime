@@ -1,4 +1,10 @@
 #nullable enable
+Vais.Agents.Control.Http.AgentControlPlaneClient.ApproveAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.ApprovalRequest?>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.ListApprovalsAsync(string? status = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ApprovalRequest!>!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.RejectAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.ApprovalRequest?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ApproveAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.ApprovalRequest?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.ListApprovalsAsync(string? status = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.ApprovalRequest!>!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.RejectAsync(string! requestId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.ApprovalRequest?>!
 override Vais.Agents.Control.Http.AgentApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.GetHashCode() -> int

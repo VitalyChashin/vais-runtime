@@ -1260,6 +1260,34 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             ?? new FilterStatusResponse(Array.Empty<Vais.Agents.Control.FilterCallEntry>(), 0);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ApprovalRequest>> ListApprovalsAsync(string? status = null, CancellationToken cancellationToken = default)
+    {
+        var path = string.IsNullOrWhiteSpace(status) ? "/v1/approvals" : $"/v1/approvals?status={Uri.EscapeDataString(status)}";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<ApprovalRequest>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? Array.Empty<ApprovalRequest>();
+    }
+
+    /// <inheritdoc />
+    public Task<ApprovalRequest?> ApproveAsync(string requestId, CancellationToken cancellationToken = default)
+        => DecideApprovalAsync(requestId, "approve", cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ApprovalRequest?> RejectAsync(string requestId, CancellationToken cancellationToken = default)
+        => DecideApprovalAsync(requestId, "reject", cancellationToken);
+
+    private async Task<ApprovalRequest?> DecideApprovalAsync(string requestId, string action, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestId);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/v1/approvals/{Uri.EscapeDataString(requestId)}/{action}");
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ApprovalRequest>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
     private static AgentGraphEvent? ParseGraphEventFrame(string eventType, ReadOnlySpan<byte> data)
     {
         return eventType switch

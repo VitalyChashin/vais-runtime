@@ -1,5 +1,6 @@
 #nullable enable
 const Vais.Agents.Control.Http.ProblemDetailsMapping.ApprovalRequiredType = "urn:vais-agents:approval-required" -> string!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapApprovalControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 override Vais.Agents.Control.Http.AgentApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.Equals(object? obj) -> bool
 override Vais.Agents.Control.Http.AgentGraphApplyResponse.GetHashCode() -> int

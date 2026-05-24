@@ -203,6 +203,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         MapEvalSuiteControlPlane(builder, prefix);
         MapEvalRunControlPlane(builder, prefix);
         MapDiagnosticsControlPlane(builder, prefix);
+        MapApprovalControlPlane(builder, prefix);
 
         return builder;
     }
@@ -3535,11 +3536,75 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         };
     }
 
-    // ── Eval suite endpoints (E1) ─────────────────────────────────────────────
+    // ── Approval endpoints (Plan B Phase 3) ───────────────────────────────────
 
-    /// <summary>
-    /// Mount the eval suite control-plane endpoints (E1).
-    /// </summary>
+    private const string ApproverScope = "vais.approver";
+
+    /// <summary>Mount the high-risk mutation approval admin endpoints (Plan B Phase 3).</summary>
+    public static IEndpointRouteBuilder MapApprovalControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var group = builder.MapGroup(prefix).WithTags("Approvals");
+
+        group.MapGet("/approvals", ApprovalsListAsync)
+            .WithName("Approvals.List")
+            .WithSummary("List high-risk mutation approval requests (optional ?status=pending|approved|rejected).")
+            .Produces<IReadOnlyList<ApprovalRequest>>(StatusCodes.Status200OK);
+
+        group.MapPost("/approvals/{id}/approve", (string id, HttpContext http, CancellationToken ct)
+                => ApprovalsDecideAsync(id, approve: true, http, ct))
+            .WithName("Approvals.Approve")
+            .WithSummary("Approve a pending high-risk mutation (requires the approver scope).")
+            .Produces<ApprovalRequest>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        group.MapPost("/approvals/{id}/reject", (string id, HttpContext http, CancellationToken ct)
+                => ApprovalsDecideAsync(id, approve: false, http, ct))
+            .WithName("Approvals.Reject")
+            .WithSummary("Reject a pending high-risk mutation (requires the approver scope).")
+            .Produces<ApprovalRequest>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        return builder;
+    }
+
+    private static async Task<IResult> ApprovalsListAsync(HttpContext http, string? status, CancellationToken ct)
+    {
+        var store = http.RequestServices.GetService<IApprovalStore>();
+        if (store is null) return Results.Ok(Array.Empty<ApprovalRequest>());
+        ApprovalStatus? filter = status is not null && Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var s) ? s : null;
+        var items = await store.ListAsync(filter, ct).ConfigureAwait(false);
+        return Results.Ok(items);
+    }
+
+    private static async Task<IResult> ApprovalsDecideAsync(string id, bool approve, HttpContext http, CancellationToken ct)
+    {
+        var store = http.RequestServices.GetService<IApprovalStore>();
+        if (store is null)
+            return Results.Problem("Approvals are not enabled on this runtime.", statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        // Operator-scope gate. A secured deployment requires the approver scope; an unauthenticated
+        // (localhost/dev) caller has no scopes and is allowed — matching the opt-in security posture.
+        var ctx = http.RequestServices.GetService<IAgentContextAccessor>()?.Current ?? AgentContext.Empty;
+        if (ctx.Scopes is { Count: > 0 } scopes && !scopes.Contains(ApproverScope))
+            return Results.Problem(
+                title: "Approval denied",
+                detail: $"approval decisions require the '{ApproverScope}' scope",
+                statusCode: StatusCodes.Status403Forbidden,
+                type: ProblemDetailsMapping.PolicyDeniedType);
+
+        var decidedBy = ctx.UserId ?? "anonymous";
+        var decided = await store.DecideAsync(id, approve, decidedBy, ct).ConfigureAwait(false);
+        return decided is null
+            ? Results.NotFound(new { error = $"approval '{id}' not found or already decided" })
+            : Results.Ok(decided);
+    }
+
+    /// <summary>Mount the eval suite control-plane endpoints (E1).</summary>
     public static IEndpointRouteBuilder MapEvalSuiteControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
     {
         ArgumentNullException.ThrowIfNull(builder);
