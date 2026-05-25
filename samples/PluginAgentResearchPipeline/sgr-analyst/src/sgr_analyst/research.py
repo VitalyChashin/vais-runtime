@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
+from pydantic import Field
 from sgr_agent_core import AgentFactory
 from sgr_agent_core.agent_definition import AgentDefinition, LLMConfig, ToolDefinition
 from sgr_agent_core.agents.sgr_agent import SGRAgent
@@ -23,6 +24,7 @@ from sgr_agent_core.tools import (
     GeneratePlanTool,
     WebSearchTool,
 )
+from sgr_agent_core.tools.reasoning_tool import ReasoningTool
 
 _GATEWAY_HEADERS: ContextVar[dict[str, str]] = ContextVar(
     "_GATEWAY_HEADERS", default={}
@@ -97,6 +99,38 @@ class _GatewayWebSearchTool(WebSearchTool):
         return result
 
 
+class _UncappedReasoningTool(ReasoningTool):
+    """ReasoningTool without the ``max_length=3`` cap on the step lists.
+
+    sgr-agent-core 0.7.0 caps ``reasoning_steps``/``remaining_steps`` at 3 via
+    pydantic ``max_length``, but OpenAI structured output does not enforce array
+    ``maxItems`` — so weaker models (the SGR default gpt-4o-mini) routinely return
+    4-5 items, tripping a pydantic ``too_long`` ValidationError that crashes the
+    reasoning phase (surfacing as "No analysis produced"). Removing the upper cap
+    keeps brevity guided by the field description without the hard crash. Only the
+    upper bound is dropped; ``min_length`` and other fields are inherited unchanged.
+    See research/sgr-agent-core-maxitems-upstream-2026-05-25.md.
+    """
+
+    reasoning_steps: list[str] = Field(
+        description="Step-by-step reasoning (brief, 1 sentence each)",
+        min_length=2,
+    )
+    remaining_steps: list[str] = Field(
+        description="Remaining steps (brief, action-oriented)",
+    )
+
+
+class _RelaxedSGRAgent(SGRAgent):
+    """SGRAgent wired to use :class:`_UncappedReasoningTool` by default."""
+
+    name = "sgr_analyst_uncapped"
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        kwargs.setdefault("reasoning_tool_cls", _UncappedReasoningTool)
+        super().__init__(*args, **kwargs)
+
+
 def _make_toolkit(
     llm_gateway_url: str,
     call_token: str,
@@ -125,7 +159,7 @@ def _get_agent_def(
 ) -> AgentDefinition:
     return AgentDefinition(
         name="sgr-analyst",
-        base_class=SGRAgent,
+        base_class=_RelaxedSGRAgent,
         tools=_make_toolkit(llm_gateway_url, call_token, run_id, agent_id),
         llm=LLMConfig(
             api_key=call_token,
