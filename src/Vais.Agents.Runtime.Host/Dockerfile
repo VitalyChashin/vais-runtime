@@ -5,7 +5,7 @@
 # aspnet-alpine base as a non-root user. The BASE_IMAGE arg exists so Pillar F
 # polish can flip to the chiseled base with a single build argument.
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 ARG BASE_IMAGE=mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-alpine
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS build
@@ -13,6 +13,9 @@ WORKDIR /src
 
 # Copy solution-level MSBuild files first to maximise layer caching.
 COPY Directory.Build.props Directory.Packages.props NuGet.config* ./
+
+# contracts/ supplies the base-ontology.json embedded by Vais.Agents.Control.Manifests.Json.
+COPY contracts/ contracts/
 
 # Copy all sources. A single wildcard COPY is simpler and always correct as new
 # projects are added; the NuGet restore cache is preserved by the layer above.

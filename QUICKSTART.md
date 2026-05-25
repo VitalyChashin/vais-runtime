@@ -30,7 +30,7 @@ By the end you will have:
 | Tool | Version | Why |
 |---|---|---|
 | Docker Engine / Docker Desktop | 24+ / 4.30+ | Runtime + MCP fetch sidecar |
-| .NET 9 SDK | 9.0+ | `vais` CLI is a global `dotnet tool` |
+| .NET 10 SDK | 10.0+ | `vais` CLI is a global `dotnet tool` |
 | An OpenAI API key | — | Agents call `gpt-4o-mini` |
 
 Set the key in your shell.

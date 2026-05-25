@@ -139,7 +139,7 @@ A2A's `AgentCard` describes skills but not a single "input shape" — a tool-cal
 
 ### v0.4 limitations
 
-- **TFM note.** `A2A 1.0.0-preview2` targets `net8.0` + `net10.0` only. Consumed under our `net9.0` via forward-compat; clean restore.
+- **TFM note.** `A2A 1.0.0-preview2` targets `net8.0` + `net10.0` only. Resolves to its native `net10.0` target under our TFM; clean restore.
 
 ## A2A — inbound (agents as A2A endpoints)
 

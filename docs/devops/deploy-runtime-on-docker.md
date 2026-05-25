@@ -32,7 +32,7 @@ docker build \
   .
 ```
 
-The build uses `mcr.microsoft.com/dotnet/sdk:9.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` at runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume, and exposes `/healthz`, `/readyz`, and `/openapi/v1.json` on port 8080. Expect ~175 MB.
+The build uses `mcr.microsoft.com/dotnet/sdk:10.0-alpine` for the build stage and `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` at runtime. The final image runs as uid/gid 65532 (non-root), mounts `/var/lib/vais/plugins` as a volume, and exposes `/healthz`, `/readyz`, and `/openapi/v1.json` on port 8080. Expect ~175 MB.
 
 ```bash
 docker images | grep vais-agents-runtime

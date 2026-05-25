@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -17,8 +17,12 @@
       Suppressions:
       - SKEXP0001 / SKEXP0010 / SKEXP0110 : Semantic Kernel experimental surface we intentionally use.
       - MEAI001                           : Microsoft.Extensions.AI experimental surface.
+      - NU1510                            : .NET 10 package pruning. These are published libraries that
+                                            deliberately declare their Microsoft.Extensions.* / framework
+                                            dependencies; we keep them explicit rather than rely on the
+                                            shared framework, so the "likely unnecessary" advisory is moot.
     -->
-    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0110;MEAI001</NoWarn>
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0110;MEAI001;NU1510</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
@@ -55,17 +59,6 @@
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" Visible="false" />
-  </ItemGroup>
-
-  <!--
-    NuGet audit suppressions — tracked here so they are visible and auditable.
-    Each entry should be removed when the dep is upgraded past the fixed version.
-    GHSA-mr8r-92fq-pj8p : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability.
-    GHSA-4625-4j76-fww9 : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability (gRPC).
-  -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-mr8r-92fq-pj8p" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4625-4j76-fww9" />
   </ItemGroup>
 
 </Project>

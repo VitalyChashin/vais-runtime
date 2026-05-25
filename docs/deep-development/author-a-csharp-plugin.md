@@ -16,7 +16,7 @@ For polyglot (Python, Go, anything else) or stricter isolation (container, netwo
 
 - A running `vais-agents-runtime` ([DevOps section](../devops/index.md)).
 - The `vais` CLI installed and pointed at the runtime.
-- .NET 9 SDK.
+- .NET 10 SDK.
 - Access to the `Vais.Agents.*` NuGet packages. These are not on nuget.org. Add a `NuGet.config` next to your csproj that points at the private feed (or the local `agentic/artifacts/packages` folder from your checkout):
 
 ```xml
@@ -52,7 +52,7 @@ Edit the csproj to reference Vais.Agents packages and publish transitive deps:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
@@ -119,7 +119,7 @@ Build to verify:
 
 ```bash
 dotnet build -c Release
-# → bin/Release/net9.0/MyApp.WeatherAgent.dll
+# → bin/Release/net10.0/MyApp.WeatherAgent.dll
 ```
 
 ## 4. Publish with transitive deps

@@ -5,7 +5,7 @@
 #
 # For production with a published runtime image use langgraph-researcher-live/Dockerfile.overlay instead.
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 # ── Stage 1: Build the .NET runtime ──────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS dotnet-build
@@ -22,7 +22,7 @@ RUN dotnet publish src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj 
 # ── Stage 2: Build the Python plugin venv on Linux ───────────────────────────
 # Runs inside Linux, so the produced .venv is Linux-native — safe to COPY into
 # the final stage regardless of the developer's host OS.
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS python-builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS python-builder
 WORKDIR /plugin
 
 # vais-agent-sdk — replace with `uv pip install vais-agent-sdk>=0.24` once published to PyPI.
@@ -35,17 +35,18 @@ RUN uv venv .venv \
        "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3"
 
 # ── Stage 3: Final image — .NET runtime + Python plugin ──────────────────────
-# Uses the Debian (bookworm) aspnet base so that `apt-get install python3.11`
-# places the interpreter at /usr/bin/python3.11 — the same path referenced by
-# the .venv symlinks built in the python-builder stage above.
+# Uses the default .NET 10 aspnet base (Ubuntu 24.04); `apt-get install python3.12`
+# provides /usr/bin/python3.12 — the same path referenced by the python3.12 .venv
+# built in the python-builder stage above. (.NET 10 dropped the Debian base images
+# that previously supplied python3.11; Ubuntu 24.04's system Python is 3.12.)
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3.11 \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3.11 \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3 \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python \
+    && apt-get install -y --no-install-recommends python3.12 \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python3.12 \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r -g 65532 vais \

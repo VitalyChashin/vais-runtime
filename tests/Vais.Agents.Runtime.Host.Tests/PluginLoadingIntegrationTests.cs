@@ -118,7 +118,7 @@ public class PluginLoadingIntegrationTests : IDisposable
         // AppContext.BaseDirectory (.../tests/Vais.Agents.Runtime.Host.Tests/bin/<Config>/<TFM>)
         // to the solution's tests/ root, then down into the fixture's matching Config + TFM.
         var testBin = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var tfmName = Path.GetFileName(testBin);                                         // net9.0
+        var tfmName = Path.GetFileName(testBin);                                         // net10.0
         var configDir = Path.GetDirectoryName(testBin)!;                                 // .../Tests/bin/Debug
         var configName = Path.GetFileName(configDir);                                    // Debug
         var binDir = Path.GetDirectoryName(configDir)!;                                  // .../Tests/bin

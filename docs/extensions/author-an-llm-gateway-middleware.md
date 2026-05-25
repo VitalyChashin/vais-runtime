@@ -35,7 +35,7 @@ public abstract class LlmGatewayMiddleware : IAgentFilter, IStreamingAgentFilter
 
 ## Prerequisites
 
-- .NET 9 SDK.
+- .NET 10 SDK.
 - Familiarity with C# async/await + `IAsyncEnumerable<T>`.
 - The reference impls in `src/Vais.Agents.Gateways.*` as templates — `Fallback`, `SemanticCache`, `StructuredOutput`, `Prometheus`, `Governance`, `Testing`.
 

@@ -4,7 +4,7 @@
 # Stage 1 restores + publishes the host assembly; stage 2 runs it on a
 # minimal aspnet-alpine base as a non-root user.
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS build
 WORKDIR /src
@@ -12,9 +12,15 @@ WORKDIR /src
 # Copy solution-level MSBuild files first to maximise layer caching.
 COPY Directory.Build.props Directory.Packages.props NuGet.config* ./
 
+# contracts/ supplies the base-ontology.json embedded by Vais.Agents.Control.Manifests.Json.
+COPY contracts/ contracts/
+
 # Bring in only the project files referenced by the host publish graph.
 COPY src/Vais.Agents.Abstractions/Vais.Agents.Abstractions.csproj                                       src/Vais.Agents.Abstractions/
 COPY src/Vais.Agents.Control.Abstractions/Vais.Agents.Control.Abstractions.csproj                       src/Vais.Agents.Control.Abstractions/
+COPY src/Vais.Agents.Core/Vais.Agents.Core.csproj                                                       src/Vais.Agents.Core/
+COPY src/Vais.Agents.Eval/Vais.Agents.Eval.csproj                                                       src/Vais.Agents.Eval/
+COPY src/Vais.Agents.Control.Manifests.Json/Vais.Agents.Control.Manifests.Json.csproj                   src/Vais.Agents.Control.Manifests.Json/
 COPY src/Vais.Agents.Control.Http.Client/Vais.Agents.Control.Http.Client.csproj                         src/Vais.Agents.Control.Http.Client/
 COPY src/Vais.Agents.Control.KubernetesOperator/Vais.Agents.Control.KubernetesOperator.csproj           src/Vais.Agents.Control.KubernetesOperator/
 COPY src/Vais.Agents.Control.KubernetesOperator.Host/Vais.Agents.Control.KubernetesOperator.Host.csproj src/Vais.Agents.Control.KubernetesOperator.Host/
@@ -24,6 +30,9 @@ RUN dotnet restore src/Vais.Agents.Control.KubernetesOperator.Host/Vais.Agents.C
 # Copy the rest of the sources the host depends on.
 COPY src/Vais.Agents.Abstractions/                          src/Vais.Agents.Abstractions/
 COPY src/Vais.Agents.Control.Abstractions/                  src/Vais.Agents.Control.Abstractions/
+COPY src/Vais.Agents.Core/                                  src/Vais.Agents.Core/
+COPY src/Vais.Agents.Eval/                                  src/Vais.Agents.Eval/
+COPY src/Vais.Agents.Control.Manifests.Json/                src/Vais.Agents.Control.Manifests.Json/
 COPY src/Vais.Agents.Control.Http.Client/                   src/Vais.Agents.Control.Http.Client/
 COPY src/Vais.Agents.Control.KubernetesOperator/            src/Vais.Agents.Control.KubernetesOperator/
 COPY src/Vais.Agents.Control.KubernetesOperator.Host/       src/Vais.Agents.Control.KubernetesOperator.Host/

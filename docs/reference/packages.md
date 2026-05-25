@@ -1,6 +1,6 @@
 # Reference: packages
 
-**56 projects** under `src/` — 54 ship as NuGet (52 libraries + `Vais.Agents.Cli` dotnet tool + `Vais.Plugin.Sdk` container plugin SDK) and 2 are **in-repo composition / host projects** (`Vais.Agents.Runtime.Host` and `Vais.Agents.Control.KubernetesOperator.Host`, both `IsPackable=false`, both shipping as container images rather than NuGet packages). Target framework: `net9.0`. Versions track preview tags — not yet published to nuget.org.
+**56 projects** under `src/` — 54 ship as NuGet (52 libraries + `Vais.Agents.Cli` dotnet tool + `Vais.Plugin.Sdk` container plugin SDK) and 2 are **in-repo composition / host projects** (`Vais.Agents.Runtime.Host` and `Vais.Agents.Control.KubernetesOperator.Host`, both `IsPackable=false`, both shipping as container images rather than NuGet packages). Target framework: `net10.0`. Versions track preview tags — not yet published to nuget.org.
 
 Sections below cover each tier. The runtime container is documented separately at [Runtime container](#runtime-container-v016); the K8s operator host at [Kubernetes-native deployment](#control-plane--kubernetes-v013).
 
@@ -178,7 +178,7 @@ Optional middleware packages that plug into any `StatefulAiAgent` via `StatefulA
 |---|---|---|---|
 | `Vais.Agents.Cli` | `vais` dotnet-tool wrapping the HTTP control plane. ~30 top-level commands + 5 branches (`eval`, `ext`, `agent`, `diagnose`, `config`) for a total of ~47 commands covering agents, graphs, gateways, plugins, extensions, eval, diagnostics, and config. Kubeconfig-style `~/.vais/config.yaml`. POSIX exit codes. | `vais apply` / `invoke` / `logs` / `signal` / `get` / `delete` / `cancel` / `init` / `version`; graph commands (`get-graphs`, `delete-graph`, `graph-validate`, `invoke-graph`, `graph-logs`, `get-runs`); plugin commands (`plugin-status`, `plugin-push`, `plugin-build`, `plugin-deploy`, `plugin-init`, `plugin-watch`, `plugin-import-existing`); gateway / MCP server (`get-llm-gateways`, `get-mcp-gateways`, `get-mcp-servers`, `*-validate`); eval branch; ext branch; agent branch; diagnose branch; config branch | Interactive exploration + CI manifest apply + log tailing. Install with `dotnet tool install -g Vais.Agents.Cli`. Cannot be added as a library reference (NU1212) — use `Vais.Agents.Control.Http.Client` for in-process .NET callers. |
 
-`Vais.Agents.Cli` ships with `<PackAsTool>true</PackAsTool>` + `<ToolCommandName>vais</ToolCommandName>`. Targets `net9.0`. The tool install resolves the binary under `~/.dotnet/tools/` (`%USERPROFILE%\.dotnet\tools\` on Windows). Full command catalogue: [cli-subcommands reference](cli-subcommands.md).
+`Vais.Agents.Cli` ships with `<PackAsTool>true</PackAsTool>` + `<ToolCommandName>vais</ToolCommandName>`. Targets `net10.0`. The tool install resolves the binary under `~/.dotnet/tools/` (`%USERPROFILE%\.dotnet\tools\` on Windows). Full command catalogue: [cli-subcommands reference](cli-subcommands.md).
 
 ## Typical scenario bundles
 

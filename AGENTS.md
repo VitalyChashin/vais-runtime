@@ -88,7 +88,7 @@ Licence: **Apache-2.0**. Copyright is held by *VAIS contributors*. Every `.cs` f
 |---|---|
 | `src/` | 29 C# projects: 27 library packages + `Vais.Agents.Runtime.Host` (container entrypoint) + `Vais.Agents.Control.KubernetesOperator.Host` (operator entrypoint). |
 | `tests/` | xUnit test projects. Naming convention: `<ProjectUnderTest>.Tests`. |
-| `samples/` | Standalone .NET 9 console apps + YAML-only directories (27 samples). Each is a runnable demonstration of one feature; see [`samples/README.md`](samples/README.md). |
+| `samples/` | Standalone .NET 10 console apps + YAML-only directories (27 samples). Each is a runnable demonstration of one feature; see [`samples/README.md`](samples/README.md). |
 | `docs/` | All docs. Top-level audience sections: `agent-developer/`, `devops/`, `deep-development/`, `extensions/`, `library-mode/`. Plus `concepts/` (explanations), `guides/` (deep-dive how-tos), `reference/` (lookup tables), `roadmap/`, `contributing/`. |
 | `deploy/` | `compose/` (docker-compose recipes, bases + overlays), `helm/` (runtime + operator charts), `crds/` (standalone CRDs for non-Helm installs). |
 | `contracts/` | Versioned contract artefacts (JSON schemas, OPA input schema, OpenAPI) consumed by downstream repos. |
@@ -111,7 +111,7 @@ dotnet build   Vais.Agents.sln --configuration Release --no-restore
 dotnet test    Vais.Agents.sln --configuration Release --no-build
 ```
 
-Required: **.NET 9 SDK** (`9.0.x`). No earlier or later major. CI verifies on both `ubuntu-latest` and `windows-latest`; assume either is a supported dev platform.
+Required: **.NET 10 SDK** (`10.0.x`). No earlier or later major. CI verifies on both `ubuntu-latest` and `windows-latest`; assume either is a supported dev platform.
 
 Single project / single test run:
 
@@ -168,7 +168,7 @@ End-to-end walkthroughs:
 
 Enforced by [`.editorconfig`](.editorconfig) + [`Directory.Build.props`](Directory.Build.props). Summary:
 
-- **Target framework:** `net9.0`. **Language:** `latest`. **Nullable:** `enable` (all projects). **ImplicitUsings:** `enable`.
+- **Target framework:** `net10.0`. **Language:** `latest`. **Nullable:** `enable` (all projects). **ImplicitUsings:** `enable`.
 - **File-scoped namespaces.** `csharp_style_namespace_declarations = file_scoped:warning`. Block-scoped namespaces are rejected.
 - **Braces required** on single-statement blocks (`csharp_prefer_braces = true:suggestion`).
 - **System usings first** (`dotnet_sort_system_directives_first = true`).
@@ -236,7 +236,7 @@ Rules:
 
 27 samples under `samples/`. Each:
 
-- Is a standalone .NET 9 console app **or** a YAML-only configuration directory (for runtime / deployment scenarios).
+- Is a standalone .NET 10 console app **or** a YAML-only configuration directory (for runtime / deployment scenarios).
 - Has a `README.md` describing scenario, prerequisites, run command, expected output.
 - Consumes `Vais.Agents.*` through `PackageReference` against the local `artifacts/packages/` feed configured in `NuGet.config` — **not** through `ProjectReference`.
 - Opts out of CPM and pins package versions explicitly in its own `.csproj`.

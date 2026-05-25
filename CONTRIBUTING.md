@@ -35,7 +35,7 @@ When in doubt, open an issue describing the problem you're trying to solve befor
 
 ## Build and test locally
 
-Requires **.NET 9 SDK** (`9.0.x`). No earlier or later major. CI verifies on `ubuntu-latest` and `windows-latest`; either is a supported dev platform.
+Requires **.NET 10 SDK** (`10.0.x`). No earlier or later major. CI verifies on `ubuntu-latest` and `windows-latest`; either is a supported dev platform.
 
 ```bash
 dotnet restore Vais.Agents.sln

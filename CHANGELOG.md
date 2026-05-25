@@ -9,6 +9,53 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated the solution to .NET 10 (`net10.0`).** All `src/`, `tests/`, and `samples/` projects
+  moved from `net9.0` to `net10.0`; SDK pinned via a new `global.json` (`10.0`, `rollForward:
+  latestFeature`). Language version stays `latest` (now C# 14).
+  - **ASP.NET Core framework packages** bumped `9.0.x` → `10.0.8`: `Microsoft.AspNetCore.OpenApi`,
+    `Microsoft.AspNetCore.TestHost`, `Microsoft.AspNetCore.Mvc.Testing`,
+    `Microsoft.AspNetCore.Authentication.JwtBearer`.
+  - **Microsoft.OpenApi v2** (pulled in by ASP.NET Core 10) breaking change handled in
+    `VaisProblemDetailsOperationTransformer`: the `Microsoft.OpenApi.Models` / `Microsoft.OpenApi.Any`
+    namespaces were flattened into root `Microsoft.OpenApi`, and `OpenApiString`/`OpenApiArray` were
+    removed — now builds the extension as `new JsonNodeExtension(new JsonArray(...))` and assigns it
+    on the concrete `OpenApiResponse` (the `IOpenApiResponse.Extensions` getter is read-only).
+  - **Container base images** bumped to `10.0`. .NET 10 dropped the Debian base images and the
+    default `aspnet:10.0` is now Ubuntu 24.04, so the two Python demo images
+    (`PluginAgentResearchPipeline/Dockerfile.demo`, `PluginAgentLangGraphResearcherLive/Dockerfile`)
+    move their plugin venvs from `python3.11` to `python3.12` (Ubuntu 24.04's system Python) on the
+    default base, rather than relying on a Debian-only `python3.11` apt package.
+  - **`vais plugin-init`** now scaffolds plugin Dockerfiles on `dotnet/sdk:10.0` + `aspnet:10.0`.
+  - **CI** (`setup-dotnet`) and all docs updated to .NET 10. `A2A 1.0.0-preview2` now resolves to its
+    native `net10.0` target (previously consumed under `net9.0` via forward-compat).
+  - **NuGet:** `NU1510` suppressed (these are published libraries that deliberately declare their
+    `Microsoft.Extensions.*` dependencies rather than rely on the shared framework; .NET 10 package
+    pruning would otherwise flag them).
+
+- **Dependency freshness pass (safe bumps only).** Patch/minor-within-major updates: `Microsoft.Extensions.*`
+  runtime family 10.0.6 → 10.0.8; `Microsoft.Extensions.AI`(+Abstractions/OpenAI) / `.Resilience` /
+  `.TimeProvider.Testing` → 10.6.0; `System.Net.ServerSentEvents` → 10.0.8; `OpenTelemetry` family → 1.15.3
+  (clears advisories `GHSA-mr8r-92fq-pj8p`, `GHSA-4625-4j76-fww9`, `GHSA-g94r-2vxg-569j` — the three
+  `NuGetAuditSuppress` entries were removed); `ModelContextProtocol`(.Core/.AspNetCore) → 1.3.0;
+  `StackExchange.Redis` → 2.13.1; `Testcontainers*` → 4.12.0; `xunit` → 2.9.3; `Google.Protobuf` → 3.35.0;
+  `Microsoft.IdentityModel.*` (JsonWebTokens, Protocols.OpenIdConnect) 8.0.1 → 8.18.0 (same major; the old pin
+  tracked the JwtBearer 9.0 floor, now resolved by JwtBearer 10.0.x); `JsonSchema.Net` 6.0.3 → 9.2.1 (v9 moved
+  `Evaluate` to `JsonElement` and made `EvaluationResults.Details` nullable — fixed in `ManifestValidator` and
+  the MS-3-B schema test); `Microsoft.NET.Test.Sdk` 17.11.1 → 18.5.1 (no code change; runner/discovery works
+  with the existing xunit 2.x — confirmed decoupled from the xunit-v3 migration); `YamlDotNet` 16.3.0 → 18.0.0
+  (no code change; stable high-level API, no YAML round-trip regression); `Npgsql` 9.0.5 → 10.0.2 (no code
+  change; verified at runtime against real Postgres — Orleans AdoNet clustering/persistence + cross-silo green);
+  `KubeOps` 10.3.4 → 11.0.0 (no code change; KubernetesOperator.Tests 59/59 + operator image/CRD-gen green;
+  KubernetesClient stays 19.0.2); `Microsoft.SemanticKernel` core + Connectors.OpenAI 1.74.0 → 1.76.0 (no code
+  change; Connectors.InMemory stays 1.74.0-preview — no 1.76 release — and is binary-compatible with SK 1.76);
+  `Microsoft.Agents.AI` / `.Workflows` (MAF) 1.1.0/1.5.0 → 1.6.2 (no code change; graph-orchestrator + parity
+  suites green).
+  Only the xunit-v3 migration remains deferred — see `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`.
+  Pins held: FluentAssertions (licence), VectorData.Abstractions + SK.Connectors.InMemory (no SK-1.76-aligned
+  InMemory connector release).
+
 ### Security
 
 - **C# DLL plugin endpoints now governed by RBAC + approval gate (PG-1..PG-14).** The six

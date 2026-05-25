@@ -37,7 +37,7 @@ docker build \
   .
 ```
 
-The build uses `mcr.microsoft.com/dotnet/sdk:9.0` for the build stage and `mcr.microsoft.com/dotnet/aspnet:9.0-alpine` for runtime. The final image runs as non-root (uid/gid 65532) and exposes `/healthz` + `/readyz` on port 8080. Expect ~120 MB.
+The build uses `mcr.microsoft.com/dotnet/sdk:10.0` for the build stage and `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` for runtime. The final image runs as non-root (uid/gid 65532) and exposes `/healthz` + `/readyz` on port 8080. Expect ~120 MB.
 
 ```bash
 docker images | grep vais-agents-operator
