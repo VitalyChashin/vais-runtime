@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Vais.Agents.Control.Manifests;
@@ -50,12 +49,13 @@ internal static class ManifestValidator
             var schema = GetSchema(kind);
             if (schema is not null)
             {
+                using var instanceDoc = JsonDocument.Parse(manifestJson);
                 var evalResult = schema.Evaluate(
-                    JsonNode.Parse(manifestJson),
+                    instanceDoc.RootElement,
                     new EvaluationOptions { OutputFormat = OutputFormat.List });
-                if (!evalResult.IsValid)
+                if (!evalResult.IsValid && evalResult.Details is { } details)
                 {
-                    foreach (var detail in evalResult.Details)
+                    foreach (var detail in details)
                     {
                         if (detail.Errors is { Count: > 0 })
                             foreach (var (_, msg) in detail.Errors)

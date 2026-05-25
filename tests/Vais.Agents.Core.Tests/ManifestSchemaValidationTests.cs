@@ -1,7 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using FluentAssertions;
 using Json.Schema;
 using Vais.Agents.Control;
@@ -40,7 +40,8 @@ public sealed class ManifestSchemaValidationTests
         var codecJson = Encode(resources.Single());
 
         var schema = JsonSchema.FromText(ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(recordType, kind));
-        var result = schema.Evaluate(JsonNode.Parse(codecJson), new EvaluationOptions { OutputFormat = OutputFormat.List });
+        using var instanceDoc = JsonDocument.Parse(codecJson);
+        var result = schema.Evaluate(instanceDoc.RootElement, new EvaluationOptions { OutputFormat = OutputFormat.List });
 
         result.IsValid.Should().BeTrue(
             because: $"codec output for {kind} must validate against the generated schema. Violations:\n{Violations(result)}");
@@ -60,7 +61,7 @@ public sealed class ManifestSchemaValidationTests
 
     private static string Violations(EvaluationResults result)
     {
-        var lines = result.Details
+        var lines = (result.Details ?? [])
             .Where(d => d.Errors is { Count: > 0 })
             .SelectMany(d => d.Errors!.Select(e => $"  {d.InstanceLocation}: {e.Key} = {e.Value}"));
         return string.Join("\n", lines);

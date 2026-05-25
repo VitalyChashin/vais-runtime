@@ -124,8 +124,10 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
-    <!-- JSON Schema validator (test-only) — MS-3-B correctness gate: codec output must validate against the generated schema. -->
-    <PackageVersion Include="JsonSchema.Net" Version="6.0.3" />
+    <!-- JSON Schema validator. Used by the MCP design server's ManifestValidator (vais.validate) and the
+         MS-3-B test gate (codec output must validate against the generated schema). v9 note: Evaluate takes
+         JsonElement (was JsonNode) and EvaluationResults.Details is nullable. -->
+    <PackageVersion Include="JsonSchema.Net" Version="9.2.1" />
   </ItemGroup>
   <ItemGroup Label="YAML loader (Vais.Agents.Control.Manifests.Yaml). YamlDotNet is the de-facto .NET YAML parser.">
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
