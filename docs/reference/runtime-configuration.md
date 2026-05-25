@@ -166,6 +166,32 @@ Off-by-default. When set, the runtime applies all manifests in the directory on 
 - `Boot-manifest directory '<path>' does not exist — skipping boot apply.`
 - `Boot-manifest apply complete — N applied, M skipped (same version), K failed.`
 
+## Graceful shutdown
+
+Controls how long the host waits for Orleans grain drain to complete after SIGTERM before it is forcibly cancelled.
+
+| Env var | Default | Notes |
+|---|---|---|
+| `VAIS_SHUTDOWN_TIMEOUT_SECONDS` | `30` | Maximum seconds `IHost.StopAsync` is allowed to run. Must satisfy: **max grain drain ≤ `VAIS_SHUTDOWN_TIMEOUT_SECONDS` < external grace window** (`stop_grace_period` in compose, `terminationGracePeriodSeconds` in K8s). The shipped defaults are 30 s host timeout + 45 s external grace — the 15 s gap is the SIGKILL safety net. |
+
+**Shutdown contract.** On SIGTERM, the .NET generic host calls `IHost.StopAsync`, which triggers the Orleans silo's `Stopping` phase. Orleans deactivates all local grain activations, calls `OnDeactivateAsync` (reason `ShuttingDown`) on each, and waits for them to complete — all within `VAIS_SHUTDOWN_TIMEOUT_SECONDS`. Grain `OnDeactivateAsync` is **best-effort** — it is not called on SIGKILL, crash, or abnormal exit. Grain state durability does not depend on it (Orleans persists state independently); the shutdown drain is for session-lifecycle `closing` hooks and any deactivation-time cleanup.
+
+**Startup log.** The active timeout value is emitted at boot:
+
+```
+Vais.Agents runtime starting — mode=localhost … shutdownTimeout=30s
+```
+
+**Diagnosis log.** When a grain drains on shutdown, it emits at Information level:
+
+```
+Grain deactivating on shutdown — agentId=<id>
+```
+
+This line confirms the drain reached the grain before the host budget expired. Its absence means the timeout was too short (raise `VAIS_SHUTDOWN_TIMEOUT_SECONDS`), or SIGTERM did not reach PID 1 (check the container entrypoint form — exec-form required).
+
+See [Smoke test](../../deploy/shutdown-drain-test.ps1) for a verification script and the deploy docs for aligning external grace windows.
+
 ## Logging
 
 The baked `appsettings.json` sets these log-levels:
