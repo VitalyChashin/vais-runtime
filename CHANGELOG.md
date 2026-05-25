@@ -46,8 +46,10 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   the MS-3-B schema test); `Microsoft.NET.Test.Sdk` 17.11.1 → 18.5.1 (no code change; runner/discovery works
   with the existing xunit 2.x — confirmed decoupled from the xunit-v3 migration); `YamlDotNet` 16.3.0 → 18.0.0
   (no code change; stable high-level API, no YAML round-trip regression); `Npgsql` 9.0.5 → 10.0.2 (no code
-  change; verified at runtime against real Postgres — Orleans AdoNet clustering/persistence + cross-silo green).
-  Remaining major-version bumps (MAF, SemanticKernel, KubeOps, and the xunit-v3 migration)
+  change; verified at runtime against real Postgres — Orleans AdoNet clustering/persistence + cross-silo green);
+  `KubeOps` 10.3.4 → 11.0.0 (no code change; KubernetesOperator.Tests 59/59 + operator image/CRD-gen green;
+  KubernetesClient stays 19.0.2).
+  Remaining major-version bumps (MAF, SemanticKernel, and the xunit-v3 migration)
   are deferred to be attempted one at a time — see
   `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`. Pins held: FluentAssertions (licence),
   VectorData.Abstractions (SK 1.74 compat).
