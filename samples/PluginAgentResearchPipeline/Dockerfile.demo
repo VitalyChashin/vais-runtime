@@ -30,7 +30,7 @@ RUN dotnet publish samples/PluginAgentResearchPipeline/planner/Planner.csproj \
     /p:TreatWarningsAsErrors=false
 
 # ── Stage 2: Build LangGraph researcher Python venv ──────────────────────────
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS langgraph-builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS langgraph-builder
 WORKDIR /plugin
 
 COPY samples/python-agent-sdk /sdk
@@ -43,7 +43,7 @@ RUN uv venv .venv \
        "langchain-mcp-adapters>=0.1,<1" "pydantic>=2.8,<3"
 
 # ── Stage 3: Build SGR analyst Python venv ───────────────────────────────────
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS sgr-builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS sgr-builder
 WORKDIR /plugin
 
 COPY samples/python-agent-sdk /sdk
@@ -55,25 +55,25 @@ RUN uv venv .venv \
     && uv pip install --python .venv/bin/python "sgr-agent-core>=0.7.0,<1"
 
 # ── Stage 4: Final image ──────────────────────────────────────────────────────
-# Pinned to the Debian (bookworm) aspnet base: `apt-get install python3.11` places
-# the interpreter at /usr/bin/python3.11, matching the .venv symlinks built above.
-# The default .NET 10 aspnet image is Ubuntu 24.04, which ships python3.12 (no
-# python3.11 in apt), so it must not be used here.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-bookworm-slim
+# Uses the default .NET 10 aspnet base (Ubuntu 24.04). `apt-get install python3.12`
+# provides the interpreter at /usr/bin/python3.12 — matching the python3.12 .venvs
+# built in the uv stages above. (.NET 10 dropped the Debian base images that
+# previously supplied python3.11; Ubuntu 24.04's system Python is 3.12.)
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3.11 python3.11-venv python3-pip \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3.11 \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3 \
-    && ln -sf /usr/bin/python3.11 /usr/local/bin/python \
+    && apt-get install -y --no-install-recommends python3.12 python3.12-venv python3-pip \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python3.12 \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/local/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 # Pre-install vais-agent-sdk into the system Python so bootstrapped plugin venvs
 # (created with --system-site-packages) can satisfy the "vais-agent-sdk" dependency
 # without a PyPI lookup (the SDK is not yet published to PyPI).
 COPY --chown=root:root samples/python-agent-sdk /tmp/vais-agent-sdk
-RUN python3.11 -m pip install --no-cache-dir --break-system-packages /tmp/vais-agent-sdk \
+RUN python3.12 -m pip install --no-cache-dir --break-system-packages /tmp/vais-agent-sdk \
     && rm -rf /tmp/vais-agent-sdk
 
 RUN groupadd -r -g 65532 vais \

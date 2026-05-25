@@ -22,10 +22,11 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
     namespaces were flattened into root `Microsoft.OpenApi`, and `OpenApiString`/`OpenApiArray` were
     removed — now builds the extension as `new JsonNodeExtension(new JsonArray(...))` and assigns it
     on the concrete `OpenApiResponse` (the `IOpenApiResponse.Extensions` getter is read-only).
-  - **Container base images** bumped to `10.0`. The two Python demo images
+  - **Container base images** bumped to `10.0`. .NET 10 dropped the Debian base images and the
+    default `aspnet:10.0` is now Ubuntu 24.04, so the two Python demo images
     (`PluginAgentResearchPipeline/Dockerfile.demo`, `PluginAgentLangGraphResearcherLive/Dockerfile`)
-    pin the Debian `10.0-bookworm-slim` runtime base, because the default .NET 10 image is now
-    Ubuntu 24.04 (which ships `python3.12`, not `python3.11`, in apt).
+    move their plugin venvs from `python3.11` to `python3.12` (Ubuntu 24.04's system Python) on the
+    default base, rather than relying on a Debian-only `python3.11` apt package.
   - **`vais plugin-init`** now scaffolds plugin Dockerfiles on `dotnet/sdk:10.0` + `aspnet:10.0`.
   - **CI** (`setup-dotnet`) and all docs updated to .NET 10. `A2A 1.0.0-preview2` now resolves to its
     native `net10.0` target (previously consumed under `net9.0` via forward-compat).
