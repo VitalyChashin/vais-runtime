@@ -7,15 +7,21 @@
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
     <!--
-      VectorData.Abstractions pinned at 10.1.0 — SK 1.74.0's InMemory connector (used in tests)
-      was compiled against 10.1's surface and references types (e.g. VectorSearchFilter) that
-      were removed in later 10.x patches. Bump in lockstep with SK.Connectors.InMemory.
+      VectorData.Abstractions pinned at 10.1.0 — the SK InMemory connector (used in tests, still at
+      1.74.0-preview; see the SK adapter group) was compiled against 10.1's surface and references types
+      (e.g. VectorSearchFilter) removed in later 10.x patches. SK core is now 1.76, but the InMemory
+      connector preview never advanced past 1.74, so this stays pinned. Bump in lockstep with SK.Connectors.InMemory.
     -->
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.1.0" />
   </ItemGroup>
   <ItemGroup Label="Semantic Kernel adapter">
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.74.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.74.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.76.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.76.0" />
+    <!--
+      Connectors.InMemory (test-only) stays at 1.74.0-preview: its preview line ended there — there is no
+      1.76 release. Binary-compatible with SK 1.76 core (verified by Persistence.VectorData.Tests). Bump
+      together with VectorData.Abstractions when/if a newer InMemory preview ships.
+    -->
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
   </ItemGroup>
   <ItemGroup Label="Microsoft Agent Framework (MAF) adapter">
