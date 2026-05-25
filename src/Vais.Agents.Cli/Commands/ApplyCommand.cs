@@ -444,6 +444,14 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
                 $"[red]✗[/] {Markup.Escape(manifest.Id)}: {result.Status} — {Markup.Escape(result.ErrorMessage ?? result.Status.ToString())}");
             return false;
         }
+        catch (ApprovalRequiredException are)
+        {
+            AnsiConsole.MarkupLine(
+                $"{Markup.Escape(manifest.Id ?? "?")} [yellow]pending approval[/] — " +
+                $"requestId [bold]{Markup.Escape(are.RequestId)}[/]; run " +
+                $"[bold]vais approvals approve {Markup.Escape(are.RequestId)}[/]");
+            return true;
+        }
         catch (AgentControlPlaneException ex)
         {
             ProblemDetailsParser.HandleAndExitCode(ex, AnsiConsole.Console);
@@ -503,13 +511,23 @@ internal sealed class ApplyCommand : AsyncCommand<ApplyCommand.Settings>
 
         try
         {
-            var handle = await client.CreateContainerPluginAsync(manifest, idempotencyKey, ct);
-            AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (container-plugin, version {handle.Version})");
+            try
+            {
+                var handle = await client.CreateContainerPluginAsync(manifest, idempotencyKey, ct);
+                AnsiConsole.MarkupLine($"{handle.Id} [green]created[/] (container-plugin, version {handle.Version})");
+            }
+            catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+            {
+                var updated = await client.UpdateContainerPluginAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
+                AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (container-plugin, version {updated.Version})");
+            }
         }
-        catch (AgentControlPlaneException ex) when (ProblemDetailsParser.IsConflict(ex))
+        catch (ApprovalRequiredException are)
         {
-            var updated = await client.UpdateContainerPluginAsync(manifest.Id, manifest, manifest.Version, idempotencyKey, ct);
-            AnsiConsole.MarkupLine($"{updated.Id} [blue]updated[/] (container-plugin, version {updated.Version})");
+            AnsiConsole.MarkupLine(
+                $"{Markup.Escape(manifest.Id ?? "?")} [yellow]pending approval[/] — " +
+                $"requestId [bold]{Markup.Escape(are.RequestId)}[/]; run " +
+                $"[bold]vais approvals approve {Markup.Escape(are.RequestId)}[/]");
         }
         return true;
     }
