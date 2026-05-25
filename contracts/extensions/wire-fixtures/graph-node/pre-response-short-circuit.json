@@ -1,0 +1,5 @@
+{
+  "action": "shortCircuit",
+  "continuationToken": "tok-1",
+  "output": { "result": "cached" }
+}

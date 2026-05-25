@@ -1,0 +1,11 @@
+{
+  "callId": "call-1",
+  "request": {
+    "messages": [{ "role": "user", "content": "hello" }],
+    "systemPrompt": "You are helpful.",
+    "temperature": 0.7,
+    "maxTokens": 256,
+    "agentId": "agent-1",
+    "runId": "run-1"
+  }
+}

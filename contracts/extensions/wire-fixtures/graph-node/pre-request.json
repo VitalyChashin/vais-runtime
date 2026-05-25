@@ -1,0 +1,11 @@
+{
+  "callId": "call-1",
+  "context": {
+    "runId": "run-1",
+    "nodeId": "node-1",
+    "nodeKind": "llm",
+    "agentId": "agent-1",
+    "superStep": 0,
+    "input": { "query": "hello" }
+  }
+}

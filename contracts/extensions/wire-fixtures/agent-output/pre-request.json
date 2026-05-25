@@ -1,0 +1,10 @@
+{
+  "callId": "call-1",
+  "context": {
+    "agentId": "agent-1",
+    "runId": "run-1",
+    "sessionId": "session-1",
+    "outputTokens": 120,
+    "inputTokens": 30
+  }
+}

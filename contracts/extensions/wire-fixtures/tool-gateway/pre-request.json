@@ -1,0 +1,12 @@
+{
+  "callId": "call-1",
+  "context": {
+    "toolName": "search",
+    "callId": "tool-call-1",
+    "arguments": { "query": "hello" },
+    "agentId": "agent-1",
+    "runId": "run-1",
+    "privilegeLevel": "standard",
+    "allowedTools": ["search", "fetch"]
+  }
+}
