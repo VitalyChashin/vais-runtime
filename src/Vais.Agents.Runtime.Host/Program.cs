@@ -15,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 var options = RuntimeOptions.FromEnvironment();
 options.EnsureValid();
 
+builder.Services.Configure<HostOptions>(o =>
+    o.ShutdownTimeout = TimeSpan.FromSeconds(options.ShutdownTimeoutSeconds));
+
 // Fail fast on wiring mistakes: validate the whole DI graph at build (every registered service
 // is constructable) and surface captive-dependency / scope violations instead of deferring them
 // to the first request. On by default in Development under WebApplicationBuilder; we enable it in
@@ -37,7 +40,7 @@ var app = builder.Build();
 CriticalRuntimeContracts.Verify(app.Services);
 
 app.Logger.LogInformation(
-    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} persistence={Persistence} pubsub={PubSub} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests}",
+    "Vais.Agents runtime starting — mode={Mode} clustering={Clustering} persistence={Persistence} pubsub={PubSub} opa={Opa} otel={Otel} langfuse={Langfuse} jwt={Jwt} bootManifests={BootManifests} shutdownTimeout={ShutdownTimeout}s",
     options.Mode,
     options.Mode == "clustered" ? options.ClusteringBackend : "n/a",
     options.Mode == "localhost" ? options.LocalhostPersistence.ToString().ToLowerInvariant() : "n/a",
@@ -53,7 +56,8 @@ app.Logger.LogInformation(
     string.IsNullOrWhiteSpace(options.JwtAuthority)
         ? "disabled"
         : options.UseSaPrincipalMapper ? $"enabled+sa-mapper ({options.JwtAuthority})" : $"enabled ({options.JwtAuthority})",
-    string.IsNullOrWhiteSpace(options.BootManifestsDirectory) ? "disabled" : options.BootManifestsDirectory);
+    string.IsNullOrWhiteSpace(options.BootManifestsDirectory) ? "disabled" : options.BootManifestsDirectory,
+    options.ShutdownTimeoutSeconds);
 
 app.Logger.LogInformation(
     "Vais.Agents observability stores — run-store={RunStore} agent-run-store={AgentRunStore} gateway-event-store={GatewayEventStore} mcp-event-store={McpEventStore} mcp-gateway-event-store={McpGatewayEventStore} agent-log-sink={AgentLogSink}",
