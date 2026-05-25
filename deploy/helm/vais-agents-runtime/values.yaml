@@ -151,6 +151,11 @@ service:
   port: 8080
   annotations: {}
 
+# Graceful shutdown: how long Kubernetes waits after SIGTERM before SIGKILL.
+# Must satisfy: max grain drain ≤ VAIS_SHUTDOWN_TIMEOUT_SECONDS (30) < terminationGracePeriodSeconds.
+# The default 45 s leaves a 15 s safety net above the 30 s host timeout.
+terminationGracePeriodSeconds: 45
+
 # Probe timings — default tolerance is 60s (12 × 5s) on readiness to cover
 # the measured ~14s P99 silo-join time in clustered mode with 4× safety. Tune
 # `readinessProbe.failureThreshold` upward for larger clusters that may
