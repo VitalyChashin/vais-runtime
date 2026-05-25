@@ -144,8 +144,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
   </ItemGroup>
-  <ItemGroup Label="Microsoft.IdentityModel — OIDC identity provider (Vais.Agents.Identity.Oidc). Version pinned to match the 8.0.1 floor set transitively by Microsoft.AspNetCore.Authentication.JwtBearer 9.0.0.">
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.0.1" />
+  <ItemGroup Label="Microsoft.IdentityModel — OIDC identity provider (Vais.Agents.Identity.Oidc). On the 8.x line that ASP.NET Core 10's Microsoft.AspNetCore.Authentication.JwtBearer 10.0.x resolves to.">
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.18.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.18.0" />
   </ItemGroup>
 </Project>
