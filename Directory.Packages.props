@@ -111,7 +111,7 @@
   <ItemGroup Label="Postgres persistence (Vais.Agents.Persistence.Postgres). Orleans ADO.NET providers + Npgsql.">
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.1.0" />
-    <PackageVersion Include="Npgsql" Version="9.0.5" />
+    <PackageVersion Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
   <ItemGroup Label="Testcontainers (integration tests that need real infrastructure).">
     <PackageVersion Include="Testcontainers" Version="4.12.0" />
