@@ -1,0 +1,4 @@
+{
+  "action": "mutate",
+  "response": { "text": "rewritten reply", "promptTokens": 10, "completionTokens": 5 }
+}

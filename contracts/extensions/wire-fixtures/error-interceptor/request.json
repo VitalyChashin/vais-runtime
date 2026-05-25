@@ -1,0 +1,10 @@
+{
+  "callId": "call-1",
+  "context": {
+    "agentId": "agent-1",
+    "runId": "run-1",
+    "nodeId": "node-1",
+    "errorType": "InvalidOperation",
+    "errorMessage": "something failed"
+  }
+}
