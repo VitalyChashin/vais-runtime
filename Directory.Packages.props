@@ -25,8 +25,8 @@
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.74.0-preview" />
   </ItemGroup>
   <ItemGroup Label="Microsoft Agent Framework (MAF) adapter">
-    <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
-    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.5.0" />
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.6.2" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.6.2" />
   </ItemGroup>
   <ItemGroup Label="PowerFx expression evaluator (Vais.Agents.Core.PowerFx only — optional)">
     <PackageVersion Include="Microsoft.PowerFx.Interpreter" Version="1.8.1" />
