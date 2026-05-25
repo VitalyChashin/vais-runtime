@@ -131,6 +131,25 @@ The bridge reads its behaviour from env vars. Set them in `spec.container.env`.
 | `MCP_HEALTH_PATH` | `/health` | Health endpoint path. Must match `spec.container.healthPath`. |
 | `MCP_SERVER_NAME` | `vais-mcp-bridge` | Identity reported on MCP `initialize`. |
 
+The following vars are **injected automatically by the runtime** when
+`Vais__ContainerPlugin__CallTokenSecret` is set (the same condition that enables OTLP for
+container plugins). Do not set them manually.
+
+| Var | Set by | Purpose |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Runtime | OTLP HTTP endpoint on the runtime's internal port (`/v1/otlp`). |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | Runtime | Always `http/protobuf`. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Runtime | `Authorization: vais-plugin-token <hmac>` authenticating spans at the OTLP receiver. |
+| `OTEL_RESOURCE_ATTRIBUTES` | Runtime | `vais.agent_id=<server-id>` tagging emitted spans. |
+| `VAIS_LOG_ENDPOINT` | Runtime | `POST /v1/logs` endpoint URL (with `?source=plugin&id=<server-id>`). |
+| `VAIS_LOG_TOKEN` | Runtime | 24-hour HMAC token for authenticating log records at the structured-log receiver. |
+
+The stdio child process inherits all of these from the bridge process. To activate span
+forwarding in Python, install `opentelemetry-sdk opentelemetry-exporter-otlp-proto-http`;
+the SDK picks up the `OTEL_*` env vars automatically. For structured logs, use the
+`vais-plugin-sdk` `VaisLogHandler` or post JSON directly to `$VAIS_LOG_ENDPOINT` with
+`Authorization: vais-plugin-token $VAIS_LOG_TOKEN`.
+
 ## Iterate
 
 Edit your bridge code, bump `metadata.version`, re-apply:
@@ -182,9 +201,13 @@ re-apply. K8s drives the rollout.
   `VAIS_DOCKER_PLUGIN_NETWORK`. Use `--internal` Docker network topology or K8s
   `NetworkPolicy` to constrain what the stdio MCP can reach. See
   [P12 sandbox contract](../../../research/completed/2026-05-14/plugin-isolation-contract-2026-05-13.md).
-- **Observability.** Spans for every tool call are emitted by the gateway middleware
-  chain (`ToolOtel`). In-container bridge spans are not currently forwarded; that's a
-  follow-up.
+- **Observability.** Gateway middleware (`ToolOtel`) emits a span for every tool call on
+  the runtime side. When `Vais__ContainerPlugin__CallTokenSecret` is set, the runtime also
+  injects `OTEL_EXPORTER_OTLP_*` and `VAIS_LOG_ENDPOINT`/`VAIS_LOG_TOKEN` into the
+  container so the bridge and its stdio child can export their own spans and log records to
+  the runtime's receivers (see [Bridge env vars](#bridge-env-vars) above). K8s deployments
+  must add `OTEL_*` to their Deployment spec directly; the K8s supervisor does not inject
+  env vars.
 
 ## Troubleshooting
 

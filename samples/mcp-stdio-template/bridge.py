@@ -13,6 +13,12 @@ Use this script verbatim. Override behavior by setting env vars in your manifest
 """
 from __future__ import annotations
 
+# Telemetry opt-in: when Vais__ContainerPlugin__CallTokenSecret is set, the runtime
+# injects OTEL_EXPORTER_OTLP_ENDPOINT/PROTOCOL/HEADERS, OTEL_RESOURCE_ATTRIBUTES,
+# VAIS_LOG_ENDPOINT, and VAIS_LOG_TOKEN into this container. The stdio child inherits
+# them. Install opentelemetry-sdk + opentelemetry-exporter-otlp-proto-http to activate
+# span forwarding; see docs/guides/deploy-a-stdio-mcp-server.md for details.
+
 import os
 import shlex
 
