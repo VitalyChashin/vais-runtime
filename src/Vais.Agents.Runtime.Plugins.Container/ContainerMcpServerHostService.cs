@@ -72,7 +72,11 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
         ILoggerFactory loggerFactory)
         : this(registry, options,
               () => serviceProvider.GetServices<IMcpServerConnectionChangedHook>(),
-              DefaultSupervisorFactory(loggerFactory),
+              DefaultSupervisorFactory(
+                  loggerFactory,
+                  serviceProvider.GetService<ICallTokenService>(),
+                  options.OtlpEndpointUrl,
+                  options.LogEndpointUrl),
               DefaultToolSourceFactory,
               loggerFactory)
     {
@@ -96,7 +100,11 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
         _logger = _loggerFactory.CreateLogger<ContainerMcpServerHostService>();
     }
 
-    private static Func<ContainerPluginDescriptor, IContainerSupervisor> DefaultSupervisorFactory(ILoggerFactory lf) =>
+    private static Func<ContainerPluginDescriptor, IContainerSupervisor> DefaultSupervisorFactory(
+        ILoggerFactory lf,
+        ICallTokenService? callTokenService,
+        string? otlpEndpointUrl,
+        string? logEndpointUrl) =>
         descriptor =>
         {
             if (descriptor.KubernetesConfig is not null)
@@ -106,11 +114,9 @@ internal sealed class ContainerMcpServerHostService : BackgroundService, INamedT
                     descriptor, k8s, lf.CreateLogger<KubernetesContainerSupervisor>());
             }
             var docker = new DockerClientConfiguration().CreateClient();
-            // OTLP wiring deferred for container MCP servers (see plan §10.4 option b) —
-            // pass callTokenService=null and otlpEndpointUrl=null so the supervisor skips OTLP env injection.
             return new DockerContainerSupervisor(
                 descriptor, docker, lf.CreateLogger<DockerContainerSupervisor>(),
-                callTokenService: null, otlpEndpointUrl: null);
+                callTokenService, otlpEndpointUrl, logEndpointUrl);
         };
 
     private static async Task<(IAsyncDisposable Client, IToolSource Source)> DefaultToolSourceFactory(

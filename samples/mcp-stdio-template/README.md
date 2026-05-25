@@ -51,6 +51,23 @@ The bridge reads its behavior from env vars. The most useful ones are settable f
 | `MCP_HEALTH_PATH` | `/health` | Health endpoint path. Must match `spec.container.healthPath`. |
 | `MCP_SERVER_NAME` | `vais-mcp-bridge` | Identity reported on MCP `initialize`. |
 
+## Telemetry (opt-in)
+
+When `Vais__ContainerPlugin__CallTokenSecret` is configured on the runtime, it
+automatically injects the following env vars into every container MCP server container:
+
+- `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_PROTOCOL` /
+  `OTEL_EXPORTER_OTLP_HEADERS` — point the OpenTelemetry SDK at the runtime's OTLP
+  receiver, authenticated with a `vais-plugin-token`.
+- `OTEL_RESOURCE_ATTRIBUTES` — tags emitted spans with `vais.agent_id=<server-id>`.
+- `VAIS_LOG_ENDPOINT` / `VAIS_LOG_TOKEN` — authenticated endpoint for `POST /v1/logs`
+  structured-log records.
+
+The stdio child process inherits all of these from the bridge process. To activate span
+forwarding, install `opentelemetry-sdk opentelemetry-exporter-otlp-proto-http` (e.g. add
+to your `Dockerfile`'s `pip install` line); the SDK picks up the env vars automatically.
+Do not set these vars manually in `spec.container.env`.
+
 ## Concrete example
 
 [`samples/mcp-fetch-container/`](../mcp-fetch-container/) wraps `mcp-server-fetch`
