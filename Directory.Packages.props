@@ -12,7 +12,7 @@
       (e.g. VectorSearchFilter) removed in later 10.x patches. SK core is now 1.76, but the InMemory
       connector preview never advanced past 1.74, so this stays pinned. Bump in lockstep with SK.Connectors.InMemory.
     -->
-    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.6.0" />
   </ItemGroup>
   <ItemGroup Label="Semantic Kernel adapter">
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.76.0" />
