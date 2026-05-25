@@ -44,8 +44,9 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   tracked the JwtBearer 9.0 floor, now resolved by JwtBearer 10.0.x); `JsonSchema.Net` 6.0.3 → 9.2.1 (v9 moved
   `Evaluate` to `JsonElement` and made `EvaluationResults.Details` nullable — fixed in `ManifestValidator` and
   the MS-3-B schema test); `Microsoft.NET.Test.Sdk` 17.11.1 → 18.5.1 (no code change; runner/discovery works
-  with the existing xunit 2.x — confirmed decoupled from the xunit-v3 migration).
-  Remaining major-version bumps (MAF, SemanticKernel, Npgsql, YamlDotNet, KubeOps, and the xunit-v3 migration)
+  with the existing xunit 2.x — confirmed decoupled from the xunit-v3 migration); `YamlDotNet` 16.3.0 → 18.0.0
+  (no code change; stable high-level API, no YAML round-trip regression).
+  Remaining major-version bumps (MAF, SemanticKernel, Npgsql, KubeOps, and the xunit-v3 migration)
   are deferred to be attempted one at a time — see
   `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`. Pins held: FluentAssertions (licence),
   VectorData.Abstractions (SK 1.74 compat).
