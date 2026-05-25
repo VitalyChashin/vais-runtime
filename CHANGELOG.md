@@ -32,8 +32,18 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
     native `net10.0` target (previously consumed under `net9.0` via forward-compat).
   - **NuGet:** `NU1510` suppressed (these are published libraries that deliberately declare their
     `Microsoft.Extensions.*` dependencies rather than rely on the shared framework; .NET 10 package
-    pruning would otherwise flag them). Added an audit suppression for `GHSA-g94r-2vxg-569j`
-    (`OpenTelemetry.Api` 1.15.2), newly surfaced by .NET 10's default transitive `NuGetAudit`.
+    pruning would otherwise flag them).
+
+- **Dependency freshness pass (safe bumps only).** Patch/minor-within-major updates: `Microsoft.Extensions.*`
+  runtime family 10.0.6 → 10.0.8; `Microsoft.Extensions.AI`(+Abstractions/OpenAI) / `.Resilience` /
+  `.TimeProvider.Testing` → 10.6.0; `System.Net.ServerSentEvents` → 10.0.8; `OpenTelemetry` family → 1.15.3
+  (clears advisories `GHSA-mr8r-92fq-pj8p`, `GHSA-4625-4j76-fww9`, `GHSA-g94r-2vxg-569j` — the three
+  `NuGetAuditSuppress` entries were removed); `ModelContextProtocol`(.Core/.AspNetCore) → 1.3.0;
+  `StackExchange.Redis` → 2.13.1; `Testcontainers*` → 4.12.0; `xunit` → 2.9.3; `Google.Protobuf` → 3.35.0.
+  Major-version bumps (MAF, SemanticKernel, Npgsql, YamlDotNet, KubeOps, Test.Sdk / xunit-v3, JsonSchema.Net,
+  IdentityModel) are deferred to be attempted one at a time — see
+  `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`. Pins held: FluentAssertions (licence),
+  VectorData.Abstractions (SK 1.74 compat).
 
 ### Security
 

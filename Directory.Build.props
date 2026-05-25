@@ -61,18 +61,4 @@
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" Visible="false" />
   </ItemGroup>
 
-  <!--
-    NuGet audit suppressions — tracked here so they are visible and auditable.
-    Each entry should be removed when the dep is upgraded past the fixed version.
-    GHSA-mr8r-92fq-pj8p : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability.
-    GHSA-4625-4j76-fww9 : OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 moderate vulnerability (gRPC).
-    GHSA-g94r-2vxg-569j : OpenTelemetry.Api 1.15.2 moderate vulnerability. Surfaced by .NET 10's
-                          default transitive NuGetAudit; remove when OpenTelemetry is bumped.
-  -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-mr8r-92fq-pj8p" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4625-4j76-fww9" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-g94r-2vxg-569j" />
-  </ItemGroup>
-
 </Project>
