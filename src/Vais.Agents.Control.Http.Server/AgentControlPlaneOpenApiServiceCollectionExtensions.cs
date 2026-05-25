@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Vais.Agents.Control.Http;
 
 /// <summary>
-/// DI + endpoint-builder extensions that register a .NET 9
+/// DI + endpoint-builder extensions that register a .NET 10
 /// <c>Microsoft.AspNetCore.OpenApi</c> document describing the control-plane
 /// REST surface. Zero new package references — the API ships with
 /// <c>Microsoft.AspNetCore.App</c> and is reachable via the existing

@@ -9,6 +9,31 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated the solution to .NET 10 (`net10.0`).** All `src/`, `tests/`, and `samples/` projects
+  moved from `net9.0` to `net10.0`; SDK pinned via a new `global.json` (`10.0`, `rollForward:
+  latestFeature`). Language version stays `latest` (now C# 14).
+  - **ASP.NET Core framework packages** bumped `9.0.x` → `10.0.8`: `Microsoft.AspNetCore.OpenApi`,
+    `Microsoft.AspNetCore.TestHost`, `Microsoft.AspNetCore.Mvc.Testing`,
+    `Microsoft.AspNetCore.Authentication.JwtBearer`.
+  - **Microsoft.OpenApi v2** (pulled in by ASP.NET Core 10) breaking change handled in
+    `VaisProblemDetailsOperationTransformer`: the `Microsoft.OpenApi.Models` / `Microsoft.OpenApi.Any`
+    namespaces were flattened into root `Microsoft.OpenApi`, and `OpenApiString`/`OpenApiArray` were
+    removed — now builds the extension as `new JsonNodeExtension(new JsonArray(...))` and assigns it
+    on the concrete `OpenApiResponse` (the `IOpenApiResponse.Extensions` getter is read-only).
+  - **Container base images** bumped to `10.0`. The two Python demo images
+    (`PluginAgentResearchPipeline/Dockerfile.demo`, `PluginAgentLangGraphResearcherLive/Dockerfile`)
+    pin the Debian `10.0-bookworm-slim` runtime base, because the default .NET 10 image is now
+    Ubuntu 24.04 (which ships `python3.12`, not `python3.11`, in apt).
+  - **`vais plugin-init`** now scaffolds plugin Dockerfiles on `dotnet/sdk:10.0` + `aspnet:10.0`.
+  - **CI** (`setup-dotnet`) and all docs updated to .NET 10. `A2A 1.0.0-preview2` now resolves to its
+    native `net10.0` target (previously consumed under `net9.0` via forward-compat).
+  - **NuGet:** `NU1510` suppressed (these are published libraries that deliberately declare their
+    `Microsoft.Extensions.*` dependencies rather than rely on the shared framework; .NET 10 package
+    pruning would otherwise flag them). Added an audit suppression for `GHSA-g94r-2vxg-569j`
+    (`OpenTelemetry.Api` 1.15.2), newly surfaced by .NET 10's default transitive `NuGetAudit`.
+
 ### Security
 
 - **C# DLL plugin endpoints now governed by RBAC + approval gate (PG-1..PG-14).** The six

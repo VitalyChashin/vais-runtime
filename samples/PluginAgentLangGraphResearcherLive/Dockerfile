@@ -5,7 +5,7 @@
 #
 # For production with a published runtime image use langgraph-researcher-live/Dockerfile.overlay instead.
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 # ── Stage 1: Build the .NET runtime ──────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS dotnet-build
@@ -35,10 +35,12 @@ RUN uv venv .venv \
        "langgraph>=1.0,<2" "langchain-openai>=0.2,<1" "pydantic>=2.8,<3"
 
 # ── Stage 3: Final image — .NET runtime + Python plugin ──────────────────────
-# Uses the Debian (bookworm) aspnet base so that `apt-get install python3.11`
+# Pinned to the Debian (bookworm) aspnet base so that `apt-get install python3.11`
 # places the interpreter at /usr/bin/python3.11 — the same path referenced by
-# the .venv symlinks built in the python-builder stage above.
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
+# the .venv symlinks built in the python-builder stage above. The default .NET 10
+# aspnet image is Ubuntu 24.04 (python3.12, no python3.11 in apt), so the tag is
+# pinned explicitly rather than derived from ${DOTNET_VERSION}.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update \

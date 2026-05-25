@@ -77,7 +77,7 @@ Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.get -> System.
 Vais.Agents.Control.Http.StreamingInvokeOptions.HeartbeatInterval.set -> void
 Vais.Agents.Control.Http.StreamingInvokeOptions.StreamingInvokeOptions() -> void
 Vais.Agents.Control.Http.VaisProblemDetailsOperationTransformer
-Vais.Agents.Control.Http.VaisProblemDetailsOperationTransformer.TransformAsync(Microsoft.OpenApi.Models.OpenApiOperation! operation, Microsoft.AspNetCore.OpenApi.OpenApiOperationTransformerContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Vais.Agents.Control.Http.VaisProblemDetailsOperationTransformer.TransformAsync(Microsoft.OpenApi.OpenApiOperation! operation, Microsoft.AspNetCore.OpenApi.OpenApiOperationTransformerContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Vais.Agents.Control.Http.VaisProblemDetailsOperationTransformer.VaisProblemDetailsOperationTransformer() -> void
 const Vais.Agents.Control.Http.AgentControlPlaneOpenApiServiceCollectionExtensions.DefaultDocumentName = "v1" -> string!
 const Vais.Agents.Control.Http.ProblemDetailsMapping.AgentNotFoundType = "urn:vais-agents:agent-not-found" -> string!

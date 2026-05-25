@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/VitalyChashin/vais-runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/VitalyChashin/vais-runtime/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
-[![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/download)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download)
 [![NuGet status](https://img.shields.io/badge/NuGet-pre--alpha-orange.svg)](#)
 
 > **Status: pre-alpha preview.** API unstable.
@@ -246,11 +246,11 @@ Plus [Concepts](docs/index.md#concepts) for the design model and [Reference](doc
 
 | Built on | Interoperates with |
 |---|---|
-| .NET 9 · Orleans · Microsoft.Extensions.AI · ASP.NET Core · KubeOps · Spectre.Console | Microsoft Agent Framework · Semantic Kernel · OpenAI · Anthropic · Azure OpenAI · Model Context Protocol (MCP) · Agent-to-Agent (A2A) · OpenTelemetry · Langfuse · Prometheus · OPA · Redis · Postgres |
+| .NET 10 · Orleans · Microsoft.Extensions.AI · ASP.NET Core · KubeOps · Spectre.Console | Microsoft Agent Framework · Semantic Kernel · OpenAI · Anthropic · Azure OpenAI · Model Context Protocol (MCP) · Agent-to-Agent (A2A) · OpenTelemetry · Langfuse · Prometheus · OPA · Redis · Postgres |
 
 ## Building
 
-Requires **.NET 9 SDK**.
+Requires **.NET 10 SDK**.
 
 Run any sample end-to-end from a fresh clone:
 

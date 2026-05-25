@@ -32,7 +32,7 @@ When in doubt: middleware first. Use a guardrail only when the check is intrinsi
 
 ## Prerequisites
 
-- .NET 9 SDK.
+- .NET 10 SDK.
 - The reference impls in `src/Vais.Agents.Gateways.Mcp*` as templates — `McpCache`, `McpReliability`, `McpSecurity`, `McpTransformation`, `McpGovernance`.
 
 ## 1. Implement the middleware

@@ -41,7 +41,7 @@ Done.
 
 ## What it demonstrates
 
-- `AddAgentControlPlaneOpenApi()` — registers the .NET 9 `Microsoft.AspNetCore.OpenApi` document generator + the `VaisProblemDetailsOperationTransformer` that enriches each error response with `x-vais-type-urns`.
+- `AddAgentControlPlaneOpenApi()` — registers the .NET 10 `Microsoft.AspNetCore.OpenApi` document generator + the `VaisProblemDetailsOperationTransformer` that enriches each error response with `x-vais-type-urns`.
 - `MapAgentControlPlaneOpenApi()` — mounts `GET /openapi/{documentName}.json`; default document name is `v1` → `/openapi/v1.json`.
 - `x-vais-type-urns` extension — array of stable `urn:vais-agents:*` type URNs on every 4xx/5xx response. Client codegen can pattern-match on these URNs at runtime without parsing strings from the Problem Details body.
 - `System.Text.Json.JsonDocument` — no OpenAPI client library needed; parse the spec as plain JSON to print paths and extensions.

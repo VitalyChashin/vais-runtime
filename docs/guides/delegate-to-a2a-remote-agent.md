@@ -11,7 +11,7 @@ Wrap a remote A2A agent as a local `ITool` so your agent can delegate subtasks t
 <PackageReference Include="A2A" Version="1.0.0-preview2" />
 ```
 
-The A2A SDK targets `net8.0` + `net10.0` only; we consume it under `net9.0` via forward-compat (standard BCL compat rule). Restore is clean.
+The A2A SDK targets `net8.0` + `net10.0` only; under our `net10.0` TFM it resolves to its native `net10.0` target. Restore is clean.
 
 ## Create the wrapper
 

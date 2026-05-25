@@ -6,7 +6,7 @@ Initial CLI pillar shipped in v0.15; subsequent pillars (graphs, plugins, eval, 
 
 ## Prerequisites
 
-- **.NET 9 SDK** — the tool is published as `net9.0`.
+- **.NET 10 SDK** — the tool is published as `net10.0`.
 - **An HTTP control plane reachable from your machine** — local `dotnet run` on `http://localhost:5080`, or a cluster-deployed host. The CLI is a pure client; without a backing server it can only bootstrap its config and print its version.
 
 ## Install

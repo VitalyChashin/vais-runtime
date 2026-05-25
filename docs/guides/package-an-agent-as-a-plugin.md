@@ -2,7 +2,7 @@
 
 End-to-end walkthrough from a blank class library to a plugin that the runtime loads at startup and routes manifests to. Companion to [author-an-agent-in-yaml](author-an-agent-in-yaml.md) — when the declarative path isn't enough and you need C# for custom loops, proprietary providers, or deterministic fallbacks.
 
-Prereqs: a running `vais-agents-runtime` container ([install-the-runtime-locally](install-the-runtime-locally.md)), the `vais` CLI ([install-the-cli](../devops/install-the-cli.md)), .NET 9 SDK.
+Prereqs: a running `vais-agents-runtime` container ([install-the-runtime-locally](install-the-runtime-locally.md)), the `vais` CLI ([install-the-cli](../devops/install-the-cli.md)), .NET 10 SDK.
 
 ## 1. Scaffold a class library
 
@@ -18,7 +18,7 @@ Edit the csproj to reference Vais.Agents packages + publish the plugin with its 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>MyApp.WeatherAgent</AssemblyName>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -85,7 +85,7 @@ Build to verify:
 
 ```bash
 dotnet build -c Release
-# → bin/Release/net9.0/MyApp.WeatherAgent.dll
+# → bin/Release/net10.0/MyApp.WeatherAgent.dll
 ```
 
 ## 4. Publish with transitive deps

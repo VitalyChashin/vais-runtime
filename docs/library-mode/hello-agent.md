@@ -6,7 +6,7 @@ A library-mode walkthrough: stateful multi-turn chat, first on Semantic Kernel, 
 
 ## Prerequisites
 
-- `.NET 9 SDK`.
+- `.NET 10 SDK`.
 - `OPENAI_API_KEY` in your environment.
 - Packages installed per **[Install + package picks](installation.md)**.
 

@@ -171,7 +171,7 @@ that references all CPM packages, or the NuGet website.
 ### 7. Web search (general)
 
 **Why it helps.** For error messages, library idioms, and "what's the current best
-practice for X in .NET 9". Use it before guessing — the repo is new and many decisions
+practice for X in .NET 10". Use it before guessing — the repo is new and many decisions
 reference patterns from `microsoft/semantic-kernel`, `microsoft/agent-framework`,
 `dotnet/orleans`, `open-policy-agent/opa`, and the MCP and A2A reference servers. Those
 upstreams evolve faster than this repo does.
@@ -303,7 +303,7 @@ green.
 
 **Recipe.** Create `samples/<Name>/` containing:
 
-- `<Name>.csproj` — .NET 9 console app, opts out of CPM
+- `<Name>.csproj` — .NET 10 console app, opts out of CPM
   (`<ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>`), references
   `Vais.Agents.*` via `PackageReference` against the local `artifacts/packages/` feed.
 - `Program.cs` — the demo itself. Prefer a deterministic scripted fake provider over a

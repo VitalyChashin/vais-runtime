@@ -6,7 +6,7 @@ You're embedding `Vais.Agents` primitives in your own .NET host instead of runni
 
 ## Prerequisites
 
-- **.NET 9 SDK** (or newer).
+- **.NET 10 SDK** (or newer).
 - An LLM provider key for samples that talk to a live model (OpenAI is the default in `samples/HelloAgent/`).
 
 ## NuGet source (pre-release)
@@ -72,7 +72,7 @@ The `Directory.Packages.props` in this repo pins:
 - `OpenAI` 2.10.0
 - `Microsoft.Orleans.*` 10.1.0
 - `ModelContextProtocol.Core` 1.2.0
-- `A2A` 1.0.0-preview2 *(targets `net8.0` + `net10.0`; consumed under `net9.0` via forward-compat)*
+- `A2A` 1.0.0-preview2 *(targets `net8.0` + `net10.0`; resolves to its native `net10.0` target)*
 - `OpenTelemetry` 1.15.2
 
 You can override any of these in your own app's `Directory.Packages.props` or csproj.

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.OpenApi;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace Vais.Agents.Control.Http;
 
@@ -57,14 +57,15 @@ public sealed class VaisProblemDetailsOperationTransformer : IOpenApiOperationTr
 
         foreach (var (statusCode, response) in operation.Responses)
         {
-            if (_urnsByStatus.TryGetValue(statusCode, out var urns))
+            if (_urnsByStatus.TryGetValue(statusCode, out var urns) && response is OpenApiResponse concrete)
             {
-                var array = new OpenApiArray();
+                var array = new JsonArray();
                 foreach (var urn in urns)
                 {
-                    array.Add(new OpenApiString(urn));
+                    array.Add(urn);
                 }
-                response.Extensions["x-vais-type-urns"] = array;
+                concrete.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+                concrete.Extensions["x-vais-type-urns"] = new JsonNodeExtension(array);
             }
         }
 

@@ -4,7 +4,7 @@
 # Stage 1 restores + publishes the host assembly; stage 2 runs it on a
 # minimal aspnet-alpine base as a non-root user.
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS build
 WORKDIR /src

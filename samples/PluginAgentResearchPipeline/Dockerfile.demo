@@ -8,7 +8,7 @@
 #   docker build -f samples/PluginAgentResearchPipeline/Dockerfile.demo \
 #       -t vais-research-pipeline:local .
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 # ── Stage 1: Build the .NET runtime ──────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS dotnet-build
@@ -55,7 +55,11 @@ RUN uv venv .venv \
     && uv pip install --python .venv/bin/python "sgr-agent-core>=0.7.0,<1"
 
 # ── Stage 4: Final image ──────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}
+# Pinned to the Debian (bookworm) aspnet base: `apt-get install python3.11` places
+# the interpreter at /usr/bin/python3.11, matching the .venv symlinks built above.
+# The default .NET 10 aspnet image is Ubuntu 24.04, which ships python3.12 (no
+# python3.11 in apt), so it must not be used here.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update \

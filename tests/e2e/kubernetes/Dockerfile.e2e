@@ -5,12 +5,14 @@
 # Build context: repo root
 #   docker build -f tests/e2e/kubernetes/Dockerfile.e2e -t vais-agents-runtime:e2e .
 
-ARG DOTNET_VERSION=9.0
+ARG DOTNET_VERSION=10.0
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS build
 WORKDIR /src
 
 COPY Directory.Build.props Directory.Packages.props NuGet.config* ./
+# contracts/ supplies the base-ontology.json embedded by Vais.Agents.Control.Manifests.Json.
+COPY contracts/ contracts/
 COPY src/ src/
 
 RUN dotnet restore src/Vais.Agents.Runtime.Host/Vais.Agents.Runtime.Host.csproj
