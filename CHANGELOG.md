@@ -48,11 +48,13 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   (no code change; stable high-level API, no YAML round-trip regression); `Npgsql` 9.0.5 → 10.0.2 (no code
   change; verified at runtime against real Postgres — Orleans AdoNet clustering/persistence + cross-silo green);
   `KubeOps` 10.3.4 → 11.0.0 (no code change; KubernetesOperator.Tests 59/59 + operator image/CRD-gen green;
-  KubernetesClient stays 19.0.2).
-  Remaining major-version bumps (MAF, SemanticKernel, and the xunit-v3 migration)
-  are deferred to be attempted one at a time — see
-  `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`. Pins held: FluentAssertions (licence),
-  VectorData.Abstractions (SK 1.74 compat).
+  KubernetesClient stays 19.0.2); `Microsoft.SemanticKernel` core + Connectors.OpenAI 1.74.0 → 1.76.0 (no code
+  change; Connectors.InMemory stays 1.74.0-preview — no 1.76 release — and is binary-compatible with SK 1.76);
+  `Microsoft.Agents.AI` / `.Workflows` (MAF) 1.1.0/1.5.0 → 1.6.2 (no code change; graph-orchestrator + parity
+  suites green).
+  Only the xunit-v3 migration remains deferred — see `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`.
+  Pins held: FluentAssertions (licence), VectorData.Abstractions + SK.Connectors.InMemory (no SK-1.76-aligned
+  InMemory connector release).
 
 ### Security
 
