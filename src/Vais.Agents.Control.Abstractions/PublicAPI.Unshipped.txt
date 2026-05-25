@@ -272,6 +272,10 @@ Vais.Agents.Control.PolicyOperation.ExtensionCreate = 33 -> Vais.Agents.Control.
 Vais.Agents.Control.PolicyOperation.ExtensionUpdate = 34 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.ExtensionQuery = 35 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.ExtensionEvict = 36 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.PluginCreate = 37 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.PluginUpdate = 38 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.PluginQuery = 39 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.PluginEvict = 40 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.AuthorRolesPolicy
 Vais.Agents.Control.AuthorRolesPolicy.AuthorRolesPolicy() -> void
 Vais.Agents.Control.AuthorRolesPolicy.Roles.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.AuthorRole!>?

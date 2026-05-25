@@ -12,13 +12,17 @@
       "tags": ["risk:RunsCode"],
       "manualConcept": "Agent-hosted extension handler. Runs code within the agent process on a declared extension seam (agentInput, toolGateway, graphNode, …). No spec schema — defined by the handler-protocol contract at contracts/extensions/handler-protocol.md.",
       "description": "In-process agent extension handler."
+    },
+    "Plugin": {
+      "tags": ["risk:RunsCode"],
+      "description": "C# DLL plugin. Runs arbitrary .NET code inside the runtime process. Carries the same code-execution risk as ContainerPlugin and Extension."
     }
   },
   // RBAC (Plan B): each key is a JWT scope string the caller's bearer token carries;
   // the value lists per-kind authoring permissions. Action tokens: "write"
   // (create/update/upsert), "delete", or "*" (all). When the runtime is wired with an
   // overlay that has authorRoles, mutating verbs are denied unless a scope grants them.
-  // High-risk kinds (ContainerPlugin, Extension — risk:RunsCode) additionally require
+  // High-risk kinds (ContainerPlugin, Extension, Plugin — risk:RunsCode) additionally require
   // approval in Plan B Phase 3. The "vais.approver" scope is the approval grantor.
   "authorRoles": {
     "roles": {
@@ -35,7 +39,8 @@
       "vais.plugin-admin": {
         "permissions": {
           "ContainerPlugin": ["*"],
-          "Extension": ["*"]
+          "Extension": ["*"],
+          "Plugin": ["*"]
         }
       },
       "vais.readonly": { "permissions": {} },
