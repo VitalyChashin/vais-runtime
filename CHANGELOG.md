@@ -43,8 +43,9 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   `Microsoft.IdentityModel.*` (JsonWebTokens, Protocols.OpenIdConnect) 8.0.1 → 8.18.0 (same major; the old pin
   tracked the JwtBearer 9.0 floor, now resolved by JwtBearer 10.0.x); `JsonSchema.Net` 6.0.3 → 9.2.1 (v9 moved
   `Evaluate` to `JsonElement` and made `EvaluationResults.Details` nullable — fixed in `ManifestValidator` and
-  the MS-3-B schema test).
-  Remaining major-version bumps (MAF, SemanticKernel, Npgsql, YamlDotNet, KubeOps, Test.Sdk / xunit-v3)
+  the MS-3-B schema test); `Microsoft.NET.Test.Sdk` 17.11.1 → 18.5.1 (no code change; runner/discovery works
+  with the existing xunit 2.x — confirmed decoupled from the xunit-v3 migration).
+  Remaining major-version bumps (MAF, SemanticKernel, Npgsql, YamlDotNet, KubeOps, and the xunit-v3 migration)
   are deferred to be attempted one at a time — see
   `plans/gaps/nuget-major-upgrades-gap-2026-05-25.md`. Pins held: FluentAssertions (licence),
   VectorData.Abstractions (SK 1.74 compat).
