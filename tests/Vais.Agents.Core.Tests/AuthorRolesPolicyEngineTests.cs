@@ -118,4 +118,46 @@ public sealed class AuthorRolesPolicyEngineTests
         (await Decide(AuthorRolesPolicy.Empty, p, PolicyOperation.Create)).IsAllowed.Should().BeFalse();
         (await Decide(AuthorRolesPolicy.Empty, p, PolicyOperation.Invoke)).IsAllowed.Should().BeTrue();
     }
+
+    // ── PG-10: Plugin PolicyOperation TryMap cases ───────────────────────────
+
+    [Theory]
+    [InlineData(PolicyOperation.PluginCreate)]
+    [InlineData(PolicyOperation.PluginUpdate)]
+    [InlineData(PolicyOperation.PluginEvict)]
+    public async Task PluginAdmin_Scope_Covers_All_Plugin_Mutations(PolicyOperation op)
+    {
+        var policy = new AuthorRolesPolicy
+        {
+            Roles = new Dictionary<string, AuthorRole>
+            {
+                ["vais.plugin-admin"] = Role(("Plugin", "*")),
+            },
+        };
+        var p = Principal("vais.plugin-admin");
+        (await Decide(policy, p, op)).IsAllowed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Plugin_Write_Does_Not_Grant_Evict()
+    {
+        var policy = new AuthorRolesPolicy
+        {
+            Roles = new Dictionary<string, AuthorRole>
+            {
+                ["vais.plugin-writer"] = Role(("Plugin", "write")),
+            },
+        };
+        var p = Principal("vais.plugin-writer");
+        (await Decide(policy, p, PolicyOperation.PluginCreate)).IsAllowed.Should().BeTrue();
+        (await Decide(policy, p, PolicyOperation.PluginUpdate)).IsAllowed.Should().BeTrue();
+        (await Decide(policy, p, PolicyOperation.PluginEvict)).IsAllowed.Should().BeFalse("delete is not in granted actions");
+    }
+
+    [Fact]
+    public async Task PluginQuery_Is_Non_Authoring_And_Always_Allowed()
+    {
+        var p = new AgentPrincipal("bob", TenantId: null, Scopes: null);
+        (await Decide(AuthorRolesPolicy.Empty, p, PolicyOperation.PluginQuery)).IsAllowed.Should().BeTrue();
+    }
 }

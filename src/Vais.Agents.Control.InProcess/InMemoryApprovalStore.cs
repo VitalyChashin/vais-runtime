@@ -116,7 +116,7 @@ public sealed class ApprovalGate : IApprovalGate
 {
     /// <summary>Kinds that run code and therefore require approval by default.</summary>
     public static readonly IReadOnlySet<string> DefaultHighRiskKinds =
-        new HashSet<string>(StringComparer.Ordinal) { "ContainerPlugin", "Extension" };
+        new HashSet<string>(StringComparer.Ordinal) { "ContainerPlugin", "Extension", "Plugin" };
 
     private readonly IApprovalStore _store;
     private readonly IReadOnlySet<string> _highRiskKinds;

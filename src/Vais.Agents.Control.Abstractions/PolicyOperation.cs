@@ -135,4 +135,18 @@ public enum PolicyOperation
 
     /// <summary>Unload an extension and remove its handler registrations.</summary>
     ExtensionEvict = 36,
+
+    // ── Plugin (C# DLL) operations (PG-1) ────────────────────────────────────
+
+    /// <summary>Load a new C# DLL plugin (first registration).</summary>
+    PluginCreate = 37,
+
+    /// <summary>Hot-swap an existing C# DLL plugin.</summary>
+    PluginUpdate = 38,
+
+    /// <summary>Read-only query of loaded plugin descriptors.</summary>
+    PluginQuery = 39,
+
+    /// <summary>Unload a plugin and remove its handler registrations.</summary>
+    PluginEvict = 40,
 }

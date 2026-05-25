@@ -9,6 +9,28 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Security
+
+- **C# DLL plugin endpoints now governed by RBAC + approval gate (PG-1..PG-14).** The six
+  `POST /v1/plugins*` and `DELETE /v1/plugins/{name}` routes were previously unguarded despite
+  loading code into the runtime process. Now:
+  - `POST /v1/plugins` (csharp branch), `POST /v1/plugins/{name}/dll`, and
+    `POST /v1/plugins/{name}/import` require the caller to hold a role with `Plugin: write`
+    permission (RBAC, Plan B Phase 2) and, when an `IApprovalGate` is wired, an operator-approved
+    request whose canonical includes the **DLL SHA-256 digest** — so a swapped DLL under the same
+    manifest ID re-requires approval.
+  - `DELETE /v1/plugins/{name}` requires `Plugin: delete`.
+  - `POST /v1/plugins/{name}/source` (Python subprocess) requires `Plugin: write` (RBAC only;
+    Python runs out-of-process so the in-process blast radius does not apply).
+  - `POST /v1/plugins/{name}/image` (container image update) now correctly requires
+    `ContainerPlugin: write` + approval, closing a bypass path into the ContainerPlugin approval
+    flow.
+  - `PolicyOperation` extended with `PluginCreate = 37`, `PluginUpdate = 38`,
+    `PluginQuery = 39`, `PluginEvict = 40`.
+  - `ApprovalGate.DefaultHighRiskKinds` now includes `"Plugin"`.
+  - Example overlay (`contracts/ontology/overlay.example.json`) updated with `Plugin:
+    risk:RunsCode` tag and `vais.plugin-admin` role grant.
+
 ### Added
 
 - **Design-tools MCP server — read-only coding-agent integration (ND-1..ND-9).** Exposes a `/design-mcp` MCP endpoint so an external coding agent (Claude Code, OpenCode, Codex) can discover, inspect, and dry-run-validate Vais resources over the Model Context Protocol — without any mutation risk. Ships as `Vais.Agents.Control.Mcp.Server`.

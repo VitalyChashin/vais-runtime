@@ -110,4 +110,42 @@ public sealed class ApprovalGateTests
         (await store.ListAsync(ApprovalStatus.Approved)).Should().ContainSingle();
         (await store.ListAsync()).Should().HaveCount(2);
     }
+
+    // ── PG-11: "Plugin" kind is high-risk (DLL digest canonical) ─────────────
+
+    [Fact]
+    public async Task Plugin_Kind_Is_HighRisk_And_Held_On_First_Apply()
+    {
+        var (gate, _) = NewGate();
+        var ex = await Held(gate, "Plugin", "my-plugin", "manifest:{}\ndll_sha256:aabbcc001122");
+        ex.Kind.Should().Be("Plugin");
+        ex.Name.Should().Be("my-plugin");
+    }
+
+    [Fact]
+    public async Task Plugin_Approve_Then_ReApply_With_Same_Hash_Proceeds()
+    {
+        var (gate, store) = NewGate();
+        const string canonical = "manifest:{\"id\":\"p1\"}\ndll_sha256:aabbccdd1122";
+
+        var requestId = (await Held(gate, "Plugin", "p1", canonical)).RequestId;
+        await store.DecideAsync(requestId, approve: true, "operator");
+
+        await ShouldProceed(gate, "Plugin", "p1", canonical);
+    }
+
+    [Fact]
+    public async Task Different_Dll_Hash_In_Canonical_Requires_New_Approval()
+    {
+        var (gate, store) = NewGate();
+        var canonical1 = "manifest:{\"id\":\"p1\"}\ndll_sha256:aabbcc";
+        var canonical2 = "manifest:{\"id\":\"p1\"}\ndll_sha256:ddeeff";
+
+        var requestId = (await Held(gate, "Plugin", "p1", canonical1)).RequestId;
+        await store.DecideAsync(requestId, approve: true, "operator");
+
+        // Same manifest, different DLL hash → different canonical → new approval required.
+        var second = await Held(gate, "Plugin", "p1", canonical2);
+        second.RequestId.Should().NotBe(requestId, "a swapped DLL must re-require approval");
+    }
 }

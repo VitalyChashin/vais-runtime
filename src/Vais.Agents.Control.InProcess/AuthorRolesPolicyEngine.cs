@@ -144,6 +144,12 @@ internal static class AuthoringActions
             case PolicyOperation.ExtensionEvict:
                 kind = "Extension"; action = Delete; return true;
 
+            case PolicyOperation.PluginCreate:
+            case PolicyOperation.PluginUpdate:
+                kind = "Plugin"; action = Write; return true;
+            case PolicyOperation.PluginEvict:
+                kind = "Plugin"; action = Delete; return true;
+
             default:
                 kind = string.Empty;
                 action = string.Empty;

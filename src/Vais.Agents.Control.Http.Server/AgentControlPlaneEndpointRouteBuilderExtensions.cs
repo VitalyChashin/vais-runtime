@@ -3,6 +3,7 @@
 
 using System.Formats.Tar;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -671,6 +672,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                     $"Invalid plugin name '{name}'."),
                 statusCode: StatusCodes.Status400BadRequest);
 
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.PluginUpdate, name, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
+
         string pluginDirectory;
         var plugin = host?.LoadedPlugins.FirstOrDefault(p =>
             string.Equals(p.Descriptor.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -757,6 +763,26 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 new PluginImageUpdateResponse(name, PluginImageUpdateStatus.NoSupervisor, null),
                 statusCode: StatusCodes.Status503ServiceUnavailable);
 
+        // This endpoint mutates a ContainerPlugin (calls IContainerPluginReloader); use ContainerPlugin ops.
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.ContainerPluginUpdate, name, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
+
+        var approvalGate = http.RequestServices.GetService<IApprovalGate>();
+        if (approvalGate is not null)
+        {
+            var requestedBy = http.RequestServices.GetService<IAgentContextAccessor>()?.Current.UserId ?? "anonymous";
+            try
+            {
+                await approvalGate.EnsureApprovedAsync("ContainerPlugin", name, $"image:{request.Image}", requestedBy, ct).ConfigureAwait(false);
+            }
+            catch (ApprovalRequiredException are)
+            {
+                return ProblemDetailsMapping.ToResult(are, http.Request.Path, name, PolicyOperation.ContainerPluginUpdate);
+            }
+        }
+
         var result = await reloader.ReloadAsync(name, request.Image, ct).ConfigureAwait(false);
         return MapImageUpdateResult(result);
     }
@@ -780,8 +806,33 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                     $"Invalid plugin name '{name}'."),
                 statusCode: StatusCodes.Status400BadRequest);
 
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.PluginUpdate, name, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
+
+        // Buffer body to compute approval canonical (request stream is not seekable).
+        using var dllBuffer = new MemoryStream();
+        await http.Request.Body.CopyToAsync(dllBuffer, ct).ConfigureAwait(false);
+        var dllBytes = dllBuffer.ToArray();
+        var dllSha256 = Convert.ToHexStringLower(SHA256.HashData(dllBytes));
+
+        var approvalGate = http.RequestServices.GetService<IApprovalGate>();
+        if (approvalGate is not null)
+        {
+            var requestedBy = http.RequestServices.GetService<IAgentContextAccessor>()?.Current.UserId ?? "anonymous";
+            try
+            {
+                await approvalGate.EnsureApprovedAsync("Plugin", name, $"dll_sha256:{dllSha256}", requestedBy, ct).ConfigureAwait(false);
+            }
+            catch (ApprovalRequiredException are)
+            {
+                return ProblemDetailsMapping.ToResult(are, http.Request.Path, name, PolicyOperation.PluginUpdate);
+            }
+        }
+
         var contentType = http.Request.ContentType ?? "application/octet-stream";
-        var result = await pusher.PushAsync(name, http.Request.Body, contentType, ct).ConfigureAwait(false);
+        var result = await pusher.PushAsync(name, new MemoryStream(dllBytes), contentType, ct).ConfigureAwait(false);
 
         return result.Status switch
         {
@@ -834,6 +885,12 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         if (manifest is null || string.IsNullOrWhiteSpace(manifest.Id))
             return Results.Problem("manifest.id is required.", statusCode: StatusCodes.Status400BadRequest);
 
+        // Authorize before any service availability checks or side effects.
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.PluginUpdate, manifest.Id, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
+
         var language = manifest.Spec?.Language ?? string.Empty;
 
         if (string.Equals(language, "csharp", StringComparison.OrdinalIgnoreCase))
@@ -852,9 +909,30 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                         "The 'dll' form file is required for csharp plugins."),
                     statusCode: StatusCodes.Status400BadRequest);
 
+            // Buffer DLL bytes to compute the approval canonical before mutating state.
+            var dllBytes = new byte[dllFile.Length];
+            await using (var dllReadStream = dllFile.OpenReadStream())
+                await dllReadStream.ReadExactlyAsync(dllBytes, ct).ConfigureAwait(false);
+            var dllSha256 = Convert.ToHexStringLower(SHA256.HashData(dllBytes));
+            var canonical = $"manifest:{manifestJson}\ndll_sha256:{dllSha256}";
+
+            // High-risk approval gate: C# DLL plugins run code in-process.
+            var approvalGate = http.RequestServices.GetService<IApprovalGate>();
+            if (approvalGate is not null)
+            {
+                var requestedBy = http.RequestServices.GetService<IAgentContextAccessor>()?.Current.UserId ?? "anonymous";
+                try
+                {
+                    await approvalGate.EnsureApprovedAsync("Plugin", manifest.Id, canonical, requestedBy, ct).ConfigureAwait(false);
+                }
+                catch (ApprovalRequiredException are)
+                {
+                    return ProblemDetailsMapping.ToResult(are, http.Request.Path, manifest.Id, PolicyOperation.PluginUpdate);
+                }
+            }
+
             var contentType = dllFile.ContentType ?? "application/octet-stream";
-            await using var dllStream = dllFile.OpenReadStream();
-            var pushResult = await pusher.PushAsync(manifest.Id, dllStream, contentType, ct).ConfigureAwait(false);
+            var pushResult = await pusher.PushAsync(manifest.Id, new MemoryStream(dllBytes), contentType, ct).ConfigureAwait(false);
 
             // Cross-validate manifest spec.handlers vs actual DLL handlers on success.
             if (manifest.Spec?.Handlers is { Count: > 0 } expectedHandlers &&
@@ -887,6 +965,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             return Results.Problem("Plugin reloader is not available. Hot-reload may be disabled.",
                 statusCode: StatusCodes.Status503ServiceUnavailable);
 
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.PluginEvict, name, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
+
         var result = await reloader.UnloadAsync(name, ct).ConfigureAwait(false);
 
         return result.Status switch
@@ -907,6 +990,11 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 new PluginDllPushResponse(name, PluginDllPushStatus.ReloadDisabled, null, null,
                     "Hot-reload is disabled. Set VAIS_PLUGINS_RELOAD_POLICY=DrainAndSwap to enable."),
                 statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var rbacDenied = await ControlPlaneEndpointGate
+            .CheckAsync(http, PolicyOperation.PluginUpdate, name, null, ct)
+            .ConfigureAwait(false);
+        if (rbacDenied is not null) return rbacDenied;
 
         var result = await pusher.ImportExistingAsync(name, ct).ConfigureAwait(false);
 
