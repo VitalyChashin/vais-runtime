@@ -9,6 +9,16 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Fixed
+
+- **research-pipeline SGR analyst no longer crashes on >3 reasoning steps.** The `sgr-analyst` sample wrapped
+  `sgr-agent-core` 0.7.0, whose `ReasoningTool` caps `reasoning_steps`/`remaining_steps` at `max_length=3`;
+  since OpenAI structured output doesn't enforce array `maxItems`, gpt-4o-mini routinely returned 4-5 items →
+  pydantic `too_long` → the analyst returned "No analysis produced" on ~80% of runs. Fixed via the framework's
+  supported `reasoning_tool_cls` override (an `SGRAgent` subclass using an uncapped `ReasoningTool`) — no
+  package patch. Verified end-to-end (analyst now runs 7+ reasoning steps to completion). Upstream is unfixed
+  (0.7.0 is latest); see `research/completed/sgr-agent-core-maxitems-upstream-2026-05-25.md`.
+
 ### Changed
 
 - **Migrated the solution to .NET 10 (`net10.0`).** All `src/`, `tests/`, and `samples/` projects
