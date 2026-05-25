@@ -20,6 +20,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "vais-agents-runtime.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

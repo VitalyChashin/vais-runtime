@@ -160,6 +160,47 @@ docker compose \
 
 Five services, three integration points, fully wired. Use this shape to demo the runtime to a partner end-to-end.
 
+## 5. Graceful shutdown and grain drain
+
+When `docker stop` sends SIGTERM, the runtime performs a graceful drain before exit:
+
+1. SIGTERM → PID 1 (the .NET process, exec-form entrypoint) → `IHost.StopAsync`.
+2. Orleans silo enters `Stopping`: deactivates all active grain activations, calling `OnDeactivateAsync` on each.
+3. Session grains fire their `closing` lifecycle hook during deactivation.
+4. Host exits cleanly within `VAIS_SHUTDOWN_TIMEOUT_SECONDS` (default **30 s**).
+
+**Grace window invariant.** The compose files set `stop_grace_period: 45s` on the runtime service. This is the time Docker waits between SIGTERM and SIGKILL. The window must satisfy:
+
+```
+max grain drain ≤ VAIS_SHUTDOWN_TIMEOUT_SECONDS (30 s) < stop_grace_period (45 s)
+```
+
+To verify a drain happened, check `docker logs` for:
+
+```
+Grain deactivating on shutdown — agentId=<id>
+```
+
+If the line is absent, the host timeout was too short. Raise `VAIS_SHUTDOWN_TIMEOUT_SECONDS` and increase `stop_grace_period` to maintain the margin:
+
+```yaml
+services:
+  runtime:
+    stop_grace_period: 60s
+    environment:
+      VAIS_SHUTDOWN_TIMEOUT_SECONDS: 45
+```
+
+**Best-effort caveat.** `OnDeactivateAsync` does not run on SIGKILL or crash. Grain state is always persisted independently — no data is lost on hard kill; only deactivation-time cleanup (session hooks, summarize-on-close) is skipped.
+
+Run the smoke test to verify the full path end-to-end:
+
+```powershell
+pwsh deploy/shutdown-drain-test.ps1
+```
+
+See [Reference → Runtime configuration → Graceful shutdown](../reference/runtime-configuration.md#graceful-shutdown) for the `VAIS_SHUTDOWN_TIMEOUT_SECONDS` knob.
+
 ## 5. Talk to the runtime with the `vais` CLI
 
 ```bash

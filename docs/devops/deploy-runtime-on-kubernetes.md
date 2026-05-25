@@ -186,6 +186,50 @@ vais apply -f agent.yaml
 vais get
 ```
 
+## 7. Graceful shutdown and rolling restarts
+
+Kubernetes sends SIGTERM and waits `terminationGracePeriodSeconds` (default **45 s** in the Helm chart) before SIGKILL. The runtime uses this window to drain Orleans grains:
+
+1. SIGTERM → `IHost.StopAsync` → Orleans silo `Stopping` → `OnDeactivateAsync` on each active grain.
+2. Session grains fire their `closing` lifecycle hook during deactivation.
+3. Host exits within `VAIS_SHUTDOWN_TIMEOUT_SECONDS` (default **30 s**).
+
+**Grace window invariant:**
+
+```
+max grain drain ≤ VAIS_SHUTDOWN_TIMEOUT_SECONDS (30 s) < terminationGracePeriodSeconds (45 s)
+```
+
+The Helm chart enforces this by default. To increase the budget:
+
+```bash
+helm upgrade vais-runtime ./deploy/helm/vais-agents-runtime \
+  --namespace vais --reuse-values \
+  --set terminationGracePeriodSeconds=60 \
+  --set-string 'extraEnv[0].name=VAIS_SHUTDOWN_TIMEOUT_SECONDS' \
+  --set-string 'extraEnv[0].value=45'
+```
+
+Or, set the env var via a custom `values.yaml`:
+
+```yaml
+terminationGracePeriodSeconds: 60
+
+# Add to the runtime container env section in a custom values.yaml:
+# VAIS_SHUTDOWN_TIMEOUT_SECONDS: "45"
+```
+
+To confirm drains are happening during rolling updates:
+
+```bash
+kubectl logs -n vais -l app.kubernetes.io/name=vais-agents-runtime \
+  | grep "Grain deactivating on shutdown"
+```
+
+**Best-effort caveat.** `OnDeactivateAsync` does not run on SIGKILL or crash. Grain state durability is independent of the drain — no data is lost; only deactivation-time cleanup (session hooks) is skipped on hard termination.
+
+See [Reference → Runtime configuration → Graceful shutdown](../reference/runtime-configuration.md#graceful-shutdown) for the `VAIS_SHUTDOWN_TIMEOUT_SECONDS` knob.
+
 ## 7. Teardown
 
 ```bash

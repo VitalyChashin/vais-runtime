@@ -293,6 +293,15 @@ internal sealed record RuntimeOptions
     public int AgentLogBufferLines { get; init; } = 500;
 
     /// <summary>
+    /// Maximum seconds the host waits for Orleans grain drain and <see cref="IHostedService"/>
+    /// shutdown to complete on SIGTERM. Must satisfy:
+    /// <c>max grain drain ≤ ShutdownTimeoutSeconds &lt; external grace window</c>
+    /// (compose <c>stop_grace_period</c> / K8s <c>terminationGracePeriodSeconds</c>).
+    /// Default 30. Set via <c>VAIS_SHUTDOWN_TIMEOUT_SECONDS</c>.
+    /// </summary>
+    public int ShutdownTimeoutSeconds { get; init; } = 30;
+
+    /// <summary>
     /// v0.xx Grain storage backend for <c>localhost</c> mode — controls <c>AiAgentGrain.StorageName</c>
     /// (the store used by every agent, registry, checkpoint, idempotency, and session grain).
     /// <see cref="LocalhostPersistenceMode.Postgres"/> makes API-deployed agents and graphs survive
@@ -397,6 +406,7 @@ internal sealed record RuntimeOptions
             McpGatewayEventStoreConnection = Env("VAIS_MCP_GATEWAY_EVENT_STORE_CONNECTION"),
             McpGatewayId = Env("VAIS_MCP_GATEWAY_ID"),
             AgentLogBufferLines = int.TryParse(Env("VAIS_AGENT_LOG_BUFFER_LINES"), out var bufLines) ? bufLines : 500,
+            ShutdownTimeoutSeconds = int.TryParse(Env("VAIS_SHUTDOWN_TIMEOUT_SECONDS"), out var shutdownSecs) ? shutdownSecs : 30,
             BootManifestsDirectory = Env("VAIS_BOOT_MANIFESTS_DIRECTORY"),
             LocalhostPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PERSISTENCE")),
             LocalhostPubSubPersistence = ParsePersistenceMode(Env("VAIS_LOCALHOST_PUBSUB_PERSISTENCE")),
@@ -448,6 +458,9 @@ internal sealed record RuntimeOptions
     /// </summary>
     public void EnsureValid()
     {
+        if (ShutdownTimeoutSeconds <= 0)
+            throw new InvalidOperationException("VAIS_SHUTDOWN_TIMEOUT_SECONDS must be > 0.");
+
         if (Mode is not ("localhost" or "clustered"))
         {
             throw new InvalidOperationException(

@@ -19,6 +19,7 @@
 
 services:
   runtime:
+    stop_grace_period: 45s
     environment:
       # LLM providers
       OPENAI_API_KEY: ${OPENAI_API_KEY}

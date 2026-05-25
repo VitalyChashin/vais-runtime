@@ -232,10 +232,12 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Grain deactivating — agentId={AgentId} reason={Reason}", _agentId, reason.ReasonCode);
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+            _logger.LogInformation("Grain deactivating on shutdown — agentId={AgentId}", _agentId);
         // Fire closing here only for the idle/shutdown path. The explicit-removal path (DeleteAsync)
         // already fired it BEFORE clearing state — re-firing here would deliver empty history.
-        // Run on a bounded token of our own, not the deactivation token: the latter may already be
-        // cancelled on shutdown/collection, which would silently skip summarize-on-close.
+        // Run on a bounded token of our own, not the deactivation token. The independent 5 s bound
+        // must stay < HostOptions.ShutdownTimeout (default 30 s) so it finishes within the host budget.
         if (!_sessionClosed)
         {
             using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

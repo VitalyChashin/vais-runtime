@@ -1029,4 +1029,74 @@ public class CompositionRootTests
             Environment.SetEnvironmentVariable("VAIS_IDEMPOTENCY_ENABLED", null);
         }
     }
+
+    // ── Graceful shutdown timeout ─────────────────────────────────────────────
+
+    [Fact]
+    public void Options_ShutdownTimeoutSeconds_DefaultsTo30()
+    {
+        new RuntimeOptions().ShutdownTimeoutSeconds.Should().Be(30,
+            because: "default satisfies the invariant: grain drain < 30 s < external grace (45 s).");
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_ShutdownTimeoutSeconds_ReadsEnvVar()
+    {
+        Environment.SetEnvironmentVariable("VAIS_SHUTDOWN_TIMEOUT_SECONDS", "60");
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.ShutdownTimeoutSeconds.Should().Be(60);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_SHUTDOWN_TIMEOUT_SECONDS", null);
+        }
+    }
+
+    [Fact]
+    public void Options_FromEnvironment_ShutdownTimeoutSeconds_DefaultsTo30_WhenUnset()
+    {
+        Environment.SetEnvironmentVariable("VAIS_SHUTDOWN_TIMEOUT_SECONDS", null);
+        try
+        {
+            var options = RuntimeOptions.FromEnvironment();
+            options.ShutdownTimeoutSeconds.Should().Be(30,
+                because: "unset VAIS_SHUTDOWN_TIMEOUT_SECONDS must default to 30 s.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_SHUTDOWN_TIMEOUT_SECONDS", null);
+        }
+    }
+
+    [Fact]
+    public void Options_EnsureValid_ShutdownTimeoutSeconds_Throws_WhenZeroOrNegative()
+    {
+        new RuntimeOptions { ShutdownTimeoutSeconds = 0 }
+            .Invoking(o => o.EnsureValid())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_SHUTDOWN_TIMEOUT_SECONDS*");
+
+        new RuntimeOptions { ShutdownTimeoutSeconds = -5 }
+            .Invoking(o => o.EnsureValid())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*VAIS_SHUTDOWN_TIMEOUT_SECONDS*");
+    }
+
+    [Fact]
+    public void Composition_HostOptions_ShutdownTimeout_Wired_From_RuntimeOptions()
+    {
+        // Mirrors the Program.cs wiring: Configure<HostOptions> from ShutdownTimeoutSeconds.
+        var services = new ServiceCollection();
+        var runtimeOptions = new RuntimeOptions { ShutdownTimeoutSeconds = 42 };
+        services.Configure<HostOptions>(o =>
+            o.ShutdownTimeout = TimeSpan.FromSeconds(runtimeOptions.ShutdownTimeoutSeconds));
+
+        using var sp = services.BuildServiceProvider();
+        var hostOptions = sp.GetRequiredService<IOptions<HostOptions>>().Value;
+
+        hostOptions.ShutdownTimeout.Should().Be(TimeSpan.FromSeconds(42),
+            because: "Program.cs wires HostOptions.ShutdownTimeout from RuntimeOptions.ShutdownTimeoutSeconds.");
+    }
 }

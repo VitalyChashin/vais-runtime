@@ -26,6 +26,7 @@ services:
     # for production or multi-tenant environments.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    stop_grace_period: 45s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 10s
