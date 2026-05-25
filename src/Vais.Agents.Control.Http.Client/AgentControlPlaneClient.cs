@@ -999,6 +999,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         };
         AttachIdempotencyKey(request, idempotencyKey);
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await DetectApprovalPendingAsync(response, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         var applyResponse = await response.Content.ReadFromJsonAsync<ContainerPluginApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
         return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on CreateContainerPlugin.");
@@ -1020,6 +1021,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         };
         AttachIdempotencyKey(request, idempotencyKey);
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await DetectApprovalPendingAsync(response, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         var applyResponse = await response.Content.ReadFromJsonAsync<ContainerPluginApplyResponse>(JsonOptions, cancellationToken).ConfigureAwait(false);
         return applyResponse?.Handle ?? throw new InvalidOperationException("Server returned empty body on UpdateContainerPlugin.");
@@ -1221,6 +1223,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         if (acceptLatencyCost)
             request.Headers.TryAddWithoutValidation("X-Vais-Accept-Latency-Cost", "true");
         using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        await DetectApprovalPendingAsync(response, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<ExtensionApplyResponse>(JsonOptions, cancellationToken)
             .ConfigureAwait(false)
@@ -1305,6 +1308,32 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         };
     }
 
+    // Mirrors ProblemDetailsMapping.ApprovalRequiredType on the server; duplicated here to avoid
+    // a client→server project reference.
+    private const string ApprovalRequiredType = "urn:vais-agents:approval-required";
+
+    // Detects the 202 pending-approval shape before EnsureSuccessAsync sees the response.
+    // Buffers the content so subsequent reads (EnsureSuccessAsync, ReadFromJsonAsync) still work
+    // if the server returns an unexpected 202 from a future endpoint that is not an approval hold.
+    private static async Task DetectApprovalPendingAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.StatusCode != System.Net.HttpStatusCode.Accepted) return;
+
+        await response.Content.LoadIntoBufferAsync(ct).ConfigureAwait(false);
+
+        ProblemDetailsWire? problem;
+        try { problem = await response.Content.ReadFromJsonAsync<ProblemDetailsWire>(JsonOptions, ct).ConfigureAwait(false); }
+        catch (JsonException) { return; }
+        catch (NotSupportedException) { return; }
+
+        if (problem?.Type != ApprovalRequiredType) return;
+
+        var requestId = problem.Extensions?.TryGetValue("requestId", out var r) is true ? r.GetString() ?? "" : "";
+        var kind      = problem.Extensions?.TryGetValue("kind",      out var k) is true ? k.GetString() ?? "" : "";
+        var name      = problem.Extensions?.TryGetValue("name",      out var n) is true ? n.GetString() ?? "" : "";
+        throw new ApprovalRequiredException(kind, name, requestId);
+    }
+
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;
@@ -1330,7 +1359,11 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
             detail: body);
     }
 
-    private sealed record ProblemDetailsWire(string? Type, string? Title, int? Status, string? Detail, string? Instance);
+    private sealed record ProblemDetailsWire(string? Type, string? Title, int? Status, string? Detail, string? Instance)
+    {
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public Dictionary<string, JsonElement>? Extensions { get; init; }
+    }
 }
 
 /// <summary>
