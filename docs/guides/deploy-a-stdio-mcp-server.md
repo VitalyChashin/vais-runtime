@@ -119,6 +119,21 @@ spec:
 Gateway middleware (`ToolRateLimit`, `ToolOtel`, `ToolResponseTruncation`, etc.) applies
 to every tool call, same as a `streamableHttp` or `stdio` server.
 
+**Transport fidelity.** The FastMCP `as_proxy` bridge faithfully proxies everything the
+MCP spec defines across the stdio↔streamableHttp hop:
+
+| What | Behaviour |
+|---|---|
+| Tool result content (text, image, blob, `structuredContent`, `isError`) | Fully preserved — returned in a single response per the spec. |
+| `notifications/progress` | Forwarded: the bridge's `default_proxy_progress_handler` re-emits each progress event upstream to the runtime's MCP client. |
+| `notifications/message` (server-side logging) | Forwarded via the same mechanism. |
+| Incremental / chunked tool-result body | N/A — the MCP spec defines `tools/call` as a single-shot request/response; there is no streaming tool-result body in the protocol. |
+
+The practical implication: if a stdio MCP server emits `notifications/progress` during a
+long tool call (e.g., a multi-step web fetch), those progress events arrive at the runtime
+in real time. The final tool result arrives in one message when the stdio child completes.
+There is no silent buffering of data the spec defines as live.
+
 ## Bridge env vars
 
 The bridge reads its behaviour from env vars. Set them in `spec.container.env`.
