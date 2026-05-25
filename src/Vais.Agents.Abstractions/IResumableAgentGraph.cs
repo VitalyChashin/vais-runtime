@@ -11,12 +11,14 @@ namespace Vais.Agents;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Why a separate interface?</b> Not every orchestrator supports resume in v0.9
-/// — <c>InProcessGraphOrchestrator</c> does; the MAF adapter defers to v0.10 (MAF's
-/// <c>CheckpointManager</c> has its own checkpoint format; bridging to our
-/// <see cref="GraphCheckpoint"/> shape is non-trivial and lands when the MAF
-/// integration lands broadly). Keeping resume on a capability interface lets
-/// consumers query <c>graph is IResumableAgentGraph&lt;TState&gt;</c> at runtime.
+/// <b>Why a separate interface?</b> Resume is a capability, not something every
+/// <see cref="IAgentGraph{TState}"/> implementation must provide. Both shipped orchestrators
+/// support it: <c>InProcessGraphOrchestrator</c> and <c>MafGraphOrchestrator</c> — the latter
+/// bridges resume through this <see cref="GraphCheckpoint"/> shape via its
+/// <c>ResumeFromNodeId</c> message flag (it re-enters the interrupt node's executor and skips
+/// the body), rather than using MAF's own <c>CheckpointManager</c> format. Keeping resume on a
+/// capability interface lets consumers query <c>graph is IResumableAgentGraph&lt;TState&gt;</c>
+/// at runtime and lets future orchestrators opt out.
 /// </para>
 /// <para>
 /// <b>Resume semantics.</b> The checkpoint captures state at the interrupt boundary.
