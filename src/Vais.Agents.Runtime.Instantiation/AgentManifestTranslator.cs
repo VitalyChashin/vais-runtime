@@ -33,6 +33,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IDomainOntologyArtifactRegistry? _domainOntologyRegistry;
     private readonly CachedDomainOntologyToolListShaper? _domainOntologyShaper;
     private readonly IAgentCapabilityMapBuilder? _capabilityMapBuilder;
+    private readonly IDelegationPolicy? _delegationPolicy;
     private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
@@ -55,6 +56,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IDomainOntologyArtifactRegistry? domainOntologyRegistry = null,
         CachedDomainOntologyToolListShaper? domainOntologyShaper = null,
         IAgentCapabilityMapBuilder? capabilityMapBuilder = null,
+        IDelegationPolicy? delegationPolicy = null,
         ILogger<AgentManifestTranslator>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -79,6 +81,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _domainOntologyRegistry = domainOntologyRegistry;
         _domainOntologyShaper = domainOntologyShaper;
         _capabilityMapBuilder = capabilityMapBuilder;
+        _delegationPolicy = delegationPolicy;
         _logger = logger ?? NullLogger<AgentManifestTranslator>.Instance;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
@@ -261,6 +264,24 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             }
         }
 
+        // Plan C2 capability fabric auto-wiring: when the coordinator has LocalAgents and an
+        // IAgentCapabilityMapBuilder is registered, append the input-middleware
+        // (capability-map injection) + the delegation-governance interceptor to the per-agent
+        // chains. The default IDelegationPolicy is AllowAllDelegationPolicy so the governance
+        // middleware is harmless until the deployer overrides it.
+        AgentInputMiddleware[] inputMiddleware = [];
+        if (_capabilityMapBuilder is not null && manifest.LocalAgents is { Count: > 0 })
+        {
+            inputMiddleware = [new CapabilityMapInputMiddleware(_capabilityMapBuilder)];
+            if (_delegationPolicy is not null)
+            {
+                var withFabric = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + 1];
+                Array.Copy(toolGatewayMiddleware, withFabric, toolGatewayMiddleware.Length);
+                withFabric[^1] = new DelegationGovernanceMiddleware(_delegationPolicy, _capabilityMapBuilder);
+                toolGatewayMiddleware = withFabric;
+            }
+        }
+
         var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
         var responseFormat = ResolveResponseFormat(manifest, provider);
@@ -277,6 +298,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             Budget = manifest.Budget,
             GatewayMiddleware = gatewayMiddleware,
             ToolGatewayMiddleware = toolGatewayMiddleware,
+            InputMiddleware = inputMiddleware,
             UsageSink = _serviceProvider.GetService<IUsageSink>(),
             ResponseFormat = responseFormat,
         };

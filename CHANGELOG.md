@@ -85,13 +85,19 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
     invariants 5) + 3 translator wiring tests in
     `Vais.Agents.Runtime.Instantiation.Tests/SubAgentDescriptionOverlayTests.cs`.
     Solution 108 projects 0/0; 1585 tests across the impacted surface.
-  - **Deferred to a follow-on commit.** Runtime auto-wiring (composition-root
-    default for `IAgentCapabilityMapBuilder`, and an Extension-manifest
-    sample / opt-in glue for `CapabilityMapInputMiddleware` +
-    `DelegationGovernanceMiddleware`) parallel to Plan C1's FU-1..FU-3
-    follow-on. The components themselves are fully unit-tested; deployers
-    can plumb them via their own composition root or a custom Extension
-    today.
+  - **Runtime auto-wiring (Plan C2 follow-on, landed in the same release).**
+    With `IAgentCapabilityMapBuilder` + `IDelegationPolicy` registered by
+    default in the composition root, `AgentManifestTranslator` now
+    auto-wires the capability fabric onto every coordinator agent whose
+    manifest has `LocalAgents`: `CapabilityMapInputMiddleware` is appended
+    to `StatefulAgentOptions.InputMiddleware`, and
+    `DelegationGovernanceMiddleware` is appended innermost on
+    `ToolGatewayMiddleware` (with the default `AllowAllDelegationPolicy`
+    making it harmless until a deployer overrides). Agents without
+    `LocalAgents` are untouched. Live-verified end-to-end: a coordinator's
+    grain-activated log emits `tool-middleware=[…, DelegationGovernanceMiddleware]`
+    where the sub-agent's chain stops at the upstream
+    `[McpEventMiddleware, McpGatewayEventMiddleware]` — gating works.
 
 - **SEP-1763 ontology-interceptor substrate + south cartridge (Plan C1).** A transport-agnostic
   interceptor abstraction in `Vais.Agents.Abstractions` that the existing south
