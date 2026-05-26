@@ -359,3 +359,18 @@ Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder
 Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.AgentCapabilityMapBuilder(Vais.Agents.IAgentRegistry! agents) -> void
 Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.BuildAsync(string! coordinatorAgentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.Manifests.CapabilityMap!>
 Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.Invalidate(string! coordinatorAgentId) -> void
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddleware
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddleware.CapabilityMapInputMiddleware(Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder! builder, Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? options = null) -> void
+override Vais.Agents.Control.Manifests.CapabilityMapInputMiddleware.InvokeAsync(Vais.Agents.AgentInputContext! context, System.Func<System.Threading.Tasks.Task!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+const Vais.Agents.Control.Manifests.CapabilityMapInputMiddleware.ContextPropertyKey = "vais.capability_map" -> string!
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.<Clone>$() -> Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions!
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.CapabilityMapInputMiddlewareOptions() -> void
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.Equals(Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? other) -> bool
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.InjectIntoMessage.get -> bool
+Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.InjectIntoMessage.init -> void
+override Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.ToString() -> string!
+static Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.operator !=(Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? left, Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? right) -> bool
+static Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.operator ==(Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? left, Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? right) -> bool
