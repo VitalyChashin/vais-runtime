@@ -35,6 +35,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.RunStore\Vais.Agents.Observability.RunStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.AgentLogs\Vais.Agents.Observability.AgentLogs.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Observability.InterceptorTeeStore\Vais.Agents.Observability.InterceptorTeeStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Hosting.InMemory\Vais.Agents.Hosting.InMemory.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Instantiation\Vais.Agents.Runtime.Instantiation.csproj" />
     <ProjectReference Include="..\Vais.Agents.Control.Mcp\Vais.Agents.Control.Mcp.csproj" />

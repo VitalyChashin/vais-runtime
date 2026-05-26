@@ -23,6 +23,7 @@ using Vais.Agents.Hosting.InMemory;
 using Vais.Agents.Observability.AgentLogs;
 using Vais.Agents.Observability.AgentRunStore;
 using Vais.Agents.Observability.GatewayEventStore;
+using Vais.Agents.Observability.InterceptorTeeStore;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
@@ -668,6 +669,18 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
                 "postgres-agent-run-store", options.AgentRunStoreConnection,
                 "SELECT COUNT(*) FROM vais_agent_runs LIMIT 1"));
+        }
+
+        // Plan D — Postgres-backed trajectory store. When VAIS_INTERCEPTOR_TEE_STORE_CONNECTION
+        // is set, this registration takes precedence over the in-memory ring default wired
+        // earlier in ConfigureDomainOntologyCartridge. Schema auto-creates on first start;
+        // RecordingInterceptorTee (already registered) writes into whichever store wins.
+        if (!string.IsNullOrWhiteSpace(options.InterceptorTeeStoreConnection))
+        {
+            services.AddPostgresInterceptorTeeStore(o => o.ConnectionString = options.InterceptorTeeStoreConnection);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-interceptor-tee-store", options.InterceptorTeeStoreConnection,
+                "SELECT COUNT(*) FROM vais_trajectory_events LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.GatewayEventStoreConnection))

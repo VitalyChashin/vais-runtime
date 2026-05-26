@@ -1,0 +1,15 @@
+#nullable enable
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions.InterceptorTeeStoreOptions() -> void
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore.PostgresInterceptorTeeStore(string! connectionString, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore!>! logger) -> void
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore.DeleteEventsOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore.AppendAsync(Vais.Agents.TrajectoryEvent! trajectoryEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Observability.InterceptorTeeStore.PostgresInterceptorTeeStore.QueryAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.TrajectoryEvent!>!
+Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreExtensions
+static Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreExtensions.AddPostgresInterceptorTeeStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.InterceptorTeeStore.InterceptorTeeStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
