@@ -401,6 +401,15 @@ internal static class CompositionRoot
             return registry;
         });
         services.TryAddSingleton<CachedDomainOntologyToolListShaper>();
+
+        // Plan C2 capability fabric defaults — the components are wired into the translator
+        // automatically (sub-agent description overlay, C2-3) and made available for
+        // deployer-supplied extensions to consume (capability-map middleware, delegation
+        // governance, AllowedTools resolver). Deployers swap in custom builders / policies
+        // by registering their own before this method runs (services.TryAddSingleton).
+        services.TryAddSingleton<IAgentCapabilityMapBuilder, AgentCapabilityMapBuilder>();
+        services.TryAddSingleton<IOntologyAllowedToolsResolver, OntologyAllowedToolsResolver>();
+        services.TryAddSingleton<IDelegationPolicy>(_ => AllowAllDelegationPolicy.Instance);
     }
 
     /// <summary>
