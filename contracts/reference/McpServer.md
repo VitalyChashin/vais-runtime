@@ -71,3 +71,4 @@ spec:
 | `spec.toolProjection[].from` | string | no | The Id of the source server that provides this tool. |
 | `spec.toolProjection[].sourceToolName` | string | no | Optional override for the upstream tool name if it differs from Name. |
 | `spec.mcpGatewayRef` | string | no | Optional Id applied per tool dispatch through this server. Lower precedence than an agent-level McpGatewayRef. |
+| `spec.ontologyRef` | string | no | Optional name of a deployment-supplied domain-ontology artifact to bind to this server. When set, the south cartridge resolves the artifact through IDomainOntologyArtifactRegistry and shapes the server's tools/list + tool-call dispatch with its tags, descriptions, and cross-refs. Missing or unknown refs degrade gracefully (no cartridge applied — passthrough). Plan C1-7. |

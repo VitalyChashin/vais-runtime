@@ -71,6 +71,7 @@ public sealed class McpServerManifestFieldRoundTripTests
         yield return Row("AuthRef", Physical() with { AuthRef = "secret://env/TOK" }, m => m.AuthRef, "secret://env/TOK");
         yield return Row("Tools", Physical() with { Tools = new[] { "search" } }, m => m.Tools!.Single(), "search");
         yield return Row("McpGatewayRef", Physical() with { McpGatewayRef = "demo-gw" }, m => m.McpGatewayRef, "demo-gw");
+        yield return Row("OntologyRef", Physical() with { OntologyRef = "k8s-tools-v1" }, m => m.OntologyRef, "k8s-tools-v1");
 
         yield return Row("Virtual", Virtual(), m => m.Virtual, (object?)true);
         yield return Row("Sources.Ref", Virtual(), m => m.Sources!.Single().Ref, "up");

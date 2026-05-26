@@ -77,6 +77,15 @@ public sealed record McpServerManifest(
     /// </summary>
     public string? McpGatewayRef { get; init; }
 
+    /// <summary>
+    /// Optional name of a deployment-supplied domain-ontology artifact to bind to this server.
+    /// When set, the south cartridge resolves the artifact through <c>IDomainOntologyArtifactRegistry</c>
+    /// and shapes the server's tools/list + tool-call dispatch with its tags, descriptions, and
+    /// cross-refs. Missing or unknown refs degrade gracefully (no cartridge applied — passthrough).
+    /// Plan C1-7.
+    /// </summary>
+    public string? OntologyRef { get; init; }
+
     /// <summary>Free-form operator-visible metadata.</summary>
     public IReadOnlyDictionary<string, string>? Annotations { get; init; }
 }

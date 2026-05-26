@@ -162,3 +162,63 @@ static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateBaseOnt
 static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(System.Type! recordType, string! kind, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null) -> string!
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
 static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.<Clone>$() -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.DomainOntologyArtifact() -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Equals(Vais.Agents.Control.Manifests.DomainOntologyArtifact? other) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.OntologyVersion.init -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Tools.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainConcept!>?
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Tools.init -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.ForTool(string! toolName) -> Vais.Agents.Control.Manifests.DomainConcept?
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.ToString() -> string!
+static readonly Vais.Agents.Control.Manifests.DomainOntologyArtifact.Empty -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifact.operator !=(Vais.Agents.Control.Manifests.DomainOntologyArtifact? left, Vais.Agents.Control.Manifests.DomainOntologyArtifact? right) -> bool
+static Vais.Agents.Control.Manifests.DomainOntologyArtifact.operator ==(Vais.Agents.Control.Manifests.DomainOntologyArtifact? left, Vais.Agents.Control.Manifests.DomainOntologyArtifact? right) -> bool
+Vais.Agents.Control.Manifests.DomainConcept
+Vais.Agents.Control.Manifests.DomainConcept.<Clone>$() -> Vais.Agents.Control.Manifests.DomainConcept!
+Vais.Agents.Control.Manifests.DomainConcept.DomainConcept() -> void
+Vais.Agents.Control.Manifests.DomainConcept.Equals(Vais.Agents.Control.Manifests.DomainConcept? other) -> bool
+Vais.Agents.Control.Manifests.DomainConcept.Description.get -> string?
+Vais.Agents.Control.Manifests.DomainConcept.Description.init -> void
+Vais.Agents.Control.Manifests.DomainConcept.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.DomainConcept.Tags.init -> void
+Vais.Agents.Control.Manifests.DomainConcept.CrossRefs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.DomainCrossRef!>?
+Vais.Agents.Control.Manifests.DomainConcept.CrossRefs.init -> void
+override Vais.Agents.Control.Manifests.DomainConcept.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainConcept.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainConcept.ToString() -> string!
+static Vais.Agents.Control.Manifests.DomainConcept.operator !=(Vais.Agents.Control.Manifests.DomainConcept? left, Vais.Agents.Control.Manifests.DomainConcept? right) -> bool
+static Vais.Agents.Control.Manifests.DomainConcept.operator ==(Vais.Agents.Control.Manifests.DomainConcept? left, Vais.Agents.Control.Manifests.DomainConcept? right) -> bool
+Vais.Agents.Control.Manifests.DomainCrossRef
+Vais.Agents.Control.Manifests.DomainCrossRef.<Clone>$() -> Vais.Agents.Control.Manifests.DomainCrossRef!
+Vais.Agents.Control.Manifests.DomainCrossRef.Deconstruct(out string! FieldPath, out string! TargetConceptName, out string? Cardinality) -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.DomainCrossRef(string! FieldPath, string! TargetConceptName, string? Cardinality = null) -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.Equals(Vais.Agents.Control.Manifests.DomainCrossRef? other) -> bool
+Vais.Agents.Control.Manifests.DomainCrossRef.FieldPath.get -> string!
+Vais.Agents.Control.Manifests.DomainCrossRef.FieldPath.init -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.TargetConceptName.get -> string!
+Vais.Agents.Control.Manifests.DomainCrossRef.TargetConceptName.init -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.Cardinality.get -> string?
+Vais.Agents.Control.Manifests.DomainCrossRef.Cardinality.init -> void
+override Vais.Agents.Control.Manifests.DomainCrossRef.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainCrossRef.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainCrossRef.ToString() -> string!
+static Vais.Agents.Control.Manifests.DomainCrossRef.operator !=(Vais.Agents.Control.Manifests.DomainCrossRef? left, Vais.Agents.Control.Manifests.DomainCrossRef? right) -> bool
+static Vais.Agents.Control.Manifests.DomainCrossRef.operator ==(Vais.Agents.Control.Manifests.DomainCrossRef? left, Vais.Agents.Control.Manifests.DomainCrossRef? right) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadFromFile(string? path) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadFromJson(string? json) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadAllFromDirectory(string? directory) -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainOntologyArtifact!>!
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Get(string! name) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact?
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Register(string! name, Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact) -> void
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Names.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.InMemoryDomainOntologyArtifactRegistry() -> void
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Get(string! name) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact?
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Register(string! name, Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact) -> void
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Names.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.RegisterAll(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainOntologyArtifact!>! artifacts) -> void

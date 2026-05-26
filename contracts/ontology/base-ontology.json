@@ -225,6 +225,10 @@
         "mcpGatewayRef": {
           "type": "string",
           "description": "Optional Id applied per tool dispatch through this server. Lower precedence than an agent-level McpGatewayRef."
+        },
+        "ontologyRef": {
+          "type": "string",
+          "description": "Optional name of a deployment-supplied domain-ontology artifact to bind to this server. When set, the south cartridge resolves the artifact through IDomainOntologyArtifactRegistry and shapes the server\u0027s tools/list \u002B tool-call dispatch with its tags, descriptions, and cross-refs. Missing or unknown refs degrade gracefully (no cartridge applied \u2014 passthrough). Plan C1-7."
         }
       },
       "crossRefs": [

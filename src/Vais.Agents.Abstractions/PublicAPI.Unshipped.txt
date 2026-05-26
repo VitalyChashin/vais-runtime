@@ -1806,3 +1806,5 @@ Vais.Agents.NullInterceptorTee
 Vais.Agents.NullInterceptorTee.NullInterceptorTee() -> void
 Vais.Agents.NullInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 static Vais.Agents.NullInterceptorTee.Instance.get -> Vais.Agents.IInterceptorTee!
+Vais.Agents.McpServerManifest.OntologyRef.get -> string?
+Vais.Agents.McpServerManifest.OntologyRef.init -> void
