@@ -316,3 +316,46 @@ Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware
 Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.DomainOntologyResponseEnrichmentMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.SubAgentCapability
+Vais.Agents.Control.Manifests.SubAgentCapability.<Clone>$() -> Vais.Agents.Control.Manifests.SubAgentCapability!
+Vais.Agents.Control.Manifests.SubAgentCapability.Deconstruct(out string! ToolName, out string! AgentId, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! Tags, out Vais.Agents.LocalAgentInvocationMode Mode) -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.Equals(Vais.Agents.Control.Manifests.SubAgentCapability? other) -> bool
+Vais.Agents.Control.Manifests.SubAgentCapability.SubAgentCapability(string! ToolName, string! AgentId, string? Description, System.Collections.Generic.IReadOnlyList<string!>! Tags, Vais.Agents.LocalAgentInvocationMode Mode) -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.ToolName.get -> string!
+Vais.Agents.Control.Manifests.SubAgentCapability.ToolName.init -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.AgentId.get -> string!
+Vais.Agents.Control.Manifests.SubAgentCapability.AgentId.init -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.Description.get -> string?
+Vais.Agents.Control.Manifests.SubAgentCapability.Description.init -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.SubAgentCapability.Tags.init -> void
+Vais.Agents.Control.Manifests.SubAgentCapability.Mode.get -> Vais.Agents.LocalAgentInvocationMode
+Vais.Agents.Control.Manifests.SubAgentCapability.Mode.init -> void
+override Vais.Agents.Control.Manifests.SubAgentCapability.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.SubAgentCapability.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.SubAgentCapability.ToString() -> string!
+static Vais.Agents.Control.Manifests.SubAgentCapability.operator !=(Vais.Agents.Control.Manifests.SubAgentCapability? left, Vais.Agents.Control.Manifests.SubAgentCapability? right) -> bool
+static Vais.Agents.Control.Manifests.SubAgentCapability.operator ==(Vais.Agents.Control.Manifests.SubAgentCapability? left, Vais.Agents.Control.Manifests.SubAgentCapability? right) -> bool
+Vais.Agents.Control.Manifests.CapabilityMap
+Vais.Agents.Control.Manifests.CapabilityMap.<Clone>$() -> Vais.Agents.Control.Manifests.CapabilityMap!
+Vais.Agents.Control.Manifests.CapabilityMap.Deconstruct(out string! CoordinatorAgentId, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.SubAgentCapability!>! SubAgents) -> void
+Vais.Agents.Control.Manifests.CapabilityMap.Equals(Vais.Agents.Control.Manifests.CapabilityMap? other) -> bool
+Vais.Agents.Control.Manifests.CapabilityMap.CapabilityMap(string! CoordinatorAgentId, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.SubAgentCapability!>! SubAgents) -> void
+Vais.Agents.Control.Manifests.CapabilityMap.CoordinatorAgentId.get -> string!
+Vais.Agents.Control.Manifests.CapabilityMap.CoordinatorAgentId.init -> void
+Vais.Agents.Control.Manifests.CapabilityMap.SubAgents.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.SubAgentCapability!>!
+Vais.Agents.Control.Manifests.CapabilityMap.SubAgents.init -> void
+Vais.Agents.Control.Manifests.CapabilityMap.ToCompactText() -> string!
+override Vais.Agents.Control.Manifests.CapabilityMap.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.CapabilityMap.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.CapabilityMap.ToString() -> string!
+static Vais.Agents.Control.Manifests.CapabilityMap.operator !=(Vais.Agents.Control.Manifests.CapabilityMap? left, Vais.Agents.Control.Manifests.CapabilityMap? right) -> bool
+static Vais.Agents.Control.Manifests.CapabilityMap.operator ==(Vais.Agents.Control.Manifests.CapabilityMap? left, Vais.Agents.Control.Manifests.CapabilityMap? right) -> bool
+static Vais.Agents.Control.Manifests.CapabilityMap.Empty(string! coordinatorAgentId) -> Vais.Agents.Control.Manifests.CapabilityMap!
+Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder
+Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder.BuildAsync(string! coordinatorAgentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.Manifests.CapabilityMap!>
+Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder.Invalidate(string! coordinatorAgentId) -> void
+Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder
+Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.AgentCapabilityMapBuilder(Vais.Agents.IAgentRegistry! agents) -> void
+Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.BuildAsync(string! coordinatorAgentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.Manifests.CapabilityMap!>
+Vais.Agents.Control.Manifests.AgentCapabilityMapBuilder.Invalidate(string! coordinatorAgentId) -> void
