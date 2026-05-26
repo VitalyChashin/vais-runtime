@@ -183,6 +183,9 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Produces<IReadOnlyList<AgentLogEntryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        // Plan D — trajectory tee corpus query.
+        MapTrajectoryControlPlane(builder, prefix);
+
         // Health + readiness
         group.MapGet("/healthz", () => Results.Ok(new { status = "ok" }))
             .WithName("Agents.Healthz")
@@ -538,6 +541,66 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .Take(limit)
             .ToArray();
         return Results.Ok(merged);
+    }
+
+    /// <summary>
+    /// Map the Plan D trajectory tee corpus query endpoint at <c>{prefix}/trajectories</c>.
+    /// Exposed as a separate extension so tests can wire it independently of the full
+    /// <see cref="MapAgentControlPlane"/> surface (no service-inference cross-talk from other
+    /// endpoints' bodies / typed parameters).
+    /// </summary>
+    public static IEndpointRouteBuilder MapTrajectoryControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        var group = builder.MapGroup(prefix).WithTags("Trajectories");
+        group.MapGet("/trajectories", ListTrajectoriesAsync)
+            .WithName("Trajectories.List")
+            .WithSummary("Query the trajectory tee corpus (Plan D). Returns matching events newest-first.")
+            .WithDescription("Query params: agent, run, concept, transport (north|south), outcome (Ok|Error|ShortCircuit), since (ISO 8601), until (ISO 8601), limit (default 50). All filters AND-combined. PII is redacted at tee time; raw argument values are never persisted.")
+            .Produces<IReadOnlyList<TrajectoryEvent>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        return builder;
+    }
+
+    private static async Task<IResult> ListTrajectoriesAsync(HttpContext http, CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IInterceptorTeeStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "Trajectory tee store not configured",
+                detail: "No IInterceptorTeeStore is registered. Set VAIS_INTERCEPTOR_TEE_STORE_CONNECTION for the Postgres store or rely on the in-memory ring default.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var q = http.Request.Query;
+        var agent = q["agent"].FirstOrDefault();
+        var run = q["run"].FirstOrDefault();
+        var concept = q["concept"].FirstOrDefault();
+        var transport = q["transport"].FirstOrDefault();
+        var outcome = q["outcome"].FirstOrDefault();
+        var since = q["since"].FirstOrDefault();
+        var until = q["until"].FirstOrDefault();
+        var limitStr = q["limit"].FirstOrDefault();
+        var limit = int.TryParse(limitStr, out var n) ? n : 50;
+
+        TrajectoryOutcomeKind? outcomeKind = null;
+        if (outcome is { Length: > 0 } && Enum.TryParse<TrajectoryOutcomeKind>(outcome, ignoreCase: true, out var parsed))
+            outcomeKind = parsed;
+
+        var query = new TrajectoryQuery(
+            AgentId: string.IsNullOrWhiteSpace(agent) ? null : agent,
+            RunId: string.IsNullOrWhiteSpace(run) ? null : run,
+            ConceptName: string.IsNullOrWhiteSpace(concept) ? null : concept,
+            Transport: string.IsNullOrWhiteSpace(transport) ? null : transport,
+            Since: DateTimeOffset.TryParse(since, out var s) ? s : null,
+            Until: DateTimeOffset.TryParse(until, out var u) ? u : null,
+            OutcomeKind: outcomeKind,
+            Limit: Math.Clamp(limit, 1, 500));
+
+        var items = new List<TrajectoryEvent>();
+        await foreach (var e in store.QueryAsync(query, ct).ConfigureAwait(false))
+            items.Add(e);
+        return Results.Ok(items);
     }
 
     private static AgentRunDto ToAgentRunDto(NodeExecution n) =>

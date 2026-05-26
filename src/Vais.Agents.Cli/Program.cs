@@ -109,6 +109,13 @@ app.Configure(config =>
     config.AddCommand<GetRunsCommand>("get-runs")
         .WithDescription("List historical graph runs or inspect a specific run's node executions from the run store.");
 
+    config.AddBranch("trajectories", t =>
+    {
+        t.SetDescription("Plan D trajectory tee — query the trajectory event corpus that drives recipe induction.");
+        t.AddCommand<TrajectoriesListCommand>("list")
+            .WithDescription("List trajectory events (newest first). Filters: --agent --run --concept --transport --outcome --since --until --limit.");
+    });
+
     config.AddCommand<SignalCommand>("signal")
         .WithDescription("Send a signal (with arbitrary JSON payload) to an in-flight run.");
 

@@ -510,6 +510,36 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<TrajectoryEvent>> ListTrajectoriesAsync(
+        string? agent = null,
+        string? run = null,
+        string? concept = null,
+        string? transport = null,
+        string? outcome = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(agent)) qs.Add($"agent={Uri.EscapeDataString(agent)}");
+        if (!string.IsNullOrWhiteSpace(run)) qs.Add($"run={Uri.EscapeDataString(run)}");
+        if (!string.IsNullOrWhiteSpace(concept)) qs.Add($"concept={Uri.EscapeDataString(concept)}");
+        if (!string.IsNullOrWhiteSpace(transport)) qs.Add($"transport={Uri.EscapeDataString(transport)}");
+        if (!string.IsNullOrWhiteSpace(outcome)) qs.Add($"outcome={Uri.EscapeDataString(outcome)}");
+        if (since.HasValue) qs.Add($"since={Uri.EscapeDataString(since.Value.ToString("O"))}");
+        if (until.HasValue) qs.Add($"until={Uri.EscapeDataString(until.Value.ToString("O"))}");
+        if (limit != 50) qs.Add($"limit={limit}");
+        var path = qs.Count > 0
+            ? $"/v1/trajectories?{string.Join('&', qs)}"
+            : "/v1/trajectories";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<TrajectoryEvent>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? Array.Empty<TrajectoryEvent>();
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NodeExecutionDto>> GetRunNodesAsync(string graphId, string runId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(graphId);

@@ -1067,3 +1067,4 @@ override Vais.Agents.Control.Http.ExtensionMetricsResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.ExtensionMetricsResponse.ToString() -> string!
 static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator ==(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
 static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator !=(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapTrajectoryControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!

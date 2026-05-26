@@ -203,6 +203,23 @@ public interface IAgentControlPlaneClient
         CancellationToken cancellationToken = default)
         => Task.FromResult(new RunListResponse(Array.Empty<PipelineRunDto>()));
 
+    /// <summary>
+    /// GET /v1/trajectories — query the Plan D trajectory tee corpus. Returns matching
+    /// events newest-first. All filters AND-combined. The store applies PII redaction at
+    /// tee time; raw argument values are never returned.
+    /// </summary>
+    Task<IReadOnlyList<TrajectoryEvent>> ListTrajectoriesAsync(
+        string? agent = null,
+        string? run = null,
+        string? concept = null,
+        string? transport = null,
+        string? outcome = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<TrajectoryEvent>>(Array.Empty<TrajectoryEvent>());
+
     /// <summary>GET /v1/graphs/{id}/runs/{runId} — fetch a single run. Returns null on 404 or when run store is not configured.</summary>
     Task<PipelineRunDto?> GetRunAsync(string graphId, string runId, CancellationToken cancellationToken = default)
         => Task.FromResult((PipelineRunDto?)null);
