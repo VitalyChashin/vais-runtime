@@ -21,6 +21,7 @@
          semantic retriever decorator. The lexical retriever has no AI deps; this package
          only adds interfaces, no providers. -->
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

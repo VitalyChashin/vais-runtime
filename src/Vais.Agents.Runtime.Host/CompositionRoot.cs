@@ -176,7 +176,7 @@ internal static class CompositionRoot
         ConfigureRuntimeAndRegistries(services);
         ConfigurePlugins(services, options);
         ConfigureGatewayCatalog(services);
-        ConfigureManifestPipeline(services);
+        ConfigureManifestPipeline(services, options);
         ConfigureLifecycleManagers(services, options, configuration);
         ConfigureGovernance(services, options);
         ConfigureControlPlaneAndAuth(services, options);
@@ -371,14 +371,14 @@ internal static class CompositionRoot
     /// guardrails, and the <c>ConfigureAgentGrains</c> factory that drives translation at grain
     /// activation.
     /// </summary>
-    private static void ConfigureManifestPipeline(IServiceCollection services)
+    private static void ConfigureManifestPipeline(IServiceCollection services, RuntimeOptions options)
     {
         services.AddAgentManifestInstantiator();
         services.AddGrainReactivationPluginReloadHook();
         services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();
-        ConfigureDomainOntologyCartridge(services);
+        ConfigureDomainOntologyCartridge(services, options);
 
         services.ConfigureAgentGrains(async (sp, id, ct) =>
             await sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id, ct).ConfigureAwait(false));
@@ -392,7 +392,7 @@ internal static class CompositionRoot
     /// that directory is registered at startup so virtual MCP servers with
     /// <c>OntologyRef</c> resolve immediately.
     /// </summary>
-    private static void ConfigureDomainOntologyCartridge(IServiceCollection services)
+    private static void ConfigureDomainOntologyCartridge(IServiceCollection services, RuntimeOptions options)
     {
         services.TryAddSingleton<IDomainOntologyArtifactRegistry>(sp =>
         {
@@ -429,8 +429,35 @@ internal static class CompositionRoot
         // ApprovalRequest and throws ApprovalRequiredException (mapped to 202 at the REST
         // boundary); operator approves it via 'vais approvals approve <id>'; re-running
         // DecideAsync finds the matching approval and flips the proposal to Approved.
+        var overlayPathForRecipes = options.OntologyOverlayPath; // captured for decorator wiring
         services.TryAddSingleton<IRecipeProposalStore>(sp =>
-            new InMemoryRecipeProposalStore(BuildRecipeApprovalGate(sp)));
+        {
+            var inner = (IRecipeProposalStore)new InMemoryRecipeProposalStore(BuildRecipeApprovalGate(sp));
+            return MaybeWrapWithOverlayPublishing(sp, inner, overlayPathForRecipes);
+        });
+
+        // Plan D D-13: register the JSON overlay writer whenever an overlay path is set so the
+        // approval-side-effect decorator can pick it up. The writer itself is stateless.
+        if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
+        {
+            services.TryAddSingleton<IOntologyOverlayWriter, JsonOntologyOverlayWriter>();
+        }
+    }
+
+    /// <summary>
+    /// Plan D D-14 — when both an <see cref="IOntologyOverlayWriter"/> and an overlay path
+    /// are configured, wrap the proposal store so approved recipes land in the on-disk
+    /// overlay and trigger a catalog reload. Returns <paramref name="inner"/> unchanged when
+    /// any dependency is missing (overlay path absent ⇒ no place to write).
+    /// </summary>
+    private static IRecipeProposalStore MaybeWrapWithOverlayPublishing(IServiceProvider sp, IRecipeProposalStore inner, string? overlayPath)
+    {
+        if (string.IsNullOrWhiteSpace(overlayPath)) return inner;
+        var writer = sp.GetService<IOntologyOverlayWriter>();
+        if (writer is null) return inner;
+        var reloader = sp.GetService<IOntologyCatalogReloader>();
+        var logger = sp.GetService<ILogger<OverlayPublishingRecipeProposalStoreDecorator>>();
+        return new OverlayPublishingRecipeProposalStoreDecorator(inner, writer, overlayPath, reloader, logger);
     }
 
     private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)
@@ -571,10 +598,17 @@ internal static class CompositionRoot
     private static void ConfigureGovernance(IServiceCollection services, RuntimeOptions options)
     {
         // Ontology overlay → merged catalog (RBAC roles + risk tags + describe overrides).
+        // Plan D D-14: when an overlay path is configured, the catalog is wrapped in
+        // HotReloadableOntologyCatalog so an approved RecipeProposal landing in the file
+        // (via OverlayPublishingRecipeProposalStoreDecorator) is visible to vais.describe on
+        // the next read — no runtime restart.
         if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
         {
             var overlay = OntologyOverlayLoader.LoadFromFile(options.OntologyOverlayPath);
-            services.AddSingleton<IOntologyCatalog>(_ => OntologyCatalog.BuildFromEmbeddedBase(overlay));
+            var initialCatalog = OntologyCatalog.BuildFromEmbeddedBase(overlay);
+            var hotReloadable = new HotReloadableOntologyCatalog(initialCatalog, options.OntologyOverlayPath);
+            services.AddSingleton<IOntologyCatalog>(hotReloadable);
+            services.AddSingleton<IOntologyCatalogReloader>(hotReloadable);
 
             // RBAC: overlay author-roles authorize mutating verbs per JWT scope (replaces allow-all).
             if (overlay.AuthorRoles is { IsEmpty: false } roles)
