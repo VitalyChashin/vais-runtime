@@ -410,6 +410,16 @@ internal static class CompositionRoot
         services.TryAddSingleton<IAgentCapabilityMapBuilder, AgentCapabilityMapBuilder>();
         services.TryAddSingleton<IOntologyAllowedToolsResolver, OntologyAllowedToolsResolver>();
         services.TryAddSingleton<IDelegationPolicy>(_ => AllowAllDelegationPolicy.Instance);
+
+        // Plan D — trajectory tee. The in-memory store ships as the always-on default so the
+        // tee has somewhere to land; deployers swap in a persistent store (Postgres,
+        // Langfuse, ClickHouse, ...) by registering an IInterceptorTeeStore before this runs.
+        // RecordingInterceptorTee replaces C1's NullInterceptorTee default whenever a store
+        // is available; observability-kind interceptors that call EmitAsync land a structured
+        // event in the store with zero deployer wiring.
+        services.TryAddSingleton<IInterceptorTeeStore, InMemoryInterceptorTeeStore>();
+        services.TryAddSingleton<TrajectoryArgumentRedactor>(_ => TrajectoryArgumentRedactor.Default);
+        services.TryAddSingleton<IInterceptorTee, RecordingInterceptorTee>();
     }
 
     /// <summary>

@@ -1808,3 +1808,88 @@ Vais.Agents.NullInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEve
 static Vais.Agents.NullInterceptorTee.Instance.get -> Vais.Agents.IInterceptorTee!
 Vais.Agents.McpServerManifest.OntologyRef.get -> string?
 Vais.Agents.McpServerManifest.OntologyRef.init -> void
+Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.Ok = 0 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.Error = 1 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.ShortCircuit = 2 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcome
+Vais.Agents.TrajectoryOutcome.<Clone>$() -> Vais.Agents.TrajectoryOutcome!
+Vais.Agents.TrajectoryOutcome.Deconstruct(out Vais.Agents.TrajectoryOutcomeKind Kind, out string? ErrorType) -> void
+Vais.Agents.TrajectoryOutcome.Equals(Vais.Agents.TrajectoryOutcome? other) -> bool
+Vais.Agents.TrajectoryOutcome.TrajectoryOutcome(Vais.Agents.TrajectoryOutcomeKind Kind, string? ErrorType = null) -> void
+Vais.Agents.TrajectoryOutcome.Kind.get -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcome.Kind.init -> void
+Vais.Agents.TrajectoryOutcome.ErrorType.get -> string?
+Vais.Agents.TrajectoryOutcome.ErrorType.init -> void
+override Vais.Agents.TrajectoryOutcome.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryOutcome.GetHashCode() -> int
+override Vais.Agents.TrajectoryOutcome.ToString() -> string!
+static Vais.Agents.TrajectoryOutcome.operator !=(Vais.Agents.TrajectoryOutcome? left, Vais.Agents.TrajectoryOutcome? right) -> bool
+static Vais.Agents.TrajectoryOutcome.operator ==(Vais.Agents.TrajectoryOutcome? left, Vais.Agents.TrajectoryOutcome? right) -> bool
+Vais.Agents.TrajectoryEvent
+Vais.Agents.TrajectoryEvent.<Clone>$() -> Vais.Agents.TrajectoryEvent!
+Vais.Agents.TrajectoryEvent.Equals(Vais.Agents.TrajectoryEvent? other) -> bool
+Vais.Agents.TrajectoryEvent.TrajectoryEvent() -> void
+Vais.Agents.TrajectoryEvent.EventId.get -> string!
+Vais.Agents.TrajectoryEvent.EventId.init -> void
+Vais.Agents.TrajectoryEvent.Timestamp.get -> System.DateTimeOffset
+Vais.Agents.TrajectoryEvent.Timestamp.init -> void
+Vais.Agents.TrajectoryEvent.EventName.get -> string!
+Vais.Agents.TrajectoryEvent.EventName.init -> void
+Vais.Agents.TrajectoryEvent.Operation.get -> Vais.Agents.OntologyOperation
+Vais.Agents.TrajectoryEvent.Operation.init -> void
+Vais.Agents.TrajectoryEvent.AgentId.get -> string?
+Vais.Agents.TrajectoryEvent.AgentId.init -> void
+Vais.Agents.TrajectoryEvent.RunId.get -> string?
+Vais.Agents.TrajectoryEvent.RunId.init -> void
+Vais.Agents.TrajectoryEvent.ConceptName.get -> string?
+Vais.Agents.TrajectoryEvent.ConceptName.init -> void
+Vais.Agents.TrajectoryEvent.Transport.get -> string?
+Vais.Agents.TrajectoryEvent.Transport.init -> void
+Vais.Agents.TrajectoryEvent.ArgumentsShape.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.TrajectoryEvent.ArgumentsShape.init -> void
+Vais.Agents.TrajectoryEvent.Outcome.get -> Vais.Agents.TrajectoryOutcome?
+Vais.Agents.TrajectoryEvent.Outcome.init -> void
+Vais.Agents.TrajectoryEvent.OntologyVersion.get -> string?
+Vais.Agents.TrajectoryEvent.OntologyVersion.init -> void
+Vais.Agents.TrajectoryEvent.Duration.get -> System.TimeSpan?
+Vais.Agents.TrajectoryEvent.Duration.init -> void
+override Vais.Agents.TrajectoryEvent.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryEvent.GetHashCode() -> int
+override Vais.Agents.TrajectoryEvent.ToString() -> string!
+static Vais.Agents.TrajectoryEvent.operator !=(Vais.Agents.TrajectoryEvent? left, Vais.Agents.TrajectoryEvent? right) -> bool
+static Vais.Agents.TrajectoryEvent.operator ==(Vais.Agents.TrajectoryEvent? left, Vais.Agents.TrajectoryEvent? right) -> bool
+Vais.Agents.TrajectoryArgumentRedactor
+Vais.Agents.TrajectoryArgumentRedactor.ToShape(System.Text.Json.JsonElement arguments) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.TrajectoryArgumentRedactor.IsSecretShapedName(string! argumentName) -> bool
+static Vais.Agents.TrajectoryArgumentRedactor.Default.get -> Vais.Agents.TrajectoryArgumentRedactor!
+static Vais.Agents.TrajectoryArgumentRedactor.WithAdditionalSecretNameSubstrings(params string![]! additional) -> Vais.Agents.TrajectoryArgumentRedactor!
+Vais.Agents.TrajectoryQuery
+Vais.Agents.TrajectoryQuery.<Clone>$() -> Vais.Agents.TrajectoryQuery!
+Vais.Agents.TrajectoryQuery.Deconstruct(out string? AgentId, out string? RunId, out string? ConceptName, out string? Transport, out System.DateTimeOffset? Since, out System.DateTimeOffset? Until, out Vais.Agents.TrajectoryOutcomeKind? OutcomeKind, out int? Limit) -> void
+Vais.Agents.TrajectoryQuery.Equals(Vais.Agents.TrajectoryQuery? other) -> bool
+Vais.Agents.TrajectoryQuery.TrajectoryQuery(string? AgentId = null, string? RunId = null, string? ConceptName = null, string? Transport = null, System.DateTimeOffset? Since = null, System.DateTimeOffset? Until = null, Vais.Agents.TrajectoryOutcomeKind? OutcomeKind = null, int? Limit = null) -> void
+Vais.Agents.TrajectoryQuery.AgentId.get -> string?
+Vais.Agents.TrajectoryQuery.AgentId.init -> void
+Vais.Agents.TrajectoryQuery.RunId.get -> string?
+Vais.Agents.TrajectoryQuery.RunId.init -> void
+Vais.Agents.TrajectoryQuery.ConceptName.get -> string?
+Vais.Agents.TrajectoryQuery.ConceptName.init -> void
+Vais.Agents.TrajectoryQuery.Transport.get -> string?
+Vais.Agents.TrajectoryQuery.Transport.init -> void
+Vais.Agents.TrajectoryQuery.Since.get -> System.DateTimeOffset?
+Vais.Agents.TrajectoryQuery.Since.init -> void
+Vais.Agents.TrajectoryQuery.Until.get -> System.DateTimeOffset?
+Vais.Agents.TrajectoryQuery.Until.init -> void
+Vais.Agents.TrajectoryQuery.OutcomeKind.get -> Vais.Agents.TrajectoryOutcomeKind?
+Vais.Agents.TrajectoryQuery.OutcomeKind.init -> void
+Vais.Agents.TrajectoryQuery.Limit.get -> int?
+Vais.Agents.TrajectoryQuery.Limit.init -> void
+override Vais.Agents.TrajectoryQuery.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryQuery.GetHashCode() -> int
+override Vais.Agents.TrajectoryQuery.ToString() -> string!
+static Vais.Agents.TrajectoryQuery.operator !=(Vais.Agents.TrajectoryQuery? left, Vais.Agents.TrajectoryQuery? right) -> bool
+static Vais.Agents.TrajectoryQuery.operator ==(Vais.Agents.TrajectoryQuery? left, Vais.Agents.TrajectoryQuery? right) -> bool
+Vais.Agents.IInterceptorTeeStore
+Vais.Agents.IInterceptorTeeStore.AppendAsync(Vais.Agents.TrajectoryEvent! trajectoryEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IInterceptorTeeStore.QueryAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.TrajectoryEvent!>!

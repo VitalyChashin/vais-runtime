@@ -187,3 +187,34 @@ Vais.Agents.Core.InMemoryInvokeLeaseStore.StartAsync(string! leaseId, string! ru
 Vais.Agents.Core.LeaseLivenessCache
 Vais.Agents.Core.LeaseLivenessCache.IsLiveAsync(string! leaseId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 Vais.Agents.Core.LeaseLivenessCache.LeaseLivenessCache(Vais.Agents.Core.IInvokeLeaseStore! store, System.TimeSpan? cacheTtl = null) -> void
+Vais.Agents.Core.InMemoryInterceptorTeeStore
+Vais.Agents.Core.InMemoryInterceptorTeeStore.InMemoryInterceptorTeeStore() -> void
+Vais.Agents.Core.InMemoryInterceptorTeeStore.InMemoryInterceptorTeeStore(int capacity) -> void
+Vais.Agents.Core.InMemoryInterceptorTeeStore.Capacity.get -> int
+Vais.Agents.Core.InMemoryInterceptorTeeStore.Count.get -> int
+Vais.Agents.Core.InMemoryInterceptorTeeStore.AppendAsync(Vais.Agents.TrajectoryEvent! trajectoryEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryInterceptorTeeStore.QueryAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.TrajectoryEvent!>!
+const Vais.Agents.Core.InMemoryInterceptorTeeStore.DefaultCapacity = 10000 -> int
+Vais.Agents.Core.RecordingInterceptorTee
+Vais.Agents.Core.RecordingInterceptorTee.RecordingInterceptorTee(Vais.Agents.IInterceptorTeeStore! store, Vais.Agents.TrajectoryArgumentRedactor? redactor = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.RecordingInterceptorTee!>? logger = null) -> void
+Vais.Agents.Core.RecordingInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.ToolCallTrajectoryPayload
+Vais.Agents.Core.ToolCallTrajectoryPayload.<Clone>$() -> Vais.Agents.Core.ToolCallTrajectoryPayload!
+Vais.Agents.Core.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration) -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.Equals(Vais.Agents.Core.ToolCallTrajectoryPayload? other) -> bool
+Vais.Agents.Core.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null) -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.ConceptName.get -> string!
+Vais.Agents.Core.ToolCallTrajectoryPayload.ConceptName.init -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.Transport.get -> string!
+Vais.Agents.Core.ToolCallTrajectoryPayload.Transport.init -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.Arguments.get -> System.Text.Json.JsonElement
+Vais.Agents.Core.ToolCallTrajectoryPayload.Arguments.init -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.Outcome.get -> Vais.Agents.TrajectoryOutcome?
+Vais.Agents.Core.ToolCallTrajectoryPayload.Outcome.init -> void
+Vais.Agents.Core.ToolCallTrajectoryPayload.Duration.get -> System.TimeSpan?
+Vais.Agents.Core.ToolCallTrajectoryPayload.Duration.init -> void
+override Vais.Agents.Core.ToolCallTrajectoryPayload.Equals(object? obj) -> bool
+override Vais.Agents.Core.ToolCallTrajectoryPayload.GetHashCode() -> int
+override Vais.Agents.Core.ToolCallTrajectoryPayload.ToString() -> string!
+static Vais.Agents.Core.ToolCallTrajectoryPayload.operator !=(Vais.Agents.Core.ToolCallTrajectoryPayload? left, Vais.Agents.Core.ToolCallTrajectoryPayload? right) -> bool
+static Vais.Agents.Core.ToolCallTrajectoryPayload.operator ==(Vais.Agents.Core.ToolCallTrajectoryPayload? left, Vais.Agents.Core.ToolCallTrajectoryPayload? right) -> bool
