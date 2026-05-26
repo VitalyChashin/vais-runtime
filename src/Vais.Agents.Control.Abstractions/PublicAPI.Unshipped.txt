@@ -276,6 +276,7 @@ Vais.Agents.Control.PolicyOperation.PluginCreate = 37 -> Vais.Agents.Control.Pol
 Vais.Agents.Control.PolicyOperation.PluginUpdate = 38 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.PluginQuery = 39 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.PolicyOperation.PluginEvict = 40 -> Vais.Agents.Control.PolicyOperation
+Vais.Agents.Control.PolicyOperation.RecipePromote = 41 -> Vais.Agents.Control.PolicyOperation
 Vais.Agents.Control.AuthorRolesPolicy
 Vais.Agents.Control.AuthorRolesPolicy.AuthorRolesPolicy() -> void
 Vais.Agents.Control.AuthorRolesPolicy.Roles.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.AuthorRole!>?

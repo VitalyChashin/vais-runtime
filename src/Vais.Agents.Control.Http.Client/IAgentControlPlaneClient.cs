@@ -220,6 +220,45 @@ public interface IAgentControlPlaneClient
         CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TrajectoryEvent>>(Array.Empty<TrajectoryEvent>());
 
+    /// <summary>
+    /// GET /v1/recipes — list induced recipe proposals (Plan D), newest-first. All filters
+    /// AND-combined.
+    /// </summary>
+    Task<IReadOnlyList<RecipeProposal>> ListRecipesAsync(
+        string? concept = null,
+        string? kind = null,
+        string? status = null,
+        string? risk = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<RecipeProposal>>(Array.Empty<RecipeProposal>());
+
+    /// <summary>GET /v1/recipes/{id} — fetch a single proposal. Returns null on 404.</summary>
+    Task<RecipeProposal?> GetRecipeAsync(string proposalId, CancellationToken cancellationToken = default)
+        => Task.FromResult((RecipeProposal?)null);
+
+    /// <summary>
+    /// POST /v1/recipes/propose — run the induction pipeline now and persist any new proposals.
+    /// Returns the proposals just emitted.
+    /// </summary>
+    Task<IReadOnlyList<RecipeProposal>> ProposeRecipesAsync(
+        string? agent = null,
+        string? run = null,
+        string? concept = null,
+        string? transport = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<RecipeProposal>>(Array.Empty<RecipeProposal>());
+
+    /// <summary>
+    /// POST /v1/recipes/{id}/decide — approve or reject a pending proposal. High-risk proposals
+    /// may surface as 202 with an approval request id; the typed client surfaces this as
+    /// <see cref="AgentControlPlaneException"/>.
+    /// </summary>
+    Task<RecipeProposal?> DecideRecipeAsync(string proposalId, bool approve, string decidedBy, CancellationToken cancellationToken = default)
+        => Task.FromResult((RecipeProposal?)null);
+
     /// <summary>GET /v1/graphs/{id}/runs/{runId} — fetch a single run. Returns null on 404 or when run store is not configured.</summary>
     Task<PipelineRunDto?> GetRunAsync(string graphId, string runId, CancellationToken cancellationToken = default)
         => Task.FromResult((PipelineRunDto?)null);

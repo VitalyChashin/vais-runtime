@@ -186,6 +186,9 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         // Plan D — trajectory tee corpus query.
         MapTrajectoryControlPlane(builder, prefix);
 
+        // Plan D — induced recipe proposals (list / show / decide).
+        MapRecipeControlPlane(builder, prefix);
+
         // Health + readiness
         group.MapGet("/healthz", () => Results.Ok(new { status = "ok" }))
             .WithName("Agents.Healthz")
@@ -562,6 +565,152 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return builder;
     }
+
+    /// <summary>
+    /// Map the Plan D recipe-proposal endpoints at <c>{prefix}/recipes</c>. Exposed as a
+    /// separate extension so tests can wire it independently of the full surface (same
+    /// rationale as <see cref="MapTrajectoryControlPlane"/>).
+    /// </summary>
+    public static IEndpointRouteBuilder MapRecipeControlPlane(this IEndpointRouteBuilder builder, string prefix = "/v1")
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        var group = builder.MapGroup(prefix).WithTags("Recipes");
+
+        group.MapGet("/recipes", ListRecipesAsync)
+            .WithName("Recipes.List")
+            .WithSummary("List induced recipe proposals (Plan D), newest-first.")
+            .WithDescription("Query params: concept, kind (WorkflowRecipe|TagSuggestion|DescriptionRewrite), status (Pending|Approved|Rejected|Superseded), risk (Low|Medium|High), limit (default 50). All filters AND-combined.")
+            .Produces<IReadOnlyList<RecipeProposal>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/recipes/{proposalId}", GetRecipeAsync)
+            .WithName("Recipes.Get")
+            .WithSummary("Fetch a single induced recipe proposal by id.")
+            .Produces<RecipeProposal>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPost("/recipes/propose", ProposeRecipesAsync)
+            .WithName("Recipes.Propose")
+            .WithSummary("Run the induction pipeline now and persist any new proposals. Returns the proposals just emitted.")
+            .WithDescription("Optional query params restrict the trajectory corpus: agent, run, concept, transport, since, until. Requires an IRecipeInducer + IRecipeProposalStore to be registered.")
+            .Produces<IReadOnlyList<RecipeProposal>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPost("/recipes/{proposalId}/decide", DecideRecipeAsync)
+            .WithName("Recipes.Decide")
+            .WithSummary("Approve or reject a pending proposal.")
+            .WithDescription("Body: { \"approve\": bool, \"decidedBy\": \"id\" }. High-risk proposals may return 202 with an approval request id — operator must approve via vais approvals approve, then re-issue this call.")
+            .Produces<RecipeProposal>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return builder;
+    }
+
+    private static async Task<IResult> ListRecipesAsync(HttpContext http, CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IRecipeProposalStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "Recipe proposal store not configured",
+                detail: "No IRecipeProposalStore is registered. Wire the in-memory default or AddPostgresRecipeProposalStore().",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var q = http.Request.Query;
+        var concept = q["concept"].FirstOrDefault();
+        var kindStr = q["kind"].FirstOrDefault();
+        var statusStr = q["status"].FirstOrDefault();
+        var riskStr = q["risk"].FirstOrDefault();
+        var limitStr = q["limit"].FirstOrDefault();
+        var limit = int.TryParse(limitStr, out var n) ? n : 50;
+
+        RecipeProposalKind? kind = null;
+        if (kindStr is { Length: > 0 } && Enum.TryParse<RecipeProposalKind>(kindStr, ignoreCase: true, out var k)) kind = k;
+        RecipeProposalStatus? status = null;
+        if (statusStr is { Length: > 0 } && Enum.TryParse<RecipeProposalStatus>(statusStr, ignoreCase: true, out var s)) status = s;
+        RecipeProposalRiskLevel? risk = null;
+        if (riskStr is { Length: > 0 } && Enum.TryParse<RecipeProposalRiskLevel>(riskStr, ignoreCase: true, out var r)) risk = r;
+
+        var query = new RecipeProposalQuery(
+            Concept: string.IsNullOrWhiteSpace(concept) ? null : concept,
+            Kind: kind,
+            Status: status,
+            RiskLevel: risk,
+            Limit: Math.Clamp(limit, 1, 500));
+
+        var items = new List<RecipeProposal>();
+        await foreach (var p in store.ListAsync(query, ct).ConfigureAwait(false))
+            items.Add(p);
+        return Results.Ok(items);
+    }
+
+    private static async Task<IResult> GetRecipeAsync(string proposalId, HttpContext http, CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IRecipeProposalStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "Recipe proposal store not configured",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        var proposal = await store.GetAsync(proposalId, ct).ConfigureAwait(false);
+        return proposal is null ? Results.NotFound() : Results.Ok(proposal);
+    }
+
+    private static async Task<IResult> ProposeRecipesAsync(HttpContext http, CancellationToken ct = default)
+    {
+        var inducer = http.RequestServices.GetService<IRecipeInducer>();
+        var store = http.RequestServices.GetService<IRecipeProposalStore>();
+        if (inducer is null || store is null)
+            return Results.Problem(
+                title: "Recipe induction not configured",
+                detail: "Requires both IRecipeInducer and IRecipeProposalStore to be registered.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var q = http.Request.Query;
+        var agent = q["agent"].FirstOrDefault();
+        var run = q["run"].FirstOrDefault();
+        var concept = q["concept"].FirstOrDefault();
+        var transport = q["transport"].FirstOrDefault();
+        var sinceStr = q["since"].FirstOrDefault();
+        var untilStr = q["until"].FirstOrDefault();
+        var query = new TrajectoryQuery(
+            AgentId: string.IsNullOrWhiteSpace(agent) ? null : agent,
+            RunId: string.IsNullOrWhiteSpace(run) ? null : run,
+            ConceptName: string.IsNullOrWhiteSpace(concept) ? null : concept,
+            Transport: string.IsNullOrWhiteSpace(transport) ? null : transport,
+            Since: DateTimeOffset.TryParse(sinceStr, out var s) ? s : null,
+            Until: DateTimeOffset.TryParse(untilStr, out var u) ? u : null);
+
+        var proposals = await inducer.InduceAsync(query, ct).ConfigureAwait(false);
+        foreach (var p in proposals)
+            await store.UpsertAsync(p, ct).ConfigureAwait(false);
+        return Results.Ok(proposals);
+    }
+
+    private static async Task<IResult> DecideRecipeAsync(string proposalId, RecipeDecideRequest body, HttpContext http, CancellationToken ct = default)
+    {
+        var store = http.RequestServices.GetService<IRecipeProposalStore>();
+        if (store is null)
+            return Results.Problem(
+                title: "Recipe proposal store not configured",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var decidedBy = string.IsNullOrWhiteSpace(body?.DecidedBy) ? "anonymous" : body.DecidedBy;
+        try
+        {
+            var result = await store.DecideAsync(proposalId, body?.Approve ?? false, decidedBy, ct).ConfigureAwait(false);
+            return result is null ? Results.NotFound() : Results.Ok(result);
+        }
+        catch (ApprovalRequiredException are)
+        {
+            return ProblemDetailsMapping.ToResult(are, http.Request.Path, proposalId, PolicyOperation.RecipePromote);
+        }
+    }
+
+    /// <summary>Body of POST <c>/recipes/{id}/decide</c>.</summary>
+    public sealed record RecipeDecideRequest(bool Approve, string? DecidedBy);
 
     private static async Task<IResult> ListTrajectoriesAsync(HttpContext http, CancellationToken ct = default)
     {

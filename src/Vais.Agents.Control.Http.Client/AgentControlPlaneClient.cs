@@ -540,6 +540,99 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<RecipeProposal>> ListRecipesAsync(
+        string? concept = null,
+        string? kind = null,
+        string? status = null,
+        string? risk = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(concept)) qs.Add($"concept={Uri.EscapeDataString(concept)}");
+        if (!string.IsNullOrWhiteSpace(kind)) qs.Add($"kind={Uri.EscapeDataString(kind)}");
+        if (!string.IsNullOrWhiteSpace(status)) qs.Add($"status={Uri.EscapeDataString(status)}");
+        if (!string.IsNullOrWhiteSpace(risk)) qs.Add($"risk={Uri.EscapeDataString(risk)}");
+        if (limit != 50) qs.Add($"limit={limit}");
+        var path = qs.Count > 0 ? $"/v1/recipes?{string.Join('&', qs)}" : "/v1/recipes";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<RecipeProposal>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? Array.Empty<RecipeProposal>();
+    }
+
+    /// <inheritdoc />
+    public async Task<RecipeProposal?> GetRecipeAsync(string proposalId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
+        using var response = await _http.GetAsync($"/v1/recipes/{Uri.EscapeDataString(proposalId)}", cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<RecipeProposal>(JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RecipeProposal>> ProposeRecipesAsync(
+        string? agent = null,
+        string? run = null,
+        string? concept = null,
+        string? transport = null,
+        DateTimeOffset? since = null,
+        DateTimeOffset? until = null,
+        CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(agent)) qs.Add($"agent={Uri.EscapeDataString(agent)}");
+        if (!string.IsNullOrWhiteSpace(run)) qs.Add($"run={Uri.EscapeDataString(run)}");
+        if (!string.IsNullOrWhiteSpace(concept)) qs.Add($"concept={Uri.EscapeDataString(concept)}");
+        if (!string.IsNullOrWhiteSpace(transport)) qs.Add($"transport={Uri.EscapeDataString(transport)}");
+        if (since.HasValue) qs.Add($"since={Uri.EscapeDataString(since.Value.ToString("O"))}");
+        if (until.HasValue) qs.Add($"until={Uri.EscapeDataString(until.Value.ToString("O"))}");
+        var path = qs.Count > 0 ? $"/v1/recipes/propose?{string.Join('&', qs)}" : "/v1/recipes/propose";
+        using var response = await _http.PostAsync(path, content: null, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<RecipeProposal>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? Array.Empty<RecipeProposal>();
+    }
+
+    /// <inheritdoc />
+    public async Task<RecipeProposal?> DecideRecipeAsync(string proposalId, bool approve, string decidedBy, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(decidedBy);
+        var requestBody = JsonContent.Create(new { approve, decidedBy }, options: JsonOptions);
+        using var response = await _http.PostAsync($"/v1/recipes/{Uri.EscapeDataString(proposalId)}/decide", requestBody, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        // 202 + approval-required type ⇒ surface the typed exception so callers can run
+        // `vais approvals approve <id>` and retry. ProblemDetailsWire can't parse the body
+        // cleanly (the server emits the integer status alongside an extension named "status"
+        // — they collide on the same JSON key), so read with JsonDocument directly.
+        if (response.StatusCode == HttpStatusCode.Accepted)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                    doc.RootElement.TryGetProperty("type", out var typeEl) &&
+                    typeEl.GetString() == ApprovalRequiredType)
+                {
+                    var rid = doc.RootElement.TryGetProperty("requestId", out var ridEl) ? ridEl.GetString() ?? "" : "";
+                    var k = doc.RootElement.TryGetProperty("kind", out var kEl) ? kEl.GetString() ?? "" : "";
+                    var n = doc.RootElement.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
+                    throw new ApprovalRequiredException(k, n, rid);
+                }
+            }
+            catch (JsonException) { /* fall through to success path */ }
+        }
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new AgentControlPlaneException((int)response.StatusCode, type: null, title: null, detail: raw);
+        }
+        return JsonSerializer.Deserialize<RecipeProposal>(raw, JsonOptions);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NodeExecutionDto>> GetRunNodesAsync(string graphId, string runId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(graphId);

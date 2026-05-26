@@ -239,3 +239,10 @@ Vais.Agents.Core.BehavioralRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery
 Vais.Agents.Core.LlmAssistedRecipeInducer
 Vais.Agents.Core.LlmAssistedRecipeInducer.LlmAssistedRecipeInducer(Vais.Agents.IRecipeInducer! inner, System.Func<Vais.Agents.RecipeProposal!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string?>!>! enricher) -> void
 Vais.Agents.Core.LlmAssistedRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
+Vais.Agents.Core.InMemoryRecipeProposalStore
+Vais.Agents.Core.InMemoryRecipeProposalStore.InMemoryRecipeProposalStore() -> void
+Vais.Agents.Core.InMemoryRecipeProposalStore.InMemoryRecipeProposalStore(System.Func<Vais.Agents.RecipeProposal!, string!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? highRiskApprovalCheck) -> void
+Vais.Agents.Core.InMemoryRecipeProposalStore.UpsertAsync(Vais.Agents.RecipeProposal! proposal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Core.InMemoryRecipeProposalStore.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Core.InMemoryRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
+Vais.Agents.Core.InMemoryRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>

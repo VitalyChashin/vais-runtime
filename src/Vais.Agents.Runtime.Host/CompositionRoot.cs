@@ -24,6 +24,7 @@ using Vais.Agents.Observability.AgentLogs;
 using Vais.Agents.Observability.AgentRunStore;
 using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.InterceptorTeeStore;
+using Vais.Agents.Observability.RecipeProposalStore;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
@@ -421,6 +422,39 @@ internal static class CompositionRoot
         services.TryAddSingleton<IInterceptorTeeStore, InMemoryInterceptorTeeStore>();
         services.TryAddSingleton<TrajectoryArgumentRedactor>(_ => TrajectoryArgumentRedactor.Default);
         services.TryAddSingleton<IInterceptorTee, RecordingInterceptorTee>();
+
+        // Plan D — induced recipes. The in-memory proposal store ships as default; the
+        // high-risk gate is wired here so that approving a High-risk proposal flows through
+        // the existing IApprovalStore (Plan B): first DecideAsync call creates a pending
+        // ApprovalRequest and throws ApprovalRequiredException (mapped to 202 at the REST
+        // boundary); operator approves it via 'vais approvals approve <id>'; re-running
+        // DecideAsync finds the matching approval and flips the proposal to Approved.
+        services.TryAddSingleton<IRecipeProposalStore>(sp =>
+            new InMemoryRecipeProposalStore(BuildRecipeApprovalGate(sp)));
+    }
+
+    private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)
+    {
+        var approvalStore = sp.GetService<Vais.Agents.Control.IApprovalStore>();
+        if (approvalStore is null) return null; // no approval subsystem wired → no gate
+        return async (proposal, decidedBy, ct) =>
+        {
+            var hash = RecipeProposalHash(proposal);
+            var approved = await approvalStore.FindApprovedAsync("Recipe", proposal.ProposalId, hash, ct).ConfigureAwait(false);
+            if (approved is not null) return;
+            var pending = await approvalStore.CreatePendingAsync("Recipe", proposal.ProposalId, hash, decidedBy, ct).ConfigureAwait(false);
+            throw new Vais.Agents.Control.ApprovalRequiredException("Recipe", proposal.ProposalId, pending.RequestId);
+        };
+    }
+
+    private static string RecipeProposalHash(RecipeProposal p)
+    {
+        // Stable across re-runs of the same proposal; changing body / risk / support invalidates
+        // the approval. Status / reviewer fields are deliberately excluded — those move on
+        // decision.
+        var canonical = $"{p.Kind}|{p.Concept}|{p.Body}|{p.RiskLevel}|{p.Support}|{p.Confidence:R}";
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(canonical));
+        return Convert.ToHexStringLower(bytes);
     }
 
     /// <summary>
@@ -681,6 +715,19 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
                 "postgres-interceptor-tee-store", options.InterceptorTeeStoreConnection,
                 "SELECT COUNT(*) FROM vais_trajectory_events LIMIT 1"));
+        }
+
+        // Plan D — Postgres-backed recipe proposal store. When VAIS_RECIPE_PROPOSAL_STORE_CONNECTION
+        // is set, this replaces the in-memory default. The high-risk gate (resolved at registration
+        // time) is hoisted into the Postgres registration so it survives the AddSingleton swap.
+        if (!string.IsNullOrWhiteSpace(options.RecipeProposalStoreConnection))
+        {
+            services.AddPostgresRecipeProposalStore(
+                o => o.ConnectionString = options.RecipeProposalStoreConnection,
+                highRiskApprovalCheckFactory: BuildRecipeApprovalGate);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-recipe-proposal-store", options.RecipeProposalStoreConnection,
+                "SELECT COUNT(*) FROM vais_recipe_proposals LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.GatewayEventStoreConnection))

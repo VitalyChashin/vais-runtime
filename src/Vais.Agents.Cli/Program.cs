@@ -116,6 +116,23 @@ app.Configure(config =>
             .WithDescription("List trajectory events (newest first). Filters: --agent --run --concept --transport --outcome --since --until --limit.");
     });
 
+    config.AddBranch("recipes", r =>
+    {
+        r.SetDescription("Plan D induced recipes — propose, triage, and decide candidate authoring recipes.");
+        r.AddCommand<RecipesListCommand>("list")
+            .WithDescription("List induced recipe proposals (newest first). Filters: --concept --kind --status --risk --limit.");
+        r.AddCommand<RecipesShowCommand>("show")
+            .WithDescription("Show a single proposal by id (full body, support, confidence, risk, source traces).");
+        r.AddCommand<RecipesProposeCommand>("propose")
+            .WithDescription("Run the induction pipeline now and persist any new proposals. Optional corpus filters: --agent --run --concept --transport --since --until.");
+        r.AddCommand<RecipesDecideCommand>("approve")
+            .WithDescription("Approve a pending proposal. High-risk proposals route through the existing IApprovalStore — operator must run 'vais approvals approve <id>' first.")
+            .WithData(true);
+        r.AddCommand<RecipesDecideCommand>("reject")
+            .WithDescription("Reject a pending proposal. Always allowed; bypasses the approval gate.")
+            .WithData(false);
+    });
+
     config.AddCommand<SignalCommand>("signal")
         .WithDescription("Send a signal (with arbitrary JSON payload) to an in-flight run.");
 
