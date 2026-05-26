@@ -11,6 +11,94 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Agent-as-tool capability fabric (Plan C2).** Makes the ontology the
+  capability-routing + governance fabric at the delegation boundary, where a
+  coordinator agent calls sub-agents as tools. Reuses Plan C1's substrate and
+  the existing `LocalAgentTool` depth-guard / `AgentContext.AllowedTools` /
+  child-session isolation machinery — no new dispatch plumbing. The fabric is
+  OSS; per-deployment policy *content* (which sub-agent a role may delegate
+  to, what preconditions are required) stays deployment-local. See
+  `docs/guides/agent-as-tool-capability-fabric.md` for the deployer how-to
+  and `plans/completed/agent-as-tool-ontology-governance-impl-2026-05-25.md`
+  for the implementation plan.
+  - **Capability-map projection (`Vais.Agents.Control.Manifests.Json`).**
+    `IAgentCapabilityMapBuilder` + `AgentCapabilityMapBuilder` build a
+    coordinator-facing `CapabilityMap` over the registered sub-agent tools
+    by cross-joining `AgentManifest.LocalAgents` with the `agent:`-sourced
+    entries in `AgentManifest.Tools`, then pulling each target sub-agent's
+    `Description` + `Labels` from `IAgentRegistry`. Per-coordinator cache
+    with `Invalidate`. `CapabilityMap.ToCompactText()` renders the
+    "Your team (delegate by calling the tool by name)" block for in-band
+    injection.
+  - **`agentInput` capability-map middleware.**
+    `CapabilityMapInputMiddleware` resolves the coordinator's
+    `CapabilityMap` and surfaces it two ways: structured under
+    `AgentInputContext.Properties["vais.capability_map"]` for programmatic
+    consumers, and prepended onto `AgentInputContext.Message` in-band so any
+    existing agent picks the team roster up without code change.
+    `CapabilityMapInputMiddlewareOptions.InjectIntoMessage` (default true)
+    controls the in-band channel. Opt-in per coordinator via the existing
+    Extension scope matcher.
+  - **Sub-agent description overlay (`AgentManifestTranslator`).** When an
+    `IAgentCapabilityMapBuilder` is registered, the translator routes the
+    `LocalAgentTool`'s effective description through the map's per-sub-agent
+    `SubAgentCapability.Description` — deployer-overlaid builders can
+    replace sub-agent descriptions the LLM sees. Default builder reproduces
+    the legacy `localRef.Description ?? targetManifest.Description` path
+    byte-identically; empty / null overlay values fall back so a
+    misconfigured overlay can't silently blank descriptions.
+  - **Ontology-driven `AllowedTools`.** `IOntologyAllowedToolsResolver` +
+    `OntologyAllowedToolsResolver` compute the set of sub-agent tool names
+    a caller may invoke given `(callerScopes, CapabilityMap)`.
+    Tag-intersection policy: untagged sub-agents are open; tagged sub-agents
+    need a caller scope that matches at least one tag; wildcard scope
+    (configurable, default `"*"`) grants all; empty caller scopes default to
+    grant-all (dev posture, flip `GrantOnEmptyScope = false` for strict
+    multi-tenant). Pure function; deployers pipe the output into
+    `AgentContext.AllowedTools` and the existing
+    `DefaultToolCallDispatcher.cs:157` enforcement applies unchanged.
+  - **Delegation-governance interceptor.** `IDelegationPolicy` seam +
+    `DelegationGovernanceMiddleware` substrate-shaped `ToolGatewayMiddleware`
+    (Kind = Validation). Runs the policy against every tool call whose name
+    matches a sub-agent in the coordinator's `CapabilityMap`; non-sub-agent
+    calls pass through unchanged. On deny, short-circuits with structured
+    `{ok:false, reason, suggestions[]}` — same shape as the C1 south
+    cartridge's arg-validation refusal; LLM adapts; not a turn abort.
+    `AllowAllDelegationPolicy.Instance` is the OSS default so the middleware
+    is harmless if added without a custom policy. Per-run history
+    (preconditions, cost counters, cycle detection beyond the existing
+    `LocalAgentTool` depth guard) is the policy's responsibility — keeps
+    the OSS interceptor light.
+  - **§14.5 no-sequencing guard.** Structural + behavioural tests pin the
+    ontology-vs-graph boundary: `CapabilityMapInputMiddleware` never
+    auto-executes a delegation (runs cleanly with no `IAgentRuntime` /
+    `ITool` / `ToolGatewayMiddleware` in DI); the Manifests.Json assembly
+    exposes no exported type matching sequencer / auto-executor patterns
+    (Sequencer, AutoExecutor, RecipeExecutor, AutoDelegator);
+    `OntologyOverlay.RecipeEntry` is a data-only carrier (no `Execute` /
+    `Run` / `Invoke` methods, no execution-shaped interfaces). Future
+    commits that introduce a sequencer fail at least one of these, forcing
+    a conscious §14.5 conversation.
+  - **Test footprint.** 36 new ontology / fabric tests in
+    `Vais.Agents.Core.Tests/Ontology/` (capability map 11 + input
+    middleware 7 + AllowedTools resolver 11 + delegation governance 6 +
+    invariants 5) + 3 translator wiring tests in
+    `Vais.Agents.Runtime.Instantiation.Tests/SubAgentDescriptionOverlayTests.cs`.
+    Solution 108 projects 0/0; 1585 tests across the impacted surface.
+  - **Runtime auto-wiring (Plan C2 follow-on, landed in the same release).**
+    With `IAgentCapabilityMapBuilder` + `IDelegationPolicy` registered by
+    default in the composition root, `AgentManifestTranslator` now
+    auto-wires the capability fabric onto every coordinator agent whose
+    manifest has `LocalAgents`: `CapabilityMapInputMiddleware` is appended
+    to `StatefulAgentOptions.InputMiddleware`, and
+    `DelegationGovernanceMiddleware` is appended innermost on
+    `ToolGatewayMiddleware` (with the default `AllowAllDelegationPolicy`
+    making it harmless until a deployer overrides). Agents without
+    `LocalAgents` are untouched. Live-verified end-to-end: a coordinator's
+    grain-activated log emits `tool-middleware=[…, DelegationGovernanceMiddleware]`
+    where the sub-agent's chain stops at the upstream
+    `[McpEventMiddleware, McpGatewayEventMiddleware]` — gating works.
+
 - **SEP-1763 ontology-interceptor substrate + south cartridge (Plan C1).** A transport-agnostic
   interceptor abstraction in `Vais.Agents.Abstractions` that the existing south
   `ToolGatewayMiddleware` re-bases onto without breaking any subclass, plus a re-expression of
