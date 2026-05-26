@@ -1719,3 +1719,33 @@ static Vais.Agents.SessionTurn.operator ==(Vais.Agents.SessionTurn? left, Vais.A
 Vais.Agents.SessionPhase
 const Vais.Agents.SessionPhase.Closing = "closing" -> string!
 const Vais.Agents.SessionPhase.Opened = "opened" -> string!
+Vais.Agents.OntologyOperation
+Vais.Agents.OntologyOperation.List = 0 -> Vais.Agents.OntologyOperation
+Vais.Agents.OntologyOperation.Call = 1 -> Vais.Agents.OntologyOperation
+Vais.Agents.InterceptionContext
+Vais.Agents.InterceptionContext.InterceptionContext() -> void
+Vais.Agents.InterceptionContext.Operation.get -> Vais.Agents.OntologyOperation
+Vais.Agents.InterceptionContext.Operation.init -> void
+Vais.Agents.InterceptionContext.AgentContext.get -> Vais.Agents.AgentContext!
+Vais.Agents.InterceptionContext.AgentContext.init -> void
+Vais.Agents.InterceptionContext.Binding.get -> Vais.Agents.IOntologyBinding?
+Vais.Agents.InterceptionContext.Binding.init -> void
+Vais.Agents.IOntologyBinding
+Vais.Agents.IOntologyBinding.OntologyVersion.get -> string!
+Vais.Agents.InterceptorKind
+Vais.Agents.InterceptorKind.Validation = 0 -> Vais.Agents.InterceptorKind
+Vais.Agents.InterceptorKind.Mutation = 1 -> Vais.Agents.InterceptorKind
+Vais.Agents.InterceptorKind.Observability = 2 -> Vais.Agents.InterceptorKind
+Vais.Agents.InterceptorPhase
+Vais.Agents.InterceptorPhase.Request = 1 -> Vais.Agents.InterceptorPhase
+Vais.Agents.InterceptorPhase.Response = 2 -> Vais.Agents.InterceptorPhase
+Vais.Agents.InterceptorPhase.Both = Vais.Agents.InterceptorPhase.Request | Vais.Agents.InterceptorPhase.Response -> Vais.Agents.InterceptorPhase
+Vais.Agents.OntologyInterceptor
+Vais.Agents.OntologyInterceptor.OntologyInterceptor() -> void
+virtual Vais.Agents.OntologyInterceptor.Kind.get -> Vais.Agents.InterceptorKind
+virtual Vais.Agents.OntologyInterceptor.Phase.get -> Vais.Agents.InterceptorPhase
+Vais.Agents.OntologyInterceptor<TContext, TOutcome>
+Vais.Agents.OntologyInterceptor<TContext, TOutcome>.OntologyInterceptor() -> void
+virtual Vais.Agents.OntologyInterceptor<TContext, TOutcome>.InvokeAsync(TContext! context, System.Func<System.Threading.Tasks.Task<TOutcome>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TOutcome>!
+Vais.Agents.OntologyInterceptorChain
+static Vais.Agents.OntologyInterceptorChain.Compose<TContext, TOutcome>(System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyInterceptor<TContext!, TOutcome>!>! interceptors, TContext! context, System.Func<System.Threading.Tasks.Task<TOutcome>!>! terminal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Func<System.Threading.Tasks.Task<TOutcome>!>!
