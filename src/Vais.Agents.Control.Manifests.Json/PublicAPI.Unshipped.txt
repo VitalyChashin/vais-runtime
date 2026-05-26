@@ -2,7 +2,6 @@
 Vais.Agents.Control.Manifests.IOntologyCatalog
 Vais.Agents.Control.Manifests.IOntologyCatalog.Get(string! kind) -> Vais.Agents.Control.Manifests.KindOntologyEntry!
 Vais.Agents.Control.Manifests.IOntologyCatalog.Kinds.get -> System.Collections.Generic.IReadOnlyList<string!>!
-Vais.Agents.Control.Manifests.IOntologyCatalog.OntologyVersion.get -> string!
 Vais.Agents.Control.Manifests.IOntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
 Vais.Agents.Control.Manifests.IOntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
 Vais.Agents.Control.Manifests.KindOntologyEntry

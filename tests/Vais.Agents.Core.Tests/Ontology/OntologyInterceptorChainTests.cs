@@ -179,6 +179,12 @@ public sealed class OntologyInterceptorChainTests
     private sealed class FakeBinding(string version) : IOntologyBinding
     {
         public string OntologyVersion { get; } = version;
+        public IReadOnlyList<string> ConceptNames => [];
+        public bool TryGetConcept(string conceptName, out OntologyConceptEntry entry)
+        {
+            entry = null!;
+            return false;
+        }
     }
 
     private sealed class RecordingInterceptor(string name, List<string> log)

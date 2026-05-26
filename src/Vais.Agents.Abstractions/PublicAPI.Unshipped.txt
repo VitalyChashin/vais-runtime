@@ -1749,3 +1749,60 @@ Vais.Agents.OntologyInterceptor<TContext, TOutcome>.OntologyInterceptor() -> voi
 virtual Vais.Agents.OntologyInterceptor<TContext, TOutcome>.InvokeAsync(TContext! context, System.Func<System.Threading.Tasks.Task<TOutcome>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TOutcome>!
 Vais.Agents.OntologyInterceptorChain
 static Vais.Agents.OntologyInterceptorChain.Compose<TContext, TOutcome>(System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyInterceptor<TContext!, TOutcome>!>! interceptors, TContext! context, System.Func<System.Threading.Tasks.Task<TOutcome>!>! terminal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Func<System.Threading.Tasks.Task<TOutcome>!>!
+Vais.Agents.IOntologyBinding.ConceptNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.IOntologyBinding.TryGetConcept(string! conceptName, out Vais.Agents.OntologyConceptEntry! entry) -> bool
+Vais.Agents.IDomainOntologyCatalog
+Vais.Agents.OntologyConceptEntry
+Vais.Agents.OntologyConceptEntry.<Clone>$() -> Vais.Agents.OntologyConceptEntry!
+Vais.Agents.OntologyConceptEntry.Equals(Vais.Agents.OntologyConceptEntry? other) -> bool
+Vais.Agents.OntologyConceptEntry.OntologyConceptEntry() -> void
+Vais.Agents.OntologyConceptEntry.Name.get -> string!
+Vais.Agents.OntologyConceptEntry.Name.init -> void
+Vais.Agents.OntologyConceptEntry.Description.get -> string?
+Vais.Agents.OntologyConceptEntry.Description.init -> void
+Vais.Agents.OntologyConceptEntry.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.OntologyConceptEntry.Tags.init -> void
+Vais.Agents.OntologyConceptEntry.CrossRefs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyConceptCrossRef!>!
+Vais.Agents.OntologyConceptEntry.CrossRefs.init -> void
+override Vais.Agents.OntologyConceptEntry.Equals(object? obj) -> bool
+override Vais.Agents.OntologyConceptEntry.GetHashCode() -> int
+override Vais.Agents.OntologyConceptEntry.ToString() -> string!
+static Vais.Agents.OntologyConceptEntry.operator !=(Vais.Agents.OntologyConceptEntry? left, Vais.Agents.OntologyConceptEntry? right) -> bool
+static Vais.Agents.OntologyConceptEntry.operator ==(Vais.Agents.OntologyConceptEntry? left, Vais.Agents.OntologyConceptEntry? right) -> bool
+Vais.Agents.OntologyConceptCrossRef
+Vais.Agents.OntologyConceptCrossRef.<Clone>$() -> Vais.Agents.OntologyConceptCrossRef!
+Vais.Agents.OntologyConceptCrossRef.Deconstruct(out string! FieldPath, out string! TargetConceptName, out string? Cardinality) -> void
+Vais.Agents.OntologyConceptCrossRef.Equals(Vais.Agents.OntologyConceptCrossRef? other) -> bool
+Vais.Agents.OntologyConceptCrossRef.OntologyConceptCrossRef(string! FieldPath, string! TargetConceptName, string? Cardinality = null) -> void
+Vais.Agents.OntologyConceptCrossRef.FieldPath.get -> string!
+Vais.Agents.OntologyConceptCrossRef.FieldPath.init -> void
+Vais.Agents.OntologyConceptCrossRef.TargetConceptName.get -> string!
+Vais.Agents.OntologyConceptCrossRef.TargetConceptName.init -> void
+Vais.Agents.OntologyConceptCrossRef.Cardinality.get -> string?
+Vais.Agents.OntologyConceptCrossRef.Cardinality.init -> void
+override Vais.Agents.OntologyConceptCrossRef.Equals(object? obj) -> bool
+override Vais.Agents.OntologyConceptCrossRef.GetHashCode() -> int
+override Vais.Agents.OntologyConceptCrossRef.ToString() -> string!
+static Vais.Agents.OntologyConceptCrossRef.operator !=(Vais.Agents.OntologyConceptCrossRef? left, Vais.Agents.OntologyConceptCrossRef? right) -> bool
+static Vais.Agents.OntologyConceptCrossRef.operator ==(Vais.Agents.OntologyConceptCrossRef? left, Vais.Agents.OntologyConceptCrossRef? right) -> bool
+Vais.Agents.IInterceptorTee
+Vais.Agents.IInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.InterceptorTeeEvent
+Vais.Agents.InterceptorTeeEvent.<Clone>$() -> Vais.Agents.InterceptorTeeEvent!
+Vais.Agents.InterceptorTeeEvent.Equals(Vais.Agents.InterceptorTeeEvent? other) -> bool
+Vais.Agents.InterceptorTeeEvent.InterceptorTeeEvent() -> void
+Vais.Agents.InterceptorTeeEvent.EventName.get -> string!
+Vais.Agents.InterceptorTeeEvent.EventName.init -> void
+Vais.Agents.InterceptorTeeEvent.Context.get -> Vais.Agents.InterceptionContext!
+Vais.Agents.InterceptorTeeEvent.Context.init -> void
+Vais.Agents.InterceptorTeeEvent.Payload.get -> object?
+Vais.Agents.InterceptorTeeEvent.Payload.init -> void
+override Vais.Agents.InterceptorTeeEvent.Equals(object? obj) -> bool
+override Vais.Agents.InterceptorTeeEvent.GetHashCode() -> int
+override Vais.Agents.InterceptorTeeEvent.ToString() -> string!
+static Vais.Agents.InterceptorTeeEvent.operator !=(Vais.Agents.InterceptorTeeEvent? left, Vais.Agents.InterceptorTeeEvent? right) -> bool
+static Vais.Agents.InterceptorTeeEvent.operator ==(Vais.Agents.InterceptorTeeEvent? left, Vais.Agents.InterceptorTeeEvent? right) -> bool
+Vais.Agents.NullInterceptorTee
+Vais.Agents.NullInterceptorTee.NullInterceptorTee() -> void
+Vais.Agents.NullInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+static Vais.Agents.NullInterceptorTee.Instance.get -> Vais.Agents.IInterceptorTee!
