@@ -17,6 +17,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Microsoft.Extensions.AI.Abstractions surfaces IEmbeddingGenerator for the C1-10
+         semantic retriever decorator. The lexical retriever has no AI deps; this package
+         only adds interfaces, no providers. -->
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
