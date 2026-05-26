@@ -376,9 +376,31 @@ internal static class CompositionRoot
         services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();
+        ConfigureDomainOntologyCartridge(services);
 
         services.ConfigureAgentGrains(async (sp, id, ct) =>
             await sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id, ct).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Plan C1 south cartridge wiring. Registers a shared
+    /// <see cref="InMemoryDomainOntologyArtifactRegistry"/> + a singleton
+    /// <see cref="CachedDomainOntologyToolListShaper"/>. When
+    /// <c>VAIS_DOMAIN_ONTOLOGY_DIR</c> is set, every <c>*.domain-ontology.json</c> file in
+    /// that directory is registered at startup so virtual MCP servers with
+    /// <c>OntologyRef</c> resolve immediately.
+    /// </summary>
+    private static void ConfigureDomainOntologyCartridge(IServiceCollection services)
+    {
+        services.TryAddSingleton<IDomainOntologyArtifactRegistry>(sp =>
+        {
+            var registry = new InMemoryDomainOntologyArtifactRegistry();
+            var dir = Environment.GetEnvironmentVariable("VAIS_DOMAIN_ONTOLOGY_DIR");
+            if (!string.IsNullOrWhiteSpace(dir))
+                registry.RegisterAll(DomainOntologyArtifactLoader.LoadAllFromDirectory(dir));
+            return registry;
+        });
+        services.TryAddSingleton<CachedDomainOntologyToolListShaper>();
     }
 
     /// <summary>

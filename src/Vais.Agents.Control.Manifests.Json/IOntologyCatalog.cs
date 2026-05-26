@@ -45,11 +45,15 @@ public sealed record OntologyFieldInfo(
 /// Read-only view of the merged ontology (generated base + deployment-local overlay).
 /// The catalog is populated once at startup and is safe to read from any thread.
 /// </summary>
-public interface IOntologyCatalog
+/// <remarks>
+/// Implements the cross-cutting <see cref="IOntologyBinding"/> seam so an
+/// <see cref="OntologyInterceptor"/> can be written against the substrate without depending
+/// on this richer surface. The seam's <see cref="IOntologyBinding.ConceptNames"/> maps to
+/// <see cref="Kinds"/>, and <see cref="IOntologyBinding.TryGetConcept"/> projects from
+/// <see cref="KindOntologyEntry"/> onto <see cref="OntologyConceptEntry"/>.
+/// </remarks>
+public interface IOntologyCatalog : IOntologyBinding
 {
-    /// <summary>Ontology version from the base artifact.</summary>
-    string OntologyVersion { get; }
-
     /// <summary>
     /// Returns the merged ontology entry for <paramref name="kind"/>.
     /// Throws <see cref="KeyNotFoundException"/> for unknown kinds — callers should use

@@ -9,6 +9,96 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Added
+
+- **SEP-1763 ontology-interceptor substrate + south cartridge (Plan C1).** A transport-agnostic
+  interceptor abstraction in `Vais.Agents.Abstractions` that the existing south
+  `ToolGatewayMiddleware` re-bases onto without breaking any subclass, plus a re-expression of
+  the north read-roles through the substrate and a full south cartridge bound to a virtual
+  MCP server via a new `McpServerManifest.OntologyRef` field. The substrate is the *one engine*
+  behind the *two cartridges* (north resource-model ontology, south domain-tool ontology); see
+  `docs/concepts/ontology-substrate.md` for the architectural reference and
+  `docs/guides/attach-a-domain-ontology.md` for the deployer how-to.
+  - **Substrate (`Vais.Agents.Abstractions`).** `OntologyInterceptor` (metadata base —
+    `InterceptorKind { Validation, Mutation, Observability }`, `InterceptorPhase { Request,
+    Response, Both }`), `OntologyInterceptor<TContext, TOutcome>` (typed pipeline),
+    `OntologyInterceptorChain.Compose` (outer-to-inner chain with short-circuit),
+    `InterceptionContext` + `OntologyOperation { List, Call }`. `ToolGatewayMiddleware` now
+    derives from `OntologyInterceptor` — the existing `InvokeAsync(ToolGatewayContext, ...)`
+    virtual is preserved verbatim (P6 adapter), so every concrete subclass and the
+    `DefaultToolCallDispatcher` chain compile unchanged.
+  - **Binding seam.** `IOntologyBinding` (`OntologyVersion`, `ConceptNames`, `TryGetConcept`)
+    with `OntologyConceptEntry` + `OntologyConceptCrossRef`. The existing north
+    `IOntologyCatalog` extends the seam — an interceptor written against `IOntologyBinding`
+    works against both the north catalog (resource model) and the new south
+    `IDomainOntologyCatalog` (domain tools). `IDomainOntologyCatalog` is the south marker.
+  - **Observability producer seam.** `IInterceptorTee` + `InterceptorTeeEvent` +
+    `NullInterceptorTee` default. Plan D's trajectory store plugs in here without source
+    changes to interceptors written today.
+  - **North read-roles via the substrate (`Vais.Agents.Control.Mcp.Server`).**
+    `DesignMcpToolHandlers.ListToolsAsync` and `RunValidationChainAsync` now compose a chain
+    of `OntologyInterceptor<…, ListToolsResult>` / `OntologyInterceptor<…, ValidationOutcome>`
+    instead of running the Plan B scope-filter and Plan A schema-validator inline. The
+    built-in `DesignToolsScopeFilterInterceptor` (Kind = Mutation) and
+    `ManifestValidatorInterceptor` (Kind = Validation) always run innermost; deployers add
+    interceptors around them via DI. Byte parity preserved — every existing
+    `DesignMcpToolsTests` / `DesignMutationToolsTests` test passes unchanged.
+  - **South manifest binding.** New optional `McpServerManifest.OntologyRef` field — points
+    at a deployment-supplied domain-ontology artifact resolved through
+    `IDomainOntologyArtifactRegistry`. The field auto-serializes through `EnvelopeCodec`
+    (round-trip-safe via `vais get`); the hand-written `JsonAgentGraphManifestLoader`
+    parser was extended to read it; `contracts/schemas/McpServer.schema.json` +
+    `contracts/ontology/base-ontology.json` + `contracts/reference/McpServer.md` regenerated.
+  - **Domain ontology types + loader (`Vais.Agents.Control.Manifests.Json`).**
+    `DomainOntologyArtifact` (`OntologyVersion` + per-tool `Tools` map of `DomainConcept`s with
+    description override, tags, typed `DomainCrossRef`s). `DomainOntologyArtifactLoader`
+    mirrors `OntologyOverlayLoader` — `LoadFromFile`, `LoadFromJson`, `LoadAllFromDirectory`
+    (`*.domain-ontology.json`, malformed files skipped silently). `IDomainOntologyArtifactRegistry`
+    + `InMemoryDomainOntologyArtifactRegistry` default — unknown ref returns `null`
+    (graceful passthrough, no cartridge applied).
+  - **South catalog.** `DomainOntologyCatalog` projects an artifact onto a virtual server's
+    tool-projection scope. Implements `IDomainOntologyCatalog : IOntologyBinding`;
+    unannotated projected tools surface with empty annotations; out-of-scope tools = false
+    from `TryGetConcept` = passthrough at the cartridge.
+  - **List-time south cartridge.** `DomainOntologyToolListShaper` applies description
+    rewrite, tag injection, cross-ref injection, and operator-configured hide-tag flagging
+    over a `(ToolDescriptor → ShapedToolDescriptor)` projection. Defaults are annotate-only;
+    `Hidden` flips only when the deployer supplies `HideTags`.
+    `CachedDomainOntologyToolListShaper` keys results by (tool list, ontology version) so
+    re-shaping stays off the per-call hot path (success criterion 6).
+  - **Retrieval pipeline.** `IToolRetriever` seam. `LexicalToolRetriever` always-on
+    dependency-free (weights name ×3, tags ×2, description ×1) — `ForCatalog` helper closes
+    over an `IDomainOntologyCatalog` so the bound tags contribute to scoring.
+    `SemanticToolRetriever` decorator reranks by cosine similarity between query and
+    per-tool embeddings — opt-in behind a registered
+    `Microsoft.Extensions.AI.IEmbeddingGenerator<string, Embedding<float>>` (added as a new
+    `Microsoft.Extensions.AI.Abstractions` package reference on `Vais.Agents.Control.Manifests.Json`).
+    `IToolClassifier` is a hook for an additional re-rank step — no default impl ships.
+  - **Call-time south cartridge.** `DomainOntologyArgValidationMiddleware` (Kind =
+    Validation, request-phase) short-circuits with `{ok:false, reason, suggestions[]}` when
+    any cross-ref `FieldPath` resolves to missing or empty in the call arguments — upstream
+    is never invoked on failure. `DomainOntologyResponseEnrichmentMiddleware` (Kind =
+    Mutation, response-phase) injects an `_ontology` block (tags + ontologyVersion) into
+    JSON-object responses; plain-text and error outcomes pass through unchanged.
+  - **Test totals.** 81 new substrate / cartridge tests under
+    `Vais.Agents.Core.Tests/Ontology/` (chain + binding + tee + artifact + catalog + shaper +
+    retrieval + call-middleware) on top of 36 pre-existing — 117 in the `Ontology` filter.
+    Full suite green: `Vais.Agents.sln` 108 projects 0/0; Core 935, Control.Http 356,
+    Control.Mcp.Server 48 (incl. north substrate parity tests), Cli 152.
+  - **Runtime auto-wiring (Plan C1 follow-on, landed in the same release).** With
+    `IDomainOntologyArtifactRegistry` registered by default in the composition root (set
+    `VAIS_DOMAIN_ONTOLOGY_DIR` to bulk-load `*.domain-ontology.json` artifacts at startup),
+    `AgentManifestTranslator` now resolves every bound virtual server's `OntologyRef`,
+    composes a combined `IDomainOntologyCatalog`, appends
+    `DomainOntologyArgValidationMiddleware` + `DomainOntologyResponseEnrichmentMiddleware`
+    innermost on the per-agent tool-gateway chain, and installs the
+    `CachedDomainOntologyToolListShaper` callback on each `VirtualMcpToolSource` so the
+    agent sees rewritten descriptions + hide-tag filtering at activation. Unknown refs
+    degrade gracefully; agents without `OntologyRef` are untouched. Live-verified end-to-end
+    on the local-dev runtime — a virtual server with `ontologyRef` activated with the
+    cartridge pair on its tool-gateway chain (transcript captured in the implementation
+    plan's §5 / Phase 4).
+
 ### Fixed
 
 - **research-pipeline SGR analyst no longer crashes on >3 reasoning steps.** The `sgr-analyst` sample wrapped

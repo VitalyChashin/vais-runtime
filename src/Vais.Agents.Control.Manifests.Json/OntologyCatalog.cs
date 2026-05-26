@@ -51,6 +51,39 @@ public sealed class OntologyCatalog : IOntologyCatalog
         return _entries.TryGetValue(kind, out entry!);
     }
 
+    // ── IOntologyBinding seam (cross-cutting projection over KindOntologyEntry) ──
+
+    IReadOnlyList<string> IOntologyBinding.ConceptNames => Kinds;
+
+    bool IOntologyBinding.TryGetConcept(string conceptName, out OntologyConceptEntry entry)
+    {
+        if (!TryGet(conceptName, out var k))
+        {
+            entry = null!;
+            return false;
+        }
+        entry = new OntologyConceptEntry
+        {
+            Name = k.Kind,
+            Description = k.Description,
+            Tags = k.Tags,
+            CrossRefs = ProjectCrossRefs(k.CrossRefs),
+        };
+        return true;
+    }
+
+    private static IReadOnlyList<OntologyConceptCrossRef> ProjectCrossRefs(IReadOnlyList<CrossRefEdge> edges)
+    {
+        if (edges.Count == 0) return [];
+        var projected = new OntologyConceptCrossRef[edges.Count];
+        for (var i = 0; i < edges.Count; i++)
+        {
+            var e = edges[i];
+            projected[i] = new OntologyConceptCrossRef(e.FieldPath, e.TargetKind, e.Cardinality);
+        }
+        return projected;
+    }
+
     // ── Builder ───────────────────────────────────────────────────────────────
 
     /// <summary>

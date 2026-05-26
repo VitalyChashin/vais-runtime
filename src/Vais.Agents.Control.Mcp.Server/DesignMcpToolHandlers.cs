@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Vais.Agents.Control.Manifests;
+using Vais.Agents.Control.Mcp.Server.Ontology;
 using Vais.Agents.Eval;
 
 namespace Vais.Agents.Control.Mcp.Server;
@@ -189,32 +190,34 @@ internal static class DesignMcpToolHandlers
         CancellationToken ct)
         => ListToolsAsync(ctx.Services!, ct);
 
-    /// <summary>Testable overload — returns read verbs, plus mutating verbs when the caller can author something.</summary>
+    /// <summary>
+    /// Testable overload — composes the substrate <c>tools/list</c> interception chain over a
+    /// read-only baseline (<see cref="DesignTools"/>). The built-in
+    /// <see cref="DesignToolsScopeFilterInterceptor"/> always runs (preserving Plan B byte
+    /// parity); deployer-registered <c>OntologyInterceptor&lt;DesignToolsListInterceptionContext, ListToolsResult&gt;</c>
+    /// implementations layer around it via DI.
+    /// </summary>
     internal static async ValueTask<ListToolsResult> ListToolsAsync(IServiceProvider sp, CancellationToken ct)
     {
-        var tools = new List<Tool>(DesignTools);
-        if (await CanMutateAnythingAsync(sp, ct).ConfigureAwait(false))
-            tools.AddRange(MutatingTools);
-        return new ListToolsResult { Tools = tools };
-    }
-
-    private static readonly PolicyOperation[] MutationProbes =
-    [
-        PolicyOperation.Create, PolicyOperation.GraphCreate, PolicyOperation.McpServerCreate,
-        PolicyOperation.McpGatewayConfigCreate, PolicyOperation.LlmGatewayConfigCreate, PolicyOperation.ContainerPluginCreate,
-        PolicyOperation.EvalSuiteUpsert,
-    ];
-
-    private static async ValueTask<bool> CanMutateAnythingAsync(IServiceProvider sp, CancellationToken ct)
-    {
-        var policy = sp.GetService<IAgentPolicyEngine>() ?? NullAgentPolicyEngine.Instance;
-        var principal = BuildPrincipal(sp);
-        foreach (var op in MutationProbes)
+        var deployer = sp.GetServices<OntologyInterceptor<DesignToolsListInterceptionContext, ListToolsResult>>();
+        var builtIn = new DesignToolsScopeFilterInterceptor(
+            sp.GetService<IAgentPolicyEngine>(),
+            sp.GetService<IAgentContextAccessor>());
+        var interceptors = new List<OntologyInterceptor<DesignToolsListInterceptionContext, ListToolsResult>>(deployer)
         {
-            var decision = await policy.EvaluateAsync(op, manifest: null, principal, ct).ConfigureAwait(false);
-            if (decision.IsAllowed) return true;
-        }
-        return false;
+            builtIn,
+        };
+
+        var context = new DesignToolsListInterceptionContext
+        {
+            Operation = OntologyOperation.List,
+            AgentContext = sp.GetService<IAgentContextAccessor>()?.Current ?? AgentContext.Empty,
+        };
+        var chain = OntologyInterceptorChain.Compose(
+            interceptors, context,
+            terminal: () => Task.FromResult(new ListToolsResult { Tools = [.. DesignTools] }),
+            cancellationToken: ct);
+        return await chain().ConfigureAwait(false);
     }
 
     private static AgentPrincipal? BuildPrincipal(IServiceProvider sp)
@@ -398,14 +401,44 @@ internal static class DesignMcpToolHandlers
         if (string.IsNullOrWhiteSpace(manifest))
             return TextError("Missing required argument 'manifest'.");
 
-        var (ok, errors, suggestions) = await ManifestValidator.ValidateAsync(manifest, sp, ct).ConfigureAwait(false);
+        var outcome = await RunValidationChainAsync(manifest, sp, ct).ConfigureAwait(false);
         var result = new JsonObject
         {
-            ["ok"] = ok,
-            ["errors"] = new JsonArray(errors.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray()),
-            ["suggestions"] = new JsonArray(suggestions.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray()),
+            ["ok"] = outcome.Ok,
+            ["errors"] = new JsonArray(outcome.Errors.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray()),
+            ["suggestions"] = new JsonArray(outcome.Suggestions.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray()),
         };
         return TextSuccess(result.ToJsonString());
+    }
+
+    /// <summary>
+    /// Compose and run the substrate <c>vais.validate</c> interception chain. The built-in
+    /// <see cref="ManifestValidatorInterceptor"/> always runs (schema + cross-ref integrity,
+    /// byte-parity with Plan A); deployer-registered
+    /// <c>OntologyInterceptor&lt;DesignValidateInterceptionContext, ValidationOutcome&gt;</c>
+    /// implementations layer around it via DI.
+    /// </summary>
+    internal static async Task<ValidationOutcome> RunValidationChainAsync(
+        string manifestJson, IServiceProvider sp, CancellationToken ct)
+    {
+        var deployer = sp.GetServices<OntologyInterceptor<DesignValidateInterceptionContext, ValidationOutcome>>();
+        var builtIn = new ManifestValidatorInterceptor(sp);
+        var interceptors = new List<OntologyInterceptor<DesignValidateInterceptionContext, ValidationOutcome>>(deployer)
+        {
+            builtIn,
+        };
+
+        var context = new DesignValidateInterceptionContext
+        {
+            Operation = OntologyOperation.Call,
+            AgentContext = sp.GetService<IAgentContextAccessor>()?.Current ?? AgentContext.Empty,
+            ManifestJson = manifestJson,
+        };
+        var chain = OntologyInterceptorChain.Compose(
+            interceptors, context,
+            terminal: () => Task.FromResult(ValidationOutcome.AllOk),
+            cancellationToken: ct);
+        return await chain().ConfigureAwait(false);
     }
 
     // ── vais.eval + vais.eval.status — NB-11 ──────────────────────────────────

@@ -13,6 +13,10 @@
     <ProjectReference Include="..\Vais.Agents.Core\Vais.Agents.Core.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.McpGovernance\Vais.Agents.Gateways.McpGovernance.csproj" />
+    <!-- Plan C1 south cartridge: domain ontology artifact registry, catalog, shaper, and
+         call-time middlewares. Required to auto-wire the cartridge into per-agent
+         translation when an McpServer manifest carries OntologyRef. -->
+    <ProjectReference Include="..\Vais.Agents.Control.Manifests.Json\Vais.Agents.Control.Manifests.Json.csproj" />
   </ItemGroup>
 
   <ItemGroup>

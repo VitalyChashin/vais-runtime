@@ -17,8 +17,14 @@ namespace Vais.Agents;
 /// Migration note: if an existing <see cref="IToolGuardrail"/> implementation needs
 /// short-circuit capability, subclass <see cref="ToolGatewayMiddleware"/> instead and
 /// return an outcome without calling <c>next</c>.
+/// <para>
+/// Substrate note (SEP-1763, Plan C1): this base now derives from
+/// <see cref="OntologyInterceptor"/> so south middleware carries the same kind/phase
+/// metadata as new substrate interceptors. The public <c>InvokeAsync(ToolGatewayContext, ...)</c>
+/// signature is preserved verbatim — existing subclasses compile unchanged (P6 adapter).
+/// </para>
 /// </remarks>
-public abstract class ToolGatewayMiddleware
+public abstract class ToolGatewayMiddleware : OntologyInterceptor
 {
     /// <summary>
     /// Intercepts a tool dispatch. The default implementation is a pass-through.

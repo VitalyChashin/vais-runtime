@@ -2,7 +2,6 @@
 Vais.Agents.Control.Manifests.IOntologyCatalog
 Vais.Agents.Control.Manifests.IOntologyCatalog.Get(string! kind) -> Vais.Agents.Control.Manifests.KindOntologyEntry!
 Vais.Agents.Control.Manifests.IOntologyCatalog.Kinds.get -> System.Collections.Generic.IReadOnlyList<string!>!
-Vais.Agents.Control.Manifests.IOntologyCatalog.OntologyVersion.get -> string!
 Vais.Agents.Control.Manifests.IOntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
 Vais.Agents.Control.Manifests.IOntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
 Vais.Agents.Control.Manifests.KindOntologyEntry
@@ -163,3 +162,157 @@ static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateBaseOnt
 static Vais.Agents.Control.Manifests.ManifestJsonSchemaGenerator.GenerateEnvelopeSchema(System.Type! recordType, string! kind, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? descriptions = null) -> string!
 static Vais.Agents.Control.Manifests.AgentGraphManifestValidator.ValidateAgentOutputSchemaBindings(Vais.Agents.AgentGraphManifest! manifest, System.Func<string!, string?, Vais.Agents.AgentManifest?>! resolveAgent, System.Collections.Generic.List<string!>! errors, string! prefix = "") -> void
 static Vais.Agents.Control.Manifests.EnvelopeCodec.Serialize<T>(T manifest, string! kind) -> string!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.<Clone>$() -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.DomainOntologyArtifact() -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Equals(Vais.Agents.Control.Manifests.DomainOntologyArtifact? other) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.OntologyVersion.init -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Tools.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainConcept!>?
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.Tools.init -> void
+Vais.Agents.Control.Manifests.DomainOntologyArtifact.ForTool(string! toolName) -> Vais.Agents.Control.Manifests.DomainConcept?
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainOntologyArtifact.ToString() -> string!
+static readonly Vais.Agents.Control.Manifests.DomainOntologyArtifact.Empty -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifact.operator !=(Vais.Agents.Control.Manifests.DomainOntologyArtifact? left, Vais.Agents.Control.Manifests.DomainOntologyArtifact? right) -> bool
+static Vais.Agents.Control.Manifests.DomainOntologyArtifact.operator ==(Vais.Agents.Control.Manifests.DomainOntologyArtifact? left, Vais.Agents.Control.Manifests.DomainOntologyArtifact? right) -> bool
+Vais.Agents.Control.Manifests.DomainConcept
+Vais.Agents.Control.Manifests.DomainConcept.<Clone>$() -> Vais.Agents.Control.Manifests.DomainConcept!
+Vais.Agents.Control.Manifests.DomainConcept.DomainConcept() -> void
+Vais.Agents.Control.Manifests.DomainConcept.Equals(Vais.Agents.Control.Manifests.DomainConcept? other) -> bool
+Vais.Agents.Control.Manifests.DomainConcept.Description.get -> string?
+Vais.Agents.Control.Manifests.DomainConcept.Description.init -> void
+Vais.Agents.Control.Manifests.DomainConcept.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.DomainConcept.Tags.init -> void
+Vais.Agents.Control.Manifests.DomainConcept.CrossRefs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.DomainCrossRef!>?
+Vais.Agents.Control.Manifests.DomainConcept.CrossRefs.init -> void
+override Vais.Agents.Control.Manifests.DomainConcept.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainConcept.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainConcept.ToString() -> string!
+static Vais.Agents.Control.Manifests.DomainConcept.operator !=(Vais.Agents.Control.Manifests.DomainConcept? left, Vais.Agents.Control.Manifests.DomainConcept? right) -> bool
+static Vais.Agents.Control.Manifests.DomainConcept.operator ==(Vais.Agents.Control.Manifests.DomainConcept? left, Vais.Agents.Control.Manifests.DomainConcept? right) -> bool
+Vais.Agents.Control.Manifests.DomainCrossRef
+Vais.Agents.Control.Manifests.DomainCrossRef.<Clone>$() -> Vais.Agents.Control.Manifests.DomainCrossRef!
+Vais.Agents.Control.Manifests.DomainCrossRef.Deconstruct(out string! FieldPath, out string! TargetConceptName, out string? Cardinality) -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.DomainCrossRef(string! FieldPath, string! TargetConceptName, string? Cardinality = null) -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.Equals(Vais.Agents.Control.Manifests.DomainCrossRef? other) -> bool
+Vais.Agents.Control.Manifests.DomainCrossRef.FieldPath.get -> string!
+Vais.Agents.Control.Manifests.DomainCrossRef.FieldPath.init -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.TargetConceptName.get -> string!
+Vais.Agents.Control.Manifests.DomainCrossRef.TargetConceptName.init -> void
+Vais.Agents.Control.Manifests.DomainCrossRef.Cardinality.get -> string?
+Vais.Agents.Control.Manifests.DomainCrossRef.Cardinality.init -> void
+override Vais.Agents.Control.Manifests.DomainCrossRef.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainCrossRef.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainCrossRef.ToString() -> string!
+static Vais.Agents.Control.Manifests.DomainCrossRef.operator !=(Vais.Agents.Control.Manifests.DomainCrossRef? left, Vais.Agents.Control.Manifests.DomainCrossRef? right) -> bool
+static Vais.Agents.Control.Manifests.DomainCrossRef.operator ==(Vais.Agents.Control.Manifests.DomainCrossRef? left, Vais.Agents.Control.Manifests.DomainCrossRef? right) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadFromFile(string? path) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadFromJson(string? json) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact!
+static Vais.Agents.Control.Manifests.DomainOntologyArtifactLoader.LoadAllFromDirectory(string? directory) -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainOntologyArtifact!>!
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Get(string! name) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact?
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Register(string! name, Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact) -> void
+Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry.Names.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.InMemoryDomainOntologyArtifactRegistry() -> void
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Get(string! name) -> Vais.Agents.Control.Manifests.DomainOntologyArtifact?
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Register(string! name, Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact) -> void
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Names.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.RegisterAll(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainOntologyArtifact!>! artifacts) -> void
+Vais.Agents.Control.Manifests.DomainOntologyCatalog
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.DomainOntologyCatalog(Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact, System.Collections.Generic.IReadOnlyList<string!>? projectedToolNames = null) -> void
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.ConceptNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.TryGetConcept(string! conceptName, out Vais.Agents.OntologyConceptEntry! entry) -> bool
+Vais.Agents.Control.Manifests.ToolDescriptor
+Vais.Agents.Control.Manifests.ToolDescriptor.<Clone>$() -> Vais.Agents.Control.Manifests.ToolDescriptor!
+Vais.Agents.Control.Manifests.ToolDescriptor.Deconstruct(out string! Name, out string? Description) -> void
+Vais.Agents.Control.Manifests.ToolDescriptor.Equals(Vais.Agents.Control.Manifests.ToolDescriptor? other) -> bool
+Vais.Agents.Control.Manifests.ToolDescriptor.ToolDescriptor(string! Name, string? Description) -> void
+Vais.Agents.Control.Manifests.ToolDescriptor.Name.get -> string!
+Vais.Agents.Control.Manifests.ToolDescriptor.Name.init -> void
+Vais.Agents.Control.Manifests.ToolDescriptor.Description.get -> string?
+Vais.Agents.Control.Manifests.ToolDescriptor.Description.init -> void
+override Vais.Agents.Control.Manifests.ToolDescriptor.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.ToolDescriptor.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.ToolDescriptor.ToString() -> string!
+static Vais.Agents.Control.Manifests.ToolDescriptor.operator !=(Vais.Agents.Control.Manifests.ToolDescriptor? left, Vais.Agents.Control.Manifests.ToolDescriptor? right) -> bool
+static Vais.Agents.Control.Manifests.ToolDescriptor.operator ==(Vais.Agents.Control.Manifests.ToolDescriptor? left, Vais.Agents.Control.Manifests.ToolDescriptor? right) -> bool
+Vais.Agents.Control.Manifests.ShapedToolDescriptor
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.<Clone>$() -> Vais.Agents.Control.Manifests.ShapedToolDescriptor!
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Deconstruct(out string! Name, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! Tags, out System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyConceptCrossRef!>! CrossRefs, out bool Hidden) -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Equals(Vais.Agents.Control.Manifests.ShapedToolDescriptor? other) -> bool
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.ShapedToolDescriptor(string! Name, string? Description, System.Collections.Generic.IReadOnlyList<string!>! Tags, System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyConceptCrossRef!>! CrossRefs, bool Hidden) -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Name.get -> string!
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Name.init -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Description.get -> string?
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Description.init -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Tags.init -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.CrossRefs.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.OntologyConceptCrossRef!>!
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.CrossRefs.init -> void
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Hidden.get -> bool
+Vais.Agents.Control.Manifests.ShapedToolDescriptor.Hidden.init -> void
+override Vais.Agents.Control.Manifests.ShapedToolDescriptor.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.ShapedToolDescriptor.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.ShapedToolDescriptor.ToString() -> string!
+static Vais.Agents.Control.Manifests.ShapedToolDescriptor.operator !=(Vais.Agents.Control.Manifests.ShapedToolDescriptor? left, Vais.Agents.Control.Manifests.ShapedToolDescriptor? right) -> bool
+static Vais.Agents.Control.Manifests.ShapedToolDescriptor.operator ==(Vais.Agents.Control.Manifests.ShapedToolDescriptor? left, Vais.Agents.Control.Manifests.ShapedToolDescriptor? right) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.<Clone>$() -> Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions!
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.DomainOntologyToolListShaperOptions() -> void
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.Equals(Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? other) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.HideTags.get -> System.Collections.Generic.IReadOnlySet<string!>!
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.HideTags.init -> void
+override Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.ToString() -> string!
+static Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.operator !=(Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? left, Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? right) -> bool
+static Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions.operator ==(Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? left, Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? right) -> bool
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaper
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaper.DomainOntologyToolListShaper(Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions? options = null) -> void
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaper.Options.get -> Vais.Agents.Control.Manifests.DomainOntologyToolListShaperOptions!
+Vais.Agents.Control.Manifests.DomainOntologyToolListShaper.Shape(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! tools, Vais.Agents.IDomainOntologyCatalog! catalog) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ShapedToolDescriptor!>!
+Vais.Agents.Control.Manifests.CachedDomainOntologyToolListShaper
+Vais.Agents.Control.Manifests.CachedDomainOntologyToolListShaper.CachedDomainOntologyToolListShaper(Vais.Agents.Control.Manifests.DomainOntologyToolListShaper? inner = null) -> void
+Vais.Agents.Control.Manifests.CachedDomainOntologyToolListShaper.Count.get -> int
+Vais.Agents.Control.Manifests.CachedDomainOntologyToolListShaper.Shape(System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! tools, Vais.Agents.IDomainOntologyCatalog! catalog) -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ShapedToolDescriptor!>!
+Vais.Agents.Control.Manifests.CachedDomainOntologyToolListShaper.Invalidate() -> void
+Vais.Agents.Control.Manifests.ScoredTool
+Vais.Agents.Control.Manifests.ScoredTool.<Clone>$() -> Vais.Agents.Control.Manifests.ScoredTool!
+Vais.Agents.Control.Manifests.ScoredTool.Deconstruct(out Vais.Agents.Control.Manifests.ToolDescriptor! Tool, out double Score) -> void
+Vais.Agents.Control.Manifests.ScoredTool.Equals(Vais.Agents.Control.Manifests.ScoredTool? other) -> bool
+Vais.Agents.Control.Manifests.ScoredTool.ScoredTool(Vais.Agents.Control.Manifests.ToolDescriptor! Tool, double Score) -> void
+Vais.Agents.Control.Manifests.ScoredTool.Tool.get -> Vais.Agents.Control.Manifests.ToolDescriptor!
+Vais.Agents.Control.Manifests.ScoredTool.Tool.init -> void
+Vais.Agents.Control.Manifests.ScoredTool.Score.get -> double
+Vais.Agents.Control.Manifests.ScoredTool.Score.init -> void
+override Vais.Agents.Control.Manifests.ScoredTool.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.ScoredTool.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.ScoredTool.ToString() -> string!
+static Vais.Agents.Control.Manifests.ScoredTool.operator !=(Vais.Agents.Control.Manifests.ScoredTool? left, Vais.Agents.Control.Manifests.ScoredTool? right) -> bool
+static Vais.Agents.Control.Manifests.ScoredTool.operator ==(Vais.Agents.Control.Manifests.ScoredTool? left, Vais.Agents.Control.Manifests.ScoredTool? right) -> bool
+Vais.Agents.Control.Manifests.IToolRetriever
+Vais.Agents.Control.Manifests.IToolRetriever.RetrieveAsync(string! query, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! candidates, int topK, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>!>
+Vais.Agents.Control.Manifests.IToolClassifier
+Vais.Agents.Control.Manifests.IToolClassifier.ClassifyAsync(string! query, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>! candidates, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>!>
+Vais.Agents.Control.Manifests.LexicalToolRetriever
+Vais.Agents.Control.Manifests.LexicalToolRetriever.LexicalToolRetriever(System.Func<string!, System.Collections.Generic.IReadOnlyList<string!>!>? tagsFor = null) -> void
+Vais.Agents.Control.Manifests.LexicalToolRetriever.RetrieveAsync(string! query, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! candidates, int topK, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>!>
+static Vais.Agents.Control.Manifests.LexicalToolRetriever.ForCatalog(Vais.Agents.IDomainOntologyCatalog! catalog) -> Vais.Agents.Control.Manifests.LexicalToolRetriever!
+Vais.Agents.Control.Manifests.SemanticToolRetriever
+Vais.Agents.Control.Manifests.SemanticToolRetriever.SemanticToolRetriever(Vais.Agents.Control.Manifests.IToolRetriever! inner, Microsoft.Extensions.AI.IEmbeddingGenerator<string!, Microsoft.Extensions.AI.Embedding<float>!>! embedder) -> void
+Vais.Agents.Control.Manifests.SemanticToolRetriever.ExpandRecallMultiplier.get -> int
+Vais.Agents.Control.Manifests.SemanticToolRetriever.ExpandRecallMultiplier.init -> void
+Vais.Agents.Control.Manifests.SemanticToolRetriever.RetrieveAsync(string! query, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! candidates, int topK, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>!>
+Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.DomainOntologyArgValidationMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.DomainOntologyResponseEnrichmentMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.Kind.get -> Vais.Agents.InterceptorKind
