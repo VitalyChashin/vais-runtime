@@ -1,0 +1,17 @@
+#nullable enable
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions.RecipeProposalStoreOptions() -> void
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.PostgresRecipeProposalStore(string! connectionString, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore!>! logger, System.Func<Vais.Agents.RecipeProposal!, string!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? highRiskApprovalCheck = null) -> void
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.DeleteDecidedProposalsOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.UpsertAsync(Vais.Agents.RecipeProposal! proposal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
+Vais.Agents.Observability.RecipeProposalStore.PostgresRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreExtensions
+static Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreExtensions.AddPostgresRecipeProposalStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.RecipeProposalStore.RecipeProposalStoreOptions!>! configure, System.Func<System.IServiceProvider!, System.Func<Vais.Agents.RecipeProposal!, string!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>?>? highRiskApprovalCheckFactory = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

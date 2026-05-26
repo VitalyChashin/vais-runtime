@@ -149,4 +149,9 @@ public enum PolicyOperation
 
     /// <summary>Unload a plugin and remove its handler registrations.</summary>
     PluginEvict = 40,
+
+    // ── Recipe (Plan D induced authoring recipes) operations ─────────────────
+
+    /// <summary>Promote an induced <c>RecipeProposal</c> to Approved status. High-risk proposals route through the existing <c>IApprovalStore</c>.</summary>
+    RecipePromote = 41,
 }

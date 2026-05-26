@@ -82,6 +82,88 @@ public sealed class DomainOntologyArgValidationMiddleware(IDomainOntologyCatalog
 }
 
 /// <summary>
+/// Observability south cartridge middleware. Emits an <see cref="InterceptorTeeEvent"/>
+/// per south tool call so any registered <see cref="IInterceptorTee"/> consumer
+/// (Plan D <c>RecordingInterceptorTee</c>, deployer-side OTLP exporters, …) can record the
+/// trajectory. Read-only with respect to the chain — pass-through when no tee is registered.
+/// </summary>
+/// <remarks>
+/// Declares <see cref="InterceptorKind.Observability"/>. The payload is the
+/// <c>ToolCallTrajectoryPayload</c> shape Plan D's adapter expects:
+/// <c>(ConceptName, Transport: "south", Arguments, Outcome, Duration)</c>. PII redaction
+/// happens at the adapter, not here — this middleware passes the raw arguments through and
+/// trusts the adapter's redactor (Plan D §"raw values NEVER persist" invariant).
+/// </remarks>
+public sealed class DomainOntologyTraceMiddleware(IInterceptorTee tee, IDomainOntologyCatalog catalog) : ToolGatewayMiddleware
+{
+    private readonly IInterceptorTee _tee = tee ?? throw new ArgumentNullException(nameof(tee));
+    private readonly IDomainOntologyCatalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+
+    /// <inheritdoc />
+    public override InterceptorKind Kind => InterceptorKind.Observability;
+
+    /// <inheritdoc />
+    public override async Task<ToolCallOutcome> InvokeAsync(
+        ToolGatewayContext context,
+        Func<Task<ToolCallOutcome>> next,
+        CancellationToken cancellationToken = default)
+    {
+        var start = DateTimeOffset.UtcNow;
+        ToolCallOutcome outcome;
+        try
+        {
+            outcome = await next().ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort: emit a failure event then re-throw so downstream observability
+            // still sees the call.
+            var failureDuration = DateTimeOffset.UtcNow - start;
+            var failureOutcome = new TrajectoryOutcome(TrajectoryOutcomeKind.Error);
+            await EmitAsync(context, failureOutcome, failureDuration, cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+        var duration = DateTimeOffset.UtcNow - start;
+        var trajectoryOutcome = outcome.Error is { Length: > 0 } err
+            ? new TrajectoryOutcome(TrajectoryOutcomeKind.Error, err)
+            : new TrajectoryOutcome(TrajectoryOutcomeKind.Ok);
+        await EmitAsync(context, trajectoryOutcome, duration, cancellationToken).ConfigureAwait(false);
+        return outcome;
+    }
+
+    private async ValueTask EmitAsync(ToolGatewayContext context, TrajectoryOutcome outcome, TimeSpan duration, CancellationToken cancellationToken)
+    {
+        var payload = new ToolCallTrajectoryPayload(
+            ConceptName: context.ToolName,
+            Transport: "south",
+            Arguments: context.Arguments,
+            Outcome: outcome,
+            Duration: duration);
+        var evt = new InterceptorTeeEvent
+        {
+            EventName = "tool.call",
+            Context = new SouthToolCallInterceptionContext
+            {
+                Operation = OntologyOperation.Call,
+                AgentContext = context.AgentContext,
+                Binding = _catalog,
+            },
+            Payload = payload,
+        };
+        await _tee.EmitAsync(evt, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+/// <summary>
+/// Concrete <see cref="InterceptionContext"/> for south tool-call observations. Carries the
+/// AgentContext + the bound domain ontology so the recording adapter can read ontology
+/// version + identity. The substrate intentionally doesn't ship a south-flavored
+/// InterceptionContext (Plan D §C1-0e — keep envelopes transport-specific), so this is the
+/// minimal concrete shape Plan D needs for the south tee path.
+/// </summary>
+public sealed class SouthToolCallInterceptionContext : InterceptionContext;
+
+/// <summary>
 /// Response-phase south cartridge middleware. Enriches a successful tool-call outcome with
 /// the bound concept's tags (under <c>_ontology.tags</c>) when the result is a JSON object.
 /// Non-JSON outputs and errors pass through unchanged.

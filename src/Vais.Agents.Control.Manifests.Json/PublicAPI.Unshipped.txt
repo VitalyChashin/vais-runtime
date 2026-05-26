@@ -316,6 +316,12 @@ Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware
 Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.DomainOntologyResponseEnrichmentMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.DomainOntologyTraceMiddleware(Vais.Agents.IInterceptorTee! tee, Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.SouthToolCallInterceptionContext
+Vais.Agents.Control.Manifests.SouthToolCallInterceptionContext.SouthToolCallInterceptionContext() -> void
 Vais.Agents.Control.Manifests.SubAgentCapability
 Vais.Agents.Control.Manifests.SubAgentCapability.<Clone>$() -> Vais.Agents.Control.Manifests.SubAgentCapability!
 Vais.Agents.Control.Manifests.SubAgentCapability.Deconstruct(out string! ToolName, out string! AgentId, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! Tags, out Vais.Agents.LocalAgentInvocationMode Mode) -> void
@@ -420,3 +426,25 @@ Vais.Agents.Control.Manifests.AllowAllDelegationPolicy
 Vais.Agents.Control.Manifests.AllowAllDelegationPolicy.AllowAllDelegationPolicy() -> void
 Vais.Agents.Control.Manifests.AllowAllDelegationPolicy.EvaluateAsync(Vais.Agents.ToolGatewayContext! context, Vais.Agents.Control.Manifests.CapabilityMap! map, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Control.Manifests.DelegationDecision!>
 static Vais.Agents.Control.Manifests.AllowAllDelegationPolicy.Instance.get -> Vais.Agents.Control.Manifests.IDelegationPolicy!
+Vais.Agents.Control.Manifests.IOntologyOverlayWriter
+Vais.Agents.Control.Manifests.IOntologyOverlayWriter.MergeAsync(Vais.Agents.RecipeProposal! proposal, string! overlayPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+Vais.Agents.Control.Manifests.JsonOntologyOverlayWriter
+Vais.Agents.Control.Manifests.JsonOntologyOverlayWriter.JsonOntologyOverlayWriter() -> void
+Vais.Agents.Control.Manifests.JsonOntologyOverlayWriter.MergeAsync(Vais.Agents.RecipeProposal! proposal, string! overlayPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+static Vais.Agents.Control.Manifests.JsonOntologyOverlayWriter.Merge(Vais.Agents.Control.Manifests.OntologyOverlay! existing, Vais.Agents.RecipeProposal! proposal) -> Vais.Agents.Control.Manifests.OntologyOverlay!
+Vais.Agents.Control.Manifests.IOntologyCatalogReloader
+Vais.Agents.Control.Manifests.IOntologyCatalogReloader.ReloadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Manifests.IOntologyCatalog!>!
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.HotReloadableOntologyCatalog(Vais.Agents.Control.Manifests.IOntologyCatalog! initial, string? overlayPath) -> void
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.ReloadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Manifests.IOntologyCatalog!>!
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.Get(string! kind) -> Vais.Agents.Control.Manifests.KindOntologyEntry!
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.TryGet(string! kind, out Vais.Agents.Control.Manifests.KindOntologyEntry! entry) -> bool
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.Kinds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.Recipes.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.RecipeEntry!>!
+Vais.Agents.Control.Manifests.HotReloadableOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.OverlayPublishingRecipeProposalStoreDecorator(Vais.Agents.IRecipeProposalStore! inner, Vais.Agents.Control.Manifests.IOntologyOverlayWriter! writer, string! overlayPath, Vais.Agents.Control.Manifests.IOntologyCatalogReloader? reloader = null, Microsoft.Extensions.Logging.ILogger? logger = null, bool throwOnSideEffectFailure = false) -> void
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.UpsertAsync(Vais.Agents.RecipeProposal! proposal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
+Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>

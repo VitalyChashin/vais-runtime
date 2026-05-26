@@ -129,6 +129,22 @@ internal sealed record RuntimeOptions
     public string? DomainOntologyDirectory { get; init; }
 
     /// <summary>
+    /// Plan D — trajectory tee. Postgres connection for the trajectory store. When set, the
+    /// runtime registers <c>PostgresInterceptorTeeStore</c> and replaces the in-memory
+    /// ring-buffer default. Null / empty ⇒ in-memory (single-process) only.
+    /// Set via <c>VAIS_INTERCEPTOR_TEE_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? InterceptorTeeStoreConnection { get; init; }
+
+    /// <summary>
+    /// Plan D — induced recipes. Postgres connection for the recipe-proposal store. When set,
+    /// the runtime registers <c>PostgresRecipeProposalStore</c> and replaces the in-memory
+    /// default. Null / empty ⇒ in-memory (single-process) only.
+    /// Set via <c>VAIS_RECIPE_PROPOSAL_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? RecipeProposalStoreConnection { get; init; }
+
+    /// <summary>
     /// Docker network name for internal-network isolation (Phase 2 egress isolation).
     /// When set, plugin containers join this network and are addressed via container-DNS;
     /// no host port is published. Null = legacy host-runtime mode.
@@ -394,6 +410,8 @@ internal sealed record RuntimeOptions
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
             DomainOntologyDirectory = Env("VAIS_DOMAIN_ONTOLOGY_DIR"),
+            InterceptorTeeStoreConnection = Env("VAIS_INTERCEPTOR_TEE_STORE_CONNECTION"),
+            RecipeProposalStoreConnection = Env("VAIS_RECIPE_PROPOSAL_STORE_CONNECTION"),
             DockerPluginNetwork = Env("VAIS_DOCKER_PLUGIN_NETWORK"),
             ContainerPluginRenewTokenTtlSeconds =
                 int.TryParse(Env("VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS"), out var renewTtl) ? renewTtl : 120,

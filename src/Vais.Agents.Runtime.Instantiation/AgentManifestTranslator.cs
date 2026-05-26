@@ -256,8 +256,18 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             var combined = BuildCombinedDomainOntologyCatalog(registered.OntologyBindings, manifest.Id);
             if (combined is not null)
             {
-                var withCartridge = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + 2];
+                // Plan D D-15: append the trace middleware when a tee is registered so south
+                // tool calls land in the trajectory store automatically. No tee → no trace.
+                var tee = _serviceProvider.GetService<IInterceptorTee>();
+                var cartridgeCount = tee is null ? 2 : 3;
+                var withCartridge = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + cartridgeCount];
                 Array.Copy(toolGatewayMiddleware, withCartridge, toolGatewayMiddleware.Length);
+                if (tee is not null)
+                {
+                    // Trace is outermost (Observability kind) so it wraps the whole south chain;
+                    // validation + enrichment then run inside the timing/outcome span.
+                    withCartridge[^3] = new DomainOntologyTraceMiddleware(tee, combined);
+                }
                 withCartridge[^2] = new DomainOntologyArgValidationMiddleware(combined);
                 withCartridge[^1] = new DomainOntologyResponseEnrichmentMiddleware(combined);
                 toolGatewayMiddleware = withCartridge;

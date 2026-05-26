@@ -1067,3 +1067,19 @@ override Vais.Agents.Control.Http.ExtensionMetricsResponse.GetHashCode() -> int
 override Vais.Agents.Control.Http.ExtensionMetricsResponse.ToString() -> string!
 static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator ==(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
 static Vais.Agents.Control.Http.ExtensionMetricsResponse.operator !=(Vais.Agents.Control.Http.ExtensionMetricsResponse? left, Vais.Agents.Control.Http.ExtensionMetricsResponse? right) -> bool
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapTrajectoryControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.MapRecipeControlPlane(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! builder, string! prefix = "/v1") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.RecipeDecideRequest(bool Approve, string? DecidedBy) -> void
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.<Clone>$() -> Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest!
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.Approve.get -> bool
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.Approve.init -> void
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.DecidedBy.get -> string?
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.DecidedBy.init -> void
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.Deconstruct(out bool Approve, out string? DecidedBy) -> void
+Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.Equals(Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? other) -> bool
+override Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.GetHashCode() -> int
+override Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.ToString() -> string!
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.operator !=(Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? left, Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? right) -> bool
+static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.operator ==(Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? left, Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? right) -> bool

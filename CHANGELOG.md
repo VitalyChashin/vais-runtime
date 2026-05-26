@@ -11,6 +11,120 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Trajectory tee + induced authoring recipes (Plan D).** Closes the
+  descriptive↔normative loop on top of the SEP-1763 ontology-interceptor
+  substrate. Every south tool call now produces a structured
+  `TrajectoryEvent` (PII-redacted at write time); a behavioral inducer mines
+  the corpus for candidate authoring recipes; humans triage + approve
+  proposals via the same `IApprovalStore` gate `ContainerPlugin` / `Extension`
+  / `Plugin` use; approved proposals land in the on-disk `OntologyOverlay`
+  and the in-process `IOntologyCatalog` reloads atomically — so
+  `vais.describe` reflects the change with no runtime restart. See
+  `docs/guides/induce-and-approve-recipes.md` for the operator how-to and
+  `docs/concepts/ontology-substrate.md` §"The descriptive↔normative loop"
+  for the architecture; impl plan at
+  `plans/completed/trajectory-tee-induced-recipes-impl-2026-05-26.md`.
+  - **Trajectory schema + redactor (`Vais.Agents.Abstractions`).**
+    `TrajectoryEvent { EventId, Timestamp, EventName, Operation, AgentId,
+    RunId, ConceptName, Transport, ArgumentsShape, Outcome,
+    OntologyVersion, Duration }`. `TrajectoryArgumentRedactor` strips raw
+    values from arguments before storage — only the argument-name → type
+    descriptor map persists. Default deny-list:
+    `apiKey | token | password | secret | auth | credential | privateKey |
+    passphrase` (configurable). `TrajectoryOutcomeKind { Ok, Error,
+    ShortCircuit }`.
+  - **Trajectory store (`Vais.Agents.Abstractions`,
+    `Vais.Agents.Core`, `Vais.Agents.Observability.InterceptorTeeStore`).**
+    `IInterceptorTeeStore.AppendAsync / QueryAsync(TrajectoryQuery)` seam.
+    `InMemoryInterceptorTeeStore` ships as the always-on default (10 000-event
+    ring buffer). Set `VAIS_INTERCEPTOR_TEE_STORE_CONNECTION` to swap in
+    `PostgresInterceptorTeeStore` (table `vais_trajectory_events`, JSONB
+    argument shape; schema auto-creates; 30-day retention configurable).
+  - **Recording adapter (`Vais.Agents.Core`).**
+    `RecordingInterceptorTee` projects loose `InterceptorTeeEvent`
+    instances into typed `TrajectoryEvent` records and appends. Replaces
+    `NullInterceptorTee` whenever a store is wired. Fire-and-forget — append
+    failures log at warn level and never break the interception lifecycle.
+    Canonical payload `ToolCallTrajectoryPayload` (in
+    `Vais.Agents.Abstractions`) lets any producer cooperate without source
+    changes.
+  - **South trace middleware (`Vais.Agents.Control.Manifests.Json`).**
+    `DomainOntologyTraceMiddleware` is the third south-cartridge interceptor
+    (alongside the existing arg-validator + response-enricher) — declares
+    `InterceptorKind.Observability` and emits to `IInterceptorTee` per
+    south tool call. Auto-wired into `AgentManifestTranslator` whenever the
+    agent has an `OntologyBinding` AND the runtime has registered an
+    `IInterceptorTee`. Currently fires for native C# agent tool dispatch;
+    Python-plugin agents that call MCP via the plugin's own SDK bypass the
+    per-agent middleware chain (gateway-side wiring is a future expansion;
+    see the guide for the workaround).
+  - **HTTP + CLI: trajectories surface.**
+    `GET /v1/trajectories` filters by agent / run / concept / transport /
+    outcome / time range / limit (max 500). Typed client
+    `IAgentControlPlaneClient.ListTrajectoriesAsync`. CLI
+    `vais trajectories list` with the same filters, `-o json` for scripting.
+    Mapped via factored `MapTrajectoryControlPlane` extension so tests can
+    wire the endpoint in isolation.
+  - **Induction pipeline (`Vais.Agents.Abstractions`,
+    `Vais.Agents.Core`).** `IRecipeInducer.InduceAsync(TrajectoryQuery)` seam
+    + `RecipeProposal { ProposalId, Kind, Concept, Body, Support,
+    Confidence, SourceTraceIds, RiskLevel, Status, CreatedAt, ReviewedAt,
+    ReviewerId, Name }`. `BehavioralRecipeInducer` (default registration)
+    mines ordered 2- and 3-gram concept sequences per run from any
+    `IInterceptorTeeStore`; same pattern counts at most once per run;
+    confidence = support / total runs; risk classification fires on
+    destructive concept substrings (`delete | destroy | remove | drop |
+    deploy | apply`, configurable). Pure C# — no external dependency.
+    `LlmAssistedRecipeInducer` decorates any inner inducer with a
+    host-supplied `Func<RecipeProposal, ct, Task<string?>>` enricher
+    delegate that populates `Name` — keeps Core P4-safe and lets tests
+    stub the LLM.
+  - **Proposal store + recipes CLI / HTTP.**
+    `IRecipeProposalStore.UpsertAsync / GetAsync / ListAsync /
+    DecideAsync`. `InMemoryRecipeProposalStore` (default) uses CAS via
+    `ConcurrentDictionary.TryUpdate`; preserves human-decision fields on
+    re-induction (an approval can't be clobbered by a re-emitted Pending
+    proposal). Set `VAIS_RECIPE_PROPOSAL_STORE_CONNECTION` for
+    `PostgresRecipeProposalStore` (table `vais_recipe_proposals`; schema
+    auto-creates; 90-day decided-only retention; Pending proposals never
+    auto-pruned). HTTP: `GET /v1/recipes`, `GET /v1/recipes/{id}`,
+    `POST /v1/recipes/propose`, `POST /v1/recipes/{id}/decide`. CLI:
+    `vais recipes list | show | propose | approve | reject` (single
+    `RecipesDecideCommand` class; approve vs reject differentiated via
+    `CommandContext.Data` set by `WithData(true|false)` at branch
+    registration).
+  - **High-risk approval gate (`Vais.Agents.Control.Abstractions`,
+    `Vais.Agents.Runtime.Host`).** `PolicyOperation.RecipePromote = 41`
+    (additive). `DecideRecipeAsync` HTTP handler catches
+    `ApprovalRequiredException` and returns 202 via
+    `ProblemDetailsMapping.ToResult`. CompositionRoot's
+    `BuildRecipeApprovalGate` hashes
+    `SHA256(Kind | Concept | Body | RiskLevel | Support | Confidence)` so
+    changing any of those invalidates a prior approval. Low / Medium risk
+    flip directly; Reject always bypasses the gate. Hash → `IApprovalStore`
+    integration means recipe approvals use the same
+    `vais approvals approve` flow as `ContainerPlugin` / `Extension` /
+    `Plugin` mutations — same audit trail, same operator scope.
+  - **Overlay write-back + hot-reload (`Vais.Agents.Control.Manifests.Json`).**
+    `IOntologyOverlayWriter` + `JsonOntologyOverlayWriter` merge an approved
+    proposal into the on-disk overlay JSON. Mapping:
+    `WorkflowRecipe` → appends a `RecipeEntry` to `OntologyOverlay.Recipes`,
+    `TagSuggestion` → adds to `Kinds[Concept].Tags`,
+    `DescriptionRewrite` → sets `Kinds[Concept].Description`. Merge is
+    reference-equal-idempotent; writes are atomic (temp-file + rename);
+    per-path `SemaphoreSlim` serializes concurrent merges.
+    `HotReloadableOntologyCatalog` is a volatile-read forwarding facade
+    over the inner `IOntologyCatalog`; `IOntologyCatalogReloader.ReloadAsync`
+    atomically swaps the inner pointer under a single-flight lock so the
+    next read sees fresh entries.
+    `OverlayPublishingRecipeProposalStoreDecorator` wraps any
+    `IRecipeProposalStore` — on `Decide(approve: true)`, calls the writer
+    then the reloader. Side effects are best-effort (logged + swallowed by
+    default; opt-in `throwOnSideEffectFailure: true` for strict pipelines)
+    so a transient write failure can't unmake a human decision. All wired
+    automatically by CompositionRoot when `VAIS_ONTOLOGY_OVERLAY_PATH` is
+    set.
+
 - **Agent-as-tool capability fabric (Plan C2).** Makes the ontology the
   capability-routing + governance fabric at the delegation boundary, where a
   coordinator agent calls sub-agents as tools. Reuses Plan C1's substrate and

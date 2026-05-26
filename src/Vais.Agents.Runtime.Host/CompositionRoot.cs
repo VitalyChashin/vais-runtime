@@ -23,6 +23,8 @@ using Vais.Agents.Hosting.InMemory;
 using Vais.Agents.Observability.AgentLogs;
 using Vais.Agents.Observability.AgentRunStore;
 using Vais.Agents.Observability.GatewayEventStore;
+using Vais.Agents.Observability.InterceptorTeeStore;
+using Vais.Agents.Observability.RecipeProposalStore;
 using Vais.Agents.Observability.Langfuse;
 using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
@@ -174,7 +176,7 @@ internal static class CompositionRoot
         ConfigureRuntimeAndRegistries(services);
         ConfigurePlugins(services, options);
         ConfigureGatewayCatalog(services);
-        ConfigureManifestPipeline(services);
+        ConfigureManifestPipeline(services, options);
         ConfigureLifecycleManagers(services, options, configuration);
         ConfigureGovernance(services, options);
         ConfigureControlPlaneAndAuth(services, options);
@@ -369,14 +371,14 @@ internal static class CompositionRoot
     /// guardrails, and the <c>ConfigureAgentGrains</c> factory that drives translation at grain
     /// activation.
     /// </summary>
-    private static void ConfigureManifestPipeline(IServiceCollection services)
+    private static void ConfigureManifestPipeline(IServiceCollection services, RuntimeOptions options)
     {
         services.AddAgentManifestInstantiator();
         services.AddGrainReactivationPluginReloadHook();
         services.AddPhysicalMcpServers();
         services.AddBuiltinModelProviders();
         services.AddBuiltinGuardrails();
-        ConfigureDomainOntologyCartridge(services);
+        ConfigureDomainOntologyCartridge(services, options);
 
         services.ConfigureAgentGrains(async (sp, id, ct) =>
             await sp.GetRequiredService<IAgentManifestTranslator>().TranslateForGrain(sp, id, ct).ConfigureAwait(false));
@@ -390,7 +392,7 @@ internal static class CompositionRoot
     /// that directory is registered at startup so virtual MCP servers with
     /// <c>OntologyRef</c> resolve immediately.
     /// </summary>
-    private static void ConfigureDomainOntologyCartridge(IServiceCollection services)
+    private static void ConfigureDomainOntologyCartridge(IServiceCollection services, RuntimeOptions options)
     {
         services.TryAddSingleton<IDomainOntologyArtifactRegistry>(sp =>
         {
@@ -410,6 +412,82 @@ internal static class CompositionRoot
         services.TryAddSingleton<IAgentCapabilityMapBuilder, AgentCapabilityMapBuilder>();
         services.TryAddSingleton<IOntologyAllowedToolsResolver, OntologyAllowedToolsResolver>();
         services.TryAddSingleton<IDelegationPolicy>(_ => AllowAllDelegationPolicy.Instance);
+
+        // Plan D — trajectory tee. The in-memory store ships as the always-on default so the
+        // tee has somewhere to land; deployers swap in a persistent store (Postgres,
+        // Langfuse, ClickHouse, ...) by registering an IInterceptorTeeStore before this runs.
+        // RecordingInterceptorTee replaces C1's NullInterceptorTee default whenever a store
+        // is available; observability-kind interceptors that call EmitAsync land a structured
+        // event in the store with zero deployer wiring.
+        services.TryAddSingleton<IInterceptorTeeStore, InMemoryInterceptorTeeStore>();
+        services.TryAddSingleton<TrajectoryArgumentRedactor>(_ => TrajectoryArgumentRedactor.Default);
+        services.TryAddSingleton<IInterceptorTee, RecordingInterceptorTee>();
+
+        // Plan D — induced recipes. The in-memory proposal store ships as default; the
+        // high-risk gate is wired here so that approving a High-risk proposal flows through
+        // the existing IApprovalStore (Plan B): first DecideAsync call creates a pending
+        // ApprovalRequest and throws ApprovalRequiredException (mapped to 202 at the REST
+        // boundary); operator approves it via 'vais approvals approve <id>'; re-running
+        // DecideAsync finds the matching approval and flips the proposal to Approved.
+        var overlayPathForRecipes = options.OntologyOverlayPath; // captured for decorator wiring
+        services.TryAddSingleton<IRecipeProposalStore>(sp =>
+        {
+            var inner = (IRecipeProposalStore)new InMemoryRecipeProposalStore(BuildRecipeApprovalGate(sp));
+            return MaybeWrapWithOverlayPublishing(sp, inner, overlayPathForRecipes);
+        });
+
+        // Plan D D-8/D-9: register the behavioral inducer as the always-on default so
+        // `vais recipes propose` works out of the box. Deployers can override by registering
+        // a different IRecipeInducer (e.g. LlmAssistedRecipeInducer decorator) before this.
+        services.TryAddSingleton<IRecipeInducer>(sp =>
+            new BehavioralRecipeInducer(sp.GetRequiredService<IInterceptorTeeStore>()));
+
+        // Plan D D-13: register the JSON overlay writer whenever an overlay path is set so the
+        // approval-side-effect decorator can pick it up. The writer itself is stateless.
+        if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
+        {
+            services.TryAddSingleton<IOntologyOverlayWriter, JsonOntologyOverlayWriter>();
+        }
+    }
+
+    /// <summary>
+    /// Plan D D-14 — when both an <see cref="IOntologyOverlayWriter"/> and an overlay path
+    /// are configured, wrap the proposal store so approved recipes land in the on-disk
+    /// overlay and trigger a catalog reload. Returns <paramref name="inner"/> unchanged when
+    /// any dependency is missing (overlay path absent ⇒ no place to write).
+    /// </summary>
+    private static IRecipeProposalStore MaybeWrapWithOverlayPublishing(IServiceProvider sp, IRecipeProposalStore inner, string? overlayPath)
+    {
+        if (string.IsNullOrWhiteSpace(overlayPath)) return inner;
+        var writer = sp.GetService<IOntologyOverlayWriter>();
+        if (writer is null) return inner;
+        var reloader = sp.GetService<IOntologyCatalogReloader>();
+        var logger = sp.GetService<ILogger<OverlayPublishingRecipeProposalStoreDecorator>>();
+        return new OverlayPublishingRecipeProposalStoreDecorator(inner, writer, overlayPath, reloader, logger);
+    }
+
+    private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)
+    {
+        var approvalStore = sp.GetService<Vais.Agents.Control.IApprovalStore>();
+        if (approvalStore is null) return null; // no approval subsystem wired → no gate
+        return async (proposal, decidedBy, ct) =>
+        {
+            var hash = RecipeProposalHash(proposal);
+            var approved = await approvalStore.FindApprovedAsync("Recipe", proposal.ProposalId, hash, ct).ConfigureAwait(false);
+            if (approved is not null) return;
+            var pending = await approvalStore.CreatePendingAsync("Recipe", proposal.ProposalId, hash, decidedBy, ct).ConfigureAwait(false);
+            throw new Vais.Agents.Control.ApprovalRequiredException("Recipe", proposal.ProposalId, pending.RequestId);
+        };
+    }
+
+    private static string RecipeProposalHash(RecipeProposal p)
+    {
+        // Stable across re-runs of the same proposal; changing body / risk / support invalidates
+        // the approval. Status / reviewer fields are deliberately excluded — those move on
+        // decision.
+        var canonical = $"{p.Kind}|{p.Concept}|{p.Body}|{p.RiskLevel}|{p.Support}|{p.Confidence:R}";
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(canonical));
+        return Convert.ToHexStringLower(bytes);
     }
 
     /// <summary>
@@ -526,10 +604,17 @@ internal static class CompositionRoot
     private static void ConfigureGovernance(IServiceCollection services, RuntimeOptions options)
     {
         // Ontology overlay → merged catalog (RBAC roles + risk tags + describe overrides).
+        // Plan D D-14: when an overlay path is configured, the catalog is wrapped in
+        // HotReloadableOntologyCatalog so an approved RecipeProposal landing in the file
+        // (via OverlayPublishingRecipeProposalStoreDecorator) is visible to vais.describe on
+        // the next read — no runtime restart.
         if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
         {
             var overlay = OntologyOverlayLoader.LoadFromFile(options.OntologyOverlayPath);
-            services.AddSingleton<IOntologyCatalog>(_ => OntologyCatalog.BuildFromEmbeddedBase(overlay));
+            var initialCatalog = OntologyCatalog.BuildFromEmbeddedBase(overlay);
+            var hotReloadable = new HotReloadableOntologyCatalog(initialCatalog, options.OntologyOverlayPath);
+            services.AddSingleton<IOntologyCatalog>(hotReloadable);
+            services.AddSingleton<IOntologyCatalogReloader>(hotReloadable);
 
             // RBAC: overlay author-roles authorize mutating verbs per JWT scope (replaces allow-all).
             if (overlay.AuthorRoles is { IsEmpty: false } roles)
@@ -658,6 +743,31 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
                 "postgres-agent-run-store", options.AgentRunStoreConnection,
                 "SELECT COUNT(*) FROM vais_agent_runs LIMIT 1"));
+        }
+
+        // Plan D — Postgres-backed trajectory store. When VAIS_INTERCEPTOR_TEE_STORE_CONNECTION
+        // is set, this registration takes precedence over the in-memory ring default wired
+        // earlier in ConfigureDomainOntologyCartridge. Schema auto-creates on first start;
+        // RecordingInterceptorTee (already registered) writes into whichever store wins.
+        if (!string.IsNullOrWhiteSpace(options.InterceptorTeeStoreConnection))
+        {
+            services.AddPostgresInterceptorTeeStore(o => o.ConnectionString = options.InterceptorTeeStoreConnection);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-interceptor-tee-store", options.InterceptorTeeStoreConnection,
+                "SELECT COUNT(*) FROM vais_trajectory_events LIMIT 1"));
+        }
+
+        // Plan D — Postgres-backed recipe proposal store. When VAIS_RECIPE_PROPOSAL_STORE_CONNECTION
+        // is set, this replaces the in-memory default. The high-risk gate (resolved at registration
+        // time) is hoisted into the Postgres registration so it survives the AddSingleton swap.
+        if (!string.IsNullOrWhiteSpace(options.RecipeProposalStoreConnection))
+        {
+            services.AddPostgresRecipeProposalStore(
+                o => o.ConnectionString = options.RecipeProposalStoreConnection,
+                highRiskApprovalCheckFactory: BuildRecipeApprovalGate);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-recipe-proposal-store", options.RecipeProposalStoreConnection,
+                "SELECT COUNT(*) FROM vais_recipe_proposals LIMIT 1"));
         }
 
         if (!string.IsNullOrWhiteSpace(options.GatewayEventStoreConnection))

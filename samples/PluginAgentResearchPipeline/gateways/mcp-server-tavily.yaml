@@ -7,3 +7,8 @@ spec:
   transport: streamableHttp
   url: http://tavily-mcp:8000/mcp
   mcpGatewayRef: research-mcp-gateway
+  # Plan C1 — wire the south substrate so this server's tool calls flow through
+  # ontology interceptors. Plan D's RecordingInterceptorTee then writes a
+  # TrajectoryEvent per call into the interceptor tee store, building the corpus
+  # the recipe inducer mines.
+  ontologyRef: c1-demo-v1

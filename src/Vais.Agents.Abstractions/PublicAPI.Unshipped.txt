@@ -1808,3 +1808,183 @@ Vais.Agents.NullInterceptorTee.EmitAsync(Vais.Agents.InterceptorTeeEvent! teeEve
 static Vais.Agents.NullInterceptorTee.Instance.get -> Vais.Agents.IInterceptorTee!
 Vais.Agents.McpServerManifest.OntologyRef.get -> string?
 Vais.Agents.McpServerManifest.OntologyRef.init -> void
+Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.Ok = 0 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.Error = 1 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcomeKind.ShortCircuit = 2 -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcome
+Vais.Agents.TrajectoryOutcome.<Clone>$() -> Vais.Agents.TrajectoryOutcome!
+Vais.Agents.TrajectoryOutcome.Deconstruct(out Vais.Agents.TrajectoryOutcomeKind Kind, out string? ErrorType) -> void
+Vais.Agents.TrajectoryOutcome.Equals(Vais.Agents.TrajectoryOutcome? other) -> bool
+Vais.Agents.TrajectoryOutcome.TrajectoryOutcome(Vais.Agents.TrajectoryOutcomeKind Kind, string? ErrorType = null) -> void
+Vais.Agents.TrajectoryOutcome.Kind.get -> Vais.Agents.TrajectoryOutcomeKind
+Vais.Agents.TrajectoryOutcome.Kind.init -> void
+Vais.Agents.TrajectoryOutcome.ErrorType.get -> string?
+Vais.Agents.TrajectoryOutcome.ErrorType.init -> void
+override Vais.Agents.TrajectoryOutcome.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryOutcome.GetHashCode() -> int
+override Vais.Agents.TrajectoryOutcome.ToString() -> string!
+static Vais.Agents.TrajectoryOutcome.operator !=(Vais.Agents.TrajectoryOutcome? left, Vais.Agents.TrajectoryOutcome? right) -> bool
+static Vais.Agents.TrajectoryOutcome.operator ==(Vais.Agents.TrajectoryOutcome? left, Vais.Agents.TrajectoryOutcome? right) -> bool
+Vais.Agents.TrajectoryEvent
+Vais.Agents.TrajectoryEvent.<Clone>$() -> Vais.Agents.TrajectoryEvent!
+Vais.Agents.TrajectoryEvent.Equals(Vais.Agents.TrajectoryEvent? other) -> bool
+Vais.Agents.TrajectoryEvent.TrajectoryEvent() -> void
+Vais.Agents.TrajectoryEvent.EventId.get -> string!
+Vais.Agents.TrajectoryEvent.EventId.init -> void
+Vais.Agents.TrajectoryEvent.Timestamp.get -> System.DateTimeOffset
+Vais.Agents.TrajectoryEvent.Timestamp.init -> void
+Vais.Agents.TrajectoryEvent.EventName.get -> string!
+Vais.Agents.TrajectoryEvent.EventName.init -> void
+Vais.Agents.TrajectoryEvent.Operation.get -> Vais.Agents.OntologyOperation
+Vais.Agents.TrajectoryEvent.Operation.init -> void
+Vais.Agents.TrajectoryEvent.AgentId.get -> string?
+Vais.Agents.TrajectoryEvent.AgentId.init -> void
+Vais.Agents.TrajectoryEvent.RunId.get -> string?
+Vais.Agents.TrajectoryEvent.RunId.init -> void
+Vais.Agents.TrajectoryEvent.ConceptName.get -> string?
+Vais.Agents.TrajectoryEvent.ConceptName.init -> void
+Vais.Agents.TrajectoryEvent.Transport.get -> string?
+Vais.Agents.TrajectoryEvent.Transport.init -> void
+Vais.Agents.TrajectoryEvent.ArgumentsShape.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+Vais.Agents.TrajectoryEvent.ArgumentsShape.init -> void
+Vais.Agents.TrajectoryEvent.Outcome.get -> Vais.Agents.TrajectoryOutcome?
+Vais.Agents.TrajectoryEvent.Outcome.init -> void
+Vais.Agents.TrajectoryEvent.OntologyVersion.get -> string?
+Vais.Agents.TrajectoryEvent.OntologyVersion.init -> void
+Vais.Agents.TrajectoryEvent.Duration.get -> System.TimeSpan?
+Vais.Agents.TrajectoryEvent.Duration.init -> void
+override Vais.Agents.TrajectoryEvent.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryEvent.GetHashCode() -> int
+override Vais.Agents.TrajectoryEvent.ToString() -> string!
+static Vais.Agents.TrajectoryEvent.operator !=(Vais.Agents.TrajectoryEvent? left, Vais.Agents.TrajectoryEvent? right) -> bool
+static Vais.Agents.TrajectoryEvent.operator ==(Vais.Agents.TrajectoryEvent? left, Vais.Agents.TrajectoryEvent? right) -> bool
+Vais.Agents.TrajectoryArgumentRedactor
+Vais.Agents.TrajectoryArgumentRedactor.ToShape(System.Text.Json.JsonElement arguments) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Vais.Agents.TrajectoryArgumentRedactor.IsSecretShapedName(string! argumentName) -> bool
+static Vais.Agents.TrajectoryArgumentRedactor.Default.get -> Vais.Agents.TrajectoryArgumentRedactor!
+static Vais.Agents.TrajectoryArgumentRedactor.WithAdditionalSecretNameSubstrings(params string![]! additional) -> Vais.Agents.TrajectoryArgumentRedactor!
+Vais.Agents.TrajectoryQuery
+Vais.Agents.TrajectoryQuery.<Clone>$() -> Vais.Agents.TrajectoryQuery!
+Vais.Agents.TrajectoryQuery.Deconstruct(out string? AgentId, out string? RunId, out string? ConceptName, out string? Transport, out System.DateTimeOffset? Since, out System.DateTimeOffset? Until, out Vais.Agents.TrajectoryOutcomeKind? OutcomeKind, out int? Limit) -> void
+Vais.Agents.TrajectoryQuery.Equals(Vais.Agents.TrajectoryQuery? other) -> bool
+Vais.Agents.TrajectoryQuery.TrajectoryQuery(string? AgentId = null, string? RunId = null, string? ConceptName = null, string? Transport = null, System.DateTimeOffset? Since = null, System.DateTimeOffset? Until = null, Vais.Agents.TrajectoryOutcomeKind? OutcomeKind = null, int? Limit = null) -> void
+Vais.Agents.TrajectoryQuery.AgentId.get -> string?
+Vais.Agents.TrajectoryQuery.AgentId.init -> void
+Vais.Agents.TrajectoryQuery.RunId.get -> string?
+Vais.Agents.TrajectoryQuery.RunId.init -> void
+Vais.Agents.TrajectoryQuery.ConceptName.get -> string?
+Vais.Agents.TrajectoryQuery.ConceptName.init -> void
+Vais.Agents.TrajectoryQuery.Transport.get -> string?
+Vais.Agents.TrajectoryQuery.Transport.init -> void
+Vais.Agents.TrajectoryQuery.Since.get -> System.DateTimeOffset?
+Vais.Agents.TrajectoryQuery.Since.init -> void
+Vais.Agents.TrajectoryQuery.Until.get -> System.DateTimeOffset?
+Vais.Agents.TrajectoryQuery.Until.init -> void
+Vais.Agents.TrajectoryQuery.OutcomeKind.get -> Vais.Agents.TrajectoryOutcomeKind?
+Vais.Agents.TrajectoryQuery.OutcomeKind.init -> void
+Vais.Agents.TrajectoryQuery.Limit.get -> int?
+Vais.Agents.TrajectoryQuery.Limit.init -> void
+override Vais.Agents.TrajectoryQuery.Equals(object? obj) -> bool
+override Vais.Agents.TrajectoryQuery.GetHashCode() -> int
+override Vais.Agents.TrajectoryQuery.ToString() -> string!
+static Vais.Agents.TrajectoryQuery.operator !=(Vais.Agents.TrajectoryQuery? left, Vais.Agents.TrajectoryQuery? right) -> bool
+static Vais.Agents.TrajectoryQuery.operator ==(Vais.Agents.TrajectoryQuery? left, Vais.Agents.TrajectoryQuery? right) -> bool
+Vais.Agents.IInterceptorTeeStore
+Vais.Agents.IInterceptorTeeStore.AppendAsync(Vais.Agents.TrajectoryEvent! trajectoryEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IInterceptorTeeStore.QueryAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.TrajectoryEvent!>!
+Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.WorkflowRecipe = 0 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.TagSuggestion = 1 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.DescriptionRewrite = 2 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Pending = 0 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Approved = 1 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Rejected = 2 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Superseded = 3 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.Low = 0 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.Medium = 1 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.High = 2 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposal
+Vais.Agents.RecipeProposal.<Clone>$() -> Vais.Agents.RecipeProposal!
+Vais.Agents.RecipeProposal.RecipeProposal() -> void
+Vais.Agents.RecipeProposal.Equals(Vais.Agents.RecipeProposal? other) -> bool
+Vais.Agents.RecipeProposal.ProposalId.get -> string!
+Vais.Agents.RecipeProposal.ProposalId.init -> void
+Vais.Agents.RecipeProposal.Kind.get -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposal.Kind.init -> void
+Vais.Agents.RecipeProposal.Concept.get -> string!
+Vais.Agents.RecipeProposal.Concept.init -> void
+Vais.Agents.RecipeProposal.Body.get -> string!
+Vais.Agents.RecipeProposal.Body.init -> void
+Vais.Agents.RecipeProposal.Support.get -> int
+Vais.Agents.RecipeProposal.Support.init -> void
+Vais.Agents.RecipeProposal.Confidence.get -> double
+Vais.Agents.RecipeProposal.Confidence.init -> void
+Vais.Agents.RecipeProposal.SourceTraceIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.RecipeProposal.SourceTraceIds.init -> void
+Vais.Agents.RecipeProposal.RiskLevel.get -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposal.RiskLevel.init -> void
+Vais.Agents.RecipeProposal.Status.get -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposal.Status.init -> void
+Vais.Agents.RecipeProposal.CreatedAt.get -> System.DateTimeOffset
+Vais.Agents.RecipeProposal.CreatedAt.init -> void
+Vais.Agents.RecipeProposal.ReviewedAt.get -> System.DateTimeOffset?
+Vais.Agents.RecipeProposal.ReviewedAt.init -> void
+Vais.Agents.RecipeProposal.ReviewerId.get -> string?
+Vais.Agents.RecipeProposal.ReviewerId.init -> void
+Vais.Agents.RecipeProposal.Name.get -> string?
+Vais.Agents.RecipeProposal.Name.init -> void
+override Vais.Agents.RecipeProposal.Equals(object? obj) -> bool
+override Vais.Agents.RecipeProposal.GetHashCode() -> int
+override Vais.Agents.RecipeProposal.ToString() -> string!
+static Vais.Agents.RecipeProposal.operator !=(Vais.Agents.RecipeProposal? left, Vais.Agents.RecipeProposal? right) -> bool
+static Vais.Agents.RecipeProposal.operator ==(Vais.Agents.RecipeProposal? left, Vais.Agents.RecipeProposal? right) -> bool
+Vais.Agents.IRecipeInducer
+Vais.Agents.IRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
+Vais.Agents.ToolCallTrajectoryPayload
+Vais.Agents.ToolCallTrajectoryPayload.<Clone>$() -> Vais.Agents.ToolCallTrajectoryPayload!
+Vais.Agents.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration) -> void
+Vais.Agents.ToolCallTrajectoryPayload.Equals(Vais.Agents.ToolCallTrajectoryPayload? other) -> bool
+Vais.Agents.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null) -> void
+Vais.Agents.ToolCallTrajectoryPayload.ConceptName.get -> string!
+Vais.Agents.ToolCallTrajectoryPayload.ConceptName.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Transport.get -> string!
+Vais.Agents.ToolCallTrajectoryPayload.Transport.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Arguments.get -> System.Text.Json.JsonElement
+Vais.Agents.ToolCallTrajectoryPayload.Arguments.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Outcome.get -> Vais.Agents.TrajectoryOutcome?
+Vais.Agents.ToolCallTrajectoryPayload.Outcome.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Duration.get -> System.TimeSpan?
+Vais.Agents.ToolCallTrajectoryPayload.Duration.init -> void
+override Vais.Agents.ToolCallTrajectoryPayload.Equals(object? obj) -> bool
+override Vais.Agents.ToolCallTrajectoryPayload.GetHashCode() -> int
+override Vais.Agents.ToolCallTrajectoryPayload.ToString() -> string!
+static Vais.Agents.ToolCallTrajectoryPayload.operator !=(Vais.Agents.ToolCallTrajectoryPayload? left, Vais.Agents.ToolCallTrajectoryPayload? right) -> bool
+static Vais.Agents.ToolCallTrajectoryPayload.operator ==(Vais.Agents.ToolCallTrajectoryPayload? left, Vais.Agents.ToolCallTrajectoryPayload? right) -> bool
+Vais.Agents.RecipeProposalQuery
+Vais.Agents.RecipeProposalQuery.<Clone>$() -> Vais.Agents.RecipeProposalQuery!
+Vais.Agents.RecipeProposalQuery.Deconstruct(out string? Concept, out Vais.Agents.RecipeProposalKind? Kind, out Vais.Agents.RecipeProposalStatus? Status, out Vais.Agents.RecipeProposalRiskLevel? RiskLevel, out int? Limit) -> void
+Vais.Agents.RecipeProposalQuery.Equals(Vais.Agents.RecipeProposalQuery? other) -> bool
+Vais.Agents.RecipeProposalQuery.RecipeProposalQuery(string? Concept = null, Vais.Agents.RecipeProposalKind? Kind = null, Vais.Agents.RecipeProposalStatus? Status = null, Vais.Agents.RecipeProposalRiskLevel? RiskLevel = null, int? Limit = null) -> void
+Vais.Agents.RecipeProposalQuery.Concept.get -> string?
+Vais.Agents.RecipeProposalQuery.Concept.init -> void
+Vais.Agents.RecipeProposalQuery.Kind.get -> Vais.Agents.RecipeProposalKind?
+Vais.Agents.RecipeProposalQuery.Kind.init -> void
+Vais.Agents.RecipeProposalQuery.Status.get -> Vais.Agents.RecipeProposalStatus?
+Vais.Agents.RecipeProposalQuery.Status.init -> void
+Vais.Agents.RecipeProposalQuery.RiskLevel.get -> Vais.Agents.RecipeProposalRiskLevel?
+Vais.Agents.RecipeProposalQuery.RiskLevel.init -> void
+Vais.Agents.RecipeProposalQuery.Limit.get -> int?
+Vais.Agents.RecipeProposalQuery.Limit.init -> void
+override Vais.Agents.RecipeProposalQuery.Equals(object? obj) -> bool
+override Vais.Agents.RecipeProposalQuery.GetHashCode() -> int
+override Vais.Agents.RecipeProposalQuery.ToString() -> string!
+static Vais.Agents.RecipeProposalQuery.operator !=(Vais.Agents.RecipeProposalQuery? left, Vais.Agents.RecipeProposalQuery? right) -> bool
+static Vais.Agents.RecipeProposalQuery.operator ==(Vais.Agents.RecipeProposalQuery? left, Vais.Agents.RecipeProposalQuery? right) -> bool
+Vais.Agents.IRecipeProposalStore
+Vais.Agents.IRecipeProposalStore.UpsertAsync(Vais.Agents.RecipeProposal! proposal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Vais.Agents.IRecipeProposalStore.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.IRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
+Vais.Agents.IRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
