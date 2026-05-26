@@ -1893,3 +1893,53 @@ static Vais.Agents.TrajectoryQuery.operator ==(Vais.Agents.TrajectoryQuery? left
 Vais.Agents.IInterceptorTeeStore
 Vais.Agents.IInterceptorTeeStore.AppendAsync(Vais.Agents.TrajectoryEvent! trajectoryEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Vais.Agents.IInterceptorTeeStore.QueryAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.TrajectoryEvent!>!
+Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.WorkflowRecipe = 0 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.TagSuggestion = 1 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.DescriptionRewrite = 2 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Pending = 0 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Approved = 1 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Rejected = 2 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalStatus.Superseded = 3 -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.Low = 0 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.Medium = 1 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposalRiskLevel.High = 2 -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposal
+Vais.Agents.RecipeProposal.<Clone>$() -> Vais.Agents.RecipeProposal!
+Vais.Agents.RecipeProposal.RecipeProposal() -> void
+Vais.Agents.RecipeProposal.Equals(Vais.Agents.RecipeProposal? other) -> bool
+Vais.Agents.RecipeProposal.ProposalId.get -> string!
+Vais.Agents.RecipeProposal.ProposalId.init -> void
+Vais.Agents.RecipeProposal.Kind.get -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposal.Kind.init -> void
+Vais.Agents.RecipeProposal.Concept.get -> string!
+Vais.Agents.RecipeProposal.Concept.init -> void
+Vais.Agents.RecipeProposal.Body.get -> string!
+Vais.Agents.RecipeProposal.Body.init -> void
+Vais.Agents.RecipeProposal.Support.get -> int
+Vais.Agents.RecipeProposal.Support.init -> void
+Vais.Agents.RecipeProposal.Confidence.get -> double
+Vais.Agents.RecipeProposal.Confidence.init -> void
+Vais.Agents.RecipeProposal.SourceTraceIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.RecipeProposal.SourceTraceIds.init -> void
+Vais.Agents.RecipeProposal.RiskLevel.get -> Vais.Agents.RecipeProposalRiskLevel
+Vais.Agents.RecipeProposal.RiskLevel.init -> void
+Vais.Agents.RecipeProposal.Status.get -> Vais.Agents.RecipeProposalStatus
+Vais.Agents.RecipeProposal.Status.init -> void
+Vais.Agents.RecipeProposal.CreatedAt.get -> System.DateTimeOffset
+Vais.Agents.RecipeProposal.CreatedAt.init -> void
+Vais.Agents.RecipeProposal.ReviewedAt.get -> System.DateTimeOffset?
+Vais.Agents.RecipeProposal.ReviewedAt.init -> void
+Vais.Agents.RecipeProposal.ReviewerId.get -> string?
+Vais.Agents.RecipeProposal.ReviewerId.init -> void
+Vais.Agents.RecipeProposal.Name.get -> string?
+Vais.Agents.RecipeProposal.Name.init -> void
+override Vais.Agents.RecipeProposal.Equals(object? obj) -> bool
+override Vais.Agents.RecipeProposal.GetHashCode() -> int
+override Vais.Agents.RecipeProposal.ToString() -> string!
+static Vais.Agents.RecipeProposal.operator !=(Vais.Agents.RecipeProposal? left, Vais.Agents.RecipeProposal? right) -> bool
+static Vais.Agents.RecipeProposal.operator ==(Vais.Agents.RecipeProposal? left, Vais.Agents.RecipeProposal? right) -> bool
+Vais.Agents.IRecipeInducer
+Vais.Agents.IRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!

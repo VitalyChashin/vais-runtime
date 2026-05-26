@@ -218,3 +218,24 @@ override Vais.Agents.Core.ToolCallTrajectoryPayload.GetHashCode() -> int
 override Vais.Agents.Core.ToolCallTrajectoryPayload.ToString() -> string!
 static Vais.Agents.Core.ToolCallTrajectoryPayload.operator !=(Vais.Agents.Core.ToolCallTrajectoryPayload? left, Vais.Agents.Core.ToolCallTrajectoryPayload? right) -> bool
 static Vais.Agents.Core.ToolCallTrajectoryPayload.operator ==(Vais.Agents.Core.ToolCallTrajectoryPayload? left, Vais.Agents.Core.ToolCallTrajectoryPayload? right) -> bool
+Vais.Agents.Core.BehavioralRecipeInducerOptions
+Vais.Agents.Core.BehavioralRecipeInducerOptions.<Clone>$() -> Vais.Agents.Core.BehavioralRecipeInducerOptions!
+Vais.Agents.Core.BehavioralRecipeInducerOptions.BehavioralRecipeInducerOptions() -> void
+Vais.Agents.Core.BehavioralRecipeInducerOptions.Equals(Vais.Agents.Core.BehavioralRecipeInducerOptions? other) -> bool
+Vais.Agents.Core.BehavioralRecipeInducerOptions.MinSupport.get -> int
+Vais.Agents.Core.BehavioralRecipeInducerOptions.MinSupport.init -> void
+Vais.Agents.Core.BehavioralRecipeInducerOptions.MaxSequenceLength.get -> int
+Vais.Agents.Core.BehavioralRecipeInducerOptions.MaxSequenceLength.init -> void
+Vais.Agents.Core.BehavioralRecipeInducerOptions.HighRiskConceptSubstrings.get -> System.Collections.Generic.IReadOnlySet<string!>!
+Vais.Agents.Core.BehavioralRecipeInducerOptions.HighRiskConceptSubstrings.init -> void
+override Vais.Agents.Core.BehavioralRecipeInducerOptions.Equals(object? obj) -> bool
+override Vais.Agents.Core.BehavioralRecipeInducerOptions.GetHashCode() -> int
+override Vais.Agents.Core.BehavioralRecipeInducerOptions.ToString() -> string!
+static Vais.Agents.Core.BehavioralRecipeInducerOptions.operator !=(Vais.Agents.Core.BehavioralRecipeInducerOptions? left, Vais.Agents.Core.BehavioralRecipeInducerOptions? right) -> bool
+static Vais.Agents.Core.BehavioralRecipeInducerOptions.operator ==(Vais.Agents.Core.BehavioralRecipeInducerOptions? left, Vais.Agents.Core.BehavioralRecipeInducerOptions? right) -> bool
+Vais.Agents.Core.BehavioralRecipeInducer
+Vais.Agents.Core.BehavioralRecipeInducer.BehavioralRecipeInducer(Vais.Agents.IInterceptorTeeStore! store, Vais.Agents.Core.BehavioralRecipeInducerOptions? options = null) -> void
+Vais.Agents.Core.BehavioralRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
+Vais.Agents.Core.LlmAssistedRecipeInducer
+Vais.Agents.Core.LlmAssistedRecipeInducer.LlmAssistedRecipeInducer(Vais.Agents.IRecipeInducer! inner, System.Func<Vais.Agents.RecipeProposal!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string?>!>! enricher) -> void
+Vais.Agents.Core.LlmAssistedRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
