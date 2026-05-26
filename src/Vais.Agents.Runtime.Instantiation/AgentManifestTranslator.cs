@@ -32,6 +32,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IToolGatewayMiddlewareFactory? _toolGatewayFactory;
     private readonly IDomainOntologyArtifactRegistry? _domainOntologyRegistry;
     private readonly CachedDomainOntologyToolListShaper? _domainOntologyShaper;
+    private readonly IAgentCapabilityMapBuilder? _capabilityMapBuilder;
     private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
@@ -53,6 +54,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IToolGatewayMiddlewareFactory? toolGatewayFactory = null,
         IDomainOntologyArtifactRegistry? domainOntologyRegistry = null,
         CachedDomainOntologyToolListShaper? domainOntologyShaper = null,
+        IAgentCapabilityMapBuilder? capabilityMapBuilder = null,
         ILogger<AgentManifestTranslator>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -76,6 +78,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _toolGatewayFactory = toolGatewayFactory;
         _domainOntologyRegistry = domainOntologyRegistry;
         _domainOntologyShaper = domainOntologyShaper;
+        _capabilityMapBuilder = capabilityMapBuilder;
         _logger = logger ?? NullLogger<AgentManifestTranslator>.Instance;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
@@ -593,6 +596,23 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IReadOnlyDictionary<string, IToolSource> registeredSources,
         CancellationToken cancellationToken)
     {
+        // Plan C2-3: build the coordinator capability map once if a builder is registered.
+        // The map's per-sub-agent Description becomes the source-of-truth for the
+        // LocalAgentTool description below — deployers customize sub-agent descriptions by
+        // registering an overlaid IAgentCapabilityMapBuilder. With the default builder the
+        // behaviour matches the prior `localRef.Description ?? targetManifest.Description`
+        // path (byte-identical when no customization).
+        Dictionary<string, string?>? subAgentDescriptionOverrides = null;
+        if (_capabilityMapBuilder is not null && manifest.LocalAgents is { Count: > 0 })
+        {
+            var map = await _capabilityMapBuilder.BuildAsync(manifest.Id, cancellationToken).ConfigureAwait(false);
+            if (map.SubAgents.Count > 0)
+            {
+                subAgentDescriptionOverrides = new Dictionary<string, string?>(map.SubAgents.Count, StringComparer.Ordinal);
+                foreach (var s in map.SubAgents) subAgentDescriptionOverrides[s.ToolName] = s.Description;
+            }
+        }
+
         // D1: a registered server is in explicit mode if any tools[] entry has source == "mcp:<serverName>".
         // All other transport:registered servers are in import-all mode.
         var explicitServers = new HashSet<string>(StringComparer.Ordinal);
@@ -759,7 +779,15 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                         " is not found in the registry.");
                 }
 
-                var description = localRef.Description ?? targetManifest.Description ?? string.Empty;
+                var description =
+                    (subAgentDescriptionOverrides is not null
+                     && subAgentDescriptionOverrides.TryGetValue(toolRef.Name, out var capabilityDescription)
+                     && !string.IsNullOrEmpty(capabilityDescription)
+                        ? capabilityDescription
+                        : null)
+                    ?? localRef.Description
+                    ?? targetManifest.Description
+                    ?? string.Empty;
 
                 if (localRef.Mode == LocalAgentInvocationMode.Blocking)
                 {

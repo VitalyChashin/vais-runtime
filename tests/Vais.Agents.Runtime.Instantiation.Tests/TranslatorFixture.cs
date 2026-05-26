@@ -32,6 +32,7 @@ internal sealed class TranslatorFixture
     private ILlmGatewayMiddlewareFactory? _llmGatewayFactory;
     private IToolGatewayMiddlewareFactory? _toolGatewayFactory;
     private Vais.Agents.Control.Manifests.IDomainOntologyArtifactRegistry? _domainOntologyRegistry;
+    private Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder? _capabilityMapBuilder;
     private readonly List<LlmGatewayMiddleware> _diGlobalLlmMiddleware = new();
     private readonly List<ToolGatewayMiddleware> _diGlobalToolMiddleware = new();
     private IAgentManifestTranslator? _translator;
@@ -158,6 +159,13 @@ internal sealed class TranslatorFixture
         return this;
     }
 
+    public TranslatorFixture WithCapabilityMapBuilder(Vais.Agents.Control.Manifests.IAgentCapabilityMapBuilder builder)
+    {
+        _capabilityMapBuilder = builder;
+        _translator = null;
+        return this;
+    }
+
     public TranslatorFixture WithLlmGatewayFactory(ILlmGatewayMiddlewareFactory factory)
     {
         _llmGatewayFactory = factory;
@@ -275,6 +283,8 @@ internal sealed class TranslatorFixture
             services.AddSingleton(_toolGatewayFactory);
         if (_domainOntologyRegistry is not null)
             services.AddSingleton(_domainOntologyRegistry);
+        if (_capabilityMapBuilder is not null)
+            services.AddSingleton(_capabilityMapBuilder);
         foreach (var mw in _diGlobalLlmMiddleware)
             services.AddSingleton<LlmGatewayMiddleware>(mw);
         foreach (var mw in _diGlobalToolMiddleware)
