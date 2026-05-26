@@ -1943,6 +1943,26 @@ static Vais.Agents.RecipeProposal.operator !=(Vais.Agents.RecipeProposal? left, 
 static Vais.Agents.RecipeProposal.operator ==(Vais.Agents.RecipeProposal? left, Vais.Agents.RecipeProposal? right) -> bool
 Vais.Agents.IRecipeInducer
 Vais.Agents.IRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
+Vais.Agents.ToolCallTrajectoryPayload
+Vais.Agents.ToolCallTrajectoryPayload.<Clone>$() -> Vais.Agents.ToolCallTrajectoryPayload!
+Vais.Agents.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration) -> void
+Vais.Agents.ToolCallTrajectoryPayload.Equals(Vais.Agents.ToolCallTrajectoryPayload? other) -> bool
+Vais.Agents.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null) -> void
+Vais.Agents.ToolCallTrajectoryPayload.ConceptName.get -> string!
+Vais.Agents.ToolCallTrajectoryPayload.ConceptName.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Transport.get -> string!
+Vais.Agents.ToolCallTrajectoryPayload.Transport.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Arguments.get -> System.Text.Json.JsonElement
+Vais.Agents.ToolCallTrajectoryPayload.Arguments.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Outcome.get -> Vais.Agents.TrajectoryOutcome?
+Vais.Agents.ToolCallTrajectoryPayload.Outcome.init -> void
+Vais.Agents.ToolCallTrajectoryPayload.Duration.get -> System.TimeSpan?
+Vais.Agents.ToolCallTrajectoryPayload.Duration.init -> void
+override Vais.Agents.ToolCallTrajectoryPayload.Equals(object? obj) -> bool
+override Vais.Agents.ToolCallTrajectoryPayload.GetHashCode() -> int
+override Vais.Agents.ToolCallTrajectoryPayload.ToString() -> string!
+static Vais.Agents.ToolCallTrajectoryPayload.operator !=(Vais.Agents.ToolCallTrajectoryPayload? left, Vais.Agents.ToolCallTrajectoryPayload? right) -> bool
+static Vais.Agents.ToolCallTrajectoryPayload.operator ==(Vais.Agents.ToolCallTrajectoryPayload? left, Vais.Agents.ToolCallTrajectoryPayload? right) -> bool
 Vais.Agents.RecipeProposalQuery
 Vais.Agents.RecipeProposalQuery.<Clone>$() -> Vais.Agents.RecipeProposalQuery!
 Vais.Agents.RecipeProposalQuery.Deconstruct(out string? Concept, out Vais.Agents.RecipeProposalKind? Kind, out Vais.Agents.RecipeProposalStatus? Status, out Vais.Agents.RecipeProposalRiskLevel? RiskLevel, out int? Limit) -> void

@@ -316,6 +316,12 @@ Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware
 Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.DomainOntologyResponseEnrichmentMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
 override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.DomainOntologyTraceMiddleware(Vais.Agents.IInterceptorTee! tee, Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyTraceMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.SouthToolCallInterceptionContext
+Vais.Agents.Control.Manifests.SouthToolCallInterceptionContext.SouthToolCallInterceptionContext() -> void
 Vais.Agents.Control.Manifests.SubAgentCapability
 Vais.Agents.Control.Manifests.SubAgentCapability.<Clone>$() -> Vais.Agents.Control.Manifests.SubAgentCapability!
 Vais.Agents.Control.Manifests.SubAgentCapability.Deconstruct(out string! ToolName, out string! AgentId, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! Tags, out Vais.Agents.LocalAgentInvocationMode Mode) -> void

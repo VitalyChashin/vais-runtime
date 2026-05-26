@@ -74,20 +74,3 @@ public sealed class RecordingInterceptorTee(
     }
 }
 
-/// <summary>
-/// Canonical Plan D payload for tool-call trajectory events. Carry this in
-/// <see cref="InterceptorTeeEvent.Payload"/> so <see cref="RecordingInterceptorTee"/> can
-/// project the full typed event; loose payloads (or null) still produce a valid trajectory
-/// event with the fields it can infer from <see cref="InterceptionContext"/> alone.
-/// </summary>
-/// <param name="ConceptName">Tool / verb name being intercepted (e.g. <c>tavily_search</c>, <c>vais.validate</c>).</param>
-/// <param name="Transport">Routing hint: <c>"north"</c> for design-tools MCP, <c>"south"</c> for tool dispatch.</param>
-/// <param name="Arguments">Raw arguments JSON — <see cref="TrajectoryArgumentRedactor"/> redacts before storage; raw values never reach the store.</param>
-/// <param name="Outcome">Result categorization (Ok / Error / ShortCircuit + optional error type).</param>
-/// <param name="Duration">Wall-clock duration from request to response phase. Null when not yet known (request-phase only).</param>
-public sealed record ToolCallTrajectoryPayload(
-    string ConceptName,
-    string Transport,
-    JsonElement Arguments,
-    TrajectoryOutcome? Outcome = null,
-    TimeSpan? Duration = null);

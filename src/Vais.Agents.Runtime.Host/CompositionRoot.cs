@@ -436,6 +436,12 @@ internal static class CompositionRoot
             return MaybeWrapWithOverlayPublishing(sp, inner, overlayPathForRecipes);
         });
 
+        // Plan D D-8/D-9: register the behavioral inducer as the always-on default so
+        // `vais recipes propose` works out of the box. Deployers can override by registering
+        // a different IRecipeInducer (e.g. LlmAssistedRecipeInducer decorator) before this.
+        services.TryAddSingleton<IRecipeInducer>(sp =>
+            new BehavioralRecipeInducer(sp.GetRequiredService<IInterceptorTeeStore>()));
+
         // Plan D D-13: register the JSON overlay writer whenever an overlay path is set so the
         // approval-side-effect decorator can pick it up. The writer itself is stateless.
         if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
