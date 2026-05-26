@@ -222,3 +222,8 @@ Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Get(string!
 Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Register(string! name, Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact) -> void
 Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.Names.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 Vais.Agents.Control.Manifests.InMemoryDomainOntologyArtifactRegistry.RegisterAll(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.Control.Manifests.DomainOntologyArtifact!>! artifacts) -> void
+Vais.Agents.Control.Manifests.DomainOntologyCatalog
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.DomainOntologyCatalog(Vais.Agents.Control.Manifests.DomainOntologyArtifact! artifact, System.Collections.Generic.IReadOnlyList<string!>? projectedToolNames = null) -> void
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.ConceptNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.Control.Manifests.DomainOntologyCatalog.TryGetConcept(string! conceptName, out Vais.Agents.OntologyConceptEntry! entry) -> bool
