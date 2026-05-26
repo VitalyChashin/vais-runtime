@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vais.Agents.Control;
+using Vais.Agents.Control.Manifests;
 using Vais.Agents.Core;
 using Vais.Agents.Gateways.McpGovernance;
 using Vais.Agents.Runtime.Plugins;
@@ -29,6 +30,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IMcpServerRegistry? _mcpServerRegistry;
     private readonly ILlmGatewayMiddlewareFactory? _llmGatewayFactory;
     private readonly IToolGatewayMiddlewareFactory? _toolGatewayFactory;
+    private readonly IDomainOntologyArtifactRegistry? _domainOntologyRegistry;
+    private readonly CachedDomainOntologyToolListShaper? _domainOntologyShaper;
     private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
 
@@ -48,6 +51,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         IMcpServerRegistry? mcpServerRegistry = null,
         ILlmGatewayMiddlewareFactory? llmGatewayFactory = null,
         IToolGatewayMiddlewareFactory? toolGatewayFactory = null,
+        IDomainOntologyArtifactRegistry? domainOntologyRegistry = null,
+        CachedDomainOntologyToolListShaper? domainOntologyShaper = null,
         ILogger<AgentManifestTranslator>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -69,6 +74,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _mcpServerRegistry = mcpServerRegistry;
         _llmGatewayFactory = llmGatewayFactory;
         _toolGatewayFactory = toolGatewayFactory;
+        _domainOntologyRegistry = domainOntologyRegistry;
+        _domainOntologyShaper = domainOntologyShaper;
         _logger = logger ?? NullLogger<AgentManifestTranslator>.Instance;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
@@ -234,6 +241,23 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
         }
 
+        // Plan C1 south cartridge auto-wiring: if any virtual server in scope carries
+        // OntologyRef, build a combined domain-ontology catalog and append the request-phase
+        // validator + response-phase enricher to the tool-gateway chain. Unknown refs degrade
+        // gracefully (logged + skipped).
+        if (_domainOntologyRegistry is not null && registered.OntologyBindings.Count > 0)
+        {
+            var combined = BuildCombinedDomainOntologyCatalog(registered.OntologyBindings, manifest.Id);
+            if (combined is not null)
+            {
+                var withCartridge = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + 2];
+                Array.Copy(toolGatewayMiddleware, withCartridge, toolGatewayMiddleware.Length);
+                withCartridge[^2] = new DomainOntologyArgValidationMiddleware(combined);
+                withCartridge[^1] = new DomainOntologyResponseEnrichmentMiddleware(combined);
+                toolGatewayMiddleware = withCartridge;
+            }
+        }
+
         var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
         var responseFormat = ResolveResponseFormat(manifest, provider);
@@ -395,10 +419,16 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             .ToArray();
     }
 
+    /// <summary>One virtual server's south-cartridge binding info collected during MCP resolution.</summary>
+    /// <param name="OntologyRef">The artifact name from <see cref="McpServerManifest.OntologyRef"/>.</param>
+    /// <param name="ProjectedToolNames">The agent-visible tool names contributed by this server (empty when no projection).</param>
+    private sealed record OntologyBinding(string OntologyRef, IReadOnlyList<string> ProjectedToolNames);
+
     private sealed record RegisteredMcpResolution(
         IReadOnlyDictionary<string, IToolSource> Sources,
         string? ServerMcpGatewayRef,
-        bool McpGatewayRefAmbiguous);
+        bool McpGatewayRefAmbiguous,
+        IReadOnlyList<OntologyBinding> OntologyBindings);
 
     private async ValueTask<RegisteredMcpResolution> ResolveRegisteredMcpSourcesAsync(
         AgentManifest manifest, CancellationToken cancellationToken)
@@ -407,10 +437,12 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             return new RegisteredMcpResolution(
                 new Dictionary<string, IToolSource>(StringComparer.Ordinal),
                 ServerMcpGatewayRef: null,
-                McpGatewayRefAmbiguous: false);
+                McpGatewayRefAmbiguous: false,
+                OntologyBindings: []);
 
         var result = new Dictionary<string, IToolSource>(StringComparer.Ordinal);
         var distinctGatewayRefs = new HashSet<string>(StringComparer.Ordinal);
+        var ontologyBindings = new List<OntologyBinding>();
         foreach (var serverRef in manifest.McpServers)
         {
             if (serverRef.Transport != McpServerRef.RegisteredTransport) continue;
@@ -429,10 +461,67 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
 
             if (srv.McpGatewayRef is { } gwRef)
                 distinctGatewayRefs.Add(gwRef);
+
+            if (srv.OntologyRef is { Length: > 0 } ontoRef)
+            {
+                var projected = srv.ToolProjection?.Select(p => p.Name).ToList() ?? new List<string>();
+                ontologyBindings.Add(new OntologyBinding(ontoRef, projected));
+            }
         }
 
         var serverGwRef = distinctGatewayRefs.Count == 1 ? distinctGatewayRefs.First() : (string?)null;
-        return new RegisteredMcpResolution(result, serverGwRef, distinctGatewayRefs.Count > 1);
+        return new RegisteredMcpResolution(result, serverGwRef, distinctGatewayRefs.Count > 1, ontologyBindings);
+    }
+
+    /// <summary>
+    /// Combine every <see cref="OntologyBinding"/>'s artifact + projection into a single
+    /// <see cref="IDomainOntologyCatalog"/>. Unknown refs are logged and skipped; if no
+    /// binding resolves, returns <c>null</c> and the cartridge is not appended to the chain.
+    /// Cross-binding tool-name collision = last-write-wins on the per-tool annotations and a
+    /// debug log; the projection union always contains every projected name.
+    /// </summary>
+    private IDomainOntologyCatalog? BuildCombinedDomainOntologyCatalog(
+        IReadOnlyList<OntologyBinding> bindings, string agentId)
+    {
+        if (_domainOntologyRegistry is null) return null;
+
+        var mergedTools = new Dictionary<string, DomainConcept>(StringComparer.Ordinal);
+        var allProjected = new HashSet<string>(StringComparer.Ordinal);
+        var versionStamps = new List<string>(bindings.Count);
+        var resolved = 0;
+        foreach (var binding in bindings)
+        {
+            var artifact = _domainOntologyRegistry.Get(binding.OntologyRef);
+            if (artifact is null)
+            {
+                _logger.LogInformation(
+                    "Agent '{AgentId}': OntologyRef '{Ref}' is not registered in IDomainOntologyArtifactRegistry — cartridge skipped for that server.",
+                    agentId, binding.OntologyRef);
+                continue;
+            }
+            resolved++;
+            versionStamps.Add(binding.OntologyRef + ":" + artifact.OntologyVersion);
+            if (artifact.Tools is { Count: > 0 } tools)
+            {
+                foreach (var (toolName, concept) in tools)
+                {
+                    if (mergedTools.ContainsKey(toolName))
+                        _logger.LogDebug(
+                            "Agent '{AgentId}': tool '{Tool}' annotated by multiple domain ontologies; last-write-wins.",
+                            agentId, toolName);
+                    mergedTools[toolName] = concept;
+                }
+            }
+            foreach (var name in binding.ProjectedToolNames) allProjected.Add(name);
+        }
+        if (resolved == 0) return null;
+
+        var combined = new DomainOntologyArtifact
+        {
+            OntologyVersion = string.Join('|', versionStamps),
+            Tools = mergedTools,
+        };
+        return new DomainOntologyCatalog(combined, allProjected.Count > 0 ? [.. allProjected] : null);
     }
 
     private VirtualMcpToolSource BuildVirtualMcpToolSource(McpServerManifest srv)
@@ -452,7 +541,51 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                     $"No INamedToolSourceProvider has a ready source for '{sourceRef.Ref}'.");
             upstreamSources.Add((upstreamSource, sourceRef.Ref));
         }
-        return new VirtualMcpToolSource(upstreamSources, srv.ToolProjection);
+        var shape = BuildOntologyShapeCallback(srv);
+        return new VirtualMcpToolSource(upstreamSources, srv.ToolProjection, shape);
+    }
+
+    /// <summary>
+    /// Plan C1-9 wiring: when a virtual server carries <see cref="McpServerManifest.OntologyRef"/>
+    /// and the registry resolves it, return a callback that shapes the projected tool list
+    /// through <see cref="CachedDomainOntologyToolListShaper"/> — description rewrites land on
+    /// a <see cref="VirtualMcpToolSource.DescribedTool"/> wrapper and hide-flagged tools are
+    /// filtered out. Returns null when the cartridge does not apply (no ref, no registry, or
+    /// unknown ref) so the virtual source falls back to plain projection.
+    /// </summary>
+    private Func<IReadOnlyList<ITool>, IReadOnlyList<ITool>>? BuildOntologyShapeCallback(McpServerManifest srv)
+    {
+        if (srv.OntologyRef is not { Length: > 0 } ontoRef) return null;
+        if (_domainOntologyRegistry is null) return null;
+        var artifact = _domainOntologyRegistry.Get(ontoRef);
+        if (artifact is null)
+        {
+            _logger.LogInformation(
+                "Virtual MCP server '{ServerId}': OntologyRef '{Ref}' is not registered — tool-list shaping skipped.",
+                srv.Id, ontoRef);
+            return null;
+        }
+        var projected = srv.ToolProjection?.Select(p => p.Name).ToList();
+        var catalog = new DomainOntologyCatalog(artifact, projected);
+        var shaper = _domainOntologyShaper ?? new CachedDomainOntologyToolListShaper();
+        return tools =>
+        {
+            var descriptors = new ToolDescriptor[tools.Count];
+            for (var i = 0; i < tools.Count; i++)
+                descriptors[i] = new ToolDescriptor(tools[i].Name, tools[i].Description);
+            var shaped = shaper.Shape(descriptors, catalog);
+            var output = new List<ITool>(shaped.Count);
+            for (var i = 0; i < shaped.Count; i++)
+            {
+                var s = shaped[i];
+                if (s.Hidden) continue;
+                var inner = tools[i];
+                output.Add(s.Description is { Length: > 0 } d && !string.Equals(d, inner.Description, StringComparison.Ordinal)
+                    ? new VirtualMcpToolSource.DescribedTool(inner, d)
+                    : inner);
+            }
+            return output;
+        };
     }
 
     private async ValueTask<IToolRegistry?> ResolveToolsAsync(

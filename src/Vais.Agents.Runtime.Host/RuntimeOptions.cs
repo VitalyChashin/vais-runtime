@@ -120,6 +120,15 @@ internal sealed record RuntimeOptions
     public string? ContainerPluginsDirectory { get; init; }
 
     /// <summary>
+    /// Plan C1 south cartridge. Optional directory scanned for <c>*.domain-ontology.json</c>
+    /// artifacts at startup; each file registers under its filename stem and is bound to
+    /// virtual MCP servers via <c>McpServerManifest.OntologyRef</c>. Null or empty ⇒ the
+    /// in-memory registry stays empty (deployer can still register artifacts programmatically).
+    /// Set via <c>VAIS_DOMAIN_ONTOLOGY_DIR</c>.
+    /// </summary>
+    public string? DomainOntologyDirectory { get; init; }
+
+    /// <summary>
     /// Docker network name for internal-network isolation (Phase 2 egress isolation).
     /// When set, plugin containers join this network and are addressed via container-DNS;
     /// no host port is published. Null = legacy host-runtime mode.
@@ -384,6 +393,7 @@ internal sealed record RuntimeOptions
             PythonPluginsDirectory = Env("VAIS_PYTHON_PLUGINS_DIRECTORY"),
             PythonPluginsReloadPolicy = ParseReloadPolicy(Env("VAIS_PYTHON_PLUGINS_RELOAD_POLICY")),
             ContainerPluginsDirectory = Env("VAIS_CONTAINER_PLUGINS_DIRECTORY"),
+            DomainOntologyDirectory = Env("VAIS_DOMAIN_ONTOLOGY_DIR"),
             DockerPluginNetwork = Env("VAIS_DOCKER_PLUGIN_NETWORK"),
             ContainerPluginRenewTokenTtlSeconds =
                 int.TryParse(Env("VAIS_CONTAINER_PLUGIN_RENEW_TTL_SECONDS"), out var renewTtl) ? renewTtl : 120,
