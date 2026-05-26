@@ -85,13 +85,19 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
     retrieval + call-middleware) on top of 36 pre-existing — 117 in the `Ontology` filter.
     Full suite green: `Vais.Agents.sln` 108 projects 0/0; Core 935, Control.Http 356,
     Control.Mcp.Server 48 (incl. north substrate parity tests), Cli 152.
-  - **Deferred to a follow-on commit.** Wiring the list-time shaper into
-    `AgentManifestTranslator`'s per-virtual-server tool-list assembly path so the runtime
-    automatically shapes upstream `tools/list` responses based on `OntologyRef`. The shaper
-    itself is fully tested; deployers can drive it from their own composition root or a
-    custom `AgentInputMiddleware` until the auto-wiring lands. Plan C1's verify gate is
-    functional (shaping + cache invalidation behaviour), which the shipped components fully
-    satisfy.
+  - **Runtime auto-wiring (Plan C1 follow-on, landed in the same release).** With
+    `IDomainOntologyArtifactRegistry` registered by default in the composition root (set
+    `VAIS_DOMAIN_ONTOLOGY_DIR` to bulk-load `*.domain-ontology.json` artifacts at startup),
+    `AgentManifestTranslator` now resolves every bound virtual server's `OntologyRef`,
+    composes a combined `IDomainOntologyCatalog`, appends
+    `DomainOntologyArgValidationMiddleware` + `DomainOntologyResponseEnrichmentMiddleware`
+    innermost on the per-agent tool-gateway chain, and installs the
+    `CachedDomainOntologyToolListShaper` callback on each `VirtualMcpToolSource` so the
+    agent sees rewritten descriptions + hide-tag filtering at activation. Unknown refs
+    degrade gracefully; agents without `OntologyRef` are untouched. Live-verified end-to-end
+    on the local-dev runtime — a virtual server with `ontologyRef` activated with the
+    cartridge pair on its tool-gateway chain (transcript captured in the implementation
+    plan's §5 / Phase 4).
 
 ### Fixed
 
