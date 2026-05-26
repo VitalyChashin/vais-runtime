@@ -308,3 +308,11 @@ Vais.Agents.Control.Manifests.SemanticToolRetriever.SemanticToolRetriever(Vais.A
 Vais.Agents.Control.Manifests.SemanticToolRetriever.ExpandRecallMultiplier.get -> int
 Vais.Agents.Control.Manifests.SemanticToolRetriever.ExpandRecallMultiplier.init -> void
 Vais.Agents.Control.Manifests.SemanticToolRetriever.RetrieveAsync(string! query, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ToolDescriptor!>! candidates, int topK, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Manifests.ScoredTool!>!>
+Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.DomainOntologyArgValidationMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyArgValidationMiddleware.Kind.get -> Vais.Agents.InterceptorKind
+Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware
+Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.DomainOntologyResponseEnrichmentMiddleware(Vais.Agents.IDomainOntologyCatalog! catalog) -> void
+override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+override Vais.Agents.Control.Manifests.DomainOntologyResponseEnrichmentMiddleware.Kind.get -> Vais.Agents.InterceptorKind
