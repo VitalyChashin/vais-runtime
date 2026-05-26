@@ -374,3 +374,21 @@ override Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.GetHa
 override Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.ToString() -> string!
 static Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.operator !=(Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? left, Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? right) -> bool
 static Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions.operator ==(Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? left, Vais.Agents.Control.Manifests.CapabilityMapInputMiddlewareOptions? right) -> bool
+Vais.Agents.Control.Manifests.IOntologyAllowedToolsResolver
+Vais.Agents.Control.Manifests.IOntologyAllowedToolsResolver.Compute(System.Collections.Generic.IReadOnlyList<string!>? callerScopes, Vais.Agents.Control.Manifests.CapabilityMap! map) -> System.Collections.Generic.IReadOnlySet<string!>!
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.<Clone>$() -> Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions!
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.OntologyAllowedToolsResolverOptions() -> void
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.Equals(Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? other) -> bool
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.GrantOnEmptyScope.get -> bool
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.GrantOnEmptyScope.init -> void
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.WildcardScope.get -> string?
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.WildcardScope.init -> void
+override Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.ToString() -> string!
+static Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.operator !=(Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? left, Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? right) -> bool
+static Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions.operator ==(Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? left, Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? right) -> bool
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolver
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolver.OntologyAllowedToolsResolver(Vais.Agents.Control.Manifests.OntologyAllowedToolsResolverOptions? options = null) -> void
+Vais.Agents.Control.Manifests.OntologyAllowedToolsResolver.Compute(System.Collections.Generic.IReadOnlyList<string!>? callerScopes, Vais.Agents.Control.Manifests.CapabilityMap! map) -> System.Collections.Generic.IReadOnlySet<string!>!
