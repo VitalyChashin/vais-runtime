@@ -339,6 +339,9 @@ public sealed class ContainerGatewayLlmCompleteSectionsTests : IAsyncLifetime
 
         public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken ct = default)
             => ValueTask.FromResult(false);
+
+        public ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken ct = default)
+            => throw new NotImplementedException("FakeTranslator does not implement ResolvePerAgentChainsAsync.");
     }
 
     private sealed class FakeProviderPool(FakeProvider provider) : ICompletionProviderPool

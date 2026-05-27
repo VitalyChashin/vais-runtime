@@ -259,6 +259,9 @@ public sealed class ContainerGatewaySectionsBuildTests : IAsyncLifetime
             => TranslateAsync(agentId, ct);
 
         public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken ct = default) => ValueTask.FromResult(false);
+
+        public ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken ct = default)
+            => throw new NotImplementedException("FakeTranslator does not implement ResolvePerAgentChainsAsync.");
     }
 
     private sealed class FixedContributor(string sectionId, string text) : ISystemPromptContributor

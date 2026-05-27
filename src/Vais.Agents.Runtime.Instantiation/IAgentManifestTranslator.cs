@@ -45,6 +45,18 @@ public interface IAgentManifestTranslator : IAgentManifestInvalidator
     /// </summary>
     ValueTask<StatefulAgentOptions> TranslateForGrain(IServiceProvider serviceProvider, string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Resolve only the per-agent middleware chains (LLM, tool, input) and run budget for
+    /// <paramref name="agentId"/>. Cheaper than <see cref="TranslateAsync"/>: skips provider
+    /// instantiation, guardrail resolution, and tool-registry build — only what the container
+    /// gateway endpoints need to honour <c>LlmGatewayRef</c>, <c>McpGatewayRef</c>, the
+    /// <c>OntologyRef</c>-bound south cartridge, and Plan C2 delegation-governance when a
+    /// plugin agent calls back into the runtime.
+    /// </summary>
+    /// <exception cref="ManifestInstantiationException">The agent id is unknown to the registry, or middleware resolution failed — the URN describes why.</exception>
+    /// <exception cref="ArgumentException">Thrown when the agent id is blank.</exception>
+    ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken cancellationToken = default);
+
     // NB: InvalidateAsync is declared on IAgentManifestInvalidator (inherited).
     // AgentLifecycleManager (Control.InProcess) depends on the parent interface
     // to stay layering-friendly; consumers calling TranslateAsync see the full
