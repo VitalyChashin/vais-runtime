@@ -226,3 +226,38 @@ Vais.Agents.Core.InMemoryRecipeProposalStore.UpsertAsync(Vais.Agents.RecipePropo
 Vais.Agents.Core.InMemoryRecipeProposalStore.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
 Vais.Agents.Core.InMemoryRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
 Vais.Agents.Core.InMemoryRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Core.AgentContextClaims
+Vais.Agents.Core.AgentContextClaims.AgentContextClaims(string? UserId, string? TenantId, string? CorrelationId, string? WorkspaceId, Vais.Agents.PrivilegeLevel? PrivilegeLevel, Vais.Agents.AutonomyLevel? AutonomyLevel, System.Collections.Generic.IReadOnlyList<string!>? Scopes, System.Collections.Generic.IReadOnlyList<string!>? AllowedTools, int? MaxChainDepth, string? BaselineRunId) -> void
+Vais.Agents.Core.AgentContextClaims.<Clone>$() -> Vais.Agents.Core.AgentContextClaims!
+Vais.Agents.Core.AgentContextClaims.Deconstruct(out string? UserId, out string? TenantId, out string? CorrelationId, out string? WorkspaceId, out Vais.Agents.PrivilegeLevel? PrivilegeLevel, out Vais.Agents.AutonomyLevel? AutonomyLevel, out System.Collections.Generic.IReadOnlyList<string!>? Scopes, out System.Collections.Generic.IReadOnlyList<string!>? AllowedTools, out int? MaxChainDepth, out string? BaselineRunId) -> void
+Vais.Agents.Core.AgentContextClaims.Equals(Vais.Agents.Core.AgentContextClaims? other) -> bool
+Vais.Agents.Core.AgentContextClaims.UserId.get -> string?
+Vais.Agents.Core.AgentContextClaims.UserId.init -> void
+Vais.Agents.Core.AgentContextClaims.TenantId.get -> string?
+Vais.Agents.Core.AgentContextClaims.TenantId.init -> void
+Vais.Agents.Core.AgentContextClaims.CorrelationId.get -> string?
+Vais.Agents.Core.AgentContextClaims.CorrelationId.init -> void
+Vais.Agents.Core.AgentContextClaims.WorkspaceId.get -> string?
+Vais.Agents.Core.AgentContextClaims.WorkspaceId.init -> void
+Vais.Agents.Core.AgentContextClaims.PrivilegeLevel.get -> Vais.Agents.PrivilegeLevel?
+Vais.Agents.Core.AgentContextClaims.PrivilegeLevel.init -> void
+Vais.Agents.Core.AgentContextClaims.AutonomyLevel.get -> Vais.Agents.AutonomyLevel?
+Vais.Agents.Core.AgentContextClaims.AutonomyLevel.init -> void
+Vais.Agents.Core.AgentContextClaims.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Core.AgentContextClaims.Scopes.init -> void
+Vais.Agents.Core.AgentContextClaims.AllowedTools.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Core.AgentContextClaims.AllowedTools.init -> void
+Vais.Agents.Core.AgentContextClaims.MaxChainDepth.get -> int?
+Vais.Agents.Core.AgentContextClaims.MaxChainDepth.init -> void
+Vais.Agents.Core.AgentContextClaims.BaselineRunId.get -> string?
+Vais.Agents.Core.AgentContextClaims.BaselineRunId.init -> void
+override Vais.Agents.Core.AgentContextClaims.Equals(object? obj) -> bool
+override Vais.Agents.Core.AgentContextClaims.GetHashCode() -> int
+override Vais.Agents.Core.AgentContextClaims.ToString() -> string!
+static Vais.Agents.Core.AgentContextClaims.Empty.get -> Vais.Agents.Core.AgentContextClaims!
+static Vais.Agents.Core.AgentContextClaims.From(Vais.Agents.AgentContext! context) -> Vais.Agents.Core.AgentContextClaims!
+static Vais.Agents.Core.AgentContextClaims.operator !=(Vais.Agents.Core.AgentContextClaims? left, Vais.Agents.Core.AgentContextClaims? right) -> bool
+static Vais.Agents.Core.AgentContextClaims.operator ==(Vais.Agents.Core.AgentContextClaims? left, Vais.Agents.Core.AgentContextClaims? right) -> bool
+Vais.Agents.Core.ICallTokenService.Generate(string! runId, string! agentId, Vais.Agents.Core.AgentContextClaims! claims, int ttlSeconds) -> string!
+Vais.Agents.Core.ICallTokenService.Generate(string! runId, string! agentId, string! leaseId, Vais.Agents.Core.AgentContextClaims! claims, int ttlSeconds) -> string!
+Vais.Agents.Core.ICallTokenService.TryExtract(string! token, out string! runId, out string! agentId, out string! leaseId, out Vais.Agents.Core.AgentContextClaims? claims) -> bool

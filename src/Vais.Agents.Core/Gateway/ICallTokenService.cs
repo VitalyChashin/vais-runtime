@@ -36,4 +36,27 @@ public interface ICallTokenService
     /// <paramref name="leaseId"/>. <paramref name="leaseId"/> is empty for a non-session (v1) token.
     /// </summary>
     bool TryExtract(string token, out string runId, out string agentId, out string leaseId);
+
+    /// <summary>
+    /// Generates a token whose payload additionally carries the per-call <see cref="AgentContextClaims"/>.
+    /// Used by the runtime to forward the calling grain's <c>AgentContext</c> to a container plugin so
+    /// the plugin's gateway callbacks see the same policy fields (<c>Scopes</c>, <c>PrivilegeLevel</c>,
+    /// <c>AllowedTools</c>, …) as in-process agents. Closes the G4 propagation gap.
+    /// </summary>
+    string Generate(string runId, string agentId, AgentContextClaims claims, int ttlSeconds);
+
+    /// <summary>
+    /// Session-mode variant of the claims-bearing <see cref="Generate(string, string, AgentContextClaims, int)"/>:
+    /// the token additionally carries <paramref name="leaseId"/> and is honoured only while the matching
+    /// invoke lease is live (see <see cref="IInvokeLeaseStore"/>).
+    /// </summary>
+    string Generate(string runId, string agentId, string leaseId, AgentContextClaims claims, int ttlSeconds);
+
+    /// <summary>
+    /// Like <see cref="TryExtract(string, out string, out string, out string)"/>, but also returns the
+    /// embedded <paramref name="claims"/>. <paramref name="claims"/> is <c>null</c> for legacy two-segment
+    /// (v2) tokens that were minted before claims-propagation landed — handlers should fall back to the
+    /// header-only context shape in that case (backwards-compatible during rollout).
+    /// </summary>
+    bool TryExtract(string token, out string runId, out string agentId, out string leaseId, out AgentContextClaims? claims);
 }

@@ -303,6 +303,46 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Container-plugin agents now run `IAgentInputMiddleware` before the plugin sees the message.**
+  Pre-fix the container-gateway path resolved `PerAgentChains.Input` (after G1+G2) but never
+  invoked it — Plan C2's `CapabilityMapInputMiddleware` (the "your team" injection for
+  coordinator agents) silently no-opped for plugin coordinators, and any future input
+  middleware (memory summarisation, HCM, DIEE) would inherit the same blind spot. Direct
+  violation of P12 §1 ("runtime owns input shaping via `IAgentInputMiddleware`").
+  Fix (G6): `ContainerAgentShim` now resolves the per-agent input chain via
+  `IAgentManifestTranslator.ResolvePerAgentChainsAsync` at invoke time and runs the chain
+  over the raw user message inside `AskAsync` / `StreamAsync` before sending the invoke
+  request to the plugin. Plugin receives the shaped message via the existing invoke wire
+  shape — no SDK changes, no protocol changes. Symmetric with how the shim already runs
+  `IAgentPreprocessor` on the message list. Skips silently when no translator is wired
+  (test rigs) or no input middleware is registered (typical non-coordinator agents).
+  Gap (closed): `plans/completed/container-plugin-input-middleware-gap-2026-05-27.md`.
+
+- **Container-plugin agents now see the full per-call `AgentContext` for downstream policy.**
+  Pre-fix the container-gateway endpoints fabricated an `AgentContext` from just the
+  `X-Agent-Id` and `X-Run-Id` headers; `Scopes` / `WorkspaceId` / `PrivilegeLevel` /
+  `AutonomyLevel` / `AllowedTools` / `MaxChainDepth` / `BaselineRunId` were always null.
+  Every middleware branching on those fields — `ToolWorkspacePolicyMiddleware`,
+  approval-gate `PrivilegeLevel` checks, Plan C2's tag-intersection delegation policy,
+  `DefaultToolCallDispatcher`'s `AllowedTools` enforcement, the anti-recursion
+  `MaxChainDepth` guard — silently no-opped for plugin agents.
+  Fix (G4): extended the call-token wire format with a third base64url-encoded segment
+  carrying `AgentContextClaims` (JSON, HMAC-covered, tamper-evident). `ContainerAgentShim`
+  reads `IAgentContextAccessor.Current` (for `AskAsync`) or its `AgentContext` parameter
+  (for `StreamAsync`) at mint time and projects the policy-bearing fields into the
+  token. The outer gateway filter extracts claims via the new
+  `ICallTokenService.TryExtract` 5-arg overload and stashes them on `HttpContext.Items`;
+  each of the four container-gateway handlers rebuilds the full `AgentContext` from
+  claims via a new `BuildAgentContextFromClaims` helper. `/v1/container-gateway/token/renew`
+  preserves claims across renewal automatically — extracts from the (still-valid) old
+  token, re-mints with the same claims. Legacy two-segment tokens parse with `claims = null`
+  for backwards-compat during rollout; handlers fall back to header-only context in that case.
+  Gap (closed): `plans/completed/container-plugin-agent-context-propagation-gap-2026-05-27.md`.
+  Research memo: `research/agent-context-propagation-to-plugins-2026-05-27.md`. G6
+  (`IAgentInputMiddleware` invocation pattern) is now closed in the same release (see entry
+  above). G5 (per-call `RunBudget` enforcement) remains open as a separate design-first
+  follow-up.
+
 - **Container-plugin `tools/list` is now per-agent, not the bulk MCP registry.** Pre-fix
   `GET /v1/container-gateway/tools/list` iterated every server returned by
   `IMcpServerRegistry.ListAsync()` and returned every discovered tool to any
