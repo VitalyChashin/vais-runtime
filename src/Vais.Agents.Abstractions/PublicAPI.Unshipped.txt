@@ -1988,3 +1988,5 @@ Vais.Agents.IRecipeProposalStore.UpsertAsync(Vais.Agents.RecipeProposal! proposa
 Vais.Agents.IRecipeProposalStore.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
 Vais.Agents.IRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
 Vais.Agents.IRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.AgentContext.Budget.get -> Vais.Agents.RunBudget?
+Vais.Agents.AgentContext.Budget.init -> void

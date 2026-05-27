@@ -128,4 +128,15 @@ public sealed record AgentContext(
     /// localhost dev path), which preserves the pre-RBAC allow-by-default behaviour.
     /// </summary>
     public IReadOnlyList<string>? Scopes { get; init; }
+
+    /// <summary>
+    /// The agent's manifest-declared <see cref="RunBudget"/>, propagated to the gateway
+    /// pipeline so <see cref="LlmGatewayMiddleware"/> can enforce per-call caps
+    /// (e.g. <see cref="RunBudget.MaxPromptTokens"/>) before dispatching to the provider.
+    /// <see langword="null"/> when the manifest declares no budget. Today the container-plugin
+    /// gateway handlers populate this from <c>PerAgentChains.Budget</c>; the in-process path
+    /// continues to enforce via <c>StatefulAiAgent</c>'s outer turn loop instead, so this
+    /// field is null for in-process invocations until a separate follow-up wires it there.
+    /// </summary>
+    public RunBudget? Budget { get; init; }
 }

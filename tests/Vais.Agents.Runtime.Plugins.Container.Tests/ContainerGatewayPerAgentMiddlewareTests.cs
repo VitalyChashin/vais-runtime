@@ -32,6 +32,7 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
     private const string TestSecret = "A32CharacterSecretKeyForTestingXX";
     private const string LlmAgentId = "agent-llm";
     private const string ToolAgentId = "agent-tool";
+    private const string BudgetedAgentId = "agent-budgeted";
     private const string ProbeServerId = "probe-srv";
 
     private readonly ProbeLlmMiddleware _llmProbe = new();
@@ -81,6 +82,16 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
             Model = new ModelSpec("openai", "gpt-4o-mini"),
             McpGatewayRef = "tool-governed",
             McpServers = [new McpServerRef(ProbeServerId, McpServerRef.RegisteredTransport)],
+        });
+        registry.Add(new AgentManifest(
+            Id: BudgetedAgentId, Version: "1",
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: [],
+            Tools: [])
+        {
+            Model = new ModelSpec("openai", "gpt-4o-mini"),
+            LlmGatewayRef = "rate-limited",
+            Budget = new RunBudget(MaxTurns: 5, MaxPromptTokens: 4000, MaxCompletionTokens: 2000),
         });
 
         var probeServerManifest = new McpServerManifest(ProbeServerId, "1");
@@ -254,6 +265,70 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
 
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
         _llmProbe.Invocations.Should().Be(0, because: "unknown agent must short-circuit before middleware runs");
+    }
+
+    // ── G5 — RunBudget propagates from manifest → AgentContext.Budget ──────────
+
+    [Fact]
+    public async Task LlmComplete_ManifestWithBudget_ProbeSeesBudgetOnAgentContext()
+    {
+        // G5 regression guard: a manifest with a declared RunBudget shows up as
+        // AgentContext.Budget for middleware reading via IAgentContextAccessor. Pre-G5,
+        // AgentContext had no Budget field; LlmGatewayMiddleware couldn't enforce per-call.
+        var (runId, agentId) = ("run-budget", BudgetedAgentId);
+        var token = MintToken(runId, agentId);
+
+        var body = new
+        {
+            modelId = "gpt-4o-mini",
+            messages = new[] { new { role = "user", content = "hi" } },
+        };
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/llm/complete")
+        {
+            Content = JsonContent.Create(body),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        _llmProbe.LastSeenContext.Should().NotBeNull();
+        _llmProbe.LastSeenContext!.Budget.Should().NotBeNull(
+            because: "the manifest's RunBudget must reach middleware via AgentContext.Budget post-G5");
+        _llmProbe.LastSeenContext.Budget!.MaxTurns.Should().Be(5);
+        _llmProbe.LastSeenContext.Budget.MaxPromptTokens.Should().Be(4000);
+        _llmProbe.LastSeenContext.Budget.MaxCompletionTokens.Should().Be(2000);
+    }
+
+    [Fact]
+    public async Task LlmComplete_ManifestWithoutBudget_ProbeSeesNullBudget()
+    {
+        // Most manifests don't declare a budget; the field is nullable. Verify the
+        // null case doesn't trip the populated-budget assertion above.
+        var (runId, agentId) = ("run-no-budget", LlmAgentId);
+        var token = MintToken(runId, agentId);
+
+        var body = new
+        {
+            modelId = "gpt-4o-mini",
+            messages = new[] { new { role = "user", content = "hi" } },
+        };
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/llm/complete")
+        {
+            Content = JsonContent.Create(body),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        _llmProbe.LastSeenContext.Should().NotBeNull();
+        _llmProbe.LastSeenContext!.Budget.Should().BeNull(
+            because: "agent-llm's manifest declares no RunBudget");
     }
 
     // ── G3 — tools/list discovery is per-agent, not bulk-registry ──────────────
