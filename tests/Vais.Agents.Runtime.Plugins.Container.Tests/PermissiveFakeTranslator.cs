@@ -32,4 +32,7 @@ internal sealed class PermissiveFakeTranslator(IServiceProvider services) : IAge
             services.GetServices<ToolGatewayMiddleware>().ToArray(),
             services.GetServices<AgentInputMiddleware>().ToArray(),
             Budget: null));
+
+    public ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyList<ITool>>(Array.Empty<ITool>());
 }

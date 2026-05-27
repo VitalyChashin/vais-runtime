@@ -577,36 +577,45 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
     }
 
     private static async Task<IResult> HandleToolsListAsync(
-        IMcpServerRegistry? registry,
-        IEnumerable<INamedToolSourceProvider> providers,
+        HttpContext ctx,
+        IAgentManifestTranslator translator,
         CancellationToken ct)
     {
-        if (registry is null)
-            return Results.Ok(new GatewayToolListResponse());
-
-        var tools = new List<GatewayToolInfo>();
-        await foreach (var server in registry.ListAsync(ct: ct).ConfigureAwait(false))
+        // G3: project a per-agent view of the tool surface. Pre-fix this handler iterated every
+        // registered MCP server and returned every discovered tool to any authenticated caller —
+        // a co-tenant reconnaissance primitive. Now we ask the translator for the manifest-
+        // authorised tool list for the calling agent, exactly like the in-process path does via
+        // AgentManifestTranslator.ResolveToolsAsync.
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
         {
-            IToolSource? source = null;
-            foreach (var provider in providers)
-            {
-                source = provider.GetByName(server.Id);
-                if (source is not null) break;
-            }
-            if (source is null) continue;
-
-            await foreach (var tool in source.DiscoverAsync(ct).ConfigureAwait(false))
-            {
-                tools.Add(new GatewayToolInfo
-                {
-                    Name = tool.Name,
-                    Description = tool.Description,
-                    ParametersSchema = tool.ParametersSchema,
-                });
-            }
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
         }
 
-        return Results.Ok(new GatewayToolListResponse { Tools = tools });
+        IReadOnlyList<ITool> tools;
+        try
+        {
+            tools = await translator.ResolveAgentToolsAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found.",
+                detail: ex.Message);
+        }
+
+        return Results.Ok(new GatewayToolListResponse
+        {
+            Tools = tools.Select(t => new GatewayToolInfo
+            {
+                Name = t.Name,
+                Description = t.Description,
+                ParametersSchema = t.ParametersSchema,
+            }).ToList(),
+        });
     }
 
     private static async Task<IResult> HandleSectionsBuildAsync(

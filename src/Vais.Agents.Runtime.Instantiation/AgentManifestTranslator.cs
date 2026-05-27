@@ -37,6 +37,7 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, PerAgentChains> _chainsCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, IReadOnlyList<ITool>> _toolsCache = new(StringComparer.Ordinal);
 
     public AgentManifestTranslator(
         IAgentRegistry registry,
@@ -257,7 +258,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         var optionsRemoved = _cache.TryRemove(agentId, out _);
         var chainsRemoved = _chainsCache.TryRemove(agentId, out _);
-        return new ValueTask<bool>(optionsRemoved || chainsRemoved);
+        var toolsRemoved = _toolsCache.TryRemove(agentId, out _);
+        return new ValueTask<bool>(optionsRemoved || chainsRemoved || toolsRemoved);
     }
 
     public async ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken cancellationToken = default)
@@ -279,6 +281,27 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         // a single cached entry, matching TranslateAsync's caching semantics.
         _chainsCache.TryAdd(agentId, chains);
         return chains;
+    }
+
+    public async ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        if (_toolsCache.TryGetValue(agentId, out var cached))
+            return cached;
+
+        var manifest = await _registry.GetAsync(agentId, version: null, cancellationToken).ConfigureAwait(false)
+            ?? throw new ManifestInstantiationException(
+                ManifestInstantiationUrns.AgentNotFound,
+                $"No manifest registered for agent id '{agentId}'.");
+
+        var registered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+        var registry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<ITool> tools = registry?.Tools ?? Array.Empty<ITool>();
+
+        // First-writer-wins concurrency, mirroring _chainsCache.
+        _toolsCache.TryAdd(agentId, tools);
+        return tools;
     }
 
     private ResponseFormatSpec? ResolveResponseFormat(AgentManifest manifest, ICompletionProvider provider)

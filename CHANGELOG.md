@@ -303,6 +303,19 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Container-plugin `tools/list` is now per-agent, not the bulk MCP registry.** Pre-fix
+  `GET /v1/container-gateway/tools/list` iterated every server returned by
+  `IMcpServerRegistry.ListAsync()` and returned every discovered tool to any
+  authenticated caller — a co-tenant reconnaissance primitive that disclosed
+  tools the calling agent's manifest never authorised. Fix: new
+  `IAgentManifestTranslator.ResolveAgentToolsAsync(agentId)` returns the
+  manifest-resolved tool list (mirroring the in-process path's
+  `ResolveToolsAsync`), cached parallel to `_chainsCache` and invalidated
+  together. `HandleToolsListAsync` now calls the resolver and projects only
+  those tools onto the wire; 404 on unknown agentId, 400 on missing
+  `X-Agent-Id`. Gap (closed):
+  `plans/completed/container-plugin-tools-list-discovery-leak-gap-2026-05-27.md`.
+
 - **Container-plugin agents now honour per-agent gateway configuration.** Pre-fix,
   the container-gateway endpoints (`POST /v1/container-gateway/llm/complete`,
   `chat/completions`, `tools/invoke`) used only the DI-globally-registered
@@ -322,9 +335,9 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   agentId, 400 on missing `X-Agent-Id`). The plugin tool chain also picks up
   Plan C1 south cartridge and Plan C2 governance for free. Per-call `RunBudget`
   enforcement is a separate follow-up — see
-  `plans/gaps/llm-runbudget-per-call-enforcement-gap-2026-05-27.md`. Two
-  sibling gaps (G3 `tools/list` discovery leak, G4 `AgentContext` Scopes /
-  PrivilegeLevel propagation) remain open. Plan:
+  `plans/gaps/llm-runbudget-per-call-enforcement-gap-2026-05-27.md`. G3
+  `tools/list` discovery leak is also closed in this release (see entry above).
+  G4 `AgentContext` Scopes / PrivilegeLevel propagation remains open. Plan:
   `plans/completed/container-plugin-per-agent-middleware-bypass-impl-2026-05-27.md`.
   Behaviour change worth flagging: hosts mapping `MapContainerGatewayEndpoints`
   must now register `IAgentManifestTranslator` in DI (the runtime host already

@@ -1,6 +1,7 @@
 #nullable enable
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.LocalAgentNotDeclared = "urn:vais-agents:local-agent-not-declared" -> string!
 const Vais.Agents.Runtime.Instantiation.ManifestInstantiationUrns.LocalAgentTargetNotFound = "urn:vais-agents:local-agent-target-not-found" -> string!
+Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.ResolveAgentToolsAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>!>
 Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator.ResolvePerAgentChainsAsync(string! agentId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.Runtime.Instantiation.PerAgentChains!>
 override Vais.Agents.Runtime.Instantiation.PerAgentChains.Equals(object? obj) -> bool
 override Vais.Agents.Runtime.Instantiation.PerAgentChains.GetHashCode() -> int

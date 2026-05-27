@@ -283,6 +283,125 @@ public class AgentManifestTranslatorPerAgentChainsTests
         chains.Llm.Should().ContainSingle().Which.Should().BeSameAs(expected);
     }
 
+    // ── G3 ResolveAgentToolsAsync — manifest-scoped tool discovery ─────────────
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_ReturnsOnlyManifestDeclaredTools()
+    {
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: [],
+            Tools: [new ToolRef("greeter", "static:greeter")])
+        {
+            Model = new ModelSpec("openai", "gpt-4o"),
+        };
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithStaticTool("greeter", new TinyTool("greeter"));
+
+        var tools = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+
+        tools.Should().ContainSingle().Which.Name.Should().Be("greeter");
+    }
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_NoToolsInManifest_ReturnsEmpty()
+    {
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: [],
+            Tools: [])
+        {
+            Model = new ModelSpec("openai", "gpt-4o"),
+        };
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai");
+
+        var tools = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+
+        tools.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_PluginAgent_ReturnsOnlyManifestDeclaredTools()
+    {
+        // The G3 regression guard for plugin agents: even though plugin agents have their own
+        // IAiAgent impl, the container-gateway tools/list endpoint must see only the manifest
+        // surface, not the bulk registry.
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef(PluginHandler),
+            Protocols: [],
+            Tools: [new ToolRef("greeter", "static:greeter")]);
+
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest)
+            .WithPluginHandler(PluginHandler, (_, _) => new FakePluginAiAgent())
+            .WithStaticTool("greeter", new TinyTool("greeter"));
+
+        var tools = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+
+        tools.Should().ContainSingle().Which.Name.Should().Be("greeter");
+    }
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_UnknownAgent_ThrowsAgentNotFound()
+    {
+        var fixture = new TranslatorFixture().WithProvider("openai");
+
+        var act = async () => await fixture.Translator.ResolveAgentToolsAsync("ghost");
+
+        var ex = await act.Should().ThrowAsync<ManifestInstantiationException>();
+        ex.Which.Urn.Should().Be(ManifestInstantiationUrns.AgentNotFound);
+    }
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_SecondCall_ReturnsCachedInstance()
+    {
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: [],
+            Tools: [new ToolRef("greeter", "static:greeter")])
+        {
+            Model = new ModelSpec("openai", "gpt-4o"),
+        };
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithStaticTool("greeter", new TinyTool("greeter"));
+
+        var first = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+        var second = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+
+        second.Should().BeSameAs(first);
+    }
+
+    [Fact]
+    public async Task ResolveAgentToolsAsync_AfterInvalidate_RebuildsList()
+    {
+        var manifest = new AgentManifest(
+            Id: AgentId, Version: Version,
+            Handler: new AgentHandlerRef("declarative"),
+            Protocols: [],
+            Tools: [new ToolRef("greeter", "static:greeter")])
+        {
+            Model = new ModelSpec("openai", "gpt-4o"),
+        };
+        var fixture = new TranslatorFixture()
+            .WithManifest(manifest).WithProvider("openai")
+            .WithStaticTool("greeter", new TinyTool("greeter"));
+
+        var first = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+        await fixture.Translator.InvalidateAsync(AgentId);
+        var second = await fixture.Translator.ResolveAgentToolsAsync(AgentId);
+
+        second.Should().NotBeSameAs(first, because: "InvalidateAsync must evict the per-agent tools cache too");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static (ILlmGatewayConfigRegistry Registry, ILlmGatewayMiddlewareFactory Factory)
@@ -354,6 +473,16 @@ public class AgentManifestTranslatorPerAgentChainsTests
     private sealed class FakeLlmMiddleware : LlmGatewayMiddleware { }
 
     private sealed class FakeToolMiddleware : ToolGatewayMiddleware { }
+
+    private sealed class TinyTool(string name) : ITool
+    {
+        public string Name { get; } = name;
+        public string Description => "tiny";
+        public System.Text.Json.JsonElement ParametersSchema { get; }
+            = System.Text.Json.JsonDocument.Parse("{\"type\":\"object\"}").RootElement;
+        public Task<string> InvokeAsync(System.Text.Json.JsonElement arguments, CancellationToken cancellationToken = default)
+            => Task.FromResult("ok");
+    }
 
     private sealed class FakePluginAiAgent : IAiAgent
     {

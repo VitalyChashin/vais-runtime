@@ -357,6 +357,15 @@ public sealed class ContainerGatewayLlmCompleteSectionsTests : IAsyncLifetime
                 Array.Empty<AgentInputMiddleware>(),
                 Budget: null));
         }
+
+        public ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken ct = default)
+        {
+            // Permissive fake: tests don't pre-register tool lists. Return any tool registry the
+            // test set on OptionsByAgent; else empty.
+            if (OptionsByAgent.TryGetValue(agentId, out var options) && options.ToolRegistry is { } reg)
+                return ValueTask.FromResult<IReadOnlyList<ITool>>(reg.Tools);
+            return ValueTask.FromResult<IReadOnlyList<ITool>>(Array.Empty<ITool>());
+        }
     }
 
     private sealed class FakeProviderPool(FakeProvider provider) : ICompletionProviderPool

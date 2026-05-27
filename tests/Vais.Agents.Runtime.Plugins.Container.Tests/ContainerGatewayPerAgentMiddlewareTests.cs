@@ -256,6 +256,71 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
         _llmProbe.Invocations.Should().Be(0, because: "unknown agent must short-circuit before middleware runs");
     }
 
+    // ── G3 — tools/list discovery is per-agent, not bulk-registry ──────────────
+
+    [Fact]
+    public async Task ToolsList_AgentWithMcpServer_ReturnsManifestDeclaredTool()
+    {
+        // agent-tool's manifest carries McpServers: [probe-srv] (import-all mode). probe-srv's
+        // INamedToolSourceProvider exposes probe-tool. The handler must return that single tool.
+        var (runId, agentId) = ("run-tools", ToolAgentId);
+        var token = MintToken(runId, agentId);
+
+        var req = new HttpRequestMessage(HttpMethod.Get, "/v1/container-gateway/tools/list");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var names = payload.GetProperty("tools")
+            .EnumerateArray()
+            .Select(t => t.GetProperty("name").GetString())
+            .ToList();
+        names.Should().BeEquivalentTo(["probe-tool"]);
+    }
+
+    [Fact]
+    public async Task ToolsList_AgentWithoutTools_ReturnsEmpty_NotBulkRegistry()
+    {
+        // The regression guard: agent-llm's manifest declares no tools and no McpServers.
+        // Pre-G3 the handler iterated every registered server and returned probe-tool to ANY
+        // authenticated caller — even agents whose manifest didn't authorise it. Post-G3 the
+        // handler returns only what the calling agent's manifest declares.
+        var (runId, agentId) = ("run-tools-llm", LlmAgentId);
+        var token = MintToken(runId, agentId);
+
+        var req = new HttpRequestMessage(HttpMethod.Get, "/v1/container-gateway/tools/list");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        payload.GetProperty("tools").GetArrayLength().Should().Be(0,
+            because: "agent-llm's manifest declares no tools — pre-G3 the bulk-registry walk leaked probe-tool here");
+    }
+
+    [Fact]
+    public async Task ToolsList_UnknownAgent_Returns404()
+    {
+        var (runId, agentId) = ("run-ghost", "ghost-agent");
+        var token = MintToken(runId, agentId);
+
+        var req = new HttpRequestMessage(HttpMethod.Get, "/v1/container-gateway/tools/list");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     [Fact]
     public async Task ToolInvoke_UnknownAgent_Returns404()
     {

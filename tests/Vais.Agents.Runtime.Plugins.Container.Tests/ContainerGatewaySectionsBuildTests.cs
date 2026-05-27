@@ -277,6 +277,13 @@ public sealed class ContainerGatewaySectionsBuildTests : IAsyncLifetime
                 Array.Empty<AgentInputMiddleware>(),
                 Budget: null));
         }
+
+        public ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken ct = default)
+        {
+            if (OptionsByAgent.TryGetValue(agentId, out var options) && options.ToolRegistry is { } reg)
+                return ValueTask.FromResult<IReadOnlyList<ITool>>(reg.Tools);
+            return ValueTask.FromResult<IReadOnlyList<ITool>>(Array.Empty<ITool>());
+        }
     }
 
     private sealed class FixedContributor(string sectionId, string text) : ISystemPromptContributor
