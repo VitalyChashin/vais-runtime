@@ -592,7 +592,7 @@ internal static class DesignMcpToolHandlers
             return TextSuccess(new JsonObject
             {
                 ["ok"] = false,
-                ["status"] = "pending-approval",
+                ["approvalStatus"] = "pending-approval",
                 ["requestId"] = are.RequestId,
                 ["kind"] = are.Kind,
                 ["name"] = are.Name,
@@ -627,7 +627,7 @@ internal static class DesignMcpToolHandlers
             return TextSuccess(new JsonObject
             {
                 ["ok"] = false,
-                ["status"] = "pending-approval",
+                ["approvalStatus"] = "pending-approval",
                 ["requestId"] = are.RequestId,
                 ["kind"] = are.Kind,
                 ["name"] = are.Name,
