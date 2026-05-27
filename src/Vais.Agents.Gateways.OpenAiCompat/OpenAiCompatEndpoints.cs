@@ -111,6 +111,32 @@ public static class OpenAiCompatEndpoints
             };
         }
 
+        // 2c. G5 in-process Budget propagation — for `agent:foo` requests, overlay the agent's
+        // manifest-declared RunBudget onto the context BEFORE the push so LlmGatewayMiddleware
+        // (whether on the AsyncLocal scope or downstream via Orleans propagation) sees the same
+        // Budget the container-plugin gateway already sees. Non-agent model requests stay null.
+        // IAgentRegistry resolved via ctx.RequestServices (not as a handler parameter) to avoid
+        // ASP.NET minimal-API confusing it for a body-bound type in test rigs that don't register it.
+        if (oaiRequest.Model.StartsWith("agent:", StringComparison.Ordinal))
+        {
+            var registry = ctx.RequestServices.GetService<IAgentRegistry>();
+            if (registry is not null)
+            {
+                var agentIdForBudget = oaiRequest.Model["agent:".Length..];
+                try
+                {
+                    var manifest = await registry.GetAsync(agentIdForBudget, version: null, ct).ConfigureAwait(false);
+                    if (manifest?.Budget is { } budget)
+                        agentCtx = agentCtx with { Budget = budget };
+                }
+                catch
+                {
+                    // Defensive: registry lookup failure shouldn't abort the request. Downstream
+                    // agent dispatch will surface a real error if the agent truly doesn't exist.
+                }
+            }
+        }
+
         using var _ = contextSetter.Push(agentCtx);
 
         // 3. Routing fork — agent: and graph: bypass the LLM model router

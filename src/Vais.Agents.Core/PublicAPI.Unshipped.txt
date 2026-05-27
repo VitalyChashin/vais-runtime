@@ -35,6 +35,11 @@ const Vais.Agents.Core.AgenticTags.PrivilegeLevel = "vais.privilege.level" -> st
 const Vais.Agents.Core.AgenticTags.AutonomyLevel = "vais.autonomy.level" -> string!
 const Vais.Agents.Core.AgenticTags.AllowedTools = "vais.allowed_tools" -> string!
 const Vais.Agents.Core.AgenticTags.MaxChainDepth = "vais.max_chain_depth" -> string!
+const Vais.Agents.Core.AgenticTags.BudgetMaxTurns = "vais.budget.max_turns" -> string!
+const Vais.Agents.Core.AgenticTags.BudgetMaxToolCalls = "vais.budget.max_tool_calls" -> string!
+const Vais.Agents.Core.AgenticTags.BudgetMaxPromptTokens = "vais.budget.max_prompt_tokens" -> string!
+const Vais.Agents.Core.AgenticTags.BudgetMaxCompletionTokens = "vais.budget.max_completion_tokens" -> string!
+const Vais.Agents.Core.AgenticTags.BudgetMaxDurationTicks = "vais.budget.max_duration_ticks" -> string!
 Vais.Agents.Core.InMemoryModelRouter
 Vais.Agents.Core.InMemoryModelRouter.InMemoryModelRouter(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.ModelRoute!>! routes) -> void
 Vais.Agents.Core.InMemoryModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>
