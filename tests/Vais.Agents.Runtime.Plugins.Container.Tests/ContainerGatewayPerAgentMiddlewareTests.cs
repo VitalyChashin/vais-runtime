@@ -321,6 +321,94 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // ── G4 — AgentContext claims propagate from call-token through to middleware ───────
+
+    [Fact]
+    public async Task LlmComplete_ClaimsBearingToken_ProbeMiddlewareSeesPopulatedContext()
+    {
+        // The load-bearing G4 end-to-end test: mint a token carrying AgentContextClaims (as the
+        // shim does at the grain side), call /llm/complete with it, assert the probe middleware
+        // running inside LlmGatewayPipeline sees the populated AgentContext via the accessor.
+        // Pre-G4 the probe saw a minimal (AgentName + RunId) context regardless of caller.
+        var (runId, agentId) = ("run-claims", LlmAgentId);
+        var claims = new AgentContextClaims(
+            UserId: "user-claims",
+            TenantId: "tenant-prod",
+            CorrelationId: null,
+            WorkspaceId: "ws-research",
+            PrivilegeLevel: PrivilegeLevel.Workspace,
+            AutonomyLevel: AutonomyLevel.Supervised,
+            Scopes: ["read:files", "agent:invoke"],
+            AllowedTools: ["tavily_search"],
+            MaxChainDepth: 4,
+            BaselineRunId: null);
+        var token = MintTokenWithClaims(runId, agentId, claims);
+
+        var body = new
+        {
+            modelId = "gpt-4o-mini",
+            messages = new[] { new { role = "user", content = "hi" } },
+        };
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/llm/complete")
+        {
+            Content = JsonContent.Create(body),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        _llmProbe.Invocations.Should().Be(1);
+        _llmProbe.LastSeenContext.Should().NotBeNull();
+        _llmProbe.LastSeenContext!.AgentName.Should().Be(agentId);
+        _llmProbe.LastSeenContext.RunId.Should().Be(runId);
+        _llmProbe.LastSeenContext.UserId.Should().Be("user-claims");
+        _llmProbe.LastSeenContext.TenantId.Should().Be("tenant-prod");
+        _llmProbe.LastSeenContext.WorkspaceId.Should().Be("ws-research");
+        _llmProbe.LastSeenContext.PrivilegeLevel.Should().Be(PrivilegeLevel.Workspace);
+        _llmProbe.LastSeenContext.AutonomyLevel.Should().Be(AutonomyLevel.Supervised);
+        _llmProbe.LastSeenContext.Scopes.Should().BeEquivalentTo(new[] { "read:files", "agent:invoke" });
+        _llmProbe.LastSeenContext.AllowedTools.Should().BeEquivalentTo(new[] { "tavily_search" });
+        _llmProbe.LastSeenContext.MaxChainDepth.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task LlmComplete_LegacyTokenWithoutClaims_ProbeSeesMinimalContext()
+    {
+        // Backwards-compat regression guard: a legacy two-segment token (no claims segment) still
+        // reaches the handler; the handler builds a minimal AgentContext (AgentName + RunId only)
+        // and middleware sees null in every other field. Pre-G4 this was the universal behavior;
+        // post-G4 it's the fallback when no claims travel.
+        var (runId, agentId) = ("run-legacy", LlmAgentId);
+        var token = MintToken(runId, agentId); // legacy overload — no claims
+
+        var body = new
+        {
+            modelId = "gpt-4o-mini",
+            messages = new[] { new { role = "user", content = "hi" } },
+        };
+        var req = new HttpRequestMessage(HttpMethod.Post, "/v1/container-gateway/llm/complete")
+        {
+            Content = JsonContent.Create(body),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Headers.Add("X-Run-Id", runId);
+        req.Headers.Add("X-Agent-Id", agentId);
+
+        var resp = await _client.SendAsync(req);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        _llmProbe.LastSeenContext.Should().NotBeNull();
+        _llmProbe.LastSeenContext!.AgentName.Should().Be(agentId);
+        _llmProbe.LastSeenContext.RunId.Should().Be(runId);
+        _llmProbe.LastSeenContext.UserId.Should().BeNull();
+        _llmProbe.LastSeenContext.Scopes.Should().BeNull();
+        _llmProbe.LastSeenContext.AllowedTools.Should().BeNull();
+        _llmProbe.LastSeenContext.PrivilegeLevel.Should().BeNull();
+    }
+
     [Fact]
     public async Task ToolInvoke_UnknownAgent_Returns404()
     {
@@ -355,6 +443,12 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
         return svc.Generate(runId, agentId, 60);
     }
 
+    private string MintTokenWithClaims(string runId, string agentId, AgentContextClaims claims)
+    {
+        var svc = _host.Services.GetRequiredService<ICallTokenService>();
+        return svc.Generate(runId, agentId, claims, 60);
+    }
+
     private static async IAsyncEnumerable<T> YieldOne<T>(T value)
     {
         await Task.CompletedTask;
@@ -364,6 +458,7 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
     private sealed class ProbeLlmMiddleware : LlmGatewayMiddleware
     {
         public int Invocations;
+        public AgentContext? LastSeenContext;
 
         protected override Task<CompletionResponse> InvokeAsync(
             CompletionRequest request,
@@ -371,6 +466,9 @@ public sealed class ContainerGatewayPerAgentMiddlewareTests : IAsyncLifetime
             CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref Invocations);
+            // G4: capture whatever the handler pushed onto IAgentContextAccessor — middleware that
+            // branches on Scopes/PrivilegeLevel/AllowedTools etc. reads this same accessor.
+            LastSeenContext = new AsyncLocalAgentContextAccessor().Current;
             // Short-circuit so we don't need a working provider downstream — the assertion that
             // matters is that this middleware was reached at all.
             return Task.FromResult(new CompletionResponse("probe-fired", "fake-model"));
