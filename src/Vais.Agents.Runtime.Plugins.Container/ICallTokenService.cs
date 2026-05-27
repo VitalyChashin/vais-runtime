@@ -3,6 +3,8 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Vais.Agents.Core;
 
@@ -10,7 +12,11 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 
 /// <summary>
 /// HMAC-SHA256 implementation of <see cref="ICallTokenService"/>.
-/// Token format: base64url(payload).base64url(hmac).
+/// Token format: base64url(payload).[base64url(claims-json).]base64url(hmac).
+/// The middle claims segment is present for v3 (claims-bearing) tokens minted after G4 — legacy
+/// two-segment v1/v2 tokens parse with <c>claims == null</c> for backwards compatibility during
+/// rollout. HMAC covers <c>payloadBytes ⊕ '.' ⊕ claimsBytes</c> for v3 tokens, or just
+/// <c>payloadBytes</c> for legacy tokens.
 /// Payload is one of two colon-delimited shapes:
 ///   v1 (short-turn): <c>{runId}:{agentId}:{expiresAtUnixSeconds}</c>
 ///   v2 (session):    <c>v2:{runId}:{agentId}:{leaseId}:{expiresAtUnixSeconds}</c>
@@ -20,6 +26,12 @@ internal sealed class HmacCallTokenService : ICallTokenService
 {
     private const string V2Prefix = "v2";
     private readonly byte[] _keyBytes;
+
+    private static readonly JsonSerializerOptions ClaimsJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public HmacCallTokenService(IConfiguration configuration)
     {
@@ -38,24 +50,58 @@ internal sealed class HmacCallTokenService : ICallTokenService
     public string Generate(string runId, string agentId, string leaseId, int ttlSeconds) =>
         Sign($"{V2Prefix}:{runId}:{agentId}:{leaseId}:{Expiry(ttlSeconds)}");
 
+    public string Generate(string runId, string agentId, AgentContextClaims claims, int ttlSeconds) =>
+        SignWithClaims($"{runId}:{agentId}:{Expiry(ttlSeconds)}", claims);
+
+    public string Generate(string runId, string agentId, string leaseId, AgentContextClaims claims, int ttlSeconds) =>
+        SignWithClaims($"{V2Prefix}:{runId}:{agentId}:{leaseId}:{Expiry(ttlSeconds)}", claims);
+
     public bool Validate(string token, string runId, string agentId) =>
         TryExtract(token, out var r, out var a) && r == runId && a == agentId;
 
     public bool TryExtract(string token, out string runId, out string agentId) =>
-        TryExtract(token, out runId, out agentId, out _);
+        TryExtract(token, out runId, out agentId, out _, out _);
 
-    public bool TryExtract(string token, out string runId, out string agentId, out string leaseId)
+    public bool TryExtract(string token, out string runId, out string agentId, out string leaseId) =>
+        TryExtract(token, out runId, out agentId, out leaseId, out _);
+
+    public bool TryExtract(string token, out string runId, out string agentId, out string leaseId, out AgentContextClaims? claims)
     {
         runId = agentId = leaseId = string.Empty;
+        claims = null;
         try
         {
-            var dot = token.IndexOf('.');
-            if (dot < 0) return false;
+            var firstDot = token.IndexOf('.');
+            if (firstDot < 0) return false;
+            var secondDot = token.IndexOf('.', firstDot + 1);
 
-            var payloadBytes = Base64UrlDecode(token[..dot]);
-            var tokenHmac = Base64UrlDecode(token[(dot + 1)..]);
+            byte[] payloadBytes;
+            byte[] tokenHmac;
+            byte[] signedMaterial;
+            byte[]? claimsBytes = null;
 
-            var expectedHmac = HMACSHA256.HashData(_keyBytes, payloadBytes);
+            if (secondDot < 0)
+            {
+                // Legacy 2-segment token: payload.hmac. HMAC covers payload only.
+                payloadBytes = Base64UrlDecode(token[..firstDot]);
+                tokenHmac = Base64UrlDecode(token[(firstDot + 1)..]);
+                signedMaterial = payloadBytes;
+            }
+            else
+            {
+                // v3 3-segment token: payload.claims.hmac. HMAC covers payload + '.' + claims
+                // (decoded bytes — independent of base64url padding choices on the wire).
+                payloadBytes = Base64UrlDecode(token[..firstDot]);
+                claimsBytes = Base64UrlDecode(token[(firstDot + 1)..secondDot]);
+                tokenHmac = Base64UrlDecode(token[(secondDot + 1)..]);
+
+                signedMaterial = new byte[payloadBytes.Length + 1 + claimsBytes.Length];
+                payloadBytes.CopyTo(signedMaterial, 0);
+                signedMaterial[payloadBytes.Length] = (byte)'.';
+                claimsBytes.CopyTo(signedMaterial, payloadBytes.Length + 1);
+            }
+
+            var expectedHmac = HMACSHA256.HashData(_keyBytes, signedMaterial);
             if (!CryptographicOperations.FixedTimeEquals(tokenHmac, expectedHmac)) return false;
 
             var parts = Encoding.UTF8.GetString(payloadBytes).Split(':');
@@ -78,6 +124,20 @@ internal sealed class HmacCallTokenService : ICallTokenService
 
             if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expiresAt) return false;
 
+            if (claimsBytes is not null)
+            {
+                try
+                {
+                    claims = JsonSerializer.Deserialize<AgentContextClaims>(claimsBytes, ClaimsJsonOptions);
+                }
+                catch (JsonException)
+                {
+                    // Malformed claims segment — HMAC passed so it's syntactically intentional, but
+                    // semantically broken. Fail closed: reject the token.
+                    return false;
+                }
+            }
+
             runId = r;
             agentId = a;
             leaseId = lease;
@@ -97,6 +157,20 @@ internal sealed class HmacCallTokenService : ICallTokenService
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
         var hmac = HMACSHA256.HashData(_keyBytes, payloadBytes);
         return $"{Base64UrlEncode(payloadBytes)}.{Base64UrlEncode(hmac)}";
+    }
+
+    private string SignWithClaims(string payload, AgentContextClaims claims)
+    {
+        var payloadBytes = Encoding.UTF8.GetBytes(payload);
+        var claimsBytes = JsonSerializer.SerializeToUtf8Bytes(claims, ClaimsJsonOptions);
+
+        var signedMaterial = new byte[payloadBytes.Length + 1 + claimsBytes.Length];
+        payloadBytes.CopyTo(signedMaterial, 0);
+        signedMaterial[payloadBytes.Length] = (byte)'.';
+        claimsBytes.CopyTo(signedMaterial, payloadBytes.Length + 1);
+        var hmac = HMACSHA256.HashData(_keyBytes, signedMaterial);
+
+        return $"{Base64UrlEncode(payloadBytes)}.{Base64UrlEncode(claimsBytes)}.{Base64UrlEncode(hmac)}";
     }
 
     private static string Base64UrlEncode(byte[] data) =>
