@@ -303,6 +303,26 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Approval-required ProblemDetails extension key renamed to `approvalStatus` (was `status`)
+  — BREAKING wire change; closes
+  [`plans/completed/client-detect-approval-pending-parse-bug-2026-05-26.md`](plans/completed/client-detect-approval-pending-parse-bug-2026-05-26.md).**
+  The server's `ApprovalRequiredException` mapper emitted a `status` extension carrying the
+  literal `"pending-approval"`, which collided on the JSON wire with the RFC 7807 integer
+  `status: 202`. `System.Text.Json` tried to bind the trailing string into the typed client's
+  `ProblemDetailsWire.Status: int?` and threw `JsonException`; the helper swallowed it and the
+  202 fell through to `EnsureSuccessAsync` (2xx passes), so callers crashed on the consumed
+  stream instead of seeing `ApprovalRequiredException`. Every Apply 202 path through the typed
+  client other than the inline-patched `DecideRecipeAsync` was silently broken. Fix: rename to
+  `approvalStatus` at all three emit sites — `ProblemDetailsMapping.ToResult` plus the two
+  `DesignMcpToolHandlers` (Apply + Delete) — and rewrite `AgentControlPlaneClient.DetectApprovalPendingAsync`
+  to parse with `JsonDocument` (robust to the collision). `DecideRecipeAsync` now routes through
+  the shared helper. Out-of-tree consumers reading `Extensions["status"] == "pending-approval"`
+  must switch to `Extensions["approvalStatus"]`; the integer RFC 7807 `status` field is
+  unchanged (still `202`) and the `type:` URN (`urn:vais-agents:approval-required`) is
+  unchanged. Test fixture in `ApplyPendingApprovalClientTests` was previously a false positive
+  (it emitted a fictional `status_ext` key to dodge the collision); it now exercises the real
+  shipped wire format.
+
 - **In-process `AgentContext.Budget` symmetry — manifest `RunBudget` reaches middleware on the
   OpenAI-compat path too.** Closes the small symmetry follow-up filed alongside G5: pre-fix the
   `agent:foo` request path through `/v1/chat/completions` pushed an `AgentContext` with

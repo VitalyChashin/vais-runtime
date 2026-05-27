@@ -21,8 +21,13 @@ public sealed class ApplyPendingApprovalClientTests
     private const string PluginName = "test-plugin";
     private const string ExtensionName = "test-extension";
 
+    // Mirrors the real server wire format (ProblemDetailsMapping.ToResult). The integer
+    // "status": 202 is the RFC 7807 field; "approvalStatus" is the informational extension.
+    // Earlier revisions of this fixture used a fictional "status_ext" key to dodge an
+    // int<->string collision in the typed-record client deserializer — that papered over the
+    // bug instead of catching it. Keep this body byte-for-byte aligned with the server.
     private static string ApprovalBody(string kind, string name, string requestId) =>
-        $$"""{"type":"urn:vais-agents:approval-required","title":"Approval required","status":202,"requestId":"{{requestId}}","kind":"{{kind}}","name":"{{name}}","status_ext":"pending-approval"}""";
+        $$"""{"type":"urn:vais-agents:approval-required","title":"Approval required","status":202,"requestId":"{{requestId}}","kind":"{{kind}}","name":"{{name}}","approvalStatus":"pending-approval"}""";
 
     private static AgentControlPlaneClient ClientThatReturns(int statusCode, string body, string contentType = "application/problem+json") =>
         new(new HttpClient(new FixedResponseHandler(statusCode, body, contentType)) { BaseAddress = new Uri("http://localhost") });
@@ -87,6 +92,54 @@ public sealed class ApplyPendingApprovalClientTests
 
         handle.Id.Should().Be(PluginName);
         handle.Version.Should().Be("1.0");
+    }
+
+    // ---- Legacy collision shape: pre-rename wire format must still parse cleanly ----
+
+    [Fact]
+    public async Task CreateContainerPlugin_202_WithLegacyCollidingStatusExtension_StillThrowsApprovalRequired()
+    {
+        // Reproduces the exact bug from plans/completed/client-detect-approval-pending-parse-bug-2026-05-26.md:
+        // an older revision of the server emitted `pd.Extensions["status"] = "pending-approval"`, which
+        // serialized to the same JSON key as the RFC 7807 integer `status: 202`. The typed-record
+        // deserializer (ProblemDetailsWire.Status: int?) used to choke on the trailing string, throw
+        // JsonException, get swallowed, and the 202 fell through. The JsonDocument-based helper reads
+        // explicit fields by name and is robust to the duplicate key (last-wins per the JSON spec — but
+        // the field we read is "type", which has no collision either way). This test would have failed
+        // against the pre-fix helper.
+        const string legacyBody =
+            $$"""{"type":"urn:vais-agents:approval-required","title":"Approval required","status":202,"requestId":"{{RequestId}}","kind":"{{PluginKind}}","name":"{{PluginName}}","status":"pending-approval"}""";
+        var client = ClientThatReturns(202, legacyBody);
+        var manifest = new ContainerPluginManifest(PluginName, "1.0") { Spec = new ContainerPluginSpec { Image = "test:latest" } };
+
+        var act = () => client.CreateContainerPluginAsync(manifest, cancellationToken: default);
+
+        var ex = await act.Should().ThrowAsync<ApprovalRequiredException>();
+        ex.Which.RequestId.Should().Be(RequestId);
+        ex.Which.Kind.Should().Be(PluginKind);
+        ex.Which.Name.Should().Be(PluginName);
+    }
+
+    // ---- Fall-through: a 202 that is NOT an approval hold must not throw ----
+
+    [Fact]
+    public async Task CreateContainerPlugin_202_WithUnrelatedProblemType_DoesNotThrowApprovalRequired()
+    {
+        // 202 with a Problem Details body whose `type:` URN is something other than
+        // approval-required. The helper must not throw ApprovalRequiredException; the
+        // happy-path deserialize then runs against the buffered body. Since the body is
+        // not a ContainerPluginApplyResponse, CreateContainerPluginAsync will surface
+        // either an InvalidOperationException (null handle) or a JsonException — either
+        // way it must NOT be ApprovalRequiredException. This pins the fall-through
+        // contract so a future helper refactor can't silently reintroduce the original
+        // bug shape.
+        const string body = """{"type":"urn:vais-agents:something-else","title":"Other","status":202,"detail":"not approval"}""";
+        var client = ClientThatReturns(202, body);
+        var manifest = new ContainerPluginManifest(PluginName, "1.0") { Spec = new ContainerPluginSpec { Image = "test:latest" } };
+
+        var act = () => client.CreateContainerPluginAsync(manifest, cancellationToken: default);
+
+        await act.Should().NotThrowAsync<ApprovalRequiredException>();
     }
 
     // ---- helpers ----

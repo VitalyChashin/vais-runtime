@@ -603,28 +603,8 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         var requestBody = JsonContent.Create(new { approve, decidedBy }, options: JsonOptions);
         using var response = await _http.PostAsync($"/v1/recipes/{Uri.EscapeDataString(proposalId)}/decide", requestBody, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await DetectApprovalPendingAsync(response, cancellationToken).ConfigureAwait(false);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        // 202 + approval-required type ⇒ surface the typed exception so callers can run
-        // `vais approvals approve <id>` and retry. ProblemDetailsWire can't parse the body
-        // cleanly (the server emits the integer status alongside an extension named "status"
-        // — they collide on the same JSON key), so read with JsonDocument directly.
-        if (response.StatusCode == HttpStatusCode.Accepted)
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(raw);
-                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                    doc.RootElement.TryGetProperty("type", out var typeEl) &&
-                    typeEl.GetString() == ApprovalRequiredType)
-                {
-                    var rid = doc.RootElement.TryGetProperty("requestId", out var ridEl) ? ridEl.GetString() ?? "" : "";
-                    var k = doc.RootElement.TryGetProperty("kind", out var kEl) ? kEl.GetString() ?? "" : "";
-                    var n = doc.RootElement.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
-                    throw new ApprovalRequiredException(k, n, rid);
-                }
-            }
-            catch (JsonException) { /* fall through to success path */ }
-        }
         if (!response.IsSuccessStatusCode)
         {
             throw new AgentControlPlaneException((int)response.StatusCode, type: null, title: null, detail: raw);
@@ -1436,25 +1416,35 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     private const string ApprovalRequiredType = "urn:vais-agents:approval-required";
 
     // Detects the 202 pending-approval shape before EnsureSuccessAsync sees the response.
-    // Buffers the content so subsequent reads (EnsureSuccessAsync, ReadFromJsonAsync) still work
-    // if the server returns an unexpected 202 from a future endpoint that is not an approval hold.
+    // Buffers the content first so subsequent reads on the fall-through path (EnsureSuccessAsync /
+    // ReadFromJsonAsync in the caller) still work.
+    //
+    // Parses with JsonDocument rather than ProblemDetailsWire because the server's Problem Details
+    // body for an approval hold carries both the RFC 7807 integer "status": 202 and an extension
+    // "approvalStatus": "pending-approval". Earlier wire revisions named the extension "status",
+    // which collided on the same JSON key and made the typed-record deserializer throw before it
+    // could see the type URN. JsonDocument reads explicit fields by name and is robust to either
+    // shape, so this helper stays correct even if a peer is still emitting the legacy key.
     private static async Task DetectApprovalPendingAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.StatusCode != System.Net.HttpStatusCode.Accepted) return;
 
         await response.Content.LoadIntoBufferAsync(ct).ConfigureAwait(false);
+        var raw = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
-        ProblemDetailsWire? problem;
-        try { problem = await response.Content.ReadFromJsonAsync<ProblemDetailsWire>(JsonOptions, ct).ConfigureAwait(false); }
-        catch (JsonException) { return; }
-        catch (NotSupportedException) { return; }
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return;
+            if (!doc.RootElement.TryGetProperty("type", out var typeEl) ||
+                typeEl.GetString() != ApprovalRequiredType) return;
 
-        if (problem?.Type != ApprovalRequiredType) return;
-
-        var requestId = problem.Extensions?.TryGetValue("requestId", out var r) is true ? r.GetString() ?? "" : "";
-        var kind      = problem.Extensions?.TryGetValue("kind",      out var k) is true ? k.GetString() ?? "" : "";
-        var name      = problem.Extensions?.TryGetValue("name",      out var n) is true ? n.GetString() ?? "" : "";
-        throw new ApprovalRequiredException(kind, name, requestId);
+            var requestId = doc.RootElement.TryGetProperty("requestId", out var ridEl) ? ridEl.GetString() ?? "" : "";
+            var kind      = doc.RootElement.TryGetProperty("kind",      out var kEl)   ? kEl.GetString()   ?? "" : "";
+            var name      = doc.RootElement.TryGetProperty("name",      out var nEl)   ? nEl.GetString()   ?? "" : "";
+            throw new ApprovalRequiredException(kind, name, requestId);
+        }
+        catch (JsonException) { /* non-Problem-Details 202 — let the caller handle on the buffered body */ }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)

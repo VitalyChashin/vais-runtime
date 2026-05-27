@@ -125,7 +125,7 @@ public static class ProblemDetailsMapping
             pd.Extensions["requestId"] = approval.RequestId;
             pd.Extensions["kind"] = approval.Kind;
             pd.Extensions["name"] = approval.Name;
-            pd.Extensions["status"] = "pending-approval";
+            pd.Extensions["approvalStatus"] = "pending-approval";
         }
         if (ex is AgentManifestValidationException validation)
         {
