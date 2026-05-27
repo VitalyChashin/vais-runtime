@@ -35,6 +35,31 @@ public sealed class OrleansAgentContextAccessor : IAgentContextAccessor
         AutonomyLevel  = RequestContext.Get(AgenticTags.AutonomyLevel)  is int a ? (AutonomyLevel)a  : null,
         AllowedTools   = RequestContext.Get(AgenticTags.AllowedTools) as ImmutableHashSet<string>,
         MaxChainDepth  = RequestContext.Get(AgenticTags.MaxChainDepth) as int?,
+        Budget         = ReadBudget(),
         RunId          = ActivityPropagation.ReadGraphRunId(),
     };
+
+    // Reassemble RunBudget from the per-field RequestContext primitives written by
+    // OrleansOutgoingActivityFilter. Returns null when no Budget fields were set —
+    // distinguishes "no budget" from "all fields are unlimited."
+    private static RunBudget? ReadBudget()
+    {
+        var maxTurns           = RequestContext.Get(AgenticTags.BudgetMaxTurns)           as int?;
+        var maxToolCalls       = RequestContext.Get(AgenticTags.BudgetMaxToolCalls)       as int?;
+        var maxPromptTokens    = RequestContext.Get(AgenticTags.BudgetMaxPromptTokens)    as int?;
+        var maxCompletionToks  = RequestContext.Get(AgenticTags.BudgetMaxCompletionTokens) as int?;
+        var maxDurationTicks   = RequestContext.Get(AgenticTags.BudgetMaxDurationTicks)   as long?;
+
+        if (maxTurns is null && maxToolCalls is null
+            && maxPromptTokens is null && maxCompletionToks is null
+            && maxDurationTicks is null)
+            return null;
+
+        return new RunBudget(
+            MaxTurns: maxTurns,
+            MaxToolCalls: maxToolCalls,
+            MaxPromptTokens: maxPromptTokens,
+            MaxCompletionTokens: maxCompletionToks,
+            MaxDuration: maxDurationTicks is { } ticks ? TimeSpan.FromTicks(ticks) : null);
+    }
 }

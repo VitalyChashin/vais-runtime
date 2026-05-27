@@ -118,6 +118,25 @@ public static class AgenticTags
 
     /// <summary>Maximum agent-as-tool chain depth from <see cref="AgentContext.MaxChainDepth"/>.</summary>
     public const string MaxChainDepth = "vais.max_chain_depth";
+
+    // RunBudget fields, propagated as separate primitives so they round-trip through
+    // Orleans RequestContext without requiring a [GenerateSerializer] attribute on
+    // RunBudget itself. OrleansAgentContextAccessor reassembles the record on the receive side.
+
+    /// <summary>Per-run cap on model invocations, from <see cref="AgentContext.Budget"/>.MaxTurns.</summary>
+    public const string BudgetMaxTurns = "vais.budget.max_turns";
+
+    /// <summary>Per-run cap on tool calls, from <see cref="AgentContext.Budget"/>.MaxToolCalls.</summary>
+    public const string BudgetMaxToolCalls = "vais.budget.max_tool_calls";
+
+    /// <summary>Per-run cap on aggregate prompt tokens, from <see cref="AgentContext.Budget"/>.MaxPromptTokens.</summary>
+    public const string BudgetMaxPromptTokens = "vais.budget.max_prompt_tokens";
+
+    /// <summary>Per-run cap on aggregate completion tokens, from <see cref="AgentContext.Budget"/>.MaxCompletionTokens.</summary>
+    public const string BudgetMaxCompletionTokens = "vais.budget.max_completion_tokens";
+
+    /// <summary>Per-run wall-clock cap (TimeSpan.Ticks as long), from <see cref="AgentContext.Budget"/>.MaxDuration.</summary>
+    public const string BudgetMaxDurationTicks = "vais.budget.max_duration_ticks";
 }
 
 /// <summary>

@@ -303,6 +303,21 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **In-process `AgentContext.Budget` symmetry — manifest `RunBudget` reaches middleware on the
+  OpenAI-compat path too.** Closes the small symmetry follow-up filed alongside G5: pre-fix the
+  `agent:foo` request path through `/v1/chat/completions` pushed an `AgentContext` with
+  `Budget = null` even when the agent's manifest declared `spec.budget`. Middleware reading
+  `IAgentContextAccessor.Current.Budget` saw populated values for plugin agents (post-G5) but
+  null for in-process agents — asymmetric. Fix: `OpenAiCompatEndpoints.HandleChatCompletionAsync`
+  now resolves the agent's manifest via `IAgentRegistry` for `agent:foo` requests and overlays
+  `Budget = manifest.Budget` before the context push. Cross-grain propagation: five new
+  `AgenticTags.BudgetMax*` keys, `OrleansOutgoingActivityFilter` decomposes the `RunBudget`
+  record into per-field primitives in `RequestContext`, `OrleansAgentContextAccessor`
+  reassembles on the receive side (so `RunBudget` itself doesn't need `[GenerateSerializer]`).
+  In-process budget enforcement was always correct via `StatefulAiAgent`'s outer turn loop —
+  this fix is about the middleware-author seam being consistent across paths. Gap (closed):
+  `plans/completed/agent-context-budget-in-process-push-gap-2026-05-27.md`.
+
 - **Per-agent `RunBudget` now reaches LLM gateway middleware on the container-plugin path.**
   Pre-fix `AgentContext` had no `Budget` field, so middleware running inside
   `LlmGatewayPipeline` had no way to read a manifest-declared `RunBudget` and enforce

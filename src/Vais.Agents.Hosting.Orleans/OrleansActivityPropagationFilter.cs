@@ -70,6 +70,22 @@ internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
         if (ctx.CorrelationId is not null)
             RequestContext.Set(AgenticTags.CorrelationId, ctx.CorrelationId);
 
+        // RunBudget propagation — decomposed into per-field primitives so RunBudget itself
+        // doesn't need [GenerateSerializer]. OrleansAgentContextAccessor reassembles.
+        if (ctx.Budget is { } budget)
+        {
+            if (budget.MaxTurns is { } maxTurns)
+                RequestContext.Set(AgenticTags.BudgetMaxTurns, maxTurns);
+            if (budget.MaxToolCalls is { } maxToolCalls)
+                RequestContext.Set(AgenticTags.BudgetMaxToolCalls, maxToolCalls);
+            if (budget.MaxPromptTokens is { } maxPromptTokens)
+                RequestContext.Set(AgenticTags.BudgetMaxPromptTokens, maxPromptTokens);
+            if (budget.MaxCompletionTokens is { } maxCompletionTokens)
+                RequestContext.Set(AgenticTags.BudgetMaxCompletionTokens, maxCompletionTokens);
+            if (budget.MaxDuration is { } maxDuration)
+                RequestContext.Set(AgenticTags.BudgetMaxDurationTicks, maxDuration.Ticks);
+        }
+
         await context.Invoke();
     }
 }

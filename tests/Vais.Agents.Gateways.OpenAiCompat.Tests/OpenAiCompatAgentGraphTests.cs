@@ -155,6 +155,99 @@ public sealed class OpenAiCompatAgentGraphTests
         }
     }
 
+    // ── G1F: in-process AgentContext.Budget propagation (G5 follow-up) ───────
+
+    [Fact]
+    public async Task AgentDispatch_ManifestBudget_PropagatesToAgentContextBeforeRuntimeInvoke()
+    {
+        // Pre-G1F the in-process OpenAiCompat path pushed an AgentContext without Budget,
+        // so middleware reading IAgentContextAccessor.Current.Budget saw null even when the
+        // manifest declared spec.budget. This test asserts the OpenAiCompat endpoint now
+        // resolves the agent's manifest, reads manifest.Budget, and overlays it on the
+        // pushed context BEFORE invoking the lifecycle manager. Middleware running in the
+        // same AsyncLocal scope (or downstream via Orleans propagation) sees the populated
+        // Budget — symmetric with how the container-plugin gateway handlers now behave.
+        AgentContext? captured = null;
+        var lifecycleManager = new FakeAgentLifecycleManager((handle, request) =>
+        {
+            captured = new AsyncLocalAgentContextAccessor().Current;
+            return new AgentInvocationResult("ok", "sess-1");
+        });
+
+        var budget = new RunBudget(MaxTurns: 7, MaxPromptTokens: 5000);
+        var host = await BuildHostAsync(services =>
+        {
+            services.AddSingleton<IAgentRegistry>(new FakeAgentRegistry([
+                MakeBudgetedAgentManifest("budgeted-agent", budget),
+            ]));
+            services.AddSingleton<IAgentLifecycleManager>(lifecycleManager);
+        });
+
+        using var http = host.GetTestClient();
+        try
+        {
+            var body = new
+            {
+                model = "agent:budgeted-agent",
+                messages = new[] { new { role = "user", content = "hi" } },
+            };
+            var response = await http.PostAsJsonAsync("/v1/chat/completions", body);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            captured.Should().NotBeNull(because: "the lifecycle manager must see a pushed AgentContext");
+            captured!.Budget.Should().NotBeNull(
+                because: "OpenAiCompat now resolves manifest.Budget for `agent:` requests and overlays it on AgentContext.Budget");
+            captured.Budget!.MaxTurns.Should().Be(7);
+            captured.Budget.MaxPromptTokens.Should().Be(5000);
+            captured.Budget.MaxCompletionTokens.Should().BeNull();
+        }
+        finally
+        {
+            await host.StopAsync();
+            host.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task AgentDispatch_ManifestWithoutBudget_PropagatesNullBudget()
+    {
+        // Backwards-compat: manifests that declare no Budget continue to push a context
+        // with Budget == null. No regression for existing in-process flows.
+        AgentContext? captured = null;
+        var lifecycleManager = new FakeAgentLifecycleManager((handle, request) =>
+        {
+            captured = new AsyncLocalAgentContextAccessor().Current;
+            return new AgentInvocationResult("ok", "sess-1");
+        });
+
+        var host = await BuildHostAsync(services =>
+        {
+            services.AddSingleton<IAgentRegistry>(new FakeAgentRegistry([MakeAgentManifest("myagent")]));
+            services.AddSingleton<IAgentLifecycleManager>(lifecycleManager);
+        });
+
+        using var http = host.GetTestClient();
+        try
+        {
+            var body = new
+            {
+                model = "agent:myagent",
+                messages = new[] { new { role = "user", content = "hi" } },
+            };
+            var response = await http.PostAsJsonAsync("/v1/chat/completions", body);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            captured.Should().NotBeNull();
+            captured!.Budget.Should().BeNull(
+                because: "myagent's manifest declares no Budget");
+        }
+        finally
+        {
+            await host.StopAsync();
+            host.Dispose();
+        }
+    }
+
     // ── OC-7: Agent streaming — emits CompletionDelta chunks as SSE ──────────
 
     [Fact]
@@ -521,6 +614,16 @@ public sealed class OpenAiCompatAgentGraphTests
         Handler: new AgentHandlerRef("FakeAgent"),
         Protocols: [],
         Tools: []);
+
+    private static AgentManifest MakeBudgetedAgentManifest(string id, RunBudget budget) => new(
+        Id: id,
+        Version: "1.0.0",
+        Handler: new AgentHandlerRef("FakeAgent"),
+        Protocols: [],
+        Tools: [])
+    {
+        Budget = budget,
+    };
 
     private static AgentGraphManifest MakeGraphManifest(string id, bool annotated) => new(
         Id: id,
