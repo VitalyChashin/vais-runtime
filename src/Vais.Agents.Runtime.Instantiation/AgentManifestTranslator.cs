@@ -36,6 +36,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IDelegationPolicy? _delegationPolicy;
     private readonly ILogger<AgentManifestTranslator> _logger;
     private readonly ConcurrentDictionary<string, StatefulAgentOptions> _cache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, PerAgentChains> _chainsCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, IReadOnlyList<ITool>> _toolsCache = new(StringComparer.Ordinal);
 
     public AgentManifestTranslator(
         IAgentRegistry registry,
@@ -119,6 +121,15 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             && _pluginRegistry.TryGet(manifest.Handler.TypeName, out var factory)
             && factory is not null)
         {
+            // PAM-7: build per-agent middleware chains for the plugin agent — same logic the
+            // declarative path runs. Container-gateway endpoints honour these via
+            // ResolvePerAgentChainsAsync; in-process consumers of StatefulAgentOptions
+            // (the grain wrapper around the plugin agent) honour them via these fields.
+            // Without this, manifest.LlmGatewayRef / McpGatewayRef / OntologyRef-bound
+            // south cartridge / Plan C2 delegation governance are all silently dropped.
+            var pluginRegistered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+            var pluginChains = await BuildPerAgentChainsAsync(manifest, pluginRegistered, cancellationToken).ConfigureAwait(false);
+
             // When the manifest carries a ModelSpec, build ICompletionProvider from the pool
             // and pass it via a wrapped IServiceProvider so plugin constructors that declare
             // ICompletionProvider as a dependency are satisfied (it is never a DI singleton).
@@ -153,13 +164,14 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                     ex);
             }
 
-            var pluginToolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
             var pluginOptions = new StatefulAgentOptions
             {
                 AgentName = manifest.Id,
                 Agent = pluginAgent,
                 Budget = manifest.Budget,
-                ToolGatewayMiddleware = pluginToolGatewayMiddleware,
+                GatewayMiddleware = pluginChains.Llm,
+                ToolGatewayMiddleware = pluginChains.Tool,
+                InputMiddleware = pluginChains.Input,
             };
 
             _cache.TryAdd(agentId, pluginOptions);
@@ -188,24 +200,6 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         var systemPrompt = await ResolveSystemPromptAsync(manifest.SystemPrompt, cancellationToken).ConfigureAwait(false);
         var (inputGuardrails, outputGuardrails, toolGuardrails) = ResolveGuardrails(manifest.Guardrails);
 
-        // GCF-22: LlmGatewayRef — per-agent pipeline replaces DI-global chain entirely.
-        // Agents without llmGatewayRef continue to use the DI-global chain unchanged.
-        LlmGatewayMiddleware[] gatewayMiddleware;
-        if (_llmGatewayConfigRegistry is not null && _llmGatewayFactory is not null
-            && manifest.LlmGatewayRef is { } llmRef)
-        {
-            var llmCfg = await _llmGatewayConfigRegistry.GetAsync(llmRef, ct: cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException(
-                    $"Agent '{manifest.Id}' references LlmGatewayConfig '{llmRef}' which is not registered.");
-            gatewayMiddleware = llmCfg.Middleware
-                .Select(spec => _llmGatewayFactory.Create(spec))
-                .ToArray();
-        }
-        else
-        {
-            gatewayMiddleware = _serviceProvider.GetServices<LlmGatewayMiddleware>().ToArray();
-        }
-
         // GCF-24: Expand transport:registered McpServerRefs into IToolSources.
         // Virtual servers → VirtualMcpToolSource; physical servers → INamedToolSourceProvider bridge.
         // Physical registered servers are served by PhysicalMcpConnectionService (Vais.Agents.Control.Mcp)
@@ -213,84 +207,11 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         // Also collects ServerMcpGatewayRef for GCF-23 Option D in a single registry pass.
         var registered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
 
-        // GCF-23: McpGatewayRef — per-agent pipeline replaces DI-global chain entirely.
-        // Agent-level ref wins; if absent, server-level ref applies (Option D); else DI-global.
-        // "ToolWorkspacePolicy" is a special case: workspace policies come from the manifest,
-        // not from GatewayMiddlewareSpec.Params (the factory is a no-op sentinel).
-        ToolGatewayMiddleware[] toolGatewayMiddleware;
-        if (_mcpGatewayConfigRegistry is not null && _toolGatewayFactory is not null)
-        {
-            if (manifest.McpGatewayRef is { } mcpGwRef)
-            {
-                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
-                    mcpGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
-            }
-            else if (registered.McpGatewayRefAmbiguous)
-            {
-                throw new ManifestInstantiationException(
-                    ManifestInstantiationUrns.McpGatewayRefAmbiguous,
-                    $"Agent '{manifest.Id}' binds multiple registered servers that carry different " +
-                    "McpGatewayRef values. Set an agent-level mcpGatewayRef to resolve the ambiguity.");
-            }
-            else if (registered.ServerMcpGatewayRef is { } serverGwRef)
-            {
-                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
-                    serverGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
-            }
-        }
-        else
-        {
-            toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
-        }
-
-        // Plan C1 south cartridge auto-wiring: if any virtual server in scope carries
-        // OntologyRef, build a combined domain-ontology catalog and append the request-phase
-        // validator + response-phase enricher to the tool-gateway chain. Unknown refs degrade
-        // gracefully (logged + skipped).
-        if (_domainOntologyRegistry is not null && registered.OntologyBindings.Count > 0)
-        {
-            var combined = BuildCombinedDomainOntologyCatalog(registered.OntologyBindings, manifest.Id);
-            if (combined is not null)
-            {
-                // Plan D D-15: append the trace middleware when a tee is registered so south
-                // tool calls land in the trajectory store automatically. No tee → no trace.
-                var tee = _serviceProvider.GetService<IInterceptorTee>();
-                var cartridgeCount = tee is null ? 2 : 3;
-                var withCartridge = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + cartridgeCount];
-                Array.Copy(toolGatewayMiddleware, withCartridge, toolGatewayMiddleware.Length);
-                if (tee is not null)
-                {
-                    // Trace is outermost (Observability kind) so it wraps the whole south chain;
-                    // validation + enrichment then run inside the timing/outcome span.
-                    withCartridge[^3] = new DomainOntologyTraceMiddleware(tee, combined);
-                }
-                withCartridge[^2] = new DomainOntologyArgValidationMiddleware(combined);
-                withCartridge[^1] = new DomainOntologyResponseEnrichmentMiddleware(combined);
-                toolGatewayMiddleware = withCartridge;
-            }
-        }
-
-        // Plan C2 capability fabric auto-wiring: when the coordinator has LocalAgents and an
-        // IAgentCapabilityMapBuilder is registered, append the input-middleware
-        // (capability-map injection) + the delegation-governance interceptor to the per-agent
-        // chains. The default IDelegationPolicy is AllowAllDelegationPolicy so the governance
-        // middleware is harmless until the deployer overrides it.
-        AgentInputMiddleware[] inputMiddleware = [];
-        if (_capabilityMapBuilder is not null && manifest.LocalAgents is { Count: > 0 })
-        {
-            inputMiddleware = [new CapabilityMapInputMiddleware(_capabilityMapBuilder)];
-            if (_delegationPolicy is not null)
-            {
-                var withFabric = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + 1];
-                Array.Copy(toolGatewayMiddleware, withFabric, toolGatewayMiddleware.Length);
-                withFabric[^1] = new DelegationGovernanceMiddleware(_delegationPolicy, _capabilityMapBuilder);
-                toolGatewayMiddleware = withFabric;
-            }
-        }
+        // Per-agent middleware chains (GCF-22 LlmGatewayRef, GCF-23 McpGatewayRef + Plan C1
+        // south cartridge, Plan C2 capability fabric + delegation governance). Shared with the
+        // plugin branch above and with ResolvePerAgentChainsAsync for the container-gateway
+        // endpoints, so all consumers see the same per-agent shape.
+        var chains = await BuildPerAgentChainsAsync(manifest, registered, cancellationToken).ConfigureAwait(false);
 
         var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
@@ -306,9 +227,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             OutputGuardrails = outputGuardrails,
             ToolGuardrails = toolGuardrails,
             Budget = manifest.Budget,
-            GatewayMiddleware = gatewayMiddleware,
-            ToolGatewayMiddleware = toolGatewayMiddleware,
-            InputMiddleware = inputMiddleware,
+            GatewayMiddleware = chains.Llm,
+            ToolGatewayMiddleware = chains.Tool,
+            InputMiddleware = chains.Input,
             UsageSink = _serviceProvider.GetService<IUsageSink>(),
             ResponseFormat = responseFormat,
         };
@@ -316,8 +237,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _logger.LogDebug(
             "Translated agent {AgentId}: llm-middleware=[{LlmMiddleware}] tool-middleware=[{ToolMiddleware}]",
             agentId,
-            string.Join(", ", gatewayMiddleware.Select(m => m.GetType().Name)),
-            string.Join(", ", toolGatewayMiddleware.Select(m => m.GetType().Name)));
+            string.Join(", ", chains.Llm.Select(m => m.GetType().Name)),
+            string.Join(", ", chains.Tool.Select(m => m.GetType().Name)));
 
         // First-writer-wins: concurrent TranslateAsync calls for the same id
         // do redundant work but converge on a single cached entry.
@@ -335,7 +256,52 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
-        return new ValueTask<bool>(_cache.TryRemove(agentId, out _));
+        var optionsRemoved = _cache.TryRemove(agentId, out _);
+        var chainsRemoved = _chainsCache.TryRemove(agentId, out _);
+        var toolsRemoved = _toolsCache.TryRemove(agentId, out _);
+        return new ValueTask<bool>(optionsRemoved || chainsRemoved || toolsRemoved);
+    }
+
+    public async ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        if (_chainsCache.TryGetValue(agentId, out var cached))
+            return cached;
+
+        var manifest = await _registry.GetAsync(agentId, version: null, cancellationToken).ConfigureAwait(false)
+            ?? throw new ManifestInstantiationException(
+                ManifestInstantiationUrns.AgentNotFound,
+                $"No manifest registered for agent id '{agentId}'.");
+
+        var registered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+        var chains = await BuildPerAgentChainsAsync(manifest, registered, cancellationToken).ConfigureAwait(false);
+
+        // First-writer-wins: concurrent calls for the same id do redundant work but converge on
+        // a single cached entry, matching TranslateAsync's caching semantics.
+        _chainsCache.TryAdd(agentId, chains);
+        return chains;
+    }
+
+    public async ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        if (_toolsCache.TryGetValue(agentId, out var cached))
+            return cached;
+
+        var manifest = await _registry.GetAsync(agentId, version: null, cancellationToken).ConfigureAwait(false)
+            ?? throw new ManifestInstantiationException(
+                ManifestInstantiationUrns.AgentNotFound,
+                $"No manifest registered for agent id '{agentId}'.");
+
+        var registered = await ResolveRegisteredMcpSourcesAsync(manifest, cancellationToken).ConfigureAwait(false);
+        var registry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<ITool> tools = registry?.Tools ?? Array.Empty<ITool>();
+
+        // First-writer-wins concurrency, mirroring _chainsCache.
+        _toolsCache.TryAdd(agentId, tools);
+        return tools;
     }
 
     private ResponseFormatSpec? ResolveResponseFormat(AgentManifest manifest, ICompletionProvider provider)
@@ -429,6 +395,116 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         }
 
         return raw;
+    }
+
+    private async ValueTask<LlmGatewayMiddleware[]> BuildLlmChainAsync(
+        AgentManifest manifest, CancellationToken cancellationToken)
+    {
+        if (_llmGatewayConfigRegistry is not null && _llmGatewayFactory is not null
+            && manifest.LlmGatewayRef is { } llmRef)
+        {
+            var llmCfg = await _llmGatewayConfigRegistry.GetAsync(llmRef, ct: cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException(
+                    $"Agent '{manifest.Id}' references LlmGatewayConfig '{llmRef}' which is not registered.");
+            return llmCfg.Middleware
+                .Select(spec => _llmGatewayFactory.Create(spec))
+                .ToArray();
+        }
+        return _serviceProvider.GetServices<LlmGatewayMiddleware>().ToArray();
+    }
+
+    private async ValueTask<ToolGatewayMiddleware[]> BuildToolChainAsync(
+        AgentManifest manifest,
+        RegisteredMcpResolution registered,
+        CancellationToken cancellationToken)
+    {
+        // GCF-23: McpGatewayRef — per-agent pipeline replaces DI-global chain entirely.
+        // Agent-level ref wins; if absent, server-level ref applies (Option D); else DI-global.
+        // "ToolWorkspacePolicy" is a special case: workspace policies come from the manifest,
+        // not from GatewayMiddlewareSpec.Params (the factory is a no-op sentinel).
+        ToolGatewayMiddleware[] toolGatewayMiddleware;
+        if (_mcpGatewayConfigRegistry is not null && _toolGatewayFactory is not null)
+        {
+            if (manifest.McpGatewayRef is { } mcpGwRef)
+            {
+                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
+                    mcpGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+            else if (registered.McpGatewayRefAmbiguous)
+            {
+                throw new ManifestInstantiationException(
+                    ManifestInstantiationUrns.McpGatewayRefAmbiguous,
+                    $"Agent '{manifest.Id}' binds multiple registered servers that carry different " +
+                    "McpGatewayRef values. Set an agent-level mcpGatewayRef to resolve the ambiguity.");
+            }
+            else if (registered.ServerMcpGatewayRef is { } serverGwRef)
+            {
+                toolGatewayMiddleware = await BuildToolGatewayMiddlewareAsync(
+                    serverGwRef, manifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
+            }
+        }
+        else
+        {
+            toolGatewayMiddleware = _serviceProvider.GetServices<ToolGatewayMiddleware>().ToArray();
+        }
+
+        // Plan C1 south cartridge auto-wiring: if any virtual server in scope carries
+        // OntologyRef, build a combined domain-ontology catalog and append the request-phase
+        // validator + response-phase enricher to the tool-gateway chain. Unknown refs degrade
+        // gracefully (logged + skipped).
+        if (_domainOntologyRegistry is not null && registered.OntologyBindings.Count > 0)
+        {
+            var combined = BuildCombinedDomainOntologyCatalog(registered.OntologyBindings, manifest.Id);
+            if (combined is not null)
+            {
+                // Plan D D-15: append the trace middleware when a tee is registered so south
+                // tool calls land in the trajectory store automatically. No tee → no trace.
+                var tee = _serviceProvider.GetService<IInterceptorTee>();
+                var cartridgeCount = tee is null ? 2 : 3;
+                var withCartridge = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + cartridgeCount];
+                Array.Copy(toolGatewayMiddleware, withCartridge, toolGatewayMiddleware.Length);
+                if (tee is not null)
+                {
+                    // Trace is outermost (Observability kind) so it wraps the whole south chain;
+                    // validation + enrichment then run inside the timing/outcome span.
+                    withCartridge[^3] = new DomainOntologyTraceMiddleware(tee, combined);
+                }
+                withCartridge[^2] = new DomainOntologyArgValidationMiddleware(combined);
+                withCartridge[^1] = new DomainOntologyResponseEnrichmentMiddleware(combined);
+                toolGatewayMiddleware = withCartridge;
+            }
+        }
+
+        return toolGatewayMiddleware;
+    }
+
+    private async ValueTask<PerAgentChains> BuildPerAgentChainsAsync(
+        AgentManifest manifest, RegisteredMcpResolution registered, CancellationToken cancellationToken)
+    {
+        var llmChain = await BuildLlmChainAsync(manifest, cancellationToken).ConfigureAwait(false);
+        var toolChain = await BuildToolChainAsync(manifest, registered, cancellationToken).ConfigureAwait(false);
+        var (inputChain, toolChainWithC2) = BuildInputAndAppendC2(manifest, toolChain);
+        return new PerAgentChains(llmChain, toolChainWithC2, inputChain, manifest.Budget);
+    }
+
+    private (AgentInputMiddleware[] InputChain, ToolGatewayMiddleware[] ToolChainWithC2) BuildInputAndAppendC2(
+        AgentManifest manifest, ToolGatewayMiddleware[] toolChain)
+    {
+        if (_capabilityMapBuilder is null || manifest.LocalAgents is not { Count: > 0 })
+            return ([], toolChain);
+
+        var inputChain = new AgentInputMiddleware[] { new CapabilityMapInputMiddleware(_capabilityMapBuilder) };
+        if (_delegationPolicy is null)
+            return (inputChain, toolChain);
+
+        var withFabric = new ToolGatewayMiddleware[toolChain.Length + 1];
+        Array.Copy(toolChain, withFabric, toolChain.Length);
+        withFabric[^1] = new DelegationGovernanceMiddleware(_delegationPolicy, _capabilityMapBuilder);
+        return (inputChain, withFabric);
     }
 
     private async ValueTask<ToolGatewayMiddleware[]> BuildToolGatewayMiddlewareAsync(

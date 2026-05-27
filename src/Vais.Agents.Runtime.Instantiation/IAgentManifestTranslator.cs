@@ -45,6 +45,29 @@ public interface IAgentManifestTranslator : IAgentManifestInvalidator
     /// </summary>
     ValueTask<StatefulAgentOptions> TranslateForGrain(IServiceProvider serviceProvider, string agentId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Resolve only the per-agent middleware chains (LLM, tool, input) and run budget for
+    /// <paramref name="agentId"/>. Cheaper than <see cref="TranslateAsync"/>: skips provider
+    /// instantiation, guardrail resolution, and tool-registry build — only what the container
+    /// gateway endpoints need to honour <c>LlmGatewayRef</c>, <c>McpGatewayRef</c>, the
+    /// <c>OntologyRef</c>-bound south cartridge, and Plan C2 delegation-governance when a
+    /// plugin agent calls back into the runtime.
+    /// </summary>
+    /// <exception cref="ManifestInstantiationException">The agent id is unknown to the registry, or middleware resolution failed — the URN describes why.</exception>
+    /// <exception cref="ArgumentException">Thrown when the agent id is blank.</exception>
+    ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolve the manifest-authorised tool list for <paramref name="agentId"/>. Returns an empty
+    /// list when the manifest declares no tools. Used by the container-gateway <c>tools/list</c>
+    /// discovery endpoint to project a per-agent view of the tool surface — so a plugin sees only
+    /// the tools its manifest declares, not every tool every co-tenant agent in the deployment
+    /// registered. Closes the G3 discovery-leak gap.
+    /// </summary>
+    /// <exception cref="ManifestInstantiationException">The agent id is unknown to the registry, or tool resolution failed (e.g. an MCP server is declared but unavailable).</exception>
+    /// <exception cref="ArgumentException">Thrown when the agent id is blank.</exception>
+    ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken cancellationToken = default);
+
     // NB: InvalidateAsync is declared on IAgentManifestInvalidator (inherited).
     // AgentLifecycleManager (Control.InProcess) depends on the parent interface
     // to stay layering-friendly; consumers calling TranslateAsync see the full

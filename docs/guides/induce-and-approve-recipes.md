@@ -132,13 +132,7 @@ vais recipes show <proposalId>                        # status now Approved
 
 ## Producer-side coverage as of Plan D
 
-The trace middleware `DomainOntologyTraceMiddleware` is auto-wired into the south cartridge whenever an `IInterceptorTee` is registered AND the agent's tools reference an `McpServer` with `OntologyRef`. This means **native C# agents** with such tools emit trajectories naturally.
-
-**Python-plugin (and Go-container) agents that call tools via the runtime's container-gateway endpoint do not currently emit south trajectories** — the south substrate wires into the per-agent `ToolGatewayMiddleware` chain `AgentManifestTranslator` builds for in-process C# agents, but the container-gateway endpoint (`POST /v1/container-gateway/tools/invoke`) builds its own dispatcher over only the **globally-registered** middleware, so the per-agent south cartridge is missing. Closing this is its own follow-up — tracked at `plans/gaps/south-substrate-container-plugin-coverage-gap-2026-05-27.md` (recommended fix: factor out a `SouthCartridgeBuilder` helper both the translator and the gateway endpoint call).
-
-In the meantime: deployers who want trajectories from Python-plugin agents have two options:
-1. Route the plugin's tool calls through the runtime's MCP-gateway HTTP endpoint instead of contacting MCP servers directly (then the south chain on the gateway side will fire — once the gateway-side wiring lands).
-2. Write trajectory events directly via a custom producer interceptor on the plugin host. The recording adapter accepts any `InterceptorTeeEvent` carrying a `ToolCallTrajectoryPayload`, so deployer producers integrate without source changes.
+The trace middleware `DomainOntologyTraceMiddleware` is auto-wired into the south cartridge whenever an `IInterceptorTee` is registered AND the agent's tools reference an `McpServer` with `OntologyRef`. **Native C# agents and container-plugin agents (Python, Go) emit trajectories identically** — the container-gateway endpoint (`POST /v1/container-gateway/tools/invoke`) resolves the calling agent's per-agent `ToolGatewayMiddleware` chain through `IAgentManifestTranslator.ResolvePerAgentChainsAsync`, so the south cartridge fires on every plugin tool call exactly as it does for in-process calls.
 
 For the in-process correctness of the propose → approve → overlay-write → catalog-reload chain, see `OntologyCatalogReloaderTests.Decorator_ApproveTriggersOverlayWriteAndCatalogReload` — that integration test stands up the full chain against a real overlay file and the hot-reloadable catalog.
 

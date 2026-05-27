@@ -59,6 +59,7 @@ public sealed class ContainerGatewayEndpointTests : IAsyncLifetime
 
                     services.AddSingleton<ICompletionProviderPool>(new FakeProviderPool(_provider));
                     services.AddSingleton<LlmGatewayMiddleware>(_middleware);
+                    services.AddSingleton<IAgentManifestTranslator, PermissiveFakeTranslator>();
 
                     // Required so minimal-API binding can identify the tools/invoke handler
                     // service parameters. These endpoints are mapped by MapContainerGatewayEndpoints

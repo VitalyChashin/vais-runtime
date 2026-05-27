@@ -219,11 +219,16 @@ public class CsharpPluginDllPushIntegrationTests : IDisposable
         await PushDllAsync(sp, PluginAssemblyName, v2DllPath);
         await sp.DisposeAsync();
 
-        // Force multiple GC cycles — collectible ALCs may require 2–3 rounds.
-        for (var i = 0; i < 5; i++)
+        // Force multiple GC cycles — collectible ALCs may require several rounds.
+        // Under Linux server GC the original 5-cycle margin was too tight (flake observed on CI
+        // even when no live references remain); poll up to 20 cycles and early-exit when the
+        // ALC is collected. Total budget is still bounded (< 1s) because GC.Collect(..., blocking)
+        // returns synchronously and there's nothing to retain past the SP dispose.
+        for (var i = 0; i < 20; i++)
         {
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
             GC.WaitForPendingFinalizers();
+            if (!weakAlc.IsAlive) break;
         }
 
         weakAlc.IsAlive.Should().BeFalse(

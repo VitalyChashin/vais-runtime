@@ -339,6 +339,33 @@ public sealed class ContainerGatewayLlmCompleteSectionsTests : IAsyncLifetime
 
         public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken ct = default)
             => ValueTask.FromResult(false);
+
+        public ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken ct = default)
+        {
+            // Permissive fake: tests that don't pre-register OptionsByAgent get an empty
+            // PerAgentChains. The real translator throws AgentNotFound here; the fake's job is
+            // to provide chains for tests that don't care about per-agent middleware shape.
+            if (OptionsByAgent.TryGetValue(agentId, out var options))
+            {
+                return ValueTask.FromResult(new PerAgentChains(
+                    options.GatewayMiddleware, options.ToolGatewayMiddleware,
+                    options.InputMiddleware, options.Budget));
+            }
+            return ValueTask.FromResult(new PerAgentChains(
+                Array.Empty<LlmGatewayMiddleware>(),
+                Array.Empty<ToolGatewayMiddleware>(),
+                Array.Empty<AgentInputMiddleware>(),
+                Budget: null));
+        }
+
+        public ValueTask<IReadOnlyList<ITool>> ResolveAgentToolsAsync(string agentId, CancellationToken ct = default)
+        {
+            // Permissive fake: tests don't pre-register tool lists. Return any tool registry the
+            // test set on OptionsByAgent; else empty.
+            if (OptionsByAgent.TryGetValue(agentId, out var options) && options.ToolRegistry is { } reg)
+                return ValueTask.FromResult<IReadOnlyList<ITool>>(reg.Tools);
+            return ValueTask.FromResult<IReadOnlyList<ITool>>(Array.Empty<ITool>());
+        }
     }
 
     private sealed class FakeProviderPool(FakeProvider provider) : ICompletionProviderPool

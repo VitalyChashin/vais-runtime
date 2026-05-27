@@ -130,7 +130,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         HttpContext ctx,
         GatewayLlmCompleteRequest body,
         ICompletionProviderPool pool,
-        IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
+        IAgentManifestTranslator translator,
         CancellationToken ct)
     {
         // Discriminator: exactly one of Messages or Sections must be present (contract v0.27).
@@ -152,10 +152,32 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
 
         var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
         var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
+        }
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
-        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
+        // PAM-9: resolve the calling agent's manifest-configured middleware so LlmGatewayRef
+        // (and any extension chain) compose for plugin agents identically to in-process agents.
+        // Pre-PAM-9 this handler used only the DI-global chain.
+        PerAgentChains chains;
+        try
+        {
+            chains = await translator.ResolvePerAgentChainsAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found.",
+                detail: ex.Message);
+        }
+
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, chains.Llm, agentId, ct).ConfigureAwait(false);
 
         var modelId = string.IsNullOrEmpty(body.ModelId) ? "gpt-4o-mini" : body.ModelId;
         var provider = await pool.GetAsync(
@@ -180,15 +202,6 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         }
         else
         {
-            var translator = ctx.RequestServices.GetService<IAgentManifestTranslator>();
-            if (translator is null)
-            {
-                return Results.Problem(
-                    statusCode: StatusCodes.Status501NotImplemented,
-                    title: "Sections variant requires IAgentManifestTranslator registration.",
-                    detail: "Register IAgentManifestTranslator in DI (the runtime host does so automatically). " +
-                            "Hosts that don't register a translator support only the 'messages' variant.");
-            }
             var pipelineResult = await BuildFromSectionsAsync(
                 body.Sections!, body.Options, translator, agentId, agentCtx, ct).ConfigureAwait(false);
             if (pipelineResult.Error is not null)
@@ -347,9 +360,32 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         HttpContext ctx,
         OpenAiChatRequest body,
         ICompletionProviderPool pool,
-        IEnumerable<LlmGatewayMiddleware> gatewayMiddleware,
+        IAgentManifestTranslator translator,
         CancellationToken ct)
     {
+        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
+        }
+
+        // PAM-10: per-agent middleware resolution, symmetric with HandleLlmCompleteAsync.
+        PerAgentChains chains;
+        try
+        {
+            chains = await translator.ResolvePerAgentChainsAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found.",
+                detail: ex.Message);
+        }
+
         var provider = await pool.GetAsync(
             new ModelSpec("openai", body.Model, ApiKeyRef: "secret://env/OPENAI_API_KEY"), ct)
             .ConfigureAwait(false);
@@ -368,12 +404,10 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             MaxTokens:      body.MaxTokens,
             ResponseFormat: responseFormat);
 
-        var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
-        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
             ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
 
-        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, gatewayMiddleware, agentId, ct).ConfigureAwait(false);
+        var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, chains.Llm, agentId, ct).ConfigureAwait(false);
 
         var completionId = $"chatcmpl-{Guid.NewGuid():N}";
 
@@ -418,7 +452,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         IMcpServerRegistry? registry,
         IEnumerable<INamedToolSourceProvider> providers,
         IEnumerable<IToolGuardrail> guardrails,
-        IEnumerable<ToolGatewayMiddleware> toolMiddleware,
+        IAgentManifestTranslator translator,
         CancellationToken ct)
     {
         if (registry is null)
@@ -430,19 +464,42 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
 
         var runId   = ctx.Request.Headers["X-Run-Id"].FirstOrDefault()   ?? "";
         var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
+        }
         var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
+        // PAM-11: resolve the calling agent's per-agent tool chain so McpGatewayRef +
+        // OntologyRef-bound south cartridge + Plan C2 delegation governance apply for plugin
+        // agents, symmetric with how StatefulAiAgent runs the chain in-process. Pre-PAM-11 this
+        // handler used only the DI-global ToolGatewayMiddleware.
+        PerAgentChains chains;
+        try
+        {
+            chains = await translator.ResolvePerAgentChainsAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found.",
+                detail: ex.Message);
+        }
+
         // Extension-authored tool governance: concatenate the agent's toolGatewayMiddleware
-        // extension chain AFTER the statically-registered (DI) middleware, so a co-tenant
-        // container agent's tool calls are governed by `kind: Extension` exactly like C# agents.
+        // extension chain AFTER the per-agent middleware, so a co-tenant container agent's tool
+        // calls are governed by `kind: Extension` exactly like C# agents.
         var composer = ctx.RequestServices.GetService<IExtensionChainComposer>();
         var extToolChain = composer is null
             ? (IReadOnlyList<ToolGatewayMiddleware>)Array.Empty<ToolGatewayMiddleware>()
             : await composer.GetToolChainAsync(agentId, ct).ConfigureAwait(false);
         var mergedToolMiddleware = extToolChain.Count == 0
-            ? toolMiddleware
-            : toolMiddleware.Concat(extToolChain);
+            ? chains.Tool
+            : chains.Tool.Concat(extToolChain);
 
         // DefaultToolCallDispatcher gives us: IToolGuardrail Before/After hooks,
         // IAgentJournal append (when RunId is set), IAgentEventBus ToolCallStarted/Completed,
@@ -520,36 +577,45 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
     }
 
     private static async Task<IResult> HandleToolsListAsync(
-        IMcpServerRegistry? registry,
-        IEnumerable<INamedToolSourceProvider> providers,
+        HttpContext ctx,
+        IAgentManifestTranslator translator,
         CancellationToken ct)
     {
-        if (registry is null)
-            return Results.Ok(new GatewayToolListResponse());
-
-        var tools = new List<GatewayToolInfo>();
-        await foreach (var server in registry.ListAsync(ct: ct).ConfigureAwait(false))
+        // G3: project a per-agent view of the tool surface. Pre-fix this handler iterated every
+        // registered MCP server and returned every discovered tool to any authenticated caller —
+        // a co-tenant reconnaissance primitive. Now we ask the translator for the manifest-
+        // authorised tool list for the calling agent, exactly like the in-process path does via
+        // AgentManifestTranslator.ResolveToolsAsync.
+        var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault() ?? "";
+        if (string.IsNullOrEmpty(agentId))
         {
-            IToolSource? source = null;
-            foreach (var provider in providers)
-            {
-                source = provider.GetByName(server.Id);
-                if (source is not null) break;
-            }
-            if (source is null) continue;
-
-            await foreach (var tool in source.DiscoverAsync(ct).ConfigureAwait(false))
-            {
-                tools.Add(new GatewayToolInfo
-                {
-                    Name = tool.Name,
-                    Description = tool.Description,
-                    ParametersSchema = tool.ParametersSchema,
-                });
-            }
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Missing X-Agent-Id header.");
         }
 
-        return Results.Ok(new GatewayToolListResponse { Tools = tools });
+        IReadOnlyList<ITool> tools;
+        try
+        {
+            tools = await translator.ResolveAgentToolsAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (ManifestInstantiationException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: $"Agent '{agentId}' not found.",
+                detail: ex.Message);
+        }
+
+        return Results.Ok(new GatewayToolListResponse
+        {
+            Tools = tools.Select(t => new GatewayToolInfo
+            {
+                Name = t.Name,
+                Description = t.Description,
+                ParametersSchema = t.ParametersSchema,
+            }).ToList(),
+        });
     }
 
     private static async Task<IResult> HandleSectionsBuildAsync(
