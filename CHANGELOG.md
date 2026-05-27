@@ -303,6 +303,25 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Per-agent `RunBudget` now reaches LLM gateway middleware on the container-plugin path.**
+  Pre-fix `AgentContext` had no `Budget` field, so middleware running inside
+  `LlmGatewayPipeline` had no way to read a manifest-declared `RunBudget` and enforce
+  per-call caps. `StatefulAiAgent`'s outer turn loop enforces budget for in-process
+  agents, but plugin agents don't go through that loop — the runtime had zero
+  budget-aware enforcement reachable on the plugin path. G5 closes the *reachability*
+  half of the gap: new `AgentContext.Budget : RunBudget?` field (additive, init-only,
+  nullable); the four container-gateway handlers now resolve `PerAgentChains` BEFORE
+  pushing the context and pass `chains.Budget` (or `options.Budget` for sections/build)
+  into the `BuildAgentContextFromClaims` helper. Middleware reads via
+  `IAgentContextAccessor.Current.Budget` using the same pattern as
+  `LlmRateLimitMiddleware`. Two pieces deferred to small follow-up gaps:
+  (a) wiring the in-process push site to also populate `AgentContext.Budget` for
+  middleware-author symmetry; (b) shipping a reference `LlmPromptTokenCapMiddleware`
+  blocked on the tokenizer dependency question (`/4` heuristic vs. Tiktoken). Closes
+  the last open gap in the container-plugin coverage family (G1+G2+G3+G4+G5+G6).
+  Gap (closed): `plans/completed/llm-runbudget-per-call-enforcement-gap-2026-05-27.md`.
+  Research memo: `research/llm-runbudget-per-call-enforcement-2026-05-27.md`.
+
 - **Container-plugin agents now run `IAgentInputMiddleware` before the plugin sees the message.**
   Pre-fix the container-gateway path resolved `PerAgentChains.Input` (after G1+G2) but never
   invoked it — Plan C2's `CapabilityMapInputMiddleware` (the "your team" injection for

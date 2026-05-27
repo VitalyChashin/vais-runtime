@@ -137,14 +137,16 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
     /// <see cref="IAgentContextSetter"/>. Reads <see cref="AgentContextClaims"/> stashed on
     /// <see cref="HttpContext.Items"/> by the outer filter (set when the call-token is a v3
     /// claims-bearing token). Falls back to a minimal header-only context when claims are
-    /// absent (legacy two-segment token — backwards-compatible during rollout).
+    /// absent (legacy two-segment token — backwards-compatible during rollout). G5 also
+    /// propagates the manifest's <see cref="RunBudget"/> via <paramref name="budget"/> so
+    /// LLM gateway middleware can enforce per-call caps via <see cref="IAgentContextAccessor"/>.
     /// </summary>
-    private static AgentContext BuildAgentContextFromClaims(HttpContext ctx, string agentId, string runId)
+    private static AgentContext BuildAgentContextFromClaims(HttpContext ctx, string agentId, string runId, RunBudget? budget)
     {
         var claims = ctx.Items[AgentContextClaimsItemKey] as AgentContextClaims;
         if (claims is null)
         {
-            return new AgentContext(AgentName: agentId) { RunId = runId };
+            return new AgentContext(AgentName: agentId) { RunId = runId, Budget = budget };
         }
         return new AgentContext(AgentName: agentId)
         {
@@ -159,6 +161,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             AllowedTools = claims.AllowedTools is null ? null : new HashSet<string>(claims.AllowedTools),
             MaxChainDepth = claims.MaxChainDepth,
             BaselineRunId = claims.BaselineRunId,
+            Budget = budget,
         };
     }
 
@@ -209,12 +212,12 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Missing X-Agent-Id header.");
         }
-        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
-        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         // PAM-9: resolve the calling agent's manifest-configured middleware so LlmGatewayRef
         // (and any extension chain) compose for plugin agents identically to in-process agents.
         // Pre-PAM-9 this handler used only the DI-global chain.
+        // G5: resolved BEFORE the context push so chains.Budget can populate AgentContext.Budget,
+        // making the per-call RunBudget reachable from LlmGatewayMiddleware via the accessor.
         PerAgentChains chains;
         try
         {
@@ -227,6 +230,9 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 title: $"Agent '{agentId}' not found.",
                 detail: ex.Message);
         }
+
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId, chains.Budget);
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, chains.Llm, agentId, ct).ConfigureAwait(false);
 
@@ -456,7 +462,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             ResponseFormat: responseFormat);
 
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
-            ?.Push(BuildAgentContextFromClaims(ctx, agentId, runId));
+            ?.Push(BuildAgentContextFromClaims(ctx, agentId, runId, chains.Budget));
 
         var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, chains.Llm, agentId, ct).ConfigureAwait(false);
 
@@ -521,13 +527,12 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Missing X-Agent-Id header.");
         }
-        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
-        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         // PAM-11: resolve the calling agent's per-agent tool chain so McpGatewayRef +
         // OntologyRef-bound south cartridge + Plan C2 delegation governance apply for plugin
         // agents, symmetric with how StatefulAiAgent runs the chain in-process. Pre-PAM-11 this
         // handler used only the DI-global ToolGatewayMiddleware.
+        // G5: resolved BEFORE the context push so chains.Budget can populate AgentContext.Budget.
         PerAgentChains chains;
         try
         {
@@ -540,6 +545,9 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 title: $"Agent '{agentId}' not found.",
                 detail: ex.Message);
         }
+
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId, chains.Budget);
+        using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         // Extension-authored tool governance: concatenate the agent's toolGatewayMiddleware
         // extension chain AFTER the per-agent middleware, so a co-tenant container agent's tool
@@ -701,7 +709,10 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             .Select(PluginMessageToChatTurn)
             .ToArray();
 
-        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
+        // G5: sections/build already translated the full StatefulAgentOptions above, so pull the
+        // manifest's RunBudget directly from there. Sections-build doesn't itself enforce, but
+        // any LLM gateway middleware that subsequently observes the accessor sees the budget.
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId, options.Budget);
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         var sections = new List<Section>(capacity: candidateTurns.Length + 4);
