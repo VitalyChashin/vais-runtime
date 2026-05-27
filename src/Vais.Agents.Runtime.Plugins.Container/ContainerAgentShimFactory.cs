@@ -60,6 +60,12 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
                 LeaseStore: serviceProvider.GetRequiredService<IInvokeLeaseStore>())
             : null;
 
+        // G4: the shim reads IAgentContextAccessor.Current at mint time in AskAsync to forward the
+        // calling grain's AgentContext claims via the call-token. Nullable so test rigs that don't
+        // register an accessor still construct successfully (the shim falls back to a minimal
+        // header-derived context — same as the pre-G4 behavior).
+        var contextAccessor = serviceProvider.GetService<IAgentContextAccessor>();
+
         var shim = new ContainerAgentShim(
             supervisor: _supervisor,
             invokeClient: invokeClient,
@@ -71,6 +77,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             invokeTimeoutSeconds: _descriptor.InvokeTimeoutSeconds,
             sessionConfig: sessionConfig,
             invokeIdleTimeoutSeconds: _descriptor.InvokeIdleTimeoutSeconds,
+            contextAccessor: contextAccessor,
             logger: _loggerFactory.CreateLogger<ContainerAgentShim>());
 
         return ValueTask.FromResult<IAiAgent>(shim);

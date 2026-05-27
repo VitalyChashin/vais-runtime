@@ -32,6 +32,7 @@ internal sealed class ContainerAgentShim
     private readonly int _invokeTimeoutSeconds;
     private readonly ContainerSessionTokenConfig? _sessionConfig;
     private readonly int? _invokeIdleTimeoutSeconds;
+    private readonly IAgentContextAccessor? _contextAccessor;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -49,6 +50,7 @@ internal sealed class ContainerAgentShim
         int invokeTimeoutSeconds,
         ContainerSessionTokenConfig? sessionConfig,
         int? invokeIdleTimeoutSeconds,
+        IAgentContextAccessor? contextAccessor,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -61,6 +63,7 @@ internal sealed class ContainerAgentShim
         _invokeTimeoutSeconds = invokeTimeoutSeconds;
         _sessionConfig = sessionConfig;
         _invokeIdleTimeoutSeconds = invokeIdleTimeoutSeconds;
+        _contextAccessor = contextAccessor;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -117,8 +120,14 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
+        // AskAsync (unlike StreamAsync) doesn't receive AgentContext as a parameter, so read the
+        // grain-pushed context from the accessor. Falls back to a minimal context if no accessor
+        // is wired (e.g. unit tests) or no context has been pushed (unauthenticated dev path).
+        var invokeContext = _contextAccessor?.Current
+            ?? new AgentContext(AgentName: _manifest.Id) { RunId = graphRunId };
+
         var (callToken, renewTokenUrl, leaseId) =
-            await OpenSessionAsync(graphRunId ?? "", cancellationToken).ConfigureAwait(false);
+            await OpenSessionAsync(graphRunId ?? "", invokeContext, cancellationToken).ConfigureAwait(false);
         try
         {
             var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
@@ -161,8 +170,10 @@ internal sealed class ContainerAgentShim
             messages = await RunPreprocessorChainAsync(ctx, messages, cancellationToken).ConfigureAwait(false);
         }
 
+        // StreamAsync already receives AgentContext as a parameter; pass it through to the
+        // token-mint site so AgentContextClaims travel with the call.
         var (callToken, renewTokenUrl, leaseId) =
-            await OpenSessionAsync(graphRunId ?? "", cancellationToken).ConfigureAwait(false);
+            await OpenSessionAsync(graphRunId ?? "", context, cancellationToken).ConfigureAwait(false);
         try
         {
             var request = BuildInvokeRequest(messages, callToken, graphRunId, renewTokenUrl: renewTokenUrl);
@@ -407,19 +418,24 @@ internal sealed class ContainerAgentShim
     /// Opens an invoke for one turn and mints its call token. Session-mode plugins (config present)
     /// open an invoke lease, mint a short renewable token bound to that lease (carrying its leaseId),
     /// and receive the renewal URL; short-turn plugins get a single full-TTL token, no lease, no URL.
-    /// The returned <c>leaseId</c> must be passed to <see cref="ReleaseSessionAsync"/> in a finally.
+    /// The token carries <see cref="AgentContextClaims"/> projected from <paramref name="context"/>
+    /// so the plugin's gateway callbacks reconstruct the same <c>AgentContext</c> the grain had in hand
+    /// (G4 propagation). The returned <c>leaseId</c> must be passed to <see cref="ReleaseSessionAsync"/>
+    /// in a finally.
     /// </summary>
     private async Task<(string CallToken, string? RenewTokenUrl, string? LeaseId)> OpenSessionAsync(
-        string runId, CancellationToken ct)
+        string runId, AgentContext context, CancellationToken ct)
     {
+        var claims = AgentContextClaims.From(context);
+
         if (_sessionConfig is not { } sc)
-            return (_callTokenService.Generate(runId, _manifest.Id, _invokeTimeoutSeconds + 30), null, null);
+            return (_callTokenService.Generate(runId, _manifest.Id, claims, _invokeTimeoutSeconds + 30), null, null);
 
         var leaseId = Guid.NewGuid().ToString("N");
         await sc.LeaseStore.StartAsync(
             leaseId, runId, _manifest.Id, sc.SessionTtlSeconds,
             ContainerLeasePolicy.HeartbeatTtlSeconds(sc.RenewTokenTtlSeconds), ct).ConfigureAwait(false);
-        var token = _callTokenService.Generate(runId, _manifest.Id, leaseId, sc.RenewTokenTtlSeconds);
+        var token = _callTokenService.Generate(runId, _manifest.Id, leaseId, claims, sc.RenewTokenTtlSeconds);
         return (token, sc.RenewTokenUrl, leaseId);
     }
 
