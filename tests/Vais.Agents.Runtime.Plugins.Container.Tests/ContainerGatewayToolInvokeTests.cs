@@ -75,6 +75,7 @@ public sealed class ContainerGatewayToolInvokeTests : IAsyncLifetime
                     // the llm/complete tests assert whether the model was actually called.
                     services.AddSingleton<ICompletionProviderPool>(new StubProviderPool(_provider));
                     services.AddSingleton<LlmGatewayMiddleware>(new NoopLlmMiddleware());
+                    services.AddSingleton<IAgentManifestTranslator, PermissiveFakeTranslator>();
 
                     services.AddSingleton<AsyncLocalAgentContextAccessor>();
                     services.AddSingleton<IAgentContextAccessor>(sp => sp.GetRequiredService<AsyncLocalAgentContextAccessor>());

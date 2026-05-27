@@ -341,7 +341,22 @@ public sealed class ContainerGatewayLlmCompleteSectionsTests : IAsyncLifetime
             => ValueTask.FromResult(false);
 
         public ValueTask<PerAgentChains> ResolvePerAgentChainsAsync(string agentId, CancellationToken ct = default)
-            => throw new NotImplementedException("FakeTranslator does not implement ResolvePerAgentChainsAsync.");
+        {
+            // Permissive fake: tests that don't pre-register OptionsByAgent get an empty
+            // PerAgentChains. The real translator throws AgentNotFound here; the fake's job is
+            // to provide chains for tests that don't care about per-agent middleware shape.
+            if (OptionsByAgent.TryGetValue(agentId, out var options))
+            {
+                return ValueTask.FromResult(new PerAgentChains(
+                    options.GatewayMiddleware, options.ToolGatewayMiddleware,
+                    options.InputMiddleware, options.Budget));
+            }
+            return ValueTask.FromResult(new PerAgentChains(
+                Array.Empty<LlmGatewayMiddleware>(),
+                Array.Empty<ToolGatewayMiddleware>(),
+                Array.Empty<AgentInputMiddleware>(),
+                Budget: null));
+        }
     }
 
     private sealed class FakeProviderPool(FakeProvider provider) : ICompletionProviderPool
