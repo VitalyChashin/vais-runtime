@@ -66,6 +66,11 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
         // header-derived context — same as the pre-G4 behavior).
         var contextAccessor = serviceProvider.GetService<IAgentContextAccessor>();
 
+        // G6: the shim resolves PerAgentChains.Input via IAgentManifestTranslator at invoke time
+        // to run input middleware on the raw user message before sending to the plugin
+        // (P12 §1 — runtime owns input shaping). Nullable for test rigs without a translator.
+        var translator = serviceProvider.GetService<Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator>();
+
         var shim = new ContainerAgentShim(
             supervisor: _supervisor,
             invokeClient: invokeClient,
@@ -78,6 +83,7 @@ internal sealed class ContainerAgentShimFactory : IAgentHandlerFactory
             sessionConfig: sessionConfig,
             invokeIdleTimeoutSeconds: _descriptor.InvokeIdleTimeoutSeconds,
             contextAccessor: contextAccessor,
+            translator: translator,
             logger: _loggerFactory.CreateLogger<ContainerAgentShim>());
 
         return ValueTask.FromResult<IAiAgent>(shim);

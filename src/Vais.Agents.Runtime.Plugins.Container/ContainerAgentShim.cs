@@ -33,6 +33,7 @@ internal sealed class ContainerAgentShim
     private readonly ContainerSessionTokenConfig? _sessionConfig;
     private readonly int? _invokeIdleTimeoutSeconds;
     private readonly IAgentContextAccessor? _contextAccessor;
+    private readonly Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator? _translator;
     private readonly ILogger _logger;
 
     private IAgentGrainStateView? _grainState;
@@ -51,6 +52,7 @@ internal sealed class ContainerAgentShim
         ContainerSessionTokenConfig? sessionConfig,
         int? invokeIdleTimeoutSeconds,
         IAgentContextAccessor? contextAccessor,
+        Vais.Agents.Runtime.Instantiation.IAgentManifestTranslator? translator,
         ILogger logger)
     {
         _supervisor = supervisor;
@@ -64,6 +66,7 @@ internal sealed class ContainerAgentShim
         _sessionConfig = sessionConfig;
         _invokeIdleTimeoutSeconds = invokeIdleTimeoutSeconds;
         _contextAccessor = contextAccessor;
+        _translator = translator;
         _logger = logger;
         Session = new InMemoryAgentSession(manifest.Id);
     }
@@ -104,6 +107,12 @@ internal sealed class ContainerAgentShim
         activity?.SetTag("gen_ai.prompt", userMessage);
         var graphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
         if (graphRunId is not null) activity?.SetTag("graph.run_id", graphRunId);
+
+        // G6: shape the raw user message through the per-agent IAgentInputMiddleware chain
+        // BEFORE sending to the plugin. P12 §1 — runtime owns input shaping. Today's only impl
+        // is CapabilityMapInputMiddleware (Plan C2 "your team" injection for coordinators with
+        // LocalAgents); future memory/HCM/DIEE middleware plug in here.
+        userMessage = await RunInputMiddlewareAsync(userMessage, graphRunId, cancellationToken).ConfigureAwait(false);
 
         await EnsureLiveAsync(cancellationToken).ConfigureAwait(false);
 
@@ -153,6 +162,10 @@ internal sealed class ContainerAgentShim
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
+
+        // G6: shape the raw user message through the per-agent IAgentInputMiddleware chain.
+        // Same path as AskAsync — see comment there for rationale (P12 §1).
+        userMessage = await RunInputMiddlewareAsync(userMessage, context.RunId, cancellationToken).ConfigureAwait(false);
 
         using var activity = _activitySource.StartActivity("container.agent.stream", ActivityKind.Internal);
         activity?.SetTag("vais.agent.name", _manifest.Id);
@@ -538,6 +551,52 @@ internal sealed class ContainerAgentShim
         foreach (var p in _preprocessors)
             messages = await p.ProcessAsync(ctx, messages, ct).ConfigureAwait(false);
         return messages;
+    }
+
+    /// <summary>
+    /// G6: run the per-agent <see cref="AgentInputMiddleware"/> chain on the raw user message
+    /// before the shim sends it to the plugin. Resolves the chain via
+    /// <c>IAgentManifestTranslator.ResolvePerAgentChainsAsync</c> (cached after first call). Skips
+    /// silently when no translator is wired (test rigs) or no input middleware is registered.
+    /// </summary>
+    private async Task<string> RunInputMiddlewareAsync(string userMessage, string? runId, CancellationToken ct)
+    {
+        if (_translator is null) return userMessage;
+
+        Vais.Agents.Runtime.Instantiation.PerAgentChains chains;
+        try
+        {
+            chains = await _translator.ResolvePerAgentChainsAsync(_manifest.Id, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Defensive: if the manifest is unreachable mid-call, fall back to the raw message
+            // rather than failing the whole invocation. The downstream gateway will surface the
+            // real error if there is one.
+            _logger.LogWarning(ex, "Failed to resolve per-agent chains for input middleware; skipping shaping.");
+            return userMessage;
+        }
+
+        if (chains.Input.Count == 0) return userMessage;
+
+        var inputCtx = new AgentInputContext
+        {
+            AgentId = _manifest.Id,
+            RunId = runId,
+            Message = userMessage,
+        };
+
+        // Right-to-left composition, same shape as LlmGatewayPipeline.
+        Func<Task> next = () => Task.CompletedTask;
+        for (var i = chains.Input.Count - 1; i >= 0; i--)
+        {
+            var mw = chains.Input[i];
+            var localNext = next;
+            next = () => mw.InvokeAsync(inputCtx, localNext, ct);
+        }
+        await next().ConfigureAwait(false);
+
+        return inputCtx.Message;
     }
 
     private static AgentContext BuildOperationContext(string? graphRunId) =>

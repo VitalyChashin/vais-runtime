@@ -303,6 +303,21 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Container-plugin agents now run `IAgentInputMiddleware` before the plugin sees the message.**
+  Pre-fix the container-gateway path resolved `PerAgentChains.Input` (after G1+G2) but never
+  invoked it — Plan C2's `CapabilityMapInputMiddleware` (the "your team" injection for
+  coordinator agents) silently no-opped for plugin coordinators, and any future input
+  middleware (memory summarisation, HCM, DIEE) would inherit the same blind spot. Direct
+  violation of P12 §1 ("runtime owns input shaping via `IAgentInputMiddleware`").
+  Fix (G6): `ContainerAgentShim` now resolves the per-agent input chain via
+  `IAgentManifestTranslator.ResolvePerAgentChainsAsync` at invoke time and runs the chain
+  over the raw user message inside `AskAsync` / `StreamAsync` before sending the invoke
+  request to the plugin. Plugin receives the shaped message via the existing invoke wire
+  shape — no SDK changes, no protocol changes. Symmetric with how the shim already runs
+  `IAgentPreprocessor` on the message list. Skips silently when no translator is wired
+  (test rigs) or no input middleware is registered (typical non-coordinator agents).
+  Gap (closed): `plans/completed/container-plugin-input-middleware-gap-2026-05-27.md`.
+
 - **Container-plugin agents now see the full per-call `AgentContext` for downstream policy.**
   Pre-fix the container-gateway endpoints fabricated an `AgentContext` from just the
   `X-Agent-Id` and `X-Run-Id` headers; `Scopes` / `WorkspaceId` / `PrivilegeLevel` /
@@ -323,10 +338,10 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
   token, re-mints with the same claims. Legacy two-segment tokens parse with `claims = null`
   for backwards-compat during rollout; handlers fall back to header-only context in that case.
   Gap (closed): `plans/completed/container-plugin-agent-context-propagation-gap-2026-05-27.md`.
-  Research memo: `research/agent-context-propagation-to-plugins-2026-05-27.md`. Closes the
-  last open gap in the container-plugin coverage family (G1+G2+G3+G4); G5
-  (per-call `RunBudget` enforcement) and G6 (`IAgentInputMiddleware` invocation pattern
-  in plugin endpoints) remain open as separate design-first follow-ups.
+  Research memo: `research/agent-context-propagation-to-plugins-2026-05-27.md`. G6
+  (`IAgentInputMiddleware` invocation pattern) is now closed in the same release (see entry
+  above). G5 (per-call `RunBudget` enforcement) remains open as a separate design-first
+  follow-up.
 
 - **Container-plugin `tools/list` is now per-agent, not the bulk MCP registry.** Pre-fix
   `GET /v1/container-gateway/tools/list` iterated every server returned by

@@ -203,6 +203,7 @@ public sealed class ContainerAgentShimTests
             sessionConfig: sessionConfig,
             invokeIdleTimeoutSeconds: invokeIdleTimeoutSeconds,
             contextAccessor: null,
+            translator: null,
             logger: NullLogger.Instance);
 
         return (shim, handler);
