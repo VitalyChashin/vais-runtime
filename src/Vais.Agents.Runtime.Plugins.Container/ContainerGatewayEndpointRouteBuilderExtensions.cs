@@ -25,6 +25,14 @@ namespace Vais.Agents.Runtime.Plugins.Container;
 public static class ContainerGatewayEndpointRouteBuilderExtensions
 {
     /// <summary>
+    /// <c>HttpContext.Items</c> key under which the outer filter stashes the
+    /// <see cref="AgentContextClaims"/> extracted from the call-token, so handlers can
+    /// reconstruct the calling grain's <see cref="AgentContext"/>. Null when the token is
+    /// a legacy two-segment token without claims (backwards-compat during rollout).
+    /// </summary>
+    private const string AgentContextClaimsItemKey = "vais.agent-context-claims";
+
+    /// <summary>
     /// Adds the container gateway callback endpoints. Call this from the runtime host's
     /// pipeline setup on the internal port (typically 5001).
     /// </summary>
@@ -45,7 +53,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 ? authHeader["Bearer ".Length..] : "";
 
             if (string.IsNullOrEmpty(bearerToken)
-                || !callTokenService.TryExtract(bearerToken, out var r, out var a, out var leaseId)
+                || !callTokenService.TryExtract(bearerToken, out var r, out var a, out var leaseId, out var claims)
                 || r != runId || a != agentId)
                 return Results.Unauthorized();
 
@@ -55,6 +63,11 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             if (!string.IsNullOrEmpty(leaseId)
                 && (livenessCache is null || !await livenessCache.IsLiveAsync(leaseId)))
                 return Results.Unauthorized();
+
+            // G4: stash the call-token's AgentContextClaims for handlers to consume. Null for legacy
+            // two-segment tokens — handlers fall back to header-only context (backwards-compat).
+            if (claims is not null)
+                ctx.HttpContext.Items[AgentContextClaimsItemKey] = claims;
 
             return await next(ctx);
         });
@@ -90,8 +103,12 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
         var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
         var bearerToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
             ? authHeader["Bearer ".Length..] : "";
-        callTokenService.TryExtract(bearerToken, out _, out _, out var leaseId);
+        callTokenService.TryExtract(bearerToken, out _, out _, out var leaseId, out var claims);
 
+        // G4: preserve AgentContextClaims across renewal — read from the (still-valid) old token,
+        // mint the new one carrying the same claims. The load-bearing property that makes claims
+        // self-contained in the token, no separate per-run store needed. A null claims means the
+        // old token was a legacy two-segment token (pre-G4); the new token stays in that shape.
         string token;
         if (!string.IsNullOrEmpty(leaseId))
         {
@@ -100,15 +117,49 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 return Results.Unauthorized();
 
             await leaseStore.HeartbeatAsync(leaseId, ContainerLeasePolicy.HeartbeatTtlSeconds(ttl));
-            token = callTokenService.Generate(runId, agentId, leaseId, ttl);
+            token = claims is null
+                ? callTokenService.Generate(runId, agentId, leaseId, ttl)
+                : callTokenService.Generate(runId, agentId, leaseId, claims, ttl);
         }
         else
         {
-            token = callTokenService.Generate(runId, agentId, ttl);
+            token = claims is null
+                ? callTokenService.Generate(runId, agentId, ttl)
+                : callTokenService.Generate(runId, agentId, claims, ttl);
         }
 
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(ttl).ToUnixTimeSeconds();
         return Results.Ok(new TokenRenewResponse { Token = token, ExpiresAt = expiresAt });
+    }
+
+    /// <summary>
+    /// Reconstructs the per-call <see cref="AgentContext"/> handlers push onto
+    /// <see cref="IAgentContextSetter"/>. Reads <see cref="AgentContextClaims"/> stashed on
+    /// <see cref="HttpContext.Items"/> by the outer filter (set when the call-token is a v3
+    /// claims-bearing token). Falls back to a minimal header-only context when claims are
+    /// absent (legacy two-segment token — backwards-compatible during rollout).
+    /// </summary>
+    private static AgentContext BuildAgentContextFromClaims(HttpContext ctx, string agentId, string runId)
+    {
+        var claims = ctx.Items[AgentContextClaimsItemKey] as AgentContextClaims;
+        if (claims is null)
+        {
+            return new AgentContext(AgentName: agentId) { RunId = runId };
+        }
+        return new AgentContext(AgentName: agentId)
+        {
+            RunId = runId,
+            UserId = claims.UserId,
+            TenantId = claims.TenantId,
+            CorrelationId = claims.CorrelationId,
+            WorkspaceId = claims.WorkspaceId,
+            PrivilegeLevel = claims.PrivilegeLevel,
+            AutonomyLevel = claims.AutonomyLevel,
+            Scopes = claims.Scopes,
+            AllowedTools = claims.AllowedTools is null ? null : new HashSet<string>(claims.AllowedTools),
+            MaxChainDepth = claims.MaxChainDepth,
+            BaselineRunId = claims.BaselineRunId,
+        };
     }
 
     /// <summary>
@@ -158,7 +209,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Missing X-Agent-Id header.");
         }
-        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         // PAM-9: resolve the calling agent's manifest-configured middleware so LlmGatewayRef
@@ -405,7 +456,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             ResponseFormat: responseFormat);
 
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()
-            ?.Push(new AgentContext(AgentName: agentId) { RunId = runId });
+            ?.Push(BuildAgentContextFromClaims(ctx, agentId, runId));
 
         var effectiveMiddleware = await MergeLlmExtensionsAsync(ctx, chains.Llm, agentId, ct).ConfigureAwait(false);
 
@@ -470,7 +521,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Missing X-Agent-Id header.");
         }
-        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         // PAM-11: resolve the calling agent's per-agent tool chain so McpGatewayRef +
@@ -650,7 +701,7 @@ public static class ContainerGatewayEndpointRouteBuilderExtensions
             .Select(PluginMessageToChatTurn)
             .ToArray();
 
-        var agentCtx = new AgentContext(AgentName: agentId) { RunId = runId };
+        var agentCtx = BuildAgentContextFromClaims(ctx, agentId, runId);
         using var _ = ctx.RequestServices.GetService<IAgentContextSetter>()?.Push(agentCtx);
 
         var sections = new List<Section>(capacity: candidateTurns.Length + 4);
