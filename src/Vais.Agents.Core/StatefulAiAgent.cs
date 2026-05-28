@@ -512,6 +512,10 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         var sw = Stopwatch.StartNew();
 
         using var activity = StartTurnActivity(context);
+        // Mirror AskAsync's prompt tagging so Langfuse shows the user message as the chat
+        // turn's input on the streaming path too (AnnotateTurnActivity already sets the
+        // completion at end-of-run).
+        activity?.SetTag("gen_ai.prompt", userMessage);
 
         var turnStarted = new TurnStarted(startedAt, eventContext, userMessage);
         await PublishEventAsync(turnStarted, cancellationToken).ConfigureAwait(false);

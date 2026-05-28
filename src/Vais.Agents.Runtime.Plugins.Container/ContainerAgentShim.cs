@@ -169,6 +169,9 @@ internal sealed class ContainerAgentShim
 
         using var activity = _activitySource.StartActivity("container.agent.stream", ActivityKind.Internal);
         activity?.SetTag("vais.agent.name", _manifest.Id);
+        // Match container.agent.ask's prompt/completion tagging so Langfuse shows the user
+        // message + final assistant text on the streaming span (and at trace level).
+        activity?.SetTag("gen_ai.prompt", userMessage);
         var graphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
 
         await EnsureLiveAsync(cancellationToken).ConfigureAwait(false);
@@ -222,6 +225,11 @@ internal sealed class ContainerAgentShim
             _history.Add(new ChatTurn(AgentChatRole.User, userMessage));
             _history.Add(BuildAssistantTurn(collected.FinalResponse));
             _opaqueStateJson = SerialiseOpaqueState(collected.FinalResponse.OpaqueState);
+
+            if (!string.IsNullOrEmpty(collected.FinalResponse.AssistantMessage))
+            {
+                activity?.SetTag("gen_ai.completion", collected.FinalResponse.AssistantMessage);
+            }
 
             yield return new TurnCompleted(
                 DateTimeOffset.UtcNow, context, collected.FinalResponse.AssistantMessage,
