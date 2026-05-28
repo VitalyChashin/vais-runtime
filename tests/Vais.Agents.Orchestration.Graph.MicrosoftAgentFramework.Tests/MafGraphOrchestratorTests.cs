@@ -735,11 +735,69 @@ public sealed class MafGraphOrchestratorTests
         }
 
         // MAF surfaces both an ExecutorFailedEvent (node-attributable) and a
-        // WorkflowErrorEvent (framework-level); the node failure must carry the node id.
-        events.OfType<GraphFailed>().Should().Contain(f => f.FailedNodeId == "work");
+        // WorkflowErrorEvent (framework-level). After Phase 2 of the graph-invoke-restart-cascade
+        // fix the framework-level event is suppressed as a duplicate, so exactly one GraphFailed
+        // event reaches the consumer and it carries the node id.
+        events.OfType<GraphFailed>().Should().ContainSingle()
+            .Which.FailedNodeId.Should().Be("work");
 
         logger.Entries.Should().Contain(e =>
             e.Level == LogLevel.Error && e.Message.Contains("work"));
+    }
+
+    // ---- Phase 2: WorkflowErrorEvent translation carries FailedNodeId via tracker ----
+
+    /// <summary>
+    /// Regression for Phase 2 of plans/graph-invoke-restart-cascade-fix-2026-05-28.md.
+    /// Pre-fix WorkflowErrorEvent → GraphFailed with FailedNodeId=null, then the empty key
+    /// triggered an ArgumentException in the composer that masked the real failure as a 400
+    /// Bad Request at the HTTP layer. Post-fix the ExecutorFailedEvent-emitted GraphFailed
+    /// carries FailedNodeId and the WorkflowErrorEvent duplicate is suppressed.
+    /// </summary>
+    [Fact]
+    public async Task NodeFailure_WorkflowError_Duplicate_Is_Suppressed()
+    {
+        var (registry, lifecycle) = BuildHarness(_ =>
+            throw new InvalidOperationException("boom"));
+        await lifecycle.CreateAsync(ManifestFor("planner"));
+
+        var manifest = new AgentGraphManifest(
+            Id: "wf-error-dedup", Version: "1.0", Entry: "planner",
+            Nodes: new[]
+            {
+                new GraphNode("planner", "Agent", Ref: new GraphAgentRef("planner")),
+                new GraphNode("end", "End"),
+            },
+            Edges: new[] { new GraphEdge("planner", "end") });
+
+        var logger = new CapturingLogger();
+        var orchestrator = new MafGraphOrchestrator(manifest, registry, lifecycle, logger: logger);
+
+        var events = new List<AgentGraphEvent>();
+        try
+        {
+            await foreach (var e in orchestrator.StreamAsync(
+                new Dictionary<string, JsonElement>(), new AgentContext()))
+            {
+                events.Add(e);
+            }
+        }
+        catch
+        {
+            // Stream may surface the executor exception; the GraphFailed event we assert on
+            // is still emitted upstream of any throw.
+        }
+
+        var failures = events.OfType<GraphFailed>().ToList();
+        failures.Should().ContainSingle("the duplicate WorkflowErrorEvent must be suppressed");
+        failures[0].FailedNodeId.Should().Be("planner",
+            "the node-attributable ExecutorFailedEvent must propagate the executor id");
+
+        // The suppressed duplicate is still logged at Debug for diagnosability.
+        logger.Entries.Should().Contain(e =>
+            e.Level == LogLevel.Debug && e.Message.Contains("suppressed duplicate"),
+            "the suppressed duplicate workflow error should still log at Debug so operators "
+            + "see the workflow-level surface when investigating");
     }
 
     // ---- §1d: node-level retry policy ----
@@ -937,6 +995,114 @@ public sealed class MafGraphOrchestratorTests
         var failed = events.OfType<GraphFailed>().Should().ContainSingle(f => f.FailedNodeId == "work").Which;
         failed.ErrorType.Should().Be("Timeout", "ErrorType is immutable (P9)");
         failed.ErrorMessage.Should().StartWith("[graph#7] ", "the errorInterceptor rewrote the surfaced message");
+    }
+
+    // ---- Phase 3: FoldGraphFailedAsync guards against empty key ----
+
+    private sealed class ThrowingErrorComposer : Vais.Agents.Runtime.Extensions.IExtensionChainComposer
+    {
+        public bool CalledForErrorInterceptor { get; private set; }
+        public Task<IReadOnlyList<AgentInputMiddleware>> GetInputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentInputMiddleware>>(Array.Empty<AgentInputMiddleware>());
+        public Task<IReadOnlyList<AgentOutputMiddleware>> GetOutputChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<AgentOutputMiddleware>>(Array.Empty<AgentOutputMiddleware>());
+        public Task<IReadOnlyList<ToolGatewayMiddleware>> GetToolChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<ToolGatewayMiddleware>>(Array.Empty<ToolGatewayMiddleware>());
+        public Task<IReadOnlyList<LlmGatewayMiddleware>> GetLlmChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<LlmGatewayMiddleware>>(Array.Empty<LlmGatewayMiddleware>());
+        public Task<IReadOnlyList<ErrorInterceptor>> GetErrorInterceptorChainAsync(string a, CancellationToken c = default)
+        {
+            CalledForErrorInterceptor = true;
+            // Mimic the real-world cascade: composer ultimately calls IAgentRegistry.GetAsync(a)
+            // which throws ArgumentException("id") when a is empty.
+            if (string.IsNullOrWhiteSpace(a))
+                throw new ArgumentException(
+                    "The value cannot be an empty string or composed entirely of whitespace.", "id");
+            return Task.FromResult<IReadOnlyList<ErrorInterceptor>>(Array.Empty<ErrorInterceptor>());
+        }
+        public Task<IReadOnlyList<GraphNodeMiddleware>> GetGraphNodeChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<GraphNodeMiddleware>>(Array.Empty<GraphNodeMiddleware>());
+        public Task<IReadOnlyList<SessionLifecycleHook>> GetSessionLifecycleChainAsync(string a, CancellationToken c = default)
+            => Task.FromResult<IReadOnlyList<SessionLifecycleHook>>(Array.Empty<SessionLifecycleHook>());
+        public void InvalidateAgent(string a) { }
+        public void InvalidateAll() { }
+    }
+
+    /// <summary>
+    /// Regression for Phase 3 of plans/graph-invoke-restart-cascade-fix-2026-05-28.md.
+    /// Pre-fix FoldGraphFailedAsync resolved `key = string.Empty` when neither FailedNodeId
+    /// nor Context.AgentName was set, then called the composer which crashed with
+    /// ArgumentException("id") inside OrleansAgentRegistry.GetAsync, masking the real
+    /// GraphFailed behind a 400 Bad Request at the HTTP layer.
+    /// </summary>
+    [Fact]
+    public async Task FoldGraphFailed_EmptyKey_Skips_Composer_And_Returns_Event_Unchanged()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "fold-empty-key", Version: "1.0", Entry: "end",
+            Nodes: new[] { new GraphNode("end", "End") },
+            Edges: Array.Empty<GraphEdge>());
+
+        var composer = new ThrowingErrorComposer();
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle,
+            errorInterceptorComposer: composer);
+
+        // Build a GraphFailed with no node identity and no agent name in context.
+        var graphFailed = new GraphFailed(
+            DateTimeOffset.UtcNow,
+            new AgentContext(),
+            RunId: "run-x",
+            SuperStep: 0,
+            ErrorType: "WorkflowError",
+            ErrorMessage: "synthetic graph-level error",
+            Duration: TimeSpan.Zero,
+            FailedNodeId: null);
+
+        var result = await orchestrator.FoldGraphFailedAsync(graphFailed, default);
+
+        result.Should().BeSameAs(graphFailed,
+            "the empty-key guard must short-circuit and return the input event unchanged");
+        composer.CalledForErrorInterceptor.Should().BeFalse(
+            "the composer must never be invoked when the key would be empty (it would throw "
+            + "ArgumentException(\"id\") and bubble up to the HTTP layer as a misleading 400)");
+    }
+
+    /// <summary>
+    /// Positive regression for the guard — when a key IS present, FoldGraphFailedAsync still
+    /// runs the composer chain as before (locks against over-guarding).
+    /// </summary>
+    [Fact]
+    public async Task FoldGraphFailed_KeyPresent_Still_Calls_Composer()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manifest = new AgentGraphManifest(
+            Id: "fold-key-present", Version: "1.0", Entry: "end",
+            Nodes: new[] { new GraphNode("end", "End") },
+            Edges: Array.Empty<GraphEdge>());
+
+        var composer = new ThrowingErrorComposer();
+        var orchestrator = new MafGraphOrchestrator(
+            manifest, registry, lifecycle,
+            errorInterceptorComposer: composer);
+
+        var graphFailed = new GraphFailed(
+            DateTimeOffset.UtcNow,
+            new AgentContext(),
+            RunId: "run-y",
+            SuperStep: 0,
+            ErrorType: "Timeout",
+            ErrorMessage: "took too long",
+            Duration: TimeSpan.Zero,
+            FailedNodeId: "planner");
+
+        var result = await orchestrator.FoldGraphFailedAsync(graphFailed, default);
+
+        result.Should().BeSameAs(graphFailed,
+            "with no interceptors registered, the event is returned unchanged (but the composer was invoked)");
+        composer.CalledForErrorInterceptor.Should().BeTrue(
+            "the composer must be invoked when a non-empty key is available");
     }
 
     [Fact]
