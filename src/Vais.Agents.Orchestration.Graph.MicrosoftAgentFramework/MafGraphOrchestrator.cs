@@ -723,12 +723,24 @@ public class MafGraphOrchestrator<TState> : IAgentGraph<TState>, IResumableAgent
     /// graph context name for graph-level failures; the latter matches cluster-wide interceptors only.
     /// <c>ErrorType</c> and the failure itself are never changed (P9). No-op without a composer.
     /// </summary>
-    private async Task<AgentGraphEvent> FoldGraphFailedAsync(AgentGraphEvent evt, CancellationToken cancellationToken)
+    // Internal for testing — the empty-key guard is hard to exercise via a real graph run
+    // (MAF reliably emits ExecutorInvokedEvent before any error path), so the regression test
+    // for the guard invokes this directly. See plans/graph-invoke-restart-cascade-fix-2026-05-28.md
+    // Phase 3.
+    internal async Task<AgentGraphEvent> FoldGraphFailedAsync(AgentGraphEvent evt, CancellationToken cancellationToken)
     {
         if (_errorInterceptorComposer is null || evt is not GraphFailed gf)
             return evt;
 
-        var key = gf.FailedNodeId ?? gf.Context.AgentName ?? string.Empty;
+        // Skip composer resolution when we have no identity to key on. The composer
+        // ultimately calls IAgentRegistry.GetAsync(key, ...) (DefaultExtensionChainComposer
+        // → OrleansAgentRegistry.GetAsync) which throws ArgumentException("id") on empty.
+        // Pre-guard the underlying GraphFailed flowed back as a 400 "Bad request" at the
+        // HTTP layer, masking the real ErrorType. See Phase 3 of
+        // plans/graph-invoke-restart-cascade-fix-2026-05-28.md.
+        var key = gf.FailedNodeId ?? gf.Context.AgentName;
+        if (string.IsNullOrWhiteSpace(key))
+            return evt;
         var chain = await _errorInterceptorComposer.GetErrorInterceptorChainAsync(key, cancellationToken).ConfigureAwait(false);
         if (chain.Count == 0)
             return evt;
