@@ -69,14 +69,62 @@ public sealed class AgentLifecycleManagerTests
     }
 
     [Fact]
-    public async Task Invoke_Unknown_Handle_Throws()
+    public async Task Invoke_Unknown_Handle_Throws_AgentHandleNotFound()
     {
         var (manager, registry, _) = BuildManager();
         registry.Register(SupportManifest);
 
         var ghostHandle = new AgentHandle("support", "9.9");
-        await FluentActions.Invoking(async () => await manager.InvokeAsync(ghostHandle, new AgentInvocationRequest("hi")))
-            .Should().ThrowAsync<InvalidOperationException>();
+        var ex = await FluentActions.Invoking(async () => await manager.InvokeAsync(ghostHandle, new AgentInvocationRequest("hi")))
+            .Should().ThrowAsync<AgentHandleNotFoundException>();
+        ex.Which.AgentId.Should().Be("support");
+        ex.Which.Version.Should().Be("9.9");
+    }
+
+    [Fact]
+    public async Task Invoke_RegistrySeededOutOfBand_LazyHydrates_State_And_Succeeds()
+    {
+        // Models silo restart: the durable registry recovers the manifest (here we register
+        // it directly without going through manager.CreateAsync) but the in-process _state
+        // counter dict is empty. Pre-fix InvokeAsync threw "Unknown agent handle"; post-fix
+        // it lazy-hydrates a zero AgentState and returns the agent's reply.
+        var provider = new FakeCompletionProvider(_ => new CompletionResponse("hello back"));
+        var (manager, registry, audit) = BuildManager(provider);
+        registry.Register(SupportManifest);
+
+        var handle = new AgentHandle("support", "1.0");
+        var result = await manager.InvokeAsync(handle, new AgentInvocationRequest("hi"));
+
+        result.Text.Should().Be("hello back");
+        audit.Entries.Select(e => e.Operation).Should().Equal(PolicyOperation.Invoke);
+        audit.Entries[0].ErrorType.Should().BeNull("lazy-hydrate succeeded; no errorType should be audited");
+    }
+
+    [Fact]
+    public async Task Invoke_AfterLazyHydrate_NewVersionViaCreateAsync_StillSucceeds()
+    {
+        // Regression against GetOrAdd swallowing later explicit registrations: once we've
+        // lazy-hydrated v1 from the registry, registering v2 via CreateAsync must still
+        // work, and both versions must be invokable independently.
+        var provider = new FakeCompletionProvider(req =>
+            new CompletionResponse(req.History.LastOrDefault()?.Text ?? "(none)"));
+        var (manager, registry, _) = BuildManager(provider);
+        registry.Register(SupportManifest);
+
+        // First invoke triggers lazy-hydrate for v1.
+        var v1 = await manager.InvokeAsync(new AgentHandle("support", "1.0"), new AgentInvocationRequest("first"));
+        v1.Text.Should().Be("first");
+
+        // Register a new version through the manager's normal CreateAsync path.
+        var v2Manifest = SupportManifest with { Version = "2.0" };
+        var v2Handle = await manager.CreateAsync(v2Manifest);
+        v2Handle.Version.Should().Be("2.0");
+
+        // Both versions invokable.
+        var v2 = await manager.InvokeAsync(v2Handle, new AgentInvocationRequest("second"));
+        v2.Text.Should().Be("second");
+        var v1Again = await manager.InvokeAsync(new AgentHandle("support", "1.0"), new AgentInvocationRequest("third"));
+        v1Again.Text.Should().Be("third");
     }
 
     [Fact]

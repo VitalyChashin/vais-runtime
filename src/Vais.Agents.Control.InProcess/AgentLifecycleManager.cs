@@ -117,9 +117,21 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
         var resolvedVersion = manifest?.Version ?? handle.Version;
         if (!_state.TryGetValue((handle.AgentId, resolvedVersion), out var state))
         {
-            await AuditAsync(PolicyOperation.Invoke, handle.AgentId, resolvedVersion, principal, allowed: true, denyReason: null, errorType: UnknownAgentErrorType).ConfigureAwait(false);
-            RecordVerb(PolicyOperation.Invoke, outcome: "errored", duration: null);
-            throw new InvalidOperationException($"Unknown agent handle: {handle.AgentId}/{resolvedVersion}. Call CreateAsync first.");
+            if (manifest is null)
+            {
+                // Genuine "agent doesn't exist" — typed not-found maps to 404 + a typed URN
+                // at the HTTP layer (urn:vais-agents:agent-handle-not-found).
+                await AuditAsync(PolicyOperation.Invoke, handle.AgentId, resolvedVersion, principal, allowed: true, denyReason: null, errorType: UnknownAgentErrorType).ConfigureAwait(false);
+                RecordVerb(PolicyOperation.Invoke, outcome: "errored", duration: null);
+                throw new AgentHandleNotFoundException(handle.AgentId, resolvedVersion);
+            }
+            // Registry has the manifest but _state is empty — lazy-hydrate so the verb
+            // works after a silo restart (where Orleans grain storage recovers manifests
+            // but the in-process counter dict starts fresh). Mirrors the pattern in
+            // AgentGraphLifecycleManager.ResolveEntryAsync (PR #116). Zero-value
+            // AgentState is correct: any prior invoke's CTS / running flag were already
+            // owned by the previous process and are irrecoverable.
+            state = _state.GetOrAdd((handle.AgentId, resolvedVersion), _ => new AgentState());
         }
 
         using var activity = StartVerbActivity(PolicyOperation.Invoke, manifest, principal);

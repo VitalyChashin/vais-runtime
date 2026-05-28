@@ -23,6 +23,9 @@ public static class ProblemDetailsMapping
     /// <summary>Unknown agent handle on Query / Invoke / Signal / Cancel / Evict / Update.</summary>
     public const string AgentNotFoundType = TypePrefix + "agent-not-found";
 
+    /// <summary>Typed agent-handle-not-found from <see cref="AgentHandleNotFoundException"/> (parallel to <see cref="GraphHandleNotFoundType"/>).</summary>
+    public const string AgentHandleNotFoundType = TypePrefix + "agent-handle-not-found";
+
     /// <summary>Policy engine denied the verb.</summary>
     public const string PolicyDeniedType = TypePrefix + "policy-denied";
 
@@ -225,6 +228,7 @@ public static class ProblemDetailsMapping
         System.Text.Json.JsonException => (StatusCodes.Status400BadRequest, TypePrefix + "bad-request", "Invalid JSON in request body"),
         InvalidOperationException when ex.Message.Contains("Unknown agent", StringComparison.OrdinalIgnoreCase)
             => (StatusCodes.Status404NotFound, AgentNotFoundType, "Agent not found"),
+        AgentHandleNotFoundException => (StatusCodes.Status404NotFound, AgentHandleNotFoundType, "Agent not found"),
         // ── Graph exceptions (v0.19) ──────────────────────────────────────
         GraphHandleNotFoundException => (StatusCodes.Status404NotFound, GraphHandleNotFoundType, "Graph not found"),
         GraphRunNotFoundException => (StatusCodes.Status404NotFound, GraphRunNotFoundType, "Graph run not found"),

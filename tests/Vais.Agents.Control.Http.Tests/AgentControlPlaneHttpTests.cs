@@ -143,6 +143,26 @@ public sealed class AgentControlPlaneHttpTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Invoke_Unknown_Agent_Returns_404_With_AgentHandleNotFound_URN()
+    {
+        // Verifies the AgentHandleNotFoundException → urn:vais-agents:agent-handle-not-found
+        // mapping introduced alongside the lazy-hydrate fix. POSTing to /v1/agents/{ghost}/invoke
+        // surfaces the typed 404 so external clients can distinguish "agent doesn't exist"
+        // from generic 500s.
+        var body = new StringContent("""{"text":"hi"}""", Encoding.UTF8, "application/json");
+        using var response = await _http.PostAsync("/v1/agents/ghost/invoke", body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("type").GetString()
+            .Should().Be(ProblemDetailsMapping.AgentHandleNotFoundType);
+        doc.RootElement.GetProperty("status").GetInt32().Should().Be(404);
+        doc.RootElement.GetProperty("detail").GetString()
+            .Should().Contain("ghost", "the error detail must name the missing agent");
+    }
+
+    [Fact]
     public async Task Policy_Deny_Surfaces_Via_Problem_Details_403()
     {
         // Rebuild host with a denying policy for Create only.

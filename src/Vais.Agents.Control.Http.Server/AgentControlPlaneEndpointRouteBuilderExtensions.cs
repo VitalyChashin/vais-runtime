@@ -1607,7 +1607,10 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             var resolvedVersion = version ?? (await registry.GetAsync(id, version: null, ct).ConfigureAwait(false))?.Version;
             if (resolvedVersion is null)
             {
-                return Results.NotFound(new { error = $"agent '{id}' not found" });
+                // Surface as the typed URN (urn:vais-agents:agent-handle-not-found) for parity
+                // with the graph-handle-not-found path. The existing catch maps via
+                // ProblemDetailsMapping.
+                throw new AgentHandleNotFoundException(id, version ?? "latest");
             }
             var handle = new AgentHandle(id, resolvedVersion);
 

@@ -303,6 +303,46 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Graph invoke after silo restart no longer cascades to a misleading 400.**
+  Three stacked bugs that together turned a known issue ("the agent invoke
+  lifecycle doesn't lazy-hydrate after restart, symmetric to PR #116") into
+  a 400 `urn:vais-agents:bad-request` with `Parameter 'id'` that pointed at
+  no observable cause. Concrete repro: stop+remove+up the runtime container
+  without `vais apply`, then `POST /v1/graphs/research-pipeline/invoke` — the
+  research pipeline failed end-to-end until manifests were re-applied.
+  - **Bug C — `AgentLifecycleManager.InvokeAsync` lazy-hydrates `_state` from
+    the registry on miss.** The in-process counter dict reset on process
+    restart while the Orleans-backed registry recovered manifests; the verb
+    threw `InvalidOperationException("Unknown agent handle: …. Call CreateAsync
+    first.")` for every agent the previous process registered. Same shape as
+    `AgentGraphLifecycleManager`'s lazy-hydrate in PR #116. The genuinely-unknown
+    case now throws a typed `AgentHandleNotFoundException` (new public type in
+    `Vais.Agents.Control.Abstractions`) that the HTTP layer maps to 404 with
+    `urn:vais-agents:agent-handle-not-found`. The agent invoke endpoint also
+    routes its early-out 404 through the same exception so callers get uniform
+    `ProblemDetails` instead of the legacy `{ "error": "…" }` JSON.
+  - **Bug A — `MafGraphOrchestrator`'s `WorkflowErrorEvent` translation
+    carries `FailedNodeId`.** MAF 1.6.2's `WorkflowErrorEvent` does not inherit
+    from `ExecutorEvent` and so carries no `ExecutorId`. When MAF fires both
+    `ExecutorFailedEvent` (with the failing executor id) AND a workflow-scoped
+    `WorkflowErrorEvent` (without), the latter previously produced a duplicate
+    `GraphFailed` with `FailedNodeId = null` — a P9 violation in its own right.
+    The translation now tracks `lastInvokedExecutorId` from
+    `ExecutorInvokedEvent`/`ExecutorCompletedEvent`, suppresses the duplicate
+    when `ExecutorFailedEvent` already emitted a `GraphFailed`, and falls back
+    to the tracker for genuine workflow-level failures. Suppressed duplicates
+    are still logged at Debug for diagnosability.
+  - **Bug B — `FoldGraphFailedAsync` guards against an empty composer key.**
+    When neither `FailedNodeId` nor `Context.AgentName` is set the method
+    previously called `_errorInterceptorComposer.GetErrorInterceptorChainAsync("")`,
+    which ultimately reached `OrleansAgentRegistry.GetAsync(string id, …)` and
+    threw `ArgumentException("id")`. That exception bubbled to the HTTP layer
+    and got mapped to 400 `urn:vais-agents:bad-request`, **masking the real
+    `InvalidOperationException` "Unknown agent handle"** that Bug C was
+    raising. The composer is now skipped when the key would be empty so the
+    real `GraphFailed` (with the correct `ErrorType`) flows back to the caller.
+  Plan + audit trail in `plans/completed/graph-invoke-restart-cascade-fix-2026-05-28.md`.
+
 - **Approval-required ProblemDetails extension key renamed to `approvalStatus` (was `status`)
   — BREAKING wire change; closes
   [`plans/completed/client-detect-approval-pending-parse-bug-2026-05-26.md`](plans/completed/client-detect-approval-pending-parse-bug-2026-05-26.md).**
