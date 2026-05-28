@@ -346,3 +346,7 @@ Vais.Agents.Control.ApprovalRequiredException.ApprovalRequiredException(string! 
 Vais.Agents.Control.ApprovalRequiredException.RequestId.get -> string!
 Vais.Agents.Control.ApprovalRequiredException.Kind.get -> string!
 Vais.Agents.Control.ApprovalRequiredException.Name.get -> string!
+Vais.Agents.Control.AgentHandleNotFoundException
+Vais.Agents.Control.AgentHandleNotFoundException.AgentHandleNotFoundException(string! agentId, string! version) -> void
+Vais.Agents.Control.AgentHandleNotFoundException.AgentId.get -> string!
+Vais.Agents.Control.AgentHandleNotFoundException.Version.get -> string!
