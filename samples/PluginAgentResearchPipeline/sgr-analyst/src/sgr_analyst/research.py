@@ -100,16 +100,30 @@ class _GatewayWebSearchTool(WebSearchTool):
 
 
 class _UncappedReasoningTool(ReasoningTool):
-    """ReasoningTool without the ``max_length=3`` cap on the step lists.
+    """ReasoningTool without the upstream pydantic length caps that LLMs routinely exceed.
 
-    sgr-agent-core 0.7.0 caps ``reasoning_steps``/``remaining_steps`` at 3 via
-    pydantic ``max_length``, but OpenAI structured output does not enforce array
-    ``maxItems`` — so weaker models (the SGR default gpt-4o-mini) routinely return
-    4-5 items, tripping a pydantic ``too_long`` ValidationError that crashes the
-    reasoning phase (surfacing as "No analysis produced"). Removing the upper cap
-    keeps brevity guided by the field description without the hard crash. Only the
-    upper bound is dropped; ``min_length`` and other fields are inherited unchanged.
-    See research/sgr-agent-core-maxitems-upstream-2026-05-25.md.
+    sgr-agent-core 0.7.0 places hard pydantic length constraints on the
+    reasoning-phase fields, but OpenAI structured output does not enforce
+    array ``maxItems`` or string ``maxLength`` server-side — so weaker models
+    (the SGR default gpt-4o-mini) routinely overshoot, tripping a pydantic
+    ``too_long`` / ``string_too_long`` ValidationError that crashes the
+    reasoning phase (surfacing as "No analysis produced" downstream).
+
+    Caps dropped:
+      * ``reasoning_steps`` — upstream max_length=3 (often 4-5 returned).
+      * ``remaining_steps`` — upstream max_length=3.
+      * ``current_situation`` — upstream max_length=300 chars (the model's
+        situation summary regularly runs 350-500 chars; observed crash on
+        the research-pipeline demo 2026-05-29).
+      * ``plan_status`` — upstream max_length=150 chars (same shape; not yet
+        observed in the wild but the field description and constraint pattern
+        match ``current_situation`` exactly).
+
+    Brevity is still guided by each field's ``description``; only the hard
+    upper bound is removed. ``min_length`` and other fields are inherited
+    unchanged. See research/sgr-agent-core-maxitems-upstream-2026-05-25.md
+    for the maxItems case and the same upstream-pydantic-validation pattern
+    for the maxLength cases.
     """
 
     reasoning_steps: list[str] = Field(
@@ -118,6 +132,12 @@ class _UncappedReasoningTool(ReasoningTool):
     )
     remaining_steps: list[str] = Field(
         description="Remaining steps (brief, action-oriented)",
+    )
+    current_situation: str = Field(
+        description="Current research situation (2-3 sentences MAX)",
+    )
+    plan_status: str = Field(
+        description="Status of current plan (1 sentence)",
     )
 
 
