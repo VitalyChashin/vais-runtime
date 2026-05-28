@@ -363,6 +363,9 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         using var scope = _logger.BeginScope("{AgentId}", _agentId);
         using var activity = OrleansDiagnostics.ActivitySource.StartActivity("grain.stream");
         activity?.SetTag(AgenticTags.AgentName, _agentId);
+        // Match grain.ask's prompt/completion tagging so Langfuse shows the user message and
+        // final assistant text on the root span (and hence trace-level input/output).
+        activity?.SetTag("gen_ai.prompt", userMessage);
 
         // Bridge HTTP-injected CorrelationId into Orleans RequestContext so gateway middleware
         // can read it via OrleansAgentContextAccessor (which reads RequestContext, not the context parameter).
@@ -392,6 +395,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
                 {
                     activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                     _logger.LogError(ex, "Failed to persist agent state after streaming turn");
+                }
+                if (evt is TurnCompleted tc && !string.IsNullOrEmpty(tc.AssistantText))
+                {
+                    activity?.SetTag("gen_ai.completion", tc.AssistantText);
                 }
                 if (evt is TurnFailed)
                 {

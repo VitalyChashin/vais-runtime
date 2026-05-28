@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using FluentAssertions;
 using Xunit;
 
@@ -124,6 +125,38 @@ public sealed class AiAgentGrainTests
             events[0].Should().BeOfType<TurnStarted>().Which.UserMessage.Should().Be("hello");
             events[1].Should().BeOfType<CompletionDelta>().Which.TextDelta.Should().Be("history-size=1");
             events[2].Should().BeOfType<TurnCompleted>().Which.AssistantText.Should().Be("history-size=1");
+        }
+        finally
+        {
+            await grain.DeleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task StreamAgentAsync_Tags_grain_stream_With_Prompt_And_Completion()
+    {
+        // Trace-level input/output in Langfuse is derived from the root span. The streaming
+        // grain path previously left grain.stream untagged (only grain.ask set prompt/completion),
+        // so Langfuse showed null input/output on top-level traces. Regression for that fix.
+        var recorded = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == "Vais.Agents.Hosting.Orleans",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = recorded.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var grain = _fx.Cluster.GrainFactory.GetGrain<IAiAgentGrain>("grain-stream-tags");
+        try
+        {
+            await foreach (var _ in grain.StreamAgentAsync("hello-tags", AgentContext.Empty)) { }
+
+            var grainStreamSpan = recorded.Single(a => a.OperationName == "grain.stream");
+            grainStreamSpan.GetTagItem("gen_ai.prompt").Should().Be("hello-tags",
+                "grain.stream must tag the user message so trace-level input shows in Langfuse");
+            grainStreamSpan.GetTagItem("gen_ai.completion").Should().Be("history-size=1",
+                "grain.stream must tag the final assistant text from TurnCompleted so trace-level output shows in Langfuse");
         }
         finally
         {
