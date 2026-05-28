@@ -180,10 +180,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         try
         {
-            if (!_graphs.TryGetValue((handle.GraphId, handle.Version), out var entry))
-            {
-                throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
-            }
+            var entry = await ResolveEntryAsync(handle, ct).ConfigureAwait(false);
             return entry.ToStatus(handle.GraphId, handle.Version);
         }
         finally
@@ -390,10 +387,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         ArgumentNullException.ThrowIfNull(handle);
         ArgumentException.ThrowIfNullOrWhiteSpace(runId);
 
-        if (!_graphs.TryGetValue((handle.GraphId, handle.Version), out _))
-        {
-            throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
-        }
+        _ = await ResolveEntryAsync(handle, ct).ConfigureAwait(false);
 
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.GraphCancel, handle.GraphId, handle.Version, principal, ct).ConfigureAwait(false);
@@ -445,9 +439,17 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
 
         try
         {
-            if (!_graphs.TryRemove((handle.GraphId, handle.Version), out _))
+            var hadEntry = _graphs.TryRemove((handle.GraphId, handle.Version), out _);
+            if (!hadEntry)
             {
-                throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
+                // Counters can legitimately be absent after a silo restart while the
+                // registry still holds the manifest (Orleans-backed durability). Consult
+                // the registry to decide between "unknown graph" (404) and "evict-only".
+                var manifest = await _graphRegistry.GetAsync(handle.GraphId, handle.Version, ct).ConfigureAwait(false);
+                if (manifest is null)
+                {
+                    throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
+                }
             }
             // Stop any runs executing on this host. (Cross-host runs stop cooperatively when the
             // owning host next checks the coordinator's cancel flag.)
@@ -503,10 +505,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         {
             throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
         }
-        if (!_graphs.TryGetValue((handle.GraphId, handle.Version), out var entry))
-        {
-            throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
-        }
+        var entry = _graphs.GetOrAdd((handle.GraphId, handle.Version), _ => new GraphEntry());
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.GraphInvoke, handle.GraphId, handle.Version, principal, ct).ConfigureAwait(false);
         var runId = string.IsNullOrWhiteSpace(request.RunId)
@@ -525,10 +524,7 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
         {
             throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
         }
-        if (!_graphs.TryGetValue((handle.GraphId, handle.Version), out var entry))
-        {
-            throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
-        }
+        var entry = _graphs.GetOrAdd((handle.GraphId, handle.Version), _ => new GraphEntry());
 
         var principal = SynthesizePrincipal();
         await GateAsync(PolicyOperation.GraphResume, handle.GraphId, handle.Version, principal, ct).ConfigureAwait(false);
@@ -731,6 +727,25 @@ public sealed class AgentGraphLifecycleManager : IAgentGraphLifecycleManager
             return new AgentPrincipal(userId, ctx.TenantId, ctx.Scopes);
         }
         return null;
+    }
+
+    // _graphs holds in-process counters (RecordInvoke/Complete/Interrupt). It is *not*
+    // the registration source-of-truth — the registry is. After a silo restart, the
+    // Orleans-backed registry recovers manifests but _graphs starts empty, so any verb
+    // that gated on _graphs would 404 even though the graph is durably registered.
+    // This helper consults the registry on miss and lazy-adds a zeroed counter entry.
+    private async ValueTask<GraphEntry> ResolveEntryAsync(AgentGraphHandle handle, CancellationToken ct)
+    {
+        if (_graphs.TryGetValue((handle.GraphId, handle.Version), out var entry))
+        {
+            return entry;
+        }
+        var manifest = await _graphRegistry.GetAsync(handle.GraphId, handle.Version, ct).ConfigureAwait(false);
+        if (manifest is null)
+        {
+            throw new GraphHandleNotFoundException(handle.GraphId, handle.Version);
+        }
+        return _graphs.GetOrAdd((handle.GraphId, handle.Version), _ => new GraphEntry());
     }
 
     private void RegisterManifest(AgentGraphManifest manifest)

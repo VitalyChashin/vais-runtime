@@ -4,6 +4,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Vais.Agents.Control;
 using Vais.Agents.Control.InProcess;
 using Vais.Agents.Core;
 using Vais.Agents.Hosting.InMemory;
@@ -1604,6 +1605,67 @@ public sealed class MafGraphOrchestratorTests
         await act.Should().ThrowAsync<InvalidOperationException>(
                 because: "concurrent edges require MafGraphOrchestrator via orchestratorFactory")
             .WithMessage("*concurrent*orchestratorFactory*");
+    }
+
+    // Models silo restart: an Orleans-backed registry recovers manifests from durable
+    // grain storage, but the in-process AgentGraphLifecycleManager starts with empty
+    // counters. The pre-fix code path was QueryAsync → _graphs.TryGetValue → throw
+    // GraphHandleNotFound → HTTP 404 → workbench renders "Failed to load resource".
+    [Fact]
+    public async Task AgentGraphLifecycleManager_QueryAsync_RegistrySeededOutOfBand_ReturnsZeroCounterStatus()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var graphRegistry = new InMemoryAgentGraphRegistry();
+        var manifest = new AgentGraphManifest(
+            Id: "recovered", Version: "1.0", Entry: "end",
+            Nodes: new[] { new GraphNode("end", "End") },
+            Edges: Array.Empty<GraphEdge>());
+
+        // Seed the registry directly — bypass manager.CreateAsync the way Orleans
+        // grain-storage recovery does at silo startup.
+        graphRegistry.Register(manifest);
+
+        var manager = new AgentGraphLifecycleManager(
+            graphRegistry, registry, lifecycle, new InMemoryCheckpointer());
+
+        var status = await manager.QueryAsync(new AgentGraphHandle("recovered", "1.0"));
+
+        status.GraphId.Should().Be("recovered");
+        status.Version.Should().Be("1.0");
+        status.ActiveRunCount.Should().Be(0);
+        status.CompletedRunCount.Should().Be(0);
+        status.PendingInterruptCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AgentGraphLifecycleManager_QueryAsync_UnknownGraph_Throws()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var manager = new AgentGraphLifecycleManager(
+            new InMemoryAgentGraphRegistry(), registry, lifecycle, new InMemoryCheckpointer());
+
+        var act = async () => await manager.QueryAsync(new AgentGraphHandle("ghost", "1.0"));
+
+        await act.Should().ThrowAsync<GraphHandleNotFoundException>();
+    }
+
+    [Fact]
+    public async Task AgentGraphLifecycleManager_EvictAsync_RegistrySeededOutOfBand_RemovesManifest()
+    {
+        var (registry, lifecycle) = BuildHarness();
+        var graphRegistry = new InMemoryAgentGraphRegistry();
+        var manifest = new AgentGraphManifest(
+            Id: "recovered-evict", Version: "1.0", Entry: "end",
+            Nodes: new[] { new GraphNode("end", "End") },
+            Edges: Array.Empty<GraphEdge>());
+        graphRegistry.Register(manifest);
+
+        var manager = new AgentGraphLifecycleManager(
+            graphRegistry, registry, lifecycle, new InMemoryCheckpointer());
+
+        await manager.EvictAsync(new AgentGraphHandle("recovered-evict", "1.0"));
+
+        (await graphRegistry.GetAsync("recovered-evict", "1.0")).Should().BeNull();
     }
 
     // ---- helpers ----
