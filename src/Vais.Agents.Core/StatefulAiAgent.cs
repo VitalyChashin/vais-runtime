@@ -1017,6 +1017,13 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                     toolCall.CallId,
                     toolCall.ToolName);
 
+                // Async-iterator yields return to the caller's ExecutionContext, where
+                // Activity.Current is whatever the consumer has (often null when the runtime
+                // is not AspNetCore-instrumented). Restore the turn activity before dispatching
+                // so the gateway tool middleware chain parents under chat → grain.stream rather
+                // than starting a new trace root. Same pattern as InProcessGraphOrchestrator's
+                // post-yield re-anchor.
+                if (activity != null) Activity.Current = activity;
                 var dispatchStartedAt = DateTimeOffset.UtcNow;
                 ToolCallOutcome outcome;
                 try

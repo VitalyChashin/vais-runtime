@@ -1,6 +1,7 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
 using Xunit;
@@ -21,6 +22,64 @@ namespace Vais.Agents.Core.Tests;
 /// </remarks>
 public sealed class StatefulAiAgentStreamingToolCallTests
 {
+    // One-time setup: register listeners so the AgenticDiagnostics ActivitySource records
+    // activities and the test isolation source yields a TraceId we can scope assertions to.
+    private static readonly ActivitySource _isolationSource = new("vais.test.streaming-tool-call-isolation");
+
+    static StatefulAiAgentStreamingToolCallTests()
+    {
+        ActivitySource.AddActivityListener(new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == "vais.test.streaming-tool-call-isolation",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+        });
+    }
+
+    /// <summary>
+    /// Regression for the silent "two-trace" Langfuse symptom: when the streaming tool-call
+    /// dispatcher fires after an async-iterator <c>yield return</c>, the caller's
+    /// ExecutionContext (which has <c>Activity.Current = null</c> when the runtime is not
+    /// AspNetCore-instrumented) was being used as the parent — making the gateway middleware
+    /// chain a new trace root instead of a child of the "chat" turn span. Verifies the
+    /// middleware activities share a TraceId with the surrounding chat span.
+    /// </summary>
+    [Fact]
+    public async Task StreamAsync_Tool_Middleware_Spans_Share_Trace_With_Chat_Turn()
+    {
+        using var root = _isolationSource.StartActivity("test-root");
+        var recorded = new List<Activity>();
+        using var listener = CreateListener(recorded);
+
+        var tool = new EchoTool();
+        var provider = new ScriptedMultiTurnStreamingProvider(
+            new[] { new CompletionUpdate(string.Empty, ToolCalls: new[]
+                {
+                    new ToolCallRequest("echo", JsonDocument.Parse("""{"text":"hi"}""").RootElement, "call-1"),
+                }) },
+            new[] { new CompletionUpdate("done") });
+
+        var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+        {
+            ToolRegistry = new SingleToolRegistry(tool),
+            ToolGatewayMiddleware = new[] { new PassThroughMiddleware() },
+        });
+
+        await foreach (var _ in agent.StreamAsync("use tool")) { }
+
+        var chatSpan = recorded.Single(a => a.OperationName == "chat");
+        var middlewareSpans = recorded.Where(a => a.OperationName.StartsWith("vais.gateway.tool.middleware/")).ToList();
+
+        middlewareSpans.Should().ContainSingle("only one registered middleware should produce a span");
+        // ParentSpanId of the outermost middleware identifies who the dispatcher saw as
+        // Activity.Current at chain() invocation. If the bug is back, it will be the
+        // test's isolation root span (not the chat turn) because async-iterator yields
+        // reset Activity.Current to the consumer's context. Asserting against chatSpan.SpanId
+        // directly catches that drift even when both spans share a TraceId.
+        middlewareSpans[0].ParentSpanId.Should().Be(chatSpan.SpanId,
+            "the outermost tool-middleware span must parent to the chat turn — regression for "
+            + "async-iterator Activity.Current loss after `yield return ToolCallStarted`");
+    }
+
     [Fact]
     public async Task StreamAsync_Dispatches_Tool_Call_And_Continues_Streaming_Next_Turn()
     {
@@ -235,5 +294,24 @@ public sealed class StatefulAiAgentStreamingToolCallTests
             => new NoopSub();
 
         private sealed class NoopSub : IDisposable { public void Dispose() { } }
+    }
+
+    private sealed class PassThroughMiddleware : ToolGatewayMiddleware { }
+
+    // Filters captured spans to the TraceId of the current activity (set by the test's
+    // isolation root) so parallel-test spans don't bleed into this test's recorded list.
+    private static ActivityListener CreateListener(List<Activity> sink)
+    {
+        var traceId = Activity.Current?.TraceId;
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == AgenticDiagnostics.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = traceId is null
+                ? sink.Add
+                : a => { if (a.TraceId == traceId) sink.Add(a); },
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
     }
 }
