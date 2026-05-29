@@ -89,6 +89,9 @@ public sealed class AgentSpec
     /// <summary>Schema-Guided Reasoning configuration. Contract-only in v0.6; engine treats as <see cref="AgentMode.ToolCalling"/>.</summary>
     public ReasoningSpec? Reasoning { get; set; }
 
+    /// <summary>Code-mode binding. When enabled, the agent runs LLM-authored scripts in a sandboxed runtime. Null = classic tool-calling.</summary>
+    public CodeModeSpec? CodeMode { get; set; }
+
     /// <summary>Observability overlays — Langfuse project, sampling, custom tags.</summary>
     public ObservabilitySpec? Observability { get; set; }
 

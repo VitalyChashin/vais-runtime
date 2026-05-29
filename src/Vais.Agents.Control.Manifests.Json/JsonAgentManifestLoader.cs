@@ -270,6 +270,8 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
 
         var reasoning = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("reasoning", out var rEl)
             ? ParseReasoning(rEl, errors, prefix) : null;
+        var codeMode = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("codeMode", out var cmEl)
+            ? ParseCodeMode(cmEl, errors, prefix) : null;
         var observability = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("observability", out var obEl)
             ? ParseObservability(obEl, errors, prefix) : null;
 
@@ -307,6 +309,7 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             OutputSchema = outputSchema,
             AgentMode = agentMode,
             Reasoning = reasoning,
+            CodeMode = codeMode,
             Observability = observability,
             Annotations = annotations,
             LlmGatewayRef = llmGatewayRef,
@@ -636,6 +639,70 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             schemaRef,
             MaxIterations: el.TryGetProperty("maxIterations", out var miEl) && miEl.ValueKind == JsonValueKind.Number ? miEl.GetInt32() : null,
             MaxClarifications: el.TryGetProperty("maxClarifications", out var mcEl) && mcEl.ValueKind == JsonValueKind.Number ? mcEl.GetInt32() : null);
+    }
+
+    private static CodeModeSpec ParseCodeMode(JsonElement el, List<string> errors, string prefix)
+    {
+        if (el.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}spec.codeMode must be an object");
+            return new CodeModeSpec();
+        }
+
+        var enabled = el.TryGetProperty("enabled", out var enEl) && enEl.ValueKind == JsonValueKind.True;
+        var runtime = el.TryGetProperty("runtime", out var rtEl) && rtEl.ValueKind == JsonValueKind.String
+            ? rtEl.GetString()! : "jint";
+        var generator = el.TryGetProperty("generator", out var gEl) && gEl.ValueKind == JsonValueKind.String
+            ? gEl.GetString()! : "raw";
+
+        // v1 supports only the Jint runtime and the raw (flat MCP-derived) generator. Reject
+        // unsupported values when code-mode is actually enabled; a disabled spec is inert.
+        if (enabled && !string.Equals(runtime, "jint", StringComparison.Ordinal))
+            errors.Add($"{prefix}spec.codeMode.runtime '{runtime}' is not supported (v1 supports 'jint')");
+        if (enabled && !string.Equals(generator, "raw", StringComparison.Ordinal))
+            errors.Add($"{prefix}spec.codeMode.generator '{generator}' is not supported yet (v1 supports 'raw'; 'ontology' is deferred)");
+
+        IReadOnlyList<string>? toolset = null;
+        if (el.TryGetProperty("toolset", out var tsEl) && tsEl.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<string>();
+            foreach (var item in tsEl.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } s)
+                    list.Add(s);
+            }
+            toolset = list.Count > 0 ? list : null;
+        }
+
+        CodeModeLimits? limits = el.TryGetProperty("limits", out var lEl) && lEl.ValueKind == JsonValueKind.Object
+            ? ParseCodeModeLimits(lEl) : null;
+
+        return new CodeModeSpec
+        {
+            Enabled = enabled,
+            Runtime = runtime,
+            Generator = generator,
+            Toolset = toolset,
+            Limits = limits,
+        };
+    }
+
+    private static CodeModeLimits ParseCodeModeLimits(JsonElement el)
+    {
+        var d = new CodeModeLimits();
+        int i(string key, int fallback) =>
+            el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : fallback;
+        long l(string key, long fallback) =>
+            el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : fallback;
+        return new CodeModeLimits
+        {
+            TimeoutMs = i("timeoutMs", d.TimeoutMs),
+            MaxStatements = i("maxStatements", d.MaxStatements),
+            MemoryBytes = l("memoryBytes", d.MemoryBytes),
+            MaxOutputBytes = i("maxOutputBytes", d.MaxOutputBytes),
+            MaxToolCalls = i("maxToolCalls", d.MaxToolCalls),
+            RecursionDepth = i("recursionDepth", d.RecursionDepth),
+        };
     }
 
     private static ObservabilitySpec ParseObservability(JsonElement el, List<string> _, string __)

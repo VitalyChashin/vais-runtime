@@ -83,6 +83,26 @@ public sealed class AgentSpecProjectorTests
     }
 
     [Fact]
+    public void ToManifest_CopiesCodeMode()
+    {
+        var spec = new AgentSpec
+        {
+            AgentId = "coder",
+            Version = "1.0",
+            Handler = new AgentHandlerRef("H"),
+            Protocols = new List<ProtocolBinding> { new("Http") },
+            Tools = new List<ToolRef>(),
+            CodeMode = new CodeModeSpec { Enabled = true, Toolset = new[] { "crm" } },
+        };
+
+        var manifest = AgentSpecProjector.ToManifest(spec);
+
+        manifest.CodeMode.Should().NotBeNull();
+        manifest.CodeMode!.Enabled.Should().BeTrue();
+        manifest.CodeMode.Toolset.Should().Equal("crm");
+    }
+
+    [Fact]
     public void ToManifest_NullOptionalFields_StayNull()
     {
         var spec = new AgentSpec

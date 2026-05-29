@@ -88,6 +88,10 @@
           "type": "object",
           "description": "Schema-Guided Reasoning configuration. Contract-only in v0.6 \u2014 engine treats as ToolCalling."
         },
+        "codeMode": {
+          "type": "object",
+          "description": "Code-mode binding. When Enabled is true, the agent is presented a single run_code affordance plus a generated JS API over its tools and executes LLM-authored scripts in a sandboxed runtime instead of per-tool JSON calls. Null = classic tool-calling (backwards compatible)."
+        },
         "observability": {
           "type": "object",
           "description": "Observability overlays \u2014 Langfuse project, sampling, custom tags."

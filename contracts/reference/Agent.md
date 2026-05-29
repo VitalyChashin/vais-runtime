@@ -134,6 +134,18 @@ spec:
 | `spec.reasoning.schemaRef` | string | no | Alternative to Schema — opaque name resolved by the host's DI keyspace. |
 | `spec.reasoning.maxIterations` | integer | no | Cap on cycle iterations for Cycle. Null = runtime default. |
 | `spec.reasoning.maxClarifications` | integer | no | Cap on clarification rounds — interrupts raised to the user. Null = runtime default. |
+| `spec.codeMode` | object | no | Code-mode binding. When Enabled is true, the agent is presented a single run_code affordance plus a generated JS API over its tools and executes LLM-authored scripts in a sandboxed runtime instead of per-tool JSON calls. Null = classic tool-calling (backwards compatible). |
+| `spec.codeMode.enabled` | boolean | no | Opt-in flag. When false (the default), the spec is ignored and the agent uses classic tool-calling. |
+| `spec.codeMode.runtime` | string | no | Sandbox runtime backend. v1 supports "jint" (managed JavaScript) only. |
+| `spec.codeMode.generator` | string | no | Tool-API surface generator. v1 supports "raw" (flat MCP-derived API); "ontology" is deferred. |
+| `spec.codeMode.toolset` | array&lt;string&gt; | no | Tool names exposed to scripts. Null inherits the agent's full authorised tool set. |
+| `spec.codeMode.limits` | object | no | Resource caps applied to each script execution. Null uses the CodeModeLimits defaults. |
+| `spec.codeMode.limits.timeoutMs` | integer | no | Wall-clock timeout for the script, in milliseconds. |
+| `spec.codeMode.limits.maxStatements` | integer | no | Maximum interpreted statements before the engine aborts (infinite-loop guard). |
+| `spec.codeMode.limits.memoryBytes` | integer | no | Maximum heap the script may allocate, in bytes. |
+| `spec.codeMode.limits.maxOutputBytes` | integer | no | Maximum size of the serialized script result returned to the model, in bytes. |
+| `spec.codeMode.limits.maxToolCalls` | integer | no | Maximum number of tool calls a single script may issue through the gateway bridge. |
+| `spec.codeMode.limits.recursionDepth` | integer | no | Maximum call-stack depth (deep-recursion guard). |
 | `spec.observability` | object | no | Observability overlays — Langfuse project, sampling, custom tags. |
 | `spec.observability.langfuseProject` | string | no | Langfuse project name. Null = use host-default project. |
 | `spec.observability.samplingRate` | number | no | Per-agent trace sampling rate (0.0 – 1.0). Null = host-default. |
