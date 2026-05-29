@@ -43,20 +43,29 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
     private readonly IAgentEventBus _eventBus;
     private readonly IAgentJournal _journal;
     private readonly ToolGatewayMiddleware[] _gatewayMiddleware;
+    private readonly IAgentContextSetter? _contextSetter;
 
-    /// <summary>Construct a dispatcher over the given registry + guardrails + optional event bus + optional journal.</summary>
+    /// <summary>
+    /// Construct a dispatcher over the given registry + guardrails + optional event bus + optional journal.
+    /// When <paramref name="contextSetter"/> is supplied, the run-stamped <see cref="AgentContext"/> is
+    /// pushed onto the ambient accessor for the duration of each tool invocation, so tools that read
+    /// <c>IAgentContextAccessor.Current</c> observe the current <see cref="AgentContext.RunId"/> + identity
+    /// rather than only the framework's explicit context parameter.
+    /// </summary>
     public DefaultToolCallDispatcher(
         IToolRegistry? toolRegistry,
         IReadOnlyList<IToolGuardrail>? toolGuardrails = null,
         IAgentEventBus? eventBus = null,
         IAgentJournal? journal = null,
-        IEnumerable<ToolGatewayMiddleware>? gatewayMiddleware = null)
+        IEnumerable<ToolGatewayMiddleware>? gatewayMiddleware = null,
+        IAgentContextSetter? contextSetter = null)
     {
         _toolRegistry = toolRegistry;
         _toolGuardrails = toolGuardrails ?? Array.Empty<IToolGuardrail>();
         _eventBus = eventBus ?? NullAgentEventBus.Instance;
         _journal = journal ?? NullAgentJournal.Instance;
         _gatewayMiddleware = gatewayMiddleware?.ToArray() ?? Array.Empty<ToolGatewayMiddleware>();
+        _contextSetter = contextSetter;
     }
 
     /// <inheritdoc />
@@ -199,7 +208,13 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
         string? toolError = null;
         try
         {
-            result = await tool.InvokeAsync(request.Arguments, cancellationToken).ConfigureAwait(false);
+            // Make the run-stamped context ambient for the tool call so tools that read
+            // IAgentContextAccessor.Current (e.g. run_code) see the current RunId + identity.
+            // Tightly scoped to the invocation and restored on dispose; no-op without a setter.
+            using (_contextSetter?.Push(context))
+            {
+                result = await tool.InvokeAsync(request.Arguments, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException)
         {

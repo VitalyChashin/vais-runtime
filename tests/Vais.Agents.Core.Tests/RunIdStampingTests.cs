@@ -192,6 +192,39 @@ public sealed class RunIdStampingTests
     }
 
     [Fact]
+    public async Task Tool_Observes_RunId_Via_Ambient_Context()
+    {
+        // The run-stamped context must be ambient during a tool call, so tools that read
+        // AsyncLocalAgentContextAccessor.Current (e.g. run_code) see the current RunId — not just
+        // the framework's explicit context parameter. The default dispatcher (built by
+        // StatefulAiAgent) pushes it; verify a tool reads it back.
+        string? observedAmbientRunId = "unset";
+        var registry = new FakeRegistry(new FakeTool("echo", _ =>
+        {
+            observedAmbientRunId = new AsyncLocalAgentContextAccessor().Current.RunId;
+            return "ok";
+        }));
+        var scripted = new Queue<CompletionResponse>(new[]
+        {
+            new CompletionResponse("calling", ToolCalls: new[] { new ToolCallRequest("echo", EmptyArgs, "c1") }),
+            new CompletionResponse("final"),
+        });
+        var provider = new FakeCompletionProvider(_ => scripted.Dequeue());
+
+        // No explicit ToolCallDispatcher — StatefulAiAgent builds the default one, which now pushes
+        // the run-stamped context onto the accessor for the duration of each tool invocation.
+        var agent = new StatefulAiAgent(provider, new StatefulAgentOptions
+        {
+            ToolRegistry = registry,
+            RunIdFactory = () => "run-ambient-1",
+        });
+
+        await agent.AskAsync("hi");
+
+        observedAmbientRunId.Should().Be("run-ambient-1");
+    }
+
+    [Fact]
     public async Task Default_RunIdFactory_Produces_A_32_Hex_String()
     {
         AgentContext? observed = null;
