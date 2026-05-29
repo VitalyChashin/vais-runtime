@@ -87,6 +87,14 @@ public sealed record AgentManifest(
     /// <summary>Schema-Guided Reasoning configuration. Contract-only in v0.6 — engine treats as <see cref="Vais.Agents.AgentMode.ToolCalling"/>.</summary>
     public ReasoningSpec? Reasoning { get; init; }
 
+    /// <summary>
+    /// Code-mode binding. When <see cref="CodeModeSpec.Enabled"/> is <c>true</c>, the agent is
+    /// presented a single <c>run_code</c> affordance plus a generated JS API over its tools and
+    /// executes LLM-authored scripts in a sandboxed runtime instead of per-tool JSON calls.
+    /// Null = classic tool-calling (backwards compatible).
+    /// </summary>
+    public CodeModeSpec? CodeMode { get; init; }
+
     /// <summary>Observability overlays — Langfuse project, sampling, custom tags.</summary>
     public ObservabilitySpec? Observability { get; init; }
 

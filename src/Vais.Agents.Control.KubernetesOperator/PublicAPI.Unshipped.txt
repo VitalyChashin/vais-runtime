@@ -1,1 +1,3 @@
 #nullable enable
+Vais.Agents.Control.Kubernetes.AgentSpec.CodeMode.get -> Vais.Agents.CodeModeSpec?
+Vais.Agents.Control.Kubernetes.AgentSpec.CodeMode.set -> void

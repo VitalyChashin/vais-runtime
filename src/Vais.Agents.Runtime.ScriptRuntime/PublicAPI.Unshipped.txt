@@ -1,0 +1,9 @@
+#nullable enable
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions.ScriptRuntimeOptions() -> void
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions.SidecarBaseUrl.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions.SidecarBaseUrl.set -> void
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions.GatewayBaseUrl.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRuntimeOptions.GatewayBaseUrl.set -> void
+Vais.Agents.ScriptRuntime.ScriptRuntimeServiceCollectionExtensions
+static Vais.Agents.ScriptRuntime.ScriptRuntimeServiceCollectionExtensions.AddScriptRuntime(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.ScriptRuntime.ScriptRuntimeOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -385,6 +385,21 @@ internal sealed record RuntimeOptions
     /// </summary>
     public bool IdempotencyEnabled { get; init; } = true;
 
+    /// <summary>
+    /// Code-mode (the ScriptRuntime primitive). When true, agents with <c>spec.codeMode.enabled</c>
+    /// execute LLM-authored scripts in the supervised sidecar at <see cref="ScriptRuntimeUrl"/>, and
+    /// the container-gateway tool endpoints are mapped so scripts can call tools back through the
+    /// gateway. Defaults to <see langword="false"/>. Set <c>VAIS_CODE_MODE_ENABLED=true</c> to enable.
+    /// </summary>
+    public bool CodeModeEnabled { get; init; }
+
+    /// <summary>
+    /// Base URL of the code-mode ScriptRuntime sidecar (co-deployed; <c>v1/script/run</c> is appended).
+    /// Only used when <see cref="CodeModeEnabled"/>. Set <c>VAIS_SCRIPT_RUNTIME_URL</c> per topology
+    /// (e.g. <c>http://script-runtime:8090</c> on compose, <c>http://localhost:8090</c> as a K8s pod sidecar).
+    /// </summary>
+    public string ScriptRuntimeUrl { get; init; } = "http://localhost:8090";
+
     /// <summary>Pull the canonical shape from process env vars.</summary>
     public static RuntimeOptions FromEnvironment()
     {
@@ -442,6 +457,8 @@ internal sealed record RuntimeOptions
             A2aEnabled         = !string.Equals(Env("VAIS_A2A_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
             PowerFxEnabled     = !string.Equals(Env("VAIS_POWERFX_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
             IdempotencyEnabled = !string.Equals(Env("VAIS_IDEMPOTENCY_ENABLED"), "false", StringComparison.OrdinalIgnoreCase),
+            CodeModeEnabled = string.Equals(Env("VAIS_CODE_MODE_ENABLED"), "true", StringComparison.OrdinalIgnoreCase),
+            ScriptRuntimeUrl = Env("VAIS_SCRIPT_RUNTIME_URL") ?? "http://localhost:8090",
         };
 
         static string? Env(string name)

@@ -543,6 +543,63 @@
           "additionalProperties": false,
           "description": "Schema-Guided Reasoning configuration. Contract-only in v0.6 \u2014 engine treats as ToolCalling."
         },
+        "codeMode": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Opt-in flag. When false (the default), the spec is ignored and the agent uses classic tool-calling."
+            },
+            "runtime": {
+              "type": "string",
+              "description": "Sandbox runtime backend. v1 supports \u0022jint\u0022 (managed JavaScript) only."
+            },
+            "generator": {
+              "type": "string",
+              "description": "Tool-API surface generator. v1 supports \u0022raw\u0022 (flat MCP-derived API); \u0022ontology\u0022 is deferred."
+            },
+            "toolset": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tool names exposed to scripts. Null inherits the agent\u0027s full authorised tool set."
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "timeoutMs": {
+                  "type": "integer",
+                  "description": "Wall-clock timeout for the script, in milliseconds."
+                },
+                "maxStatements": {
+                  "type": "integer",
+                  "description": "Maximum interpreted statements before the engine aborts (infinite-loop guard)."
+                },
+                "memoryBytes": {
+                  "type": "integer",
+                  "description": "Maximum heap the script may allocate, in bytes."
+                },
+                "maxOutputBytes": {
+                  "type": "integer",
+                  "description": "Maximum size of the serialized script result returned to the model, in bytes."
+                },
+                "maxToolCalls": {
+                  "type": "integer",
+                  "description": "Maximum number of tool calls a single script may issue through the gateway bridge."
+                },
+                "recursionDepth": {
+                  "type": "integer",
+                  "description": "Maximum call-stack depth (deep-recursion guard)."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Resource caps applied to each script execution. Null uses the CodeModeLimits defaults."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Code-mode binding. When Enabled is true, the agent is presented a single run_code affordance plus a generated JS API over its tools and executes LLM-authored scripts in a sandboxed runtime instead of per-tool JSON calls. Null = classic tool-calling (backwards compatible)."
+        },
         "observability": {
           "type": "object",
           "properties": {

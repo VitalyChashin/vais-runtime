@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.ScriptRuntime</RootNamespace>
+    <AssemblyName>Vais.Agents.ScriptRuntime.Abstractions</AssemblyName>
+    <Description>Stack-neutral contracts for the Vais.Agents ScriptRuntime primitive — the sidecar run protocol (ScriptRunRequest/Response), the runtime-side client interface, and the tool-API generator seam consumed by code-mode.</Description>
+    <PackageTags>agents;ai;scriptruntime;code-mode;abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.ScriptRuntime" />
+    <InternalsVisibleTo Include="Vais.Agents.ScriptRuntime.Host" />
+    <InternalsVisibleTo Include="Vais.Agents.ScriptRuntime.Abstractions.Tests" />
+  </ItemGroup>
+
+</Project>

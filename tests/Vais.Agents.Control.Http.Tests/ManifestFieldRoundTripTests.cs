@@ -55,6 +55,7 @@ public sealed class ManifestFieldRoundTripTests
         "ContextProviders",
         "OutputSchema",
         "Reasoning",
+        "CodeMode",
         "Observability",
         "Annotations",
         "LlmGatewayRef",
@@ -151,6 +152,10 @@ public sealed class ManifestFieldRoundTripTests
         yield return Row("Observability",
             Base() with { Observability = new ObservabilitySpec(LangfuseProject: "my-proj") },
             m => m.Observability!.LangfuseProject, "my-proj");
+
+        yield return Row("CodeMode",
+            Base() with { CodeMode = new CodeModeSpec { Enabled = true, Toolset = new[] { "crm" } } },
+            m => m.CodeMode!.Toolset!.Single(), "crm");
     }
 
     private static object?[] Row(string path, AgentManifest manifest, Func<AgentManifest, object?> extract, object? expected)

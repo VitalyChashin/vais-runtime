@@ -1,0 +1,63 @@
+#nullable enable
+Vais.Agents.ScriptRuntime.IScriptRuntimeClient
+Vais.Agents.ScriptRuntime.IScriptRuntimeClient.RunAsync(Vais.Agents.ScriptRuntime.ScriptRunRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ScriptRuntime.ScriptRunResponse!>!
+Vais.Agents.ScriptRuntime.IToolApiGenerator
+Vais.Agents.ScriptRuntime.IToolApiGenerator.Generate(System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>! tools) -> string!
+Vais.Agents.ScriptRuntime.ScriptRunError
+Vais.Agents.ScriptRuntime.ScriptRunError.ScriptRunError(string! Type, string! Message) -> void
+Vais.Agents.ScriptRuntime.ScriptRunError.Type.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunError.Type.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunError.Message.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunError.Message.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunError.Deconstruct(out string! Type, out string! Message) -> void
+Vais.Agents.ScriptRuntime.ScriptRunError.Equals(Vais.Agents.ScriptRuntime.ScriptRunError? other) -> bool
+Vais.Agents.ScriptRuntime.ScriptRunError.<Clone>$() -> Vais.Agents.ScriptRuntime.ScriptRunError!
+override Vais.Agents.ScriptRuntime.ScriptRunError.Equals(object? obj) -> bool
+override Vais.Agents.ScriptRuntime.ScriptRunError.GetHashCode() -> int
+override Vais.Agents.ScriptRuntime.ScriptRunError.ToString() -> string!
+static Vais.Agents.ScriptRuntime.ScriptRunError.operator !=(Vais.Agents.ScriptRuntime.ScriptRunError? left, Vais.Agents.ScriptRuntime.ScriptRunError? right) -> bool
+static Vais.Agents.ScriptRuntime.ScriptRunError.operator ==(Vais.Agents.ScriptRuntime.ScriptRunError? left, Vais.Agents.ScriptRuntime.ScriptRunError? right) -> bool
+Vais.Agents.ScriptRuntime.ScriptRunRequest
+Vais.Agents.ScriptRuntime.ScriptRunRequest.ScriptRunRequest() -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.RunId.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.RunId.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.AgentId.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.AgentId.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Prelude.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Prelude.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Script.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Script.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.ToolGatewayUrl.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.ToolGatewayUrl.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.CallToken.get -> string!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.CallToken.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Limits.get -> Vais.Agents.CodeModeLimits!
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Limits.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Traceparent.get -> string?
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Traceparent.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunRequest.Equals(Vais.Agents.ScriptRuntime.ScriptRunRequest? other) -> bool
+Vais.Agents.ScriptRuntime.ScriptRunRequest.<Clone>$() -> Vais.Agents.ScriptRuntime.ScriptRunRequest!
+override Vais.Agents.ScriptRuntime.ScriptRunRequest.Equals(object? obj) -> bool
+override Vais.Agents.ScriptRuntime.ScriptRunRequest.GetHashCode() -> int
+override Vais.Agents.ScriptRuntime.ScriptRunRequest.ToString() -> string!
+static Vais.Agents.ScriptRuntime.ScriptRunRequest.operator !=(Vais.Agents.ScriptRuntime.ScriptRunRequest? left, Vais.Agents.ScriptRuntime.ScriptRunRequest? right) -> bool
+static Vais.Agents.ScriptRuntime.ScriptRunRequest.operator ==(Vais.Agents.ScriptRuntime.ScriptRunRequest? left, Vais.Agents.ScriptRuntime.ScriptRunRequest? right) -> bool
+Vais.Agents.ScriptRuntime.ScriptRunResponse
+Vais.Agents.ScriptRuntime.ScriptRunResponse.ScriptRunResponse() -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Result.get -> string?
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Result.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Console.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Console.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.ToolCallCount.get -> int
+Vais.Agents.ScriptRuntime.ScriptRunResponse.ToolCallCount.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Error.get -> Vais.Agents.ScriptRuntime.ScriptRunError?
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Error.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.WallMs.get -> long
+Vais.Agents.ScriptRuntime.ScriptRunResponse.WallMs.init -> void
+Vais.Agents.ScriptRuntime.ScriptRunResponse.Equals(Vais.Agents.ScriptRuntime.ScriptRunResponse? other) -> bool
+Vais.Agents.ScriptRuntime.ScriptRunResponse.<Clone>$() -> Vais.Agents.ScriptRuntime.ScriptRunResponse!
+override Vais.Agents.ScriptRuntime.ScriptRunResponse.Equals(object? obj) -> bool
+override Vais.Agents.ScriptRuntime.ScriptRunResponse.GetHashCode() -> int
+override Vais.Agents.ScriptRuntime.ScriptRunResponse.ToString() -> string!
+static Vais.Agents.ScriptRuntime.ScriptRunResponse.operator !=(Vais.Agents.ScriptRuntime.ScriptRunResponse? left, Vais.Agents.ScriptRuntime.ScriptRunResponse? right) -> bool
+static Vais.Agents.ScriptRuntime.ScriptRunResponse.operator ==(Vais.Agents.ScriptRuntime.ScriptRunResponse? left, Vais.Agents.ScriptRuntime.ScriptRunResponse? right) -> bool

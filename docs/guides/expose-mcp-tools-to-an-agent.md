@@ -83,4 +83,5 @@ When the model calls an MCP-backed tool, the agent's outer loop dispatches throu
 - [Interop concept](../concepts/interop.md)
 - [Tools concept](../concepts/tools.md) — `IToolSource` + `AggregatingToolRegistry`.
 - [Delegate to an A2A remote agent](delegate-to-a2a-remote-agent.md) — sibling pattern for A2A.
+- [Run tools as code with code-mode](run-tools-as-code-with-code-mode.md) — let the LLM script its tool calls (compose many in one step) instead of one-per-turn.
 - Sample: `samples/McpToolSourceExample/` (per samples plan)

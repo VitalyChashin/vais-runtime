@@ -43,6 +43,7 @@
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins\Vais.Agents.Runtime.Plugins.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Python\Vais.Agents.Runtime.Plugins.Python.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Plugins.Container\Vais.Agents.Runtime.Plugins.Container.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Runtime.ScriptRuntime\Vais.Agents.Runtime.ScriptRuntime.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.Prometheus\Vais.Agents.Gateways.Prometheus.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.Fallback\Vais.Agents.Gateways.Fallback.csproj" />
     <ProjectReference Include="..\Vais.Agents.Gateways.Governance\Vais.Agents.Gateways.Governance.csproj" />

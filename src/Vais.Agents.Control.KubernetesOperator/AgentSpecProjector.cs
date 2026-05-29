@@ -58,6 +58,7 @@ internal static class AgentSpecProjector
             OutputSchema = spec.OutputSchema,
             AgentMode = spec.AgentMode,
             Reasoning = spec.Reasoning,
+            CodeMode = spec.CodeMode,
             Observability = spec.Observability,
             Annotations = spec.Annotations is null ? null : new Dictionary<string, string>(spec.Annotations),
         };

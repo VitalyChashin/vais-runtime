@@ -190,6 +190,50 @@ Vais.Agents.AgentManifest.LlmGatewayRef.get -> string?
 Vais.Agents.AgentManifest.LlmGatewayRef.init -> void
 Vais.Agents.AgentManifest.McpGatewayRef.get -> string?
 Vais.Agents.AgentManifest.McpGatewayRef.init -> void
+Vais.Agents.AgentManifest.CodeMode.get -> Vais.Agents.CodeModeSpec?
+Vais.Agents.AgentManifest.CodeMode.init -> void
+Vais.Agents.ICodeModeToolFactory
+Vais.Agents.ICodeModeToolFactory.Create(string! agentId, Vais.Agents.CodeModeSpec! spec, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>! tools) -> Vais.Agents.ITool!
+Vais.Agents.CodeModeSpec
+Vais.Agents.CodeModeSpec.CodeModeSpec() -> void
+Vais.Agents.CodeModeSpec.Enabled.get -> bool
+Vais.Agents.CodeModeSpec.Enabled.init -> void
+Vais.Agents.CodeModeSpec.Runtime.get -> string!
+Vais.Agents.CodeModeSpec.Runtime.init -> void
+Vais.Agents.CodeModeSpec.Generator.get -> string!
+Vais.Agents.CodeModeSpec.Generator.init -> void
+Vais.Agents.CodeModeSpec.Toolset.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.CodeModeSpec.Toolset.init -> void
+Vais.Agents.CodeModeSpec.Limits.get -> Vais.Agents.CodeModeLimits?
+Vais.Agents.CodeModeSpec.Limits.init -> void
+Vais.Agents.CodeModeSpec.Equals(Vais.Agents.CodeModeSpec? other) -> bool
+Vais.Agents.CodeModeSpec.<Clone>$() -> Vais.Agents.CodeModeSpec!
+override Vais.Agents.CodeModeSpec.Equals(object? obj) -> bool
+override Vais.Agents.CodeModeSpec.GetHashCode() -> int
+override Vais.Agents.CodeModeSpec.ToString() -> string!
+static Vais.Agents.CodeModeSpec.operator !=(Vais.Agents.CodeModeSpec? left, Vais.Agents.CodeModeSpec? right) -> bool
+static Vais.Agents.CodeModeSpec.operator ==(Vais.Agents.CodeModeSpec? left, Vais.Agents.CodeModeSpec? right) -> bool
+Vais.Agents.CodeModeLimits
+Vais.Agents.CodeModeLimits.CodeModeLimits() -> void
+Vais.Agents.CodeModeLimits.TimeoutMs.get -> int
+Vais.Agents.CodeModeLimits.TimeoutMs.init -> void
+Vais.Agents.CodeModeLimits.MaxStatements.get -> int
+Vais.Agents.CodeModeLimits.MaxStatements.init -> void
+Vais.Agents.CodeModeLimits.MemoryBytes.get -> long
+Vais.Agents.CodeModeLimits.MemoryBytes.init -> void
+Vais.Agents.CodeModeLimits.MaxOutputBytes.get -> int
+Vais.Agents.CodeModeLimits.MaxOutputBytes.init -> void
+Vais.Agents.CodeModeLimits.MaxToolCalls.get -> int
+Vais.Agents.CodeModeLimits.MaxToolCalls.init -> void
+Vais.Agents.CodeModeLimits.RecursionDepth.get -> int
+Vais.Agents.CodeModeLimits.RecursionDepth.init -> void
+Vais.Agents.CodeModeLimits.Equals(Vais.Agents.CodeModeLimits? other) -> bool
+Vais.Agents.CodeModeLimits.<Clone>$() -> Vais.Agents.CodeModeLimits!
+override Vais.Agents.CodeModeLimits.Equals(object? obj) -> bool
+override Vais.Agents.CodeModeLimits.GetHashCode() -> int
+override Vais.Agents.CodeModeLimits.ToString() -> string!
+static Vais.Agents.CodeModeLimits.operator !=(Vais.Agents.CodeModeLimits? left, Vais.Agents.CodeModeLimits? right) -> bool
+static Vais.Agents.CodeModeLimits.operator ==(Vais.Agents.CodeModeLimits? left, Vais.Agents.CodeModeLimits? right) -> bool
 Vais.Agents.GatewayMiddlewareSpec
 Vais.Agents.GatewayMiddlewareSpec.<Clone>$() -> Vais.Agents.GatewayMiddlewareSpec!
 Vais.Agents.GatewayMiddlewareSpec.Deconstruct(out string! Name, out System.Text.Json.JsonElement? Params) -> void

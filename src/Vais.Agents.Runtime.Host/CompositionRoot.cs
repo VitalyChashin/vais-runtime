@@ -38,6 +38,7 @@ using Vais.Agents.Runtime.Instantiation.ModelProviders;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
 using Vais.Agents.Runtime.Plugins.Container;
+using Vais.Agents.ScriptRuntime;
 using Vais.Agents.Gateways.Prometheus;
 using Vais.Agents.Gateways.Fallback;
 using Vais.Agents.Gateways.Governance;
@@ -175,6 +176,7 @@ internal static class CompositionRoot
         ConfigureDurability(services, options);
         ConfigureRuntimeAndRegistries(services);
         ConfigurePlugins(services, options);
+        ConfigureCodeMode(services, options);
         ConfigureGatewayCatalog(services);
         ConfigureManifestPipeline(services, options);
         ConfigureLifecycleManagers(services, options, configuration);
@@ -321,6 +323,27 @@ internal static class CompositionRoot
             });
             services.AddContainerMcpServers();
         }
+    }
+
+    // Code-mode (ScriptRuntime primitive) — opt-in via VAIS_CODE_MODE_ENABLED. Registers the
+    // run_code tool factory the manifest translator resolves, the typed sidecar client, and the
+    // call-token service the container-gateway endpoints validate (the script's tool calls route
+    // back through /v1/container-gateway, mapped in Program when code-mode is on).
+    private static void ConfigureCodeMode(IServiceCollection services, RuntimeOptions options)
+    {
+        if (!options.CodeModeEnabled)
+        {
+            return;
+        }
+
+        services.AddContainerGatewayCallToken();
+        services.AddScriptRuntime(o =>
+        {
+            o.SidecarBaseUrl = options.ScriptRuntimeUrl;
+            // The URL the sidecar uses to call tools back into this runtime — same base the
+            // container plugins use, set per topology via VAIS_INTERNAL_GATEWAY_URL.
+            o.GatewayBaseUrl = options.InternalGatewayBaseUrl;
+        });
     }
 
     /// <summary>
