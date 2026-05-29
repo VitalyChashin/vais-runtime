@@ -36,6 +36,7 @@ internal sealed class TranslatorFixture
     private Vais.Agents.Control.Manifests.IDelegationPolicy? _delegationPolicy;
     private readonly List<LlmGatewayMiddleware> _diGlobalLlmMiddleware = new();
     private readonly List<ToolGatewayMiddleware> _diGlobalToolMiddleware = new();
+    private ICodeModeToolFactory? _codeModeToolFactory;
     private IAgentManifestTranslator? _translator;
 
     public IAgentManifestTranslator Translator => _translator ??= Build();
@@ -202,6 +203,13 @@ internal sealed class TranslatorFixture
         return this;
     }
 
+    public TranslatorFixture WithCodeModeToolFactory(ICodeModeToolFactory factory)
+    {
+        _codeModeToolFactory = factory;
+        _translator = null;
+        return this;
+    }
+
     public TranslatorFixture WithGuardrailFactory(string name, GuardrailLayer layer, object instance)
     {
         var factory = Substitute.For<IGuardrailFactory>();
@@ -299,6 +307,9 @@ internal sealed class TranslatorFixture
             services.AddSingleton<LlmGatewayMiddleware>(mw);
         foreach (var mw in _diGlobalToolMiddleware)
             services.AddSingleton<ToolGatewayMiddleware>(mw);
+
+        if (_codeModeToolFactory is not null)
+            services.AddSingleton(_codeModeToolFactory);
 
         services.AddAgentManifestInstantiator();
 

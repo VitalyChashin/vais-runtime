@@ -218,6 +218,21 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
 
         var toolRegistry = await ResolveToolsAsync(manifest, registered.Sources, cancellationToken).ConfigureAwait(false);
 
+        // Code-mode: the LLM sees a single `run_code` tool plus a generated JS API over its tools,
+        // and writes a script instead of issuing per-tool JSON calls. The gateway is unaffected —
+        // ResolveAgentToolsAsync reads the manifest, so the script's tool calls still resolve the
+        // real tools and run the full middleware chain. Only the LLM-facing registry changes here.
+        if (manifest.CodeMode?.Enabled == true)
+        {
+            var codeModeFactory = _serviceProvider.GetService<ICodeModeToolFactory>()
+                ?? throw new InvalidOperationException(
+                    $"Agent '{manifest.Id}' sets spec.codeMode.enabled=true, but no ICodeModeToolFactory is registered. " +
+                    "Call AddScriptRuntime() in the runtime host to enable code-mode.");
+            var realTools = toolRegistry?.Tools ?? (IReadOnlyList<ITool>)[];
+            var runCodeTool = codeModeFactory.Create(manifest.Id, manifest.CodeMode, realTools);
+            toolRegistry = await AggregatingToolRegistry.BuildAsync([runCodeTool], sources: null, cancellationToken).ConfigureAwait(false);
+        }
+
         var responseFormat = ResolveResponseFormat(manifest, provider);
 
         var options = new StatefulAgentOptions

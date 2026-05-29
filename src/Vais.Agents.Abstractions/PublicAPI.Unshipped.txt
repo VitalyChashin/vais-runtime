@@ -192,6 +192,8 @@ Vais.Agents.AgentManifest.McpGatewayRef.get -> string?
 Vais.Agents.AgentManifest.McpGatewayRef.init -> void
 Vais.Agents.AgentManifest.CodeMode.get -> Vais.Agents.CodeModeSpec?
 Vais.Agents.AgentManifest.CodeMode.init -> void
+Vais.Agents.ICodeModeToolFactory
+Vais.Agents.ICodeModeToolFactory.Create(string! agentId, Vais.Agents.CodeModeSpec! spec, System.Collections.Generic.IReadOnlyList<Vais.Agents.ITool!>! tools) -> Vais.Agents.ITool!
 Vais.Agents.CodeModeSpec
 Vais.Agents.CodeModeSpec.CodeModeSpec() -> void
 Vais.Agents.CodeModeSpec.Enabled.get -> bool
