@@ -64,7 +64,15 @@ public sealed record SectionMeasurement(
     int? Tokens,
     double Ratio,
     string Outcome,
-    int DroppedChars);
+    int DroppedChars)
+{
+    /// <summary>
+    /// The section's textual payload, set by sinks that need content (e.g. Langfuse trace enrichment).
+    /// Null when the emitter was not configured to extract content, or for <see cref="SectionKind.Metadata"/> sections.
+    /// Sinks that display or store content should apply their own length limits.
+    /// </summary>
+    public string? Content { get; init; }
+}
 
 /// <summary>Aggregate counters for the turn's section budget. Computed alongside <see cref="SectionMeasurement"/>s.</summary>
 /// <param name="TargetChars">The <see cref="SectionBudgetContext.MaxChars"/>, or null when unlimited.</param>

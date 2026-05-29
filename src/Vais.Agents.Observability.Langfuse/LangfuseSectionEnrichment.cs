@@ -35,6 +35,9 @@ public sealed class LangfuseSectionEnrichment : ISectionTelemetrySink
     /// <summary>Shared singleton — the sink is stateless.</summary>
     public static LangfuseSectionEnrichment Instance { get; } = new();
 
+    /// <summary>Maximum characters written per section content tag. Longer content is truncated with an ellipsis.</summary>
+    private const int ContentMaxChars = 2000;
+
     /// <inheritdoc />
     public ValueTask EmitAsync(SectionTelemetrySnapshot snapshot, CancellationToken cancellationToken = default)
     {
@@ -63,6 +66,13 @@ public sealed class LangfuseSectionEnrichment : ISectionTelemetrySink
             if (section.Tokens is int tokens)
             {
                 activity.SetTag(prefix + "tokens", tokens);
+            }
+            if (section.Content is { Length: > 0 } content)
+            {
+                activity.SetTag(prefix + "content",
+                    content.Length > ContentMaxChars
+                        ? string.Concat(content.AsSpan(0, ContentMaxChars), "…")
+                        : content);
             }
         }
 

@@ -211,6 +211,10 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             ErrorInterceptors = mergedErrorInterceptors,
             InputMiddleware = mergedInputMiddleware,
             OutputMiddleware = mergedOutputMiddleware,
+            // Section telemetry sinks (OTel/Langfuse section tags, Prometheus, event bus) resolved by
+            // the translator. Must be propagated through the grain re-seed or declarative agents emit
+            // no per-section breakdown — keep this in sync when adding new option fields.
+            SectionTelemetrySinks = supplied.SectionTelemetrySinks,
             InitialHistory = _state.State.History.Count == 0 ? null : _state.State.History.ToArray(),
         };
 

@@ -973,6 +973,10 @@ internal static class CompositionRoot
                 });
 
             services.AddAgenticOpenTelemetrySink();
+
+            // Per-section OTel tags (vais.request.section.*) on the agent-turn span. Same gate as
+            // the OTel pipeline above, so it stays zero-cost when tracing is off.
+            services.AddAgenticOpenTelemetrySectionSink();
         }
 
         if (!string.IsNullOrWhiteSpace(options.LangfuseProject))
@@ -984,6 +988,10 @@ internal static class CompositionRoot
                     ["project"] = options.LangfuseProject,
                 },
             });
+
+            // Per-section Langfuse tags (langfuse.section.*) + section_breakdown metadata on the
+            // exported span, so sectioned prompt composition shows up in the Langfuse trace UI.
+            services.AddLangfuseSectionEnrichment();
 
             if (string.IsNullOrWhiteSpace(options.OtelEndpoint) && !options.OtelConsole)
             {
