@@ -9,6 +9,31 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Fixed
+
+- **Section telemetry wiring for declarative agents (PR #121).** Three stacked
+  gaps prevented `langfuse.section.*` tags and `vais.request.section.*` OTel
+  attributes from appearing in traces for Orleans-hosted (declarative) agents:
+  (1) `CompositionRoot.ConfigureObservability` never registered the section sinks —
+  added `AddAgenticOpenTelemetrySectionSink()` (OTel gate) and
+  `AddLangfuseSectionEnrichment()` (Langfuse gate); (2) `AgentManifestTranslator`
+  never set `SectionTelemetrySinks` on the `StatefulAgentOptions` it built —
+  now resolves all registered `ISectionTelemetrySink` from DI on both the
+  declarative and plugin paths; (3) `AiAgentGrain.OnActivateAsync` rebuilt
+  `StatefulAgentOptions` field-by-field and silently dropped `SectionTelemetrySinks` —
+  now propagated through the grain re-seed. Regression: `AiAgentGrainSectionTelemetryTests`
+  (self-contained `TestCluster` with a capturing sink confirms the sink survives
+  grain re-seed and fires once per turn).
+
+### Added
+
+- **Section content in Langfuse traces (PR #121).** `SectionMeasurement` gains an
+  optional `Content` property (backwards-compatible `init`-only). `SectionTelemetryEmitter`
+  populates it from the section's textual payload. `LangfuseSectionEnrichment` emits
+  `langfuse.section.<id>.content` per section, truncated to 2,000 characters, so
+  the actual system-prompt text and conversation history are visible directly in the
+  Langfuse span alongside the existing `chars` / `ratio` / `kind` metadata.
+
 ### Added
 
 - **Trajectory tee + induced authoring recipes (Plan D).** Closes the
