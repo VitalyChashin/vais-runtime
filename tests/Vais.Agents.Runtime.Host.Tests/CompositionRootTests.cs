@@ -20,6 +20,7 @@ using Vais.Agents.Persistence.Postgres;
 using Vais.Agents.Runtime.Instantiation;
 using Vais.Agents.Runtime.Plugins;
 using Vais.Agents.Runtime.Plugins.Python;
+using Vais.Agents.ScriptRuntime;
 using Xunit;
 
 namespace Vais.Agents.Runtime.Host.Tests;
@@ -65,6 +66,33 @@ public class CompositionRootTests
 
         store.Should().BeOfType<OrleansIdempotencyStore>(
             because: "the host installs the durable Orleans store via services.Replace, so it wins over the in-memory control-plane default.");
+    }
+
+    [Fact]
+    public void Composition_CodeModeDisabled_DoesNotRegisterCodeModeFactory()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<ICodeModeToolFactory>().Should().BeNull(
+            because: "code-mode services register only when VAIS_CODE_MODE_ENABLED is set.");
+    }
+
+    [Fact]
+    public void Composition_CodeModeEnabled_RegistersCodeModeServices()
+    {
+        var services = BuildBaseline();
+        CompositionRoot.ConfigureServices(services, new RuntimeOptions { CodeModeEnabled = true });
+
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetService<ICodeModeToolFactory>().Should().NotBeNull(
+            because: "the manifest translator resolves the run_code factory for code-mode agents.");
+        sp.GetService<IScriptRuntimeClient>().Should().NotBeNull();
+        sp.GetRequiredService<ICallTokenService>().Should().NotBeNull(
+            because: "the container-gateway endpoints validate the sidecar's tool callbacks with the call token.");
     }
 
     [Fact]

@@ -98,8 +98,11 @@ var designMcpBuilder = app.MapMcpDesignServer();
 if (!string.IsNullOrWhiteSpace(options.JwtAuthority))
     designMcpBuilder.RequireAuthorization();
 
+// Container plugins, Python plugins, and code-mode all route tool/LLM calls back through the
+// container gateway, so the endpoints are mapped when any of them is enabled.
 if (!string.IsNullOrWhiteSpace(options.PythonPluginsDirectory) ||
-    !string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory))
+    !string.IsNullOrWhiteSpace(options.ContainerPluginsDirectory) ||
+    options.CodeModeEnabled)
     app.MapContainerGatewayEndpoints();
 
 app.MapHealthChecks("/healthz");
