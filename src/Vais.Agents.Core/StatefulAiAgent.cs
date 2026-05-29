@@ -124,7 +124,8 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 options.ToolGuardrails,
                 _eventBus,
                 options.Journal,
-                options.ToolGatewayMiddleware.Count > 0 ? options.ToolGatewayMiddleware : null);
+                options.ToolGatewayMiddleware.Count > 0 ? options.ToolGatewayMiddleware : null,
+                _contextAccessor as IAgentContextSetter);
         _journal = options.Journal ?? NullAgentJournal.Instance;
         _replayMode = options.ReplayMode;
         _runIdFactory = options.RunIdFactory ?? DefaultRunIdFactory;

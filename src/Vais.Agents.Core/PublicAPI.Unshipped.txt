@@ -58,7 +58,7 @@ Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.get -> System.Collec
 Vais.Agents.Core.StatefulAgentOptions.ToolGatewayMiddleware.init -> void
 Vais.Agents.Core.StatefulAgentOptions.ErrorInterceptors.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ErrorInterceptor!>!
 Vais.Agents.Core.StatefulAgentOptions.ErrorInterceptors.init -> void
-Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null, System.Collections.Generic.IEnumerable<Vais.Agents.ToolGatewayMiddleware!>? gatewayMiddleware = null) -> void
+Vais.Agents.Core.DefaultToolCallDispatcher.DefaultToolCallDispatcher(Vais.Agents.IToolRegistry? toolRegistry, System.Collections.Generic.IReadOnlyList<Vais.Agents.IToolGuardrail!>? toolGuardrails = null, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentJournal? journal = null, System.Collections.Generic.IEnumerable<Vais.Agents.ToolGatewayMiddleware!>? gatewayMiddleware = null, Vais.Agents.IAgentContextSetter? contextSetter = null) -> void
 Vais.Agents.Core.ToolLoggingMiddleware
 Vais.Agents.Core.ToolLoggingMiddleware.ToolLoggingMiddleware(Microsoft.Extensions.Logging.ILogger<Vais.Agents.Core.ToolLoggingMiddleware!>! logger) -> void
 override Vais.Agents.Core.ToolLoggingMiddleware.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
