@@ -22,57 +22,39 @@ public sealed class ResearchPlannerAgent : IAiAgent
         no preamble, no trailing punctuation beyond a question mark.
         """;
 
-    private readonly InMemoryAgentSession _session;
-    private readonly ICompletionProvider _provider;
-    private readonly LlmGatewayMiddleware[] _middleware;
+    private readonly StatefulAiAgent _inner;
 
     public ResearchPlannerAgent(
         ICompletionProvider provider,
-        IEnumerable<LlmGatewayMiddleware>? middleware = null)
+        IEnumerable<LlmGatewayMiddleware>? middleware = null,
+        IEnumerable<ISectionTelemetrySink>? sectionSinks = null)
     {
-        _session = new InMemoryAgentSession(agentId: "research-planner", sessionId: Guid.NewGuid().ToString("N"));
-        _provider = provider;
-        _middleware = middleware?.ToArray() ?? [];
-    }
-
-    /// <inheritdoc />
-    public string? SystemPrompt { get; set; }
-
-    /// <inheritdoc />
-    public IAgentSession Session => _session;
-
-    /// <inheritdoc />
-    public IReadOnlyList<ChatTurn> History => _session.History;
-
-    /// <inheritdoc />
-    public async Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
-        return await AskViaGatewayAsync(userMessage, cancellationToken);
-    }
-
-    private async Task<string> AskViaGatewayAsync(string userMessage, CancellationToken cancellationToken)
-    {
-        var history = new List<ChatTurn>(_session.History)
+        _inner = new StatefulAiAgent(provider, new StatefulAgentOptions
         {
-            new(AgentChatRole.User, userMessage),
-        };
-        var request = new CompletionRequest(
-            History: history,
-            SystemPrompt: SystemPrompt ?? DefaultSystemPrompt);
-
-        var response = await LlmGatewayPipeline.InvokeAsync(request, _provider, _middleware, cancellationToken);
-        var reply = response.Text;
-        await RecordAsync(userMessage, reply, cancellationToken);
-        return reply;
+            AgentName = "research-planner",
+            SystemPrompt = DefaultSystemPrompt,
+            GatewayMiddleware = middleware?.ToArray() ?? [],
+            SectionTelemetrySinks = sectionSinks?.ToArray() ?? [],
+        });
     }
 
     /// <inheritdoc />
-    public void Reset() => _session.ResetAsync().AsTask().GetAwaiter().GetResult();
-
-    private async ValueTask RecordAsync(string user, string assistant, CancellationToken ct)
+    public string? SystemPrompt
     {
-        await _session.AppendAsync(new ChatTurn(AgentChatRole.User, user), ct);
-        await _session.AppendAsync(new ChatTurn(AgentChatRole.Assistant, assistant), ct);
+        get => _inner.SystemPrompt;
+        set => _inner.SystemPrompt = value;
     }
+
+    /// <inheritdoc />
+    public IAgentSession Session => _inner.Session;
+
+    /// <inheritdoc />
+    public IReadOnlyList<ChatTurn> History => _inner.History;
+
+    /// <inheritdoc />
+    public Task<string> AskAsync(string userMessage, CancellationToken cancellationToken = default)
+        => _inner.AskAsync(userMessage, cancellationToken);
+
+    /// <inheritdoc />
+    public void Reset() => _inner.Reset();
 }
