@@ -1,8 +1,10 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Vais.Agents.Core;
@@ -83,5 +85,54 @@ public sealed class RunCodeToolTests
 
         await act.Should().ThrowAsync<CodeModeExecutionException>();
         await client.DidNotReceive().RunAsync(Arg.Any<ScriptRunRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ForwardsConsoleAndMetrics_ToRuntimeTraceAndLogs()
+    {
+        var client = Substitute.For<IScriptRuntimeClient>();
+        client.RunAsync(Arg.Any<ScriptRunRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ScriptRunResponse
+            {
+                Result = "ok",
+                Console = new[] { "hello from script" },
+                ToolCallCount = 2,
+                WallMs = 42,
+            });
+        var tokens = Substitute.For<ICallTokenService>();
+        tokens.Generate(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<AgentContextClaims>(), Arg.Any<int>()).Returns("tok");
+
+        var logger = new CapturingLogger();
+        var tool = new RunCodeTool("agent-1", "var tools={};", new CodeModeLimits(), client, tokens,
+            new ScriptRuntimeOptions(), logger);
+
+        var tags = new Dictionary<string, object?>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = a => { foreach (var kv in a.TagObjects) tags[kv.Key] = kv.Value; },
+        };
+        ActivitySource.AddActivityListener(listener);
+        using var source = new ActivitySource("test.runcode");
+
+        using (source.StartActivity("tool.call/run_code"))
+        using (new AsyncLocalAgentContextAccessor().Push(new AgentContext { RunId = "run-1" }))
+        {
+            await tool.InvokeAsync(Code("return 1;"));
+        }
+
+        logger.Messages.Should().Contain(m => m.Contains("hello from script"));
+        tags["vais.code_mode.tool_calls"].Should().Be(2);
+        tags["vais.code_mode.wall_ms"].Should().Be(42L);
+    }
+
+    private sealed class CapturingLogger : ILogger<RunCodeTool>
+    {
+        public List<string> Messages { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Messages.Add(formatter(state, exception));
     }
 }

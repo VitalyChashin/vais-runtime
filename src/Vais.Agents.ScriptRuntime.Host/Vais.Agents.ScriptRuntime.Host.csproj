@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <PackageReference Include="Jint" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
 
   <ItemGroup>

@@ -211,6 +211,14 @@ spec:
           env:
             - name: ASPNETCORE_HTTP_PORTS
               value: {{ .Values.scriptRuntime.port | quote }}
+            {{- if .Values.observability.otel.endpoint }}
+            # Export per-script spans to the same OTLP endpoint as the runtime; spans nest
+            # under the agent's run_code span via the propagated traceparent.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otel.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: "vais-script-runtime"
+            {{- end }}
           ports:
             - name: scriptrt
               containerPort: {{ .Values.scriptRuntime.port }}

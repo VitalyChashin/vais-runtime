@@ -34,6 +34,14 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Code-mode observability.** The `run_code` tool tags its trace span with
+  `vais.code_mode.tool_calls` / `vais.code_mode.wall_ms` and forwards the sidecar-captured script
+  `console.*` output to the runtime logs (visible even without sidecar OTLP). The ScriptRuntime
+  sidecar additionally exports its own per-script spans via OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT`
+  is set — injected by local-dev compose and by the Helm `scriptRuntime` sidecar when
+  `observability.otel.endpoint` is configured — and propagates `traceparent` on its tool-gateway
+  callbacks, so the script execution + its tool calls nest under the agent's `run_code` span.
+
 - **Code-mode (the ScriptRuntime sandbox) — opt-in, off by default.** Agents can set
   `spec.codeMode.enabled: true` to be presented a single `run_code` tool plus a generated
   JavaScript API over their MCP tools, and to execute an LLM-authored script in a hardened

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 VAIS contributors.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Vais.Agents.ScriptRuntime;
 using Vais.Agents.ScriptRuntime.Host;
 
@@ -8,6 +10,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Typed client: ScriptExecutor receives an HttpClient for the __callTool gateway callback.
 builder.Services.AddHttpClient<ScriptExecutor>();
+
+// Export the per-script spans (ScriptExecutor.ActivitySource) via OTLP when an endpoint is
+// configured — OTEL_EXPORTER_OTLP_* env is injected by the runtime / compose / Helm. Each span
+// anchors to the run_code span via the incoming traceparent, so the script execution nests under
+// the agent turn in Langfuse. No endpoint → no exporter (the ActivitySource is then a no-op).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+{
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(r => r.AddService("vais-script-runtime"))
+        .WithTracing(t => t
+            .AddSource(ScriptExecutor.ActivitySource.Name)
+            .AddOtlpExporter());
+}
 
 var app = builder.Build();
 

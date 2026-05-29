@@ -125,6 +125,14 @@ public sealed class ScriptExecutor(HttpClient http, ILogger<ScriptExecutor> logg
         msg.Headers.TryAddWithoutValidation("X-Agent-Id", request.AgentId);
         msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.CallToken);
 
+        // Propagate the script span as W3C traceparent so the gateway-side tool.call span nests
+        // under it (this thread's Activity.Current is the scriptruntime.run span). Manual injection
+        // avoids pulling in the HTTP-instrumentation package just for context propagation.
+        if (Activity.Current?.Id is { } traceparent)
+        {
+            msg.Headers.TryAddWithoutValidation("traceparent", traceparent);
+        }
+
         using var resp = http.Send(msg, ct);
         var payload = resp.Content.ReadAsStringAsync(ct).GetAwaiter().GetResult();
         if (!resp.IsSuccessStatusCode)
