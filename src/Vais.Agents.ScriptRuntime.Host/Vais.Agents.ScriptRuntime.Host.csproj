@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Vais.Agents.ScriptRuntime.Host</RootNamespace>
+    <AssemblyName>Vais.Agents.ScriptRuntime.Host</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!--
+      Host exe — the code-mode sandbox sidecar. Not a published NuGet; the
+      container image source is the Dockerfile next to this csproj. Runs Jint
+      (managed, no-CLR) under the ScriptRuntime protocol; the runtime supervises
+      one shared instance per deployment.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vais.Agents.ScriptRuntime.Abstractions\Vais.Agents.ScriptRuntime.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jint" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vais.Agents.ScriptRuntime.Host.Tests" />
+  </ItemGroup>
+
+</Project>

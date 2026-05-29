@@ -139,6 +139,10 @@
     <PackageVersion Include="YamlDotNet" Version="18.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Jint — managed JavaScript interpreter (Vais.Agents.ScriptRuntime.Host code-mode sandbox). Pure C#, no native dep; cooperative limits (LimitMemory/TimeoutInterval/MaxStatements/LimitRecursion) chosen for fault containment.">
+    <PackageVersion Include="Jint" Version="4.9.2" />
+  </ItemGroup>
+
   <ItemGroup Label="Docker client (Vais.Agents.Runtime.Plugins.Container). Docker.DotNet provides container lifecycle management.">
     <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
   </ItemGroup>
