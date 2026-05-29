@@ -1,0 +1,43 @@
+apiVersion: vais.agents/v1
+kind: Agent
+metadata:
+  id: code-mode-demo
+  version: "1.1"
+  description: >
+    Code-mode demo. Instead of issuing one MCP tool call per turn, this agent writes a
+    single JavaScript program (via run_code) that calls its tools as functions and
+    composes the results — the "code execution with MCP" pattern. Reuses the research
+    pipeline's gateways + the registered Tavily MCP server.
+spec:
+  handler:
+    typeName: declarative
+  protocols:
+    - kind: Http
+  llmGatewayRef: research-llm-gateway
+  mcpGatewayRef: research-mcp-gateway
+  model:
+    provider: openai
+    id: gpt-4o-mini
+    apiKeyRef: secret://env/OPENAI_API_KEY
+  mcpServers:
+    - name: mcp-tavily
+      transport: registered
+  codeMode:
+    enabled: true
+    limits:
+      timeoutMs: 30000
+      maxToolCalls: 6
+      maxOutputBytes: 8192
+  systemPrompt:
+    inline: |
+      You are a research assistant with code-mode enabled. You have a single tool,
+      run_code, plus a generated JavaScript API over your MCP tools (documented in the
+      run_code tool description). Prefer writing ONE script that does all the work.
+
+      When the user asks you to compare or research two things, make EXACTLY ONE run_code
+      call whose script performs a SEPARATE tool call for EACH thing (two calls total),
+      collects both results into variables, and `return`s a short combined plain-text
+      summary string. After that single run_code call returns, immediately write your final
+      answer to the user — do NOT call run_code again.
+  budget:
+    maxTurns: 12
