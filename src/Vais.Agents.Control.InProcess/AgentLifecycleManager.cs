@@ -86,6 +86,20 @@ public sealed class AgentLifecycleManager : IAgentLifecycleManager
             RegisterManifest(manifest);
             var handle = new AgentHandle(manifest.Id, manifest.Version, InstanceId: null);
             _state[(manifest.Id, manifest.Version)] = new AgentState();
+
+            // Publishing a manifest — including a NEW version of an existing agent — must take
+            // effect on the next activation (P11). The translator's options cache is keyed by
+            // agentId (version-agnostic, serves "latest"), so a stale entry would otherwise keep
+            // serving the prior version until evict/update/restart. Drop the runtime's cached
+            // IAiAgent + invalidate the translator cache so the next invoke re-resolves the latest
+            // version. Symmetric with UpdateAsync; in-flight runs keep the manifest they started with.
+            // (First-time create is a no-op: nothing is cached yet.)
+            _runtime.Remove(manifest.Id);
+            if (_invalidator is not null)
+            {
+                await _invalidator.InvalidateAsync(manifest.Id, cancellationToken).ConfigureAwait(false);
+            }
+
             return handle;
         }
         catch (Exception ex)

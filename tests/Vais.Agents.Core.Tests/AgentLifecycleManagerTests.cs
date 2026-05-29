@@ -38,6 +38,26 @@ public sealed class AgentLifecycleManagerTests
     }
 
     [Fact]
+    public async Task Create_InvalidatesTranslatorCache_SoNewVersionTakesEffect()
+    {
+        // P11: publishing a manifest — including a NEW version of an existing agent — must take
+        // effect on the next activation. CreateAsync must invalidate the translator's agentId-keyed
+        // options cache (symmetric with UpdateAsync); otherwise the runtime keeps serving the prior
+        // version until evict/update/restart (the bug this guards against).
+        var registry = new InMemoryAgentRegistry();
+        var runtime = new InMemoryAgentRuntime(new FakeCompletionProvider(_ => new CompletionResponse("ok")));
+        var invalidator = new RecordingInvalidator();
+        var manager = new AgentLifecycleManager(registry, runtime, invalidator: invalidator);
+
+        await manager.CreateAsync(SupportManifest);
+        await manager.CreateAsync(SupportManifest with { Version = "1.1" });
+
+        // Each publish must invalidate the agent's cached options so the latest version
+        // activates on the next invoke (the v1.0→v1.1 staleness bug this guards against).
+        invalidator.InvalidatedIds.Should().Equal(new[] { "support", "support" });
+    }
+
+    [Fact]
     public async Task Query_Unknown_Handle_Returns_Unknown()
     {
         var (manager, _, _) = BuildManager();
@@ -312,6 +332,17 @@ public sealed class AgentLifecycleManagerTests
         {
             Entries.Add(entry);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingInvalidator : IAgentManifestInvalidator
+    {
+        public List<string> InvalidatedIds { get; } = new();
+
+        public ValueTask<bool> InvalidateAsync(string agentId, CancellationToken cancellationToken = default)
+        {
+            InvalidatedIds.Add(agentId);
+            return ValueTask.FromResult(true);
         }
     }
 
