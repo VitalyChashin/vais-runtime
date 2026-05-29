@@ -11,6 +11,13 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Fixed
 
+- **Section telemetry for C# plugin agents (`ResearchPlannerAgent`).** The planner
+  plugin called `LlmGatewayPipeline.InvokeAsync` directly, bypassing `StatefulAiAgent`
+  and the entire section pipeline. Refactored to delegate to an internal `StatefulAiAgent`
+  with `ISectionTelemetrySink[]` injected via DI — the plugin now emits
+  `langfuse.section.*` tags automatically, the same as declarative agents. Net change:
+  58 lines → 20 lines (manual session/history/pipeline code removed).
+
 - **Section telemetry wiring for declarative agents (PR #121).** Three stacked
   gaps prevented `langfuse.section.*` tags and `vais.request.section.*` OTel
   attributes from appearing in traces for Orleans-hosted (declarative) agents:
