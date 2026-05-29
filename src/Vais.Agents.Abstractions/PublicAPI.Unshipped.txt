@@ -1318,6 +1318,8 @@ Vais.Agents.SectionMeasurement.Ratio.init -> void
 Vais.Agents.SectionMeasurement.SectionMeasurement(string! Id, Vais.Agents.SectionKind Kind, string? ProducerId, int? Order, int? Priority, int Chars, int? Tokens, double Ratio, string! Outcome, int DroppedChars) -> void
 Vais.Agents.SectionMeasurement.Tokens.get -> int?
 Vais.Agents.SectionMeasurement.Tokens.init -> void
+Vais.Agents.SectionMeasurement.Content.get -> string?
+Vais.Agents.SectionMeasurement.Content.init -> void
 Vais.Agents.SectionTelemetrySnapshot
 Vais.Agents.SectionTelemetrySnapshot.<Clone>$() -> Vais.Agents.SectionTelemetrySnapshot!
 Vais.Agents.SectionTelemetrySnapshot.Budget.get -> Vais.Agents.SectionBudgetSummary!

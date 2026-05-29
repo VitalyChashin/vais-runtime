@@ -146,6 +146,7 @@ public sealed class SectionTelemetryEmitter
             var tokens = tokenSizes?[i];
             var ratio = totalChars == 0 ? 0d : (double)chars / totalChars;
 
+            var text = ExtractText(section);
             measurements[i] = new SectionMeasurement(
                 Id: section.Id,
                 Kind: section.Kind,
@@ -156,7 +157,10 @@ public sealed class SectionTelemetryEmitter
                 Tokens: tokens,
                 Ratio: ratio,
                 Outcome: outcomeLabel,
-                DroppedChars: droppedChars);
+                DroppedChars: droppedChars)
+            {
+                Content = section.Kind != SectionKind.Metadata && text.Length > 0 ? text : null,
+            };
 
             switch (outcomeLabel)
             {
