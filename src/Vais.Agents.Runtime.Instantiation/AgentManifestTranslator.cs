@@ -172,6 +172,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
                 GatewayMiddleware = pluginChains.Llm,
                 ToolGatewayMiddleware = pluginChains.Tool,
                 InputMiddleware = pluginChains.Input,
+                // Container-gateway LLM path (ContainerGatewayEndpointRouteBuilderExtensions) reads
+                // these to emit per-section telemetry for plugin agents — same DI-registered sinks.
+                SectionTelemetrySinks = _serviceProvider.GetServices<ISectionTelemetrySink>().ToArray(),
             };
 
             _cache.TryAdd(agentId, pluginOptions);
@@ -232,6 +235,10 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             InputMiddleware = chains.Input,
             UsageSink = _serviceProvider.GetService<IUsageSink>(),
             ResponseFormat = responseFormat,
+            // Section telemetry sinks (OTel / Langfuse section tags, Prometheus, event bus) are
+            // DI-registered by the host when tracing is on. Resolve them here so declarative agents
+            // emit per-section breakdowns; AiAgentGrain propagates this through its grain re-seed.
+            SectionTelemetrySinks = _serviceProvider.GetServices<ISectionTelemetrySink>().ToArray(),
         };
 
         _logger.LogDebug(
