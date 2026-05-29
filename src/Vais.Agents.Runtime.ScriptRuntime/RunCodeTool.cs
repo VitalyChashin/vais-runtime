@@ -85,8 +85,22 @@ internal sealed class RunCodeTool : ITool
         };
 
         var response = await _client.RunAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Surface script telemetry into the runtime side: the run_code tool-call span is
+        // Activity.Current here, so tag it with script metrics, and forward the sidecar-captured
+        // console output to the logs. (The sidecar also exports its own spans via OTLP when
+        // configured; this makes script internals visible from the runtime even when it isn't.)
+        var activity = System.Diagnostics.Activity.Current;
+        activity?.SetTag("vais.code_mode.tool_calls", response.ToolCallCount);
+        activity?.SetTag("vais.code_mode.wall_ms", response.WallMs);
+        foreach (var line in response.Console)
+        {
+            _logger.LogInformation("code-mode console agent={AgentId} run={RunId}: {Line}", AgentId, runId, line);
+        }
+
         if (response.Error is { } error)
         {
+            activity?.SetTag("vais.code_mode.error_type", error.Type);
             _logger.LogWarning(
                 "code-mode run_code failed agent={AgentId} run={RunId} type={ErrorType}",
                 AgentId, runId, error.Type);
