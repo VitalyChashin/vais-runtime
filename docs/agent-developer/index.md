@@ -30,3 +30,4 @@ You'll deploy a declarative agent against the runtime, route every model call an
 - [Concepts → Gateway config control plane](../concepts/gateway-config-control-plane.md) — why every LLM and tool call goes through middleware.
 - [Concepts → Graph orchestration](../concepts/graph-orchestration.md) — the Pregel/BSP graph model.
 - [Reference → Manifest schema](../reference/manifest-schema.md) — manifest field reference.
+- [Guide → Run tools as code with code-mode](../guides/run-tools-as-code-with-code-mode.md) — let the agent's LLM script its MCP tool calls (the "code execution with MCP" pattern).
