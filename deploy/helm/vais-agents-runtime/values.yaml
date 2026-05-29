@@ -130,6 +130,24 @@ plugins:
   # on Kubernetes: the watcher is a no-op if nothing changes files.
   csharpReloadPolicy: ""   # "" | DrainAndSwap
 
+# Code-mode (the ScriptRuntime sandbox). Off by default. When enabled, a hardened
+# script-runtime sidecar is co-located in the runtime pod; the runtime is told to
+# enable code-mode (VAIS_CODE_MODE_ENABLED) and to reach the sidecar at localhost.
+# Agents opt in per-manifest via spec.codeMode.enabled — enabling this only provisions
+# the sidecar + maps the gateway endpoints; it does not change non-code-mode agents.
+scriptRuntime:
+  enabled: false
+  image: vais-script-runtime:local
+  imagePullPolicy: IfNotPresent
+  # Pod-local port; must differ from the runtime's 8080 since they share localhost.
+  port: 8090
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
 # v0.30 JWT bearer authentication. Off-by-default → existing localhost semantics
 # unchanged. When jwtAuthority is set the full bearer-token pipeline is wired on
 # the runtime host. serviceAccountPrincipalMapper swaps in the K8s SA mapper so

@@ -96,6 +96,13 @@ spec:
             - name: VAIS_PLUGINS_RELOAD_POLICY
               value: {{ .Values.plugins.csharpReloadPolicy | quote }}
             {{- end }}
+            {{- if .Values.scriptRuntime.enabled }}
+            - name: VAIS_CODE_MODE_ENABLED
+              value: "true"
+            # Pod-local sidecar; the runtime reaches it over localhost (shared pod network).
+            - name: VAIS_SCRIPT_RUNTIME_URL
+              value: "http://localhost:{{ .Values.scriptRuntime.port }}"
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -197,9 +204,48 @@ spec:
             capabilities:
               drop: ["ALL"]
         {{- end }}
+        {{- if .Values.scriptRuntime.enabled }}
+        - name: script-runtime
+          image: {{ .Values.scriptRuntime.image | quote }}
+          imagePullPolicy: {{ .Values.scriptRuntime.imagePullPolicy }}
+          env:
+            - name: ASPNETCORE_HTTP_PORTS
+              value: {{ .Values.scriptRuntime.port | quote }}
+          ports:
+            - name: scriptrt
+              containerPort: {{ .Values.scriptRuntime.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: scriptrt
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: scriptrt
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.scriptRuntime.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: script-runtime-tmp
+              mountPath: /tmp
+        {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if .Values.scriptRuntime.enabled }}
+        - name: script-runtime-tmp
+          emptyDir: {}
+        {{- end }}
         {{- if .Values.plugins.enabled }}
         - name: plugins
           {{- if .Values.plugins.persistentVolumeClaimName }}

@@ -34,6 +34,23 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Code-mode (the ScriptRuntime sandbox) — opt-in, off by default.** Agents can set
+  `spec.codeMode.enabled: true` to be presented a single `run_code` tool plus a generated
+  JavaScript API over their MCP tools, and to execute an LLM-authored script in a hardened
+  Jint sidecar instead of issuing per-tool JSON calls (the "code execution with MCP" / CodeAct
+  pattern). The script's tool calls route back through the existing MCP gateway
+  (`/v1/container-gateway/tools/invoke`) with a short-turn call token, so governance, budgets,
+  and tracing are unchanged; the gateway still resolves the agent's real tools. New manifest
+  block `spec.codeMode { enabled, runtime, generator, toolset, limits }`. New packages:
+  `Vais.Agents.ScriptRuntime.Abstractions` (run protocol + `IScriptRuntimeClient` /
+  `IToolApiGenerator` seams), `Vais.Agents.Runtime.ScriptRuntime` (raw JS-API generator,
+  sidecar client, `run_code` tool factory; `AddScriptRuntime` DI), and the
+  `Vais.Agents.ScriptRuntime.Host` sidecar (no-CLR Jint with timeout / statement / memory /
+  recursion / tool-call / output-size limits; failures classified, never a fabricated success).
+  Enable on the host with `VAIS_CODE_MODE_ENABLED=true` + `VAIS_SCRIPT_RUNTIME_URL`; the Helm
+  chart ships a gated `scriptRuntime` sidecar (`scriptRuntime.enabled`). Runtime backend:
+  Jint 4.9.2 (pure-C#, no native dependency).
+
 - **Section content in Langfuse traces (PR #121).** `SectionMeasurement` gains an
   optional `Content` property (backwards-compatible `init`-only). `SectionTelemetryEmitter`
   populates it from the section's textual payload. `LangfuseSectionEnrichment` emits
