@@ -43,6 +43,8 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
     private readonly ICompletionProvider? _defaultProvider;
     private readonly Func<string, CancellationToken, ValueTask<StatefulAgentOptions>> _optionsFactory;
     private readonly IAgentContextAccessor? _contextAccessor;
+    private readonly OrleansAgentContextAccessor? _grainContextReader;
+    private readonly IAgentContextSetter? _contextSetter;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<AiAgentGrain> _logger;
     private readonly IExtensionChainComposer? _extensionChainComposer;
@@ -71,13 +73,17 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
         Func<string, CancellationToken, ValueTask<StatefulAgentOptions>>? optionsFactory = null,
         ILoggerFactory? loggerFactory = null,
         IAgentContextAccessor? contextAccessor = null,
-        IExtensionChainComposer? extensionChainComposer = null)
+        IExtensionChainComposer? extensionChainComposer = null,
+        OrleansAgentContextAccessor? grainContextReader = null,
+        IAgentContextSetter? contextSetter = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         _state = state;
         _defaultProvider = provider;
         _optionsFactory = optionsFactory ?? ((id, _) => ValueTask.FromResult(new StatefulAgentOptions { AgentName = id }));
         _contextAccessor = contextAccessor;
+        _grainContextReader = grainContextReader;
+        _contextSetter = contextSetter;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<AiAgentGrain>();
         _extensionChainComposer = extensionChainComposer;
@@ -332,10 +338,14 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
             inputMessage = inputCtx.Message;
         }
 
+        var incomingContext = _grainContextReader?.Current ?? AgentContext.Empty;
         string reply;
         try
         {
-            reply = await agent.AskAsync(inputMessage);
+            using (_contextSetter?.Push(incomingContext))
+            {
+                reply = await agent.AskAsync(inputMessage);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -383,6 +393,7 @@ public sealed class AiAgentGrain : Grain, IAiAgentGrain
 
         _logger.LogDebug("Turn starting (streaming) — agentId={AgentId} messageLen={MessageLen}", _agentId, userMessage.Length);
         var sw = Stopwatch.StartNew();
+        using var _ctx = _contextSetter?.Push(context);
         await foreach (var evt in streamingAgent.StreamAsync(userMessage, context, cancellationToken))
         {
             if (evt is TurnCompleted or TurnFailed)
