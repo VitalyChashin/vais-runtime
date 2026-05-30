@@ -33,7 +33,9 @@ public static class AgenticHostingOrleansServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.TryAddSingleton<OrleansAgentContextAccessor>();
         services.TryAddSingleton<IAgentContextAccessor, OrleansAgentContextAccessor>();
+        services.TryAddSingleton<IAgentContextSetter, AsyncLocalAgentContextAccessor>();
         services.TryAddSingleton<IAgentRuntime>(sp => new OrleansAgentRuntime(sp.GetRequiredService<IGrainFactory>()));
         return services;
     }

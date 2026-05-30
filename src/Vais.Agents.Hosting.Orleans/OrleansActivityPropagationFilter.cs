@@ -69,6 +69,14 @@ internal sealed class OrleansOutgoingActivityFilter : IOutgoingGrainCallFilter
             RequestContext.Set(AgenticTags.MaxChainDepth, ctx.MaxChainDepth);
         if (ctx.CorrelationId is not null)
             RequestContext.Set(AgenticTags.CorrelationId, ctx.CorrelationId);
+        if (ctx.UserId is not null)
+            RequestContext.Set(AgenticTags.UserId, ctx.UserId);
+        if (ctx.TenantId is not null)
+            RequestContext.Set(AgenticTags.TenantId, ctx.TenantId);
+        if (ctx.Scopes is { Count: > 0 } scopes)
+            RequestContext.Set(AgenticTags.Scopes, scopes.ToArray());
+        if (ctx.BaselineRunId is not null)
+            RequestContext.Set(AgenticTags.BaselineRunId, ctx.BaselineRunId);
 
         // RunBudget propagation — decomposed into per-field primitives so RunBudget itself
         // doesn't need [GenerateSerializer]. OrleansAgentContextAccessor reassembles.

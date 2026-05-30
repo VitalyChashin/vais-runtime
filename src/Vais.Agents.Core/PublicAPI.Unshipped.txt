@@ -40,6 +40,8 @@ const Vais.Agents.Core.AgenticTags.BudgetMaxToolCalls = "vais.budget.max_tool_ca
 const Vais.Agents.Core.AgenticTags.BudgetMaxPromptTokens = "vais.budget.max_prompt_tokens" -> string!
 const Vais.Agents.Core.AgenticTags.BudgetMaxCompletionTokens = "vais.budget.max_completion_tokens" -> string!
 const Vais.Agents.Core.AgenticTags.BudgetMaxDurationTicks = "vais.budget.max_duration_ticks" -> string!
+const Vais.Agents.Core.AgenticTags.Scopes = "vais.agent.scopes" -> string!
+const Vais.Agents.Core.AgenticTags.BaselineRunId = "vais.baseline.run_id" -> string!
 Vais.Agents.Core.InMemoryModelRouter
 Vais.Agents.Core.InMemoryModelRouter.InMemoryModelRouter(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.ModelRoute!>! routes) -> void
 Vais.Agents.Core.InMemoryModelRouter.ListAliasesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<string!>!>

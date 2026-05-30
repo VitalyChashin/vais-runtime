@@ -37,6 +37,8 @@ public sealed class OrleansAgentContextAccessor : IAgentContextAccessor
         MaxChainDepth  = RequestContext.Get(AgenticTags.MaxChainDepth) as int?,
         Budget         = ReadBudget(),
         RunId          = ActivityPropagation.ReadGraphRunId(),
+        Scopes         = RequestContext.Get(AgenticTags.Scopes) as string[],
+        BaselineRunId  = RequestContext.Get(AgenticTags.BaselineRunId) as string,
     };
 
     // Reassemble RunBudget from the per-field RequestContext primitives written by

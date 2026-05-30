@@ -137,6 +137,12 @@ public static class AgenticTags
 
     /// <summary>Per-run wall-clock cap (TimeSpan.Ticks as long), from <see cref="AgentContext.Budget"/>.MaxDuration.</summary>
     public const string BudgetMaxDurationTicks = "vais.budget.max_duration_ticks";
+
+    /// <summary>OAuth scopes from <see cref="AgentContext.Scopes"/>, stored as <c>string[]</c> in RequestContext.</summary>
+    public const string Scopes = "vais.agent.scopes";
+
+    /// <summary>Baseline run identifier for eval replay, from <see cref="AgentContext.BaselineRunId"/>.</summary>
+    public const string BaselineRunId = "vais.baseline.run_id";
 }
 
 /// <summary>
