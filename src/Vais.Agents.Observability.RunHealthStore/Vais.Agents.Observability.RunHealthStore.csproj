@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Vais.Agents.Observability.RunHealthStore</PackageId>
+    <Description>PostgreSQL-backed per-run mechanical-failure (run-health) signal store + event-bus subscriber for Vais.Agents.</Description>
+    <PackageTags>agents;ai;observability;run-health;postgres</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Abstractions only: RH-2/RH-3 need IAgentEventBus, the AgentEvent types, AgentContext,
+         RunHealth* — all in Abstractions. Referencing Core would flow the SectionInjection
+         source generator, which emits a module class named after this assembly's last segment
+         ("RunHealthStore") in the parent namespace and collides with this package's namespace. -->
+    <ProjectReference Include="..\Vais.Agents.Abstractions\Vais.Agents.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <InternalsVisibleTo Include="Vais.Agents.Observability.RunHealthStore.Tests" />
+  </ItemGroup>
+
+</Project>
