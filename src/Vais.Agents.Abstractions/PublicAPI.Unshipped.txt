@@ -2126,6 +2126,7 @@ Vais.Agents.RunHealthSignalKind.LlmFallback = 3 -> Vais.Agents.RunHealthSignalKi
 Vais.Agents.RunHealthSignalKind.LlmRetry = 2 -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignalKind.McpError = 1 -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignalKind.NodeFailed = 7 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.LlmError = 8 -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignalKind.ToolError = 0 -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignalKind.TurnFailed = 4 -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignalKind.TurnPartial = 5 -> Vais.Agents.RunHealthSignalKind

@@ -58,6 +58,9 @@ public enum RunHealthSignalKind
 
     /// <summary>A graph node failed.</summary>
     NodeFailed = 7,
+
+    /// <summary>An LLM call failed at the gateway (sourced from the gateway event store, not the bus).</summary>
+    LlmError = 8,
 }
 
 /// <summary>
