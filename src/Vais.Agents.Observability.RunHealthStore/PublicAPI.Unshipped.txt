@@ -1,0 +1,46 @@
+#nullable enable
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.DeleteOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.ListByRunTreeAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>!>!
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.RecordSignalAsync(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord! record, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.DeleteOlderThanAsync(System.DateTimeOffset cutoff, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.InitializeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.ListByRunTreeAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>!>!
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.PostgresRunHealthStore(string! connectionString) -> void
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.RecordSignalAsync(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord! record, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.<Clone>$() -> Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord!
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.At.get -> System.DateTimeOffset
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.At.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.CorrelationId.get -> string?
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.CorrelationId.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Deconstruct(out string! RunId, out string? CorrelationId, out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Equals(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? other) -> bool
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ErrorType.get -> string?
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ErrorType.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.IsTransient.get -> bool
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.IsTransient.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Kind.get -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Kind.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Level.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunHealthSignalRecord(string! RunId, string? CorrelationId, string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunId.get -> string!
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunId.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Source.get -> string!
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Source.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreExtensions
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions.ConnectionString.get -> string!
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions.ConnectionString.set -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions.RetentionDays.get -> int
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions.RetentionDays.set -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions.RunHealthStoreOptions() -> void
+override Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Equals(object? obj) -> bool
+override Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.GetHashCode() -> int
+override Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ToString() -> string!
+static Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.operator !=(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? left, Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? right) -> bool
+static Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.operator ==(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? left, Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? right) -> bool
+static Vais.Agents.Observability.RunHealthStore.RunHealthStoreExtensions.AddRunHealthStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

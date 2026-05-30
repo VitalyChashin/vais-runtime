@@ -155,9 +155,13 @@ internal sealed class ContainerAgentShim
             if (response.IsPartial)
             {
                 activity?.SetTag("vais.turn.partial", true);
+                // Langfuse observation level — a recovered partial is WARNING (degraded, not fatal).
+                // Maps to Langfuse level=WARNING via the authoritative "langfuse.observation.level" attr.
+                activity?.SetTag("langfuse.observation.level", "WARNING");
                 if (response.FailureReason is { Length: > 0 } reason)
                 {
                     activity?.SetTag("vais.turn.partial_reason", reason);
+                    activity?.SetTag("langfuse.observation.status_message", reason);
                 }
                 _logger.LogWarning(
                     "Container plugin '{Agent}' returned a partial result (run_id={RunId}): {Reason}",
@@ -222,6 +226,9 @@ internal sealed class ContainerAgentShim
 
             if (collected.Error is not null)
             {
+                // Mark the span ERROR so Langfuse rolls the trace up to error level.
+                activity?.SetStatus(ActivityStatusCode.Error, collected.Error.Message);
+                activity?.SetTag("langfuse.observation.status_message", collected.Error.Message);
                 yield return new TurnFailed(DateTimeOffset.UtcNow, context,
                     collected.Error.GetType().Name, collected.Error.Message,
                     DateTimeOffset.UtcNow - start);
@@ -247,12 +254,25 @@ internal sealed class ContainerAgentShim
                 activity?.SetTag("gen_ai.completion", collected.FinalResponse.AssistantMessage);
             }
 
+            var partialLevel = FailureLevel.Default;
+            if (collected.FinalResponse.IsPartial)
+            {
+                partialLevel = FailureLevel.Warning;
+                activity?.SetTag("vais.turn.partial", true);
+                activity?.SetTag("langfuse.observation.level", "WARNING");
+                if (collected.FinalResponse.FailureReason is { Length: > 0 } fr)
+                {
+                    activity?.SetTag("vais.turn.partial_reason", fr);
+                    activity?.SetTag("langfuse.observation.status_message", fr);
+                }
+            }
+
             yield return new TurnCompleted(
                 DateTimeOffset.UtcNow, context, collected.FinalResponse.AssistantMessage,
                 ModelId: null,
                 PromptTokens: collected.FinalResponse.Usage?.InputTokens,
                 CompletionTokens: collected.FinalResponse.Usage?.OutputTokens,
-                Duration: DateTimeOffset.UtcNow - start);
+                Duration: DateTimeOffset.UtcNow - start) { Level = partialLevel };
         }
         finally
         {

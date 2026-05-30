@@ -34,6 +34,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.OpenTelemetry\Vais.Agents.Observability.OpenTelemetry.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.Langfuse\Vais.Agents.Observability.Langfuse.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.RunStore\Vais.Agents.Observability.RunStore.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Observability.RunHealthStore\Vais.Agents.Observability.RunHealthStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.AgentLogs\Vais.Agents.Observability.AgentLogs.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.InterceptorTeeStore\Vais.Agents.Observability.InterceptorTeeStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.RecipeProposalStore\Vais.Agents.Observability.RecipeProposalStore.csproj" />

@@ -29,6 +29,7 @@
     <ProjectReference Include="..\Vais.Agents.Observability.GatewayEventStore\Vais.Agents.Observability.GatewayEventStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.McpEventStore\Vais.Agents.Observability.McpEventStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.McpGatewayEventStore\Vais.Agents.Observability.McpGatewayEventStore.csproj" />
+    <ProjectReference Include="..\Vais.Agents.Observability.RunHealthStore\Vais.Agents.Observability.RunHealthStore.csproj" />
     <ProjectReference Include="..\Vais.Agents.Observability.AgentLogs\Vais.Agents.Observability.AgentLogs.csproj" />
     <ProjectReference Include="..\Vais.Agents.Eval\Vais.Agents.Eval.csproj" />
     <ProjectReference Include="..\Vais.Agents.Runtime.Extensions\Vais.Agents.Runtime.Extensions.csproj" />

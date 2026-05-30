@@ -101,9 +101,29 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             TimeoutSeconds: _supervisor.Descriptor.InvokeTimeoutSeconds,
             Context: context);
 
-        var response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
+        AgentInvokeResponse response;
+        try
+        {
+            response = await _supervisor.InvokeAgentAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.SetTag("langfuse.observation.status_message", ex.Message);
+            throw;
+        }
 
         activity?.SetTag("gen_ai.completion", response.AssistantMessage);
+        if (response.IsPartial)
+        {
+            activity?.SetTag("vais.turn.partial", true);
+            activity?.SetTag("langfuse.observation.level", "WARNING");
+            if (response.FailureReason is { Length: > 0 } fr)
+            {
+                activity?.SetTag("vais.turn.partial_reason", fr);
+                activity?.SetTag("langfuse.observation.status_message", fr);
+            }
+        }
         if (response.Usage is { Count: > 0 } usageList)
         {
             activity?.SetTag(AgenticTags.GenAiResponseModel, usageList[0].Model);
@@ -160,10 +180,17 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             .ConfigureAwait(false);
 
         var start = DateTimeOffset.UtcNow;
+        // Start a span for Langfuse observation level tagging (error / WARNING on failure / partial).
+        // Must be started before the first yield so it nests under the current ambient parent.
+        using var activity = _activitySource.StartActivity("python.agent.stream", ActivityKind.Internal);
+        activity?.SetTag("vais.agent.name", Session.AgentId);
+        activity?.SetTag("gen_ai.prompt", userMessage);
+
         yield return new TurnStarted(start, context, userMessage);
 
         var streamGraphRunId = Activity.Current?.GetTagItem("graph.run_id") as string;
-        var requestContext = BuildInvokeContext(streamGraphRunId, Activity.Current?.Id);
+        if (streamGraphRunId is not null) activity?.SetTag("graph.run_id", streamGraphRunId);
+        var requestContext = BuildInvokeContext(streamGraphRunId, activity?.Id);
         var request = new AgentInvokeRequest(
             AgentId: Session.AgentId,
             SessionId: Session.SessionId,
@@ -219,6 +246,9 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
 
         if (streamError is not null)
         {
+            // Mark the span ERROR so Langfuse rolls the trace up to error level.
+            activity?.SetStatus(ActivityStatusCode.Error, streamError.Message);
+            activity?.SetTag("langfuse.observation.status_message", streamError.Message);
             yield return new TurnFailed(DateTimeOffset.UtcNow, context,
                 (streamError as IClassifiedAgentError)?.ErrorType ?? streamError.GetType().Name,
                 streamError.Message, DateTimeOffset.UtcNow - start);
@@ -227,9 +257,11 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
 
         if (finalResponse is null)
         {
+            const string noResponseMsg = "No final response received from Python agent.";
+            activity?.SetStatus(ActivityStatusCode.Error, noResponseMsg);
+            activity?.SetTag("langfuse.observation.status_message", noResponseMsg);
             yield return new TurnFailed(DateTimeOffset.UtcNow, context,
-                "StreamError", "No final response received from Python agent.",
-                DateTimeOffset.UtcNow - start);
+                "StreamError", noResponseMsg, DateTimeOffset.UtcNow - start);
             yield break;
         }
 
@@ -244,10 +276,11 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
                 Session.AgentId,
                 Encoding.UTF8.GetByteCount(ns),
                 _maxStateSizeBytes);
+            var tooLargeMsg = $"[{PythonPluginUrns.AgentStateTooLarge}] Python agent state exceeded {_maxStateSizeBytes} bytes.";
+            activity?.SetStatus(ActivityStatusCode.Error, tooLargeMsg);
+            activity?.SetTag("langfuse.observation.status_message", tooLargeMsg);
             yield return new TurnFailed(DateTimeOffset.UtcNow, context,
-                "AgentStateTooLarge",
-                $"[{PythonPluginUrns.AgentStateTooLarge}] Python agent state exceeded {_maxStateSizeBytes} bytes.",
-                DateTimeOffset.UtcNow - start);
+                "AgentStateTooLarge", tooLargeMsg, DateTimeOffset.UtcNow - start);
             yield break;
         }
 
@@ -256,6 +289,19 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             new ChatTurn(AgentChatRole.Assistant, finalResponse.AssistantMessage), cancellationToken)
             .ConfigureAwait(false);
 
+        var streamPartialLevel = FailureLevel.Default;
+        if (finalResponse.IsPartial)
+        {
+            streamPartialLevel = FailureLevel.Warning;
+            activity?.SetTag("vais.turn.partial", true);
+            activity?.SetTag("langfuse.observation.level", "WARNING");
+            if (finalResponse.FailureReason is { Length: > 0 } sfr)
+            {
+                activity?.SetTag("vais.turn.partial_reason", sfr);
+                activity?.SetTag("langfuse.observation.status_message", sfr);
+            }
+        }
+
         yield return new TurnCompleted(
             DateTimeOffset.UtcNow,
             context,
@@ -263,7 +309,7 @@ internal sealed class PythonAgentShim : IAiAgent, IStreamingAiAgent, IOpaqueStat
             ModelId: finalResponse.Usage?.FirstOrDefault()?.Model,
             PromptTokens: finalResponse.Usage?.Sum(u => u.InputTokens),
             CompletionTokens: finalResponse.Usage?.Sum(u => u.OutputTokens),
-            Duration: DateTimeOffset.UtcNow - start);
+            Duration: DateTimeOffset.UtcNow - start) { Level = streamPartialLevel };
     }
 
     private Dictionary<string, string>? BuildInvokeContext(string? runId, string? traceparent)

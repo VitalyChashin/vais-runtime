@@ -30,6 +30,7 @@ using Vais.Agents.Observability.McpEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.OpenTelemetry;
 using Vais.Agents.Observability.RunStore;
+using Vais.Agents.Observability.RunHealthStore;
 using Vais.Agents.Persistence.Postgres;
 using Vais.Agents.Persistence.Redis;
 using Vais.Agents.Runtime.Instantiation;
@@ -766,6 +767,22 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
                 "postgres-agent-run-store", options.AgentRunStoreConnection,
                 "SELECT COUNT(*) FROM vais_agent_runs LIMIT 1"));
+        }
+
+        // Run-health signal store. When VAIS_RUN_HEALTH_STORE_CONNECTION is set, the
+        // RunHealthSignalSubscriber persists the mechanical-failure events from the agent event
+        // bus (recovered tool errors, LLM retries/fallbacks, degraded turns, guardrail trips,
+        // turn failures) so a run that "completed" still reveals whether it degraded.
+        if (!string.IsNullOrWhiteSpace(options.RunHealthStoreConnection))
+        {
+            services.AddRunHealthStore(o => o.ConnectionString = options.RunHealthStoreConnection);
+            services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
+                "postgres-run-health-store", options.RunHealthStoreConnection,
+                "SELECT COUNT(*) FROM vais_run_health_signals LIMIT 1"));
+            // The aggregator folds the run-health signals + gateway/MCP by-run + graph nodes +
+            // background sub-runs into a per-run RunHealth for GET /graphs/{id}/runs/{runId} and
+            // `vais diagnose`. Registered only when the run-health store is configured.
+            services.AddSingleton<IRunHealthAggregator, RunHealthAggregator>();
         }
 
         // Plan D — Postgres-backed trajectory store. When VAIS_INTERCEPTOR_TEE_STORE_CONNECTION

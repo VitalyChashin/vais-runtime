@@ -467,8 +467,48 @@ Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunNodesAsync(string! graphI
 Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunNodeAsync(string! graphId, string! runId, string! nodeId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.NodeExecutionDto?>!
 Vais.Agents.Control.Http.PipelineRunDto
 Vais.Agents.Control.Http.PipelineRunDto.<Clone>$() -> Vais.Agents.Control.Http.PipelineRunDto!
-Vais.Agents.Control.Http.PipelineRunDto.PipelineRunDto(string! RunId, string! GraphId, string! Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, int SuperSteps, string? Error) -> void
-Vais.Agents.Control.Http.PipelineRunDto.Deconstruct(out string! RunId, out string! GraphId, out string! Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out int SuperSteps, out string? Error) -> void
+Vais.Agents.Control.Http.PipelineRunDto.PipelineRunDto(string! RunId, string! GraphId, string! Status, System.DateTimeOffset StartedAt, System.DateTimeOffset? EndedAt, long? DurationMs, int SuperSteps, string? Error, Vais.Agents.Control.Http.RunHealthDto? Health = null) -> void
+Vais.Agents.Control.Http.PipelineRunDto.Deconstruct(out string! RunId, out string! GraphId, out string! Status, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? EndedAt, out long? DurationMs, out int SuperSteps, out string? Error, out Vais.Agents.Control.Http.RunHealthDto? Health) -> void
+Vais.Agents.Control.Http.PipelineRunDto.Health.get -> Vais.Agents.Control.Http.RunHealthDto?
+Vais.Agents.Control.Http.PipelineRunDto.Health.init -> void
+Vais.Agents.Control.Http.RunHealthDto
+Vais.Agents.Control.Http.RunHealthDto.<Clone>$() -> Vais.Agents.Control.Http.RunHealthDto!
+Vais.Agents.Control.Http.RunHealthDto.BackgroundFailures.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>!
+Vais.Agents.Control.Http.RunHealthDto.BackgroundFailures.init -> void
+Vais.Agents.Control.Http.RunHealthDto.Deconstruct(out string! Level, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>! Signals, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>! BackgroundFailures) -> void
+Vais.Agents.Control.Http.RunHealthDto.Equals(Vais.Agents.Control.Http.RunHealthDto? other) -> bool
+Vais.Agents.Control.Http.RunHealthDto.Level.get -> string!
+Vais.Agents.Control.Http.RunHealthDto.Level.init -> void
+Vais.Agents.Control.Http.RunHealthDto.RunHealthDto(string! Level, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>! Signals, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>! BackgroundFailures) -> void
+Vais.Agents.Control.Http.RunHealthDto.Signals.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalDto!>!
+Vais.Agents.Control.Http.RunHealthDto.Signals.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto
+Vais.Agents.Control.Http.RunHealthSignalDto.<Clone>$() -> Vais.Agents.Control.Http.RunHealthSignalDto!
+Vais.Agents.Control.Http.RunHealthSignalDto.At.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.RunHealthSignalDto.At.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Deconstruct(out string! Source, out string! Kind, out string! Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Equals(Vais.Agents.Control.Http.RunHealthSignalDto? other) -> bool
+Vais.Agents.Control.Http.RunHealthSignalDto.ErrorType.get -> string?
+Vais.Agents.Control.Http.RunHealthSignalDto.ErrorType.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.IsTransient.get -> bool
+Vais.Agents.Control.Http.RunHealthSignalDto.IsTransient.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Kind.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalDto.Kind.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Level.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalDto.Level.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.RunHealthSignalDto(string! Source, string! Kind, string! Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Source.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalDto.Source.init -> void
+override Vais.Agents.Control.Http.RunHealthDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthDto.ToString() -> string!
+override Vais.Agents.Control.Http.RunHealthSignalDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthSignalDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthSignalDto.ToString() -> string!
+static Vais.Agents.Control.Http.RunHealthDto.operator !=(Vais.Agents.Control.Http.RunHealthDto? left, Vais.Agents.Control.Http.RunHealthDto? right) -> bool
+static Vais.Agents.Control.Http.RunHealthDto.operator ==(Vais.Agents.Control.Http.RunHealthDto? left, Vais.Agents.Control.Http.RunHealthDto? right) -> bool
+static Vais.Agents.Control.Http.RunHealthSignalDto.operator !=(Vais.Agents.Control.Http.RunHealthSignalDto? left, Vais.Agents.Control.Http.RunHealthSignalDto? right) -> bool
+static Vais.Agents.Control.Http.RunHealthSignalDto.operator ==(Vais.Agents.Control.Http.RunHealthSignalDto? left, Vais.Agents.Control.Http.RunHealthSignalDto? right) -> bool
 Vais.Agents.Control.Http.PipelineRunDto.Equals(Vais.Agents.Control.Http.PipelineRunDto? other) -> bool
 Vais.Agents.Control.Http.PipelineRunDto.RunId.get -> string!
 Vais.Agents.Control.Http.PipelineRunDto.RunId.init -> void

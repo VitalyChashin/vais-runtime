@@ -497,9 +497,21 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             detail: "AddRunStore() was not called during startup. Historical run data is unavailable.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
-    private static PipelineRunDto ToRunDto(PipelineRun r) =>
+    private static PipelineRunDto ToRunDto(PipelineRun r, RunHealthDto? health = null) =>
         new(r.RunId, r.GraphId, r.Status.ToString().ToLowerInvariant(),
-            r.StartedAt, r.EndedAt, r.DurationMs, r.SuperSteps, r.Error);
+            r.StartedAt, r.EndedAt, r.DurationMs, r.SuperSteps, r.Error, health);
+
+    private static RunHealthDto ToRunHealthDto(RunHealth h) =>
+        new(h.Level.ToString().ToLowerInvariant(),
+            h.Signals.Select(s => ToRunHealthSignalDto(s)).ToList(),
+            h.BackgroundFailures.Select(s => ToRunHealthSignalDto(s)).ToList());
+
+    private static RunHealthSignalDto ToRunHealthSignalDto(RunHealthSignal s) =>
+        new(s.Source, ToCamel(s.Kind.ToString()), s.Level.ToString().ToLowerInvariant(),
+            s.ErrorType, s.IsTransient, s.At);
+
+    private static string ToCamel(string pascal) =>
+        string.IsNullOrEmpty(pascal) ? pascal : char.ToLowerInvariant(pascal[0]) + pascal[1..];
 
     private static NodeExecutionDto ToNodeDto(NodeExecution n) =>
         new(n.RunId, n.NodeId, n.NodeKind, n.AgentId, n.Status.ToString().ToLowerInvariant(),
@@ -804,7 +816,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         DateTimeOffset? untilDto = DateTimeOffset.TryParse(until, out var u) ? u : null;
 
         var runs = await store.ListRunsAsync(id, ParseRunStatusQuery(status), sinceDto, untilDto, limit, ct).ConfigureAwait(false);
-        return Results.Ok(new RunListResponse(runs.Select(ToRunDto).ToArray()));
+        return Results.Ok(new RunListResponse(runs.Select(r => ToRunDto(r)).ToArray()));
     }
 
     private static async Task<IResult> GraphGetRunAsync(
@@ -820,7 +832,16 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
         if (run is null || !string.Equals(run.GraphId, id, StringComparison.Ordinal))
             return Results.NotFound();
 
-        return Results.Ok(ToRunDto(run));
+        // Mechanical-failure rollup — optional: null when VAIS_RUN_HEALTH_STORE_CONNECTION is unset.
+        RunHealthDto? health = null;
+        var aggregator = http.RequestServices.GetService<IRunHealthAggregator>();
+        if (aggregator is not null)
+        {
+            var rollup = await aggregator.GetRunHealthAsync(runId, ct).ConfigureAwait(false);
+            health = ToRunHealthDto(rollup);
+        }
+
+        return Results.Ok(ToRunDto(run, health));
     }
 
     private static async Task<IResult> GraphListRunNodesAsync(

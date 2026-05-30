@@ -232,6 +232,16 @@ internal sealed record RuntimeOptions
     public string? AgentRunStoreConnection { get; init; }
 
     /// <summary>
+    /// Postgres connection string for the run-health signal store. When set, the
+    /// mechanical-failure signals published on the agent event bus (recovered tool errors, LLM
+    /// retries/fallbacks, degraded turns, guardrail trips, turn failures) are persisted and rolled
+    /// up per run via <c>GET /v1/graphs/{id}/runs/{runId}</c> and <c>vais diagnose</c>.
+    /// Null ⇒ run-health capture disabled.
+    /// Set via <c>VAIS_RUN_HEALTH_STORE_CONNECTION</c>.
+    /// </summary>
+    public string? RunHealthStoreConnection { get; init; }
+
+    /// <summary>
     /// Postgres connection string for the graph checkpointer. When set, the runtime persists graph-run
     /// checkpoints directly to Postgres (<c>PostgresGraphCheckpointer</c>) instead of the default
     /// Orleans-grain-backed checkpointer — a simpler, queryable storage option. Null ⇒ Orleans checkpointer
@@ -438,6 +448,7 @@ internal sealed record RuntimeOptions
             CorsOrigins = Env("VAIS_CORS_ORIGINS"),
             RunStoreConnection = Env("VAIS_RUN_STORE_CONNECTION"),
             AgentRunStoreConnection = Env("VAIS_AGENT_RUN_STORE_CONNECTION"),
+            RunHealthStoreConnection = Env("VAIS_RUN_HEALTH_STORE_CONNECTION"),
             CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
             OntologyOverlayPath = Env("VAIS_ONTOLOGY_OVERLAY_PATH"),
             AuditLogPath = Env("VAIS_AUDIT_LOG_PATH"),
