@@ -197,6 +197,9 @@ app.Configure(config =>
 
         branch.AddCommand<DiagnoseFilterStatusCommand>("filter-status")
             .WithDescription("Show per-interface outgoing Orleans grain call counters.");
+
+        branch.AddCommand<DiagnoseRunCommand>("run")
+            .WithDescription("Show the mechanical-failure health rollup for a run (requires VAIS_RUN_HEALTH_STORE_CONNECTION).");
     });
 
     config.AddBranch("config", branch =>

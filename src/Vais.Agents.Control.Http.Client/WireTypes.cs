@@ -227,6 +227,7 @@ public sealed record GraphValidationResult(bool Valid, IReadOnlyList<string> Err
 /// <param name="DurationMs">Wall-clock duration in milliseconds; <see langword="null"/> while running.</param>
 /// <param name="SuperSteps">Number of super-steps executed.</param>
 /// <param name="Error">Error message when <paramref name="Status"/> is <c>failed</c>; otherwise <see langword="null"/>.</param>
+/// <param name="Health">Mechanical-failure health rollup; <see langword="null"/> when the run-health store is not configured.</param>
 public sealed record PipelineRunDto(
     string RunId,
     string GraphId,
@@ -235,7 +236,32 @@ public sealed record PipelineRunDto(
     DateTimeOffset? EndedAt,
     long? DurationMs,
     int SuperSteps,
-    string? Error);
+    string? Error,
+    RunHealthDto? Health = null);
+
+/// <summary>Client-side wire type for the per-run mechanical-failure health rollup.</summary>
+/// <param name="Level">Overall health: <c>healthy</c>, <c>degraded</c>, or <c>failed</c>.</param>
+/// <param name="Signals">Attributed mechanical-failure signals within the synchronous run tree.</param>
+/// <param name="BackgroundFailures">Failures from background sub-runs launched by this run.</param>
+public sealed record RunHealthDto(
+    string Level,
+    IReadOnlyList<RunHealthSignalDto> Signals,
+    IReadOnlyList<RunHealthSignalDto> BackgroundFailures);
+
+/// <summary>Client-side wire type for a single attributed mechanical-failure signal.</summary>
+/// <param name="Source">Sub-agent name, graph node id, or tool name that produced the signal.</param>
+/// <param name="Kind">Signal kind: <c>toolError</c>, <c>mcpError</c>, <c>llmRetry</c>, etc.</param>
+/// <param name="Level">Severity: <c>warning</c> (recovered) or <c>error</c> (fatal).</param>
+/// <param name="ErrorType">CLR/error type name when known, or <see langword="null"/>.</param>
+/// <param name="IsTransient">Whether the underlying failure was classified transient.</param>
+/// <param name="At">UTC timestamp of the signal.</param>
+public sealed record RunHealthSignalDto(
+    string Source,
+    string Kind,
+    string Level,
+    string? ErrorType,
+    bool IsTransient,
+    DateTimeOffset At);
 
 /// <summary>Client-side wire type for a single node execution returned by run-history endpoints.</summary>
 /// <param name="RunId">Identifier of the containing run.</param>
