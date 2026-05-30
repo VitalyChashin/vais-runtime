@@ -148,6 +148,22 @@ internal sealed class ContainerAgentShim
             _opaqueStateJson = SerialiseOpaqueState(response.OpaqueState);
 
             activity?.SetTag("gen_ai.completion", response.AssistantMessage);
+
+            // AskAsync has no event channel (returns a string), so a partial result surfaces here
+            // only on the span + as a structured warning. The event-level signal lives on the
+            // StreamAsync path's TurnCompleted.Level, which is what the runtime grain uses.
+            if (response.IsPartial)
+            {
+                activity?.SetTag("vais.turn.partial", true);
+                if (response.FailureReason is { Length: > 0 } reason)
+                {
+                    activity?.SetTag("vais.turn.partial_reason", reason);
+                }
+                _logger.LogWarning(
+                    "Container plugin '{Agent}' returned a partial result (run_id={RunId}): {Reason}",
+                    _manifest.Id, invokeContext.RunId, response.FailureReason ?? "(no reason given)");
+            }
+
             return response.AssistantMessage;
         }
         finally

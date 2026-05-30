@@ -2036,3 +2036,53 @@ Vais.Agents.IRecipeProposalStore.ListAsync(Vais.Agents.RecipeProposalQuery! quer
 Vais.Agents.IRecipeProposalStore.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
 Vais.Agents.AgentContext.Budget.get -> Vais.Agents.RunBudget?
 Vais.Agents.AgentContext.Budget.init -> void
+Vais.Agents.FailureLevel
+Vais.Agents.FailureLevel.Default = 0 -> Vais.Agents.FailureLevel
+Vais.Agents.FailureLevel.Warning = 1 -> Vais.Agents.FailureLevel
+Vais.Agents.FailureLevel.Error = 2 -> Vais.Agents.FailureLevel
+Vais.Agents.ToolCallCompleted.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.ToolCallCompleted.Level.init -> void
+Vais.Agents.LlmCallRetried
+Vais.Agents.LlmCallRetried.AttemptIndex.get -> int
+Vais.Agents.LlmCallRetried.AttemptIndex.init -> void
+Vais.Agents.LlmCallRetried.ErrorType.get -> string!
+Vais.Agents.LlmCallRetried.ErrorType.init -> void
+Vais.Agents.LlmCallRetried.IsTransient.get -> bool
+Vais.Agents.LlmCallRetried.IsTransient.init -> void
+Vais.Agents.LlmCallRetried.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.LlmCallRetried.Level.init -> void
+Vais.Agents.LlmCallRetried.LlmCallRetried(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, int AttemptIndex, string! ErrorType, bool IsTransient, Vais.Agents.FailureLevel Level = Vais.Agents.FailureLevel.Warning) -> void
+Vais.Agents.LlmCallRetried.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out int AttemptIndex, out string! ErrorType, out bool IsTransient, out Vais.Agents.FailureLevel Level) -> void
+Vais.Agents.LlmCallRetried.Equals(Vais.Agents.LlmCallRetried? other) -> bool
+override Vais.Agents.LlmCallRetried.<Clone>$() -> Vais.Agents.LlmCallRetried!
+override Vais.Agents.LlmCallRetried.Equals(object? obj) -> bool
+override Vais.Agents.LlmCallRetried.GetHashCode() -> int
+override Vais.Agents.LlmCallRetried.ToString() -> string!
+override sealed Vais.Agents.LlmCallRetried.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.LlmCallRetried.operator !=(Vais.Agents.LlmCallRetried? left, Vais.Agents.LlmCallRetried? right) -> bool
+static Vais.Agents.LlmCallRetried.operator ==(Vais.Agents.LlmCallRetried? left, Vais.Agents.LlmCallRetried? right) -> bool
+Vais.Agents.LlmFallbackEngaged
+Vais.Agents.LlmFallbackEngaged.FromProviderIndex.get -> int
+Vais.Agents.LlmFallbackEngaged.FromProviderIndex.init -> void
+Vais.Agents.LlmFallbackEngaged.ToProviderIndex.get -> int
+Vais.Agents.LlmFallbackEngaged.ToProviderIndex.init -> void
+Vais.Agents.LlmFallbackEngaged.FromProviderType.get -> string?
+Vais.Agents.LlmFallbackEngaged.FromProviderType.init -> void
+Vais.Agents.LlmFallbackEngaged.ToProviderType.get -> string?
+Vais.Agents.LlmFallbackEngaged.ToProviderType.init -> void
+Vais.Agents.LlmFallbackEngaged.Reason.get -> string!
+Vais.Agents.LlmFallbackEngaged.Reason.init -> void
+Vais.Agents.LlmFallbackEngaged.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.LlmFallbackEngaged.Level.init -> void
+Vais.Agents.LlmFallbackEngaged.LlmFallbackEngaged(System.DateTimeOffset At, Vais.Agents.AgentContext! Context, int FromProviderIndex, int ToProviderIndex, string? FromProviderType, string? ToProviderType, string! Reason, Vais.Agents.FailureLevel Level = Vais.Agents.FailureLevel.Warning) -> void
+Vais.Agents.LlmFallbackEngaged.Deconstruct(out System.DateTimeOffset At, out Vais.Agents.AgentContext! Context, out int FromProviderIndex, out int ToProviderIndex, out string? FromProviderType, out string? ToProviderType, out string! Reason, out Vais.Agents.FailureLevel Level) -> void
+Vais.Agents.LlmFallbackEngaged.Equals(Vais.Agents.LlmFallbackEngaged? other) -> bool
+override Vais.Agents.LlmFallbackEngaged.<Clone>$() -> Vais.Agents.LlmFallbackEngaged!
+override Vais.Agents.LlmFallbackEngaged.Equals(object? obj) -> bool
+override Vais.Agents.LlmFallbackEngaged.GetHashCode() -> int
+override Vais.Agents.LlmFallbackEngaged.ToString() -> string!
+override sealed Vais.Agents.LlmFallbackEngaged.Equals(Vais.Agents.AgentEvent? other) -> bool
+static Vais.Agents.LlmFallbackEngaged.operator !=(Vais.Agents.LlmFallbackEngaged? left, Vais.Agents.LlmFallbackEngaged? right) -> bool
+static Vais.Agents.LlmFallbackEngaged.operator ==(Vais.Agents.LlmFallbackEngaged? left, Vais.Agents.LlmFallbackEngaged? right) -> bool
+Vais.Agents.TurnCompleted.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.TurnCompleted.Level.init -> void

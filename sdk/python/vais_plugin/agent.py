@@ -293,4 +293,8 @@ def _serialise_response(r: InvokeResponse) -> dict[str, Any]:
             "outputTokens": r.usage.output_tokens,
             "cachedTokens": r.usage.cached_tokens,
         }
+    if r.is_partial:
+        d["isPartial"] = True
+        if r.failure_reason is not None:
+            d["failureReason"] = r.failure_reason
     return d

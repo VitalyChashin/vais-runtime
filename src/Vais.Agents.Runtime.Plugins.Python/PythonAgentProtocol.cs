@@ -24,7 +24,11 @@ internal sealed record AgentInvokeResponse(
     [property: JsonPropertyName("newState")] string? NewState,
     [property: JsonPropertyName("usage")] IReadOnlyList<AgentInvokeUsage>? Usage,
     [property: JsonPropertyName("journal")] IReadOnlyList<AgentInvokeJournalEntry>? Journal,
-    [property: JsonPropertyName("deltas")] IReadOnlyList<string>? Deltas = null);
+    [property: JsonPropertyName("deltas")] IReadOnlyList<string>? Deltas = null,
+    // Degraded-result signal from vais_agent_sdk.AgentResponse.is_partial — the shim maps it to a
+    // WARNING-level TurnCompleted so a partial plugin turn isn't masked as a clean success.
+    [property: JsonPropertyName("isPartial")] bool IsPartial = false,
+    [property: JsonPropertyName("failureReason")] string? FailureReason = null);
 
 internal sealed record AgentInvokeUsage(
     [property: JsonPropertyName("model")] string Model,

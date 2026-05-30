@@ -5,7 +5,7 @@ Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool
 Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool.GetProviders() -> System.Collections.Generic.IReadOnlyList<Vais.Agents.ICompletionProvider!>!
 Vais.Agents.Gateways.Fallback.InMemoryFallbackProviderPool.InMemoryFallbackProviderPool(params Vais.Agents.ICompletionProvider![]! providers) -> void
 Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware
-Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware.LlmFallbackMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> void
+Vais.Agents.Gateways.Fallback.LlmFallbackMiddleware.LlmFallbackMiddleware(Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool, Vais.Agents.IAgentEventBus? eventBus = null, Vais.Agents.IAgentContextAccessor? contextAccessor = null) -> void
 Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions
 static Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions.AddLlmFallbackMiddleware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Vais.Agents.Gateways.Fallback.IFallbackProviderPool! pool) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Vais.Agents.Gateways.Fallback.LlmFallbackServiceCollectionExtensions.AddNamedLlmGatewayMiddleware_Fallback(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
