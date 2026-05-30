@@ -39,3 +39,9 @@ CREATE TABLE IF NOT EXISTS vais_eval_case_results (
 
 CREATE INDEX IF NOT EXISTS ix_vais_eval_case_results_run
     ON vais_eval_case_results (eval_run_id);
+
+-- CS-1 (2026-05-30): mechanical failure axis — additive columns, safe to run on existing tables.
+ALTER TABLE vais_eval_case_results
+    ADD COLUMN IF NOT EXISTS mechanical_level       SMALLINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS mechanical_failure_count INT     NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS mechanical_breakdown   JSONB;
