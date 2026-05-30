@@ -29,6 +29,16 @@ public interface IGatewayEventStore
         DateTimeOffset? since = null, DateTimeOffset? until = null,
         string? kind = null, int limit = 50, CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns events for a specific run (ordered by <c>at DESC</c>), using the <c>run_id</c> index.
+    /// Powers the run-health rollup, which attributes mechanical failures to a run rather than to a
+    /// gateway. Returns an empty list when the run produced no gateway events.
+    /// </summary>
+    /// <param name="runId">Run identifier stamped on each event from the ambient agent context.</param>
+    /// <param name="limit">Maximum number of events to return (default 200).</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<GatewayEvent>> ListByRunAsync(string runId, int limit = 200, CancellationToken ct = default);
+
     /// <summary>Deletes events whose <c>created_at</c> is older than <paramref name="cutoff"/>.</summary>
     Task DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken ct = default);
 }

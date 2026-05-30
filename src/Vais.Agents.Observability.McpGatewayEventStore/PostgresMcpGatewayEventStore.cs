@@ -115,6 +115,29 @@ internal sealed class PostgresMcpGatewayEventStore : IMcpGatewayEventStore
         return result;
     }
 
+    public async Task<IReadOnlyList<McpGatewayEvent>> ListByRunAsync(string runId, int limit = 200, CancellationToken ct = default)
+    {
+        await using var conn = await OpenAsync(ct).ConfigureAwait(false);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT event_id, gateway_id, tool_name, event_kind, duration_ms, cache_hit,
+                   blocked_reason, error_type, at, correlation_id, run_id,
+                   input_json, output_json
+            FROM vais_mcp_gateway_events
+            WHERE run_id = $1
+            ORDER BY at DESC
+            LIMIT $2
+            """;
+        cmd.Parameters.AddWithValue(runId);
+        cmd.Parameters.AddWithValue(limit);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        var result = new List<McpGatewayEvent>();
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+            result.Add(ReadEvent(reader));
+        return result;
+    }
+
     public async Task DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken ct = default)
     {
         await using var conn = await OpenAsync(ct).ConfigureAwait(false);
