@@ -779,6 +779,10 @@ internal static class CompositionRoot
             services.AddSingleton<ISelfCheckProbe>(new PostgresSelfCheckProbe(
                 "postgres-run-health-store", options.RunHealthStoreConnection,
                 "SELECT COUNT(*) FROM vais_run_health_signals LIMIT 1"));
+            // The aggregator folds the run-health signals + gateway/MCP by-run + graph nodes +
+            // background sub-runs into a per-run RunHealth for GET /graphs/{id}/runs/{runId} and
+            // `vais diagnose`. Registered only when the run-health store is configured.
+            services.AddSingleton<IRunHealthAggregator, RunHealthAggregator>();
         }
 
         // Plan D — Postgres-backed trajectory store. When VAIS_INTERCEPTOR_TEE_STORE_CONNECTION
