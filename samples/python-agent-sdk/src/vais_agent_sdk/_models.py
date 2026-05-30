@@ -48,5 +48,16 @@ class AgentResponse(BaseModel):
     new_state: Optional[str] = Field(default=None, alias="newState")
     usage: Optional[list[AgentUsage]] = Field(default=None)
     journal: Optional[list[AgentJournalEntry]] = Field(default=None)
+    # Degraded-result signal (P9): set is_partial=True when you produced some content but an
+    # internal step failed or was incomplete. The runtime marks the turn WARNING (not a clean
+    # success, not a failure) so it shows up in run-health diagnostics instead of looking green.
+    # For a hard, unrecoverable failure, `raise` a classified error (LlmGatewayError / ToolError /
+    # Timeout) instead — never return placeholder text as if it succeeded.
+    # Optional (default None) so a clean response omits these from the wire under
+    # model_dump(exclude_none=True) — keeps the success shape unchanged and symmetric with the
+    # vais_plugin SDK, which also emits them only when partial. C# AgentInvokeResponse.IsPartial
+    # defaults to false when the field is absent.
+    is_partial: Optional[bool] = Field(default=None, alias="isPartial")
+    failure_reason: Optional[str] = Field(default=None, alias="failureReason")
 
     model_config = {"populate_by_name": True}

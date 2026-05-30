@@ -14,6 +14,15 @@ async def invoke(request: AgentRequest) -> AgentResponse:
         run_id=request.run_id,
         agent_id=request.agent_id,
     )
-    return AgentResponse(
-        assistant_message=result or "No analysis produced.",
-    )
+    # run_research returns None/empty when the SGR engine produced no analysis (an internal failure
+    # it swallowed). Signal that as a *partial* result instead of returning placeholder text as if it
+    # succeeded — so the runtime marks the turn WARNING and it surfaces in run-health diagnostics
+    # rather than looking green. (A hard, unrecoverable failure should `raise` a classified error —
+    # LlmGatewayError / ToolError / Timeout — instead.)
+    if not result:
+        return AgentResponse(
+            assistant_message="No analysis produced.",
+            is_partial=True,
+            failure_reason="SGR engine returned no analysis (run_research produced an empty result).",
+        )
+    return AgentResponse(assistant_message=result)
