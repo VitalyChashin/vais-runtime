@@ -97,7 +97,13 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
         _usageSink = options.UsageSink ?? NullUsageSink.Instance;
         _eventBus = options.EventBus ?? NullAgentEventBus.Instance;
         _contextAccessor = options.ContextAccessor ?? new AsyncLocalAgentContextAccessor();
-        _pipeline = options.ResiliencePipeline ?? _defaultPipeline;
+        // When a real event bus is wired, build per-instance pipelines whose Polly OnRetry hook
+        // publishes LlmCallRetried — so a recovered retry loop is observable (parity with the
+        // streaming path's per-attempt spans). With no bus we keep the shared static pipelines
+        // (zero-alloc default). A caller-supplied pipeline is honoured verbatim.
+        var emitRetryEvents = options.EventBus is not null;
+        _pipeline = options.ResiliencePipeline
+            ?? (emitRetryEvents ? BuildRetryEventPipeline() : _defaultPipeline);
         _streamingPipeline = options.StreamingResiliencePipeline ?? _defaultStreamingPipeline;
         _toolRegistry = options.ToolRegistry;
         _historyReducer = options.HistoryReducer ?? NoopHistoryReducer.Instance;
@@ -1670,6 +1676,39 @@ public sealed class StatefulAiAgent : IAiAgent, IStreamingAiAgent
                 UseJitter = true,
                 Delay = TimeSpan.FromSeconds(1),
                 ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => !IsFilterDomainException(ex)),
+            })
+            .Build();
+
+    // Per-instance variant of the default non-streaming pipeline that publishes an
+    // LlmCallRetried event on each Polly retry. Built only when a real event bus is wired
+    // (see ctor); otherwise the shared static _defaultPipeline is used. OnRetry fires once
+    // per *failed* attempt that triggers a retry — args.AttemptNumber is the zero-based index
+    // of the attempt that just failed (0 = first attempt).
+    private ResiliencePipeline BuildRetryEventPipeline() =>
+        new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 2, // 3 total attempts (1 + 2 retries) — matches BuildDefaultPipeline
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromSeconds(1),
+                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => !IsFilterDomainException(ex)),
+                OnRetry = args =>
+                {
+                    var ex = args.Outcome.Exception;
+                    if (ex is not null)
+                    {
+                        var ctx = _contextAccessor.Current;
+                        var errorType = (ex as IClassifiedAgentError)?.ErrorType ?? ex.GetType().Name;
+                        var isTransient = (ex as IClassifiedAgentError)?.IsTransient ?? true;
+                        // Fire-and-forget through the same swallow-on-failure helper; OnRetry is a
+                        // hot-path hook, so we don't block the backoff on the bus.
+                        _ = PublishEventAsync(
+                            new LlmCallRetried(DateTimeOffset.UtcNow, ctx, args.AttemptNumber, errorType, isTransient),
+                            CancellationToken.None);
+                    }
+                    return default;
+                },
             })
             .Build();
 

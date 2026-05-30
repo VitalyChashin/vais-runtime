@@ -27,7 +27,7 @@ public sealed class ToolCallEventEmissionTests
         events[0].Should().BeOfType<ToolCallStarted>()
             .Which.Should().Match<ToolCallStarted>(e => e.CallId == "c1" && e.ToolName == "echo");
         events[1].Should().BeOfType<ToolCallCompleted>()
-            .Which.Should().Match<ToolCallCompleted>(e => e.CallId == "c1" && e.ToolName == "echo" && e.Succeeded && e.Error == null);
+            .Which.Should().Match<ToolCallCompleted>(e => e.CallId == "c1" && e.ToolName == "echo" && e.Succeeded && e.Error == null && e.Level == FailureLevel.Default);
     }
 
     [Fact]
@@ -48,7 +48,9 @@ public sealed class ToolCallEventEmissionTests
         events[1].Should().BeOfType<ToolCallCompleted>()
             .Which.Should().Match<ToolCallCompleted>(e =>
                 e.Succeeded == false &&
-                e.Error == nameof(InvalidOperationException));
+                e.Error == nameof(InvalidOperationException) &&
+                // A recovered tool failure (fed back to the model) is WARNING, not turn-fatal.
+                e.Level == FailureLevel.Warning);
     }
 
     [Fact]

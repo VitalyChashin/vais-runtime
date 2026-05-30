@@ -12,7 +12,7 @@ namespace Vais.Agents;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Closed hierarchy: the Abstractions package defines exactly these twelve concrete
+/// Closed hierarchy: the Abstractions package defines exactly these fourteen concrete
 /// shapes. Consumers pattern-match on subtype; adding a new subtype is an
 /// <em>unshipped</em> addition to Abstractions, not a subclass in downstream code.
 /// Keeps wire serialisation (Orleans, Redis streams) deterministic.
@@ -113,7 +113,17 @@ public sealed record ToolCallCompleted(
     bool Succeeded,
     string? Error,
     TimeSpan Duration)
-    : AgentEvent(At, Context);
+    : AgentEvent(At, Context)
+{
+    /// <summary>
+    /// Severity of this tool outcome. A tool error that the dispatcher captures and feeds
+    /// back to the model is a <em>recovered</em> failure (<see cref="FailureLevel.Warning"/>),
+    /// not a turn-fatal one — so it stays visible in the run-health rollup without looking
+    /// like a hard error. Defaults to <see cref="FailureLevel.Default"/> on success; the
+    /// positional constructor is unchanged so existing callers are unaffected.
+    /// </summary>
+    public FailureLevel Level { get; init; } = FailureLevel.Default;
+}
 
 /// <summary>
 /// Emitted when a guardrail returns <see cref="GuardrailDecision.Deny"/> at any
@@ -286,4 +296,62 @@ public sealed record EvalRunProgress(
     string ProgressKind,
     string? CaseId = null,
     int? CaseStatus = null)
+    : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted when an LLM call fails and is retried by the agent's resilience pipeline.
+/// One event per <em>failed</em> attempt that triggers a retry; the final successful
+/// attempt (or the terminal failure → <see cref="TurnFailed"/>) is not a retry event.
+/// </summary>
+/// <remarks>
+/// A recovered retry (a later attempt succeeds) is a degraded-but-not-fatal signal, so
+/// <see cref="Level"/> is <see cref="FailureLevel.Warning"/>. Without this event a silent
+/// retry loop is invisible — "answered, but only after 2 retries" cannot be distinguished
+/// from a clean first-attempt success. Feeds the run-health rollup and eval mechanical axis.
+/// </remarks>
+/// <param name="At">UTC timestamp when the retry was scheduled.</param>
+/// <param name="Context">Ambient agent context at emission time.</param>
+/// <param name="AttemptIndex">Zero-based index of the attempt that just failed (0 = the first attempt). Matches <c>vais.stream.attempt.index</c> semantics.</param>
+/// <param name="ErrorType">Short exception type name of the failure that triggered the retry.</param>
+/// <param name="IsTransient">True when the failure was classified transient (retry-eligible); see <see cref="IClassifiedAgentError"/>.</param>
+/// <param name="Level">Severity — <see cref="FailureLevel.Warning"/> for a recovered retry.</param>
+public sealed record LlmCallRetried(
+    DateTimeOffset At,
+    AgentContext Context,
+    int AttemptIndex,
+    string ErrorType,
+    bool IsTransient,
+    FailureLevel Level = FailureLevel.Warning)
+    : AgentEvent(At, Context);
+
+/// <summary>
+/// Emitted when the LLM fallback middleware abandons one provider and tries the next in
+/// the pool. One event per fall-through; a successful fallback therefore leaves a trail of
+/// "primary failed → answered on the backup" that is otherwise completely invisible.
+/// </summary>
+/// <remarks>
+/// Because <see cref="ICompletionProvider"/> is opaque (it exposes no model id), provider
+/// identity is reported as the ordered pool index plus the runtime type name —
+/// <em>not</em> a model id. A model-level "gpt-4o → gpt-4o-mini" attribution would require
+/// the provider to surface its model; that is a separate follow-up. <see cref="Level"/> is
+/// <see cref="FailureLevel.Warning"/> (the call still recovers); only an all-providers-exhausted
+/// failure becomes a <see cref="TurnFailed"/> error.
+/// </remarks>
+/// <param name="At">UTC timestamp when the fallback was engaged.</param>
+/// <param name="Context">Ambient agent context at emission time.</param>
+/// <param name="FromProviderIndex">Zero-based pool index of the provider that just failed.</param>
+/// <param name="ToProviderIndex">Zero-based pool index of the provider being tried next.</param>
+/// <param name="FromProviderType">Runtime type name of the failed provider, when available.</param>
+/// <param name="ToProviderType">Runtime type name of the next provider, when available.</param>
+/// <param name="Reason">Short exception type name of the failure that triggered the fallback.</param>
+/// <param name="Level">Severity — <see cref="FailureLevel.Warning"/> for an engaged (recovering) fallback.</param>
+public sealed record LlmFallbackEngaged(
+    DateTimeOffset At,
+    AgentContext Context,
+    int FromProviderIndex,
+    int ToProviderIndex,
+    string? FromProviderType,
+    string? ToProviderType,
+    string Reason,
+    FailureLevel Level = FailureLevel.Warning)
     : AgentEvent(At, Context);

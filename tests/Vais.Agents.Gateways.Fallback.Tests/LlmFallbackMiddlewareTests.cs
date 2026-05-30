@@ -50,6 +50,51 @@ public sealed class LlmFallbackMiddlewareTests
     }
 
     [Fact]
+    public async Task Fallback_Emits_LlmFallbackEngaged_On_Skip()
+    {
+        var pool = new InMemoryFallbackProviderPool(
+            new ThrowingProvider("primary-down"),
+            new FixedProvider("fallback-result"));
+        var bus = new CapturingEventBus();
+
+        var agent = new StatefulAiAgent(new NeverReachedProvider(), new StatefulAgentOptions
+        {
+            GatewayMiddleware = [new LlmFallbackMiddleware(pool, bus)],
+            ResiliencePipeline = Polly.ResiliencePipeline.Empty,
+        });
+
+        var result = await agent.AskAsync("hello");
+        result.Should().Be("fallback-result");
+
+        var engaged = bus.Events.OfType<LlmFallbackEngaged>().Should().ContainSingle().Subject;
+        engaged.FromProviderIndex.Should().Be(0);
+        engaged.ToProviderIndex.Should().Be(1);
+        engaged.FromProviderType.Should().Be("throwing");
+        engaged.ToProviderType.Should().Be("fixed");
+        engaged.Reason.Should().Be(nameof(InvalidOperationException));
+        // A recovered fallback is degraded, not fatal.
+        engaged.Level.Should().Be(FailureLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Fallback_Does_Not_Emit_When_First_Provider_Succeeds()
+    {
+        var pool = new InMemoryFallbackProviderPool(
+            new FixedProvider("primary"),
+            new FixedProvider("secondary"));
+        var bus = new CapturingEventBus();
+
+        var agent = new StatefulAiAgent(new NeverReachedProvider(), new StatefulAgentOptions
+        {
+            GatewayMiddleware = [new LlmFallbackMiddleware(pool, bus)],
+        });
+
+        await agent.AskAsync("hello");
+
+        bus.Events.OfType<LlmFallbackEngaged>().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Fallback_Throws_When_All_Providers_Fail()
     {
         var pool = new InMemoryFallbackProviderPool(
@@ -133,6 +178,18 @@ public sealed class LlmFallbackMiddlewareTests
     }
 
     // ── Test doubles ────────────────────────────────────────────────────────
+
+    private sealed class CapturingEventBus : IAgentEventBus
+    {
+        public List<AgentEvent> Events { get; } = [];
+        public ValueTask PublishAsync(AgentEvent @event, CancellationToken cancellationToken = default)
+        {
+            Events.Add(@event);
+            return ValueTask.CompletedTask;
+        }
+        public IDisposable Subscribe(Func<AgentEvent, CancellationToken, ValueTask> handler) => new Noop();
+        private sealed class Noop : IDisposable { public void Dispose() { } }
+    }
 
     private sealed class NeverReachedProvider : ICompletionProvider
     {

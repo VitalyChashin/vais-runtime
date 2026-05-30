@@ -15,26 +15,65 @@ namespace Vais.Agents.Gateways.Fallback;
 /// has started delivering updates, it is not retried. This matches the idempotence contract of
 /// <see cref="IStreamingCompletionProvider"/>.
 /// </remarks>
-public sealed class LlmFallbackMiddleware(IFallbackProviderPool pool) : LlmGatewayMiddleware
+public sealed class LlmFallbackMiddleware : LlmGatewayMiddleware
 {
+    private readonly IFallbackProviderPool _pool;
+    private readonly IAgentEventBus? _eventBus;
+    private readonly IAgentContextAccessor? _contextAccessor;
+
+    /// <summary>
+    /// Construct the fallback middleware over <paramref name="pool"/>. When an
+    /// <see cref="IAgentEventBus"/> is supplied (resolved from DI in the runtime), each
+    /// fall-through to the next provider publishes an <see cref="LlmFallbackEngaged"/> event so a
+    /// recovered fallback is observable rather than silent.
+    /// </summary>
+    public LlmFallbackMiddleware(
+        IFallbackProviderPool pool,
+        IAgentEventBus? eventBus = null,
+        IAgentContextAccessor? contextAccessor = null)
+    {
+        _pool = pool;
+        _eventBus = eventBus;
+        _contextAccessor = contextAccessor;
+    }
+
+    private ValueTask EmitFallbackAsync(
+        int fromIndex, int toIndex, ICompletionProvider from, ICompletionProvider to, Exception failure, CancellationToken ct)
+    {
+        if (_eventBus is null)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        var ctx = _contextAccessor?.Current ?? AgentContext.Empty;
+        return _eventBus.PublishAsync(
+            new LlmFallbackEngaged(
+                DateTimeOffset.UtcNow, ctx, fromIndex, toIndex, from.ProviderName, to.ProviderName, failure.GetType().Name),
+            ct);
+    }
+
     /// <inheritdoc/>
     protected override async Task<CompletionResponse> InvokeAsync(
         CompletionRequest request,
         Func<CompletionRequest, CancellationToken, Task<CompletionResponse>> next,
         CancellationToken cancellationToken)
     {
-        var providers = pool.GetProviders();
+        var providers = _pool.GetProviders();
         Exception? last = null;
 
-        foreach (var provider in providers)
+        for (var i = 0; i < providers.Count; i++)
         {
             try
             {
-                return await provider.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+                return await providers[i].CompleteAsync(request, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 last = ex;
+                if (i + 1 < providers.Count)
+                {
+                    await EmitFallbackAsync(i, i + 1, providers[i], providers[i + 1], ex, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
 
@@ -52,15 +91,16 @@ public sealed class LlmFallbackMiddleware(IFallbackProviderPool pool) : LlmGatew
         CompletionRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var providers = pool.GetProviders();
+        var providers = _pool.GetProviders();
         IAsyncEnumerator<CompletionUpdate>? committed = null;
         CompletionUpdate firstDelta = default!;
         Exception? last = null;
 
         // Phase 1: find the first provider that successfully delivers at least one delta.
         // yield return is NOT used here — C# disallows yield inside try/catch.
-        foreach (var provider in providers)
+        for (var i = 0; i < providers.Count; i++)
         {
+            var provider = providers[i];
             if (provider is not IStreamingCompletionProvider streaming) continue;
 
             var enumerator = streaming.StreamAsync(request, cancellationToken).GetAsyncEnumerator(cancellationToken);
@@ -73,6 +113,10 @@ public sealed class LlmFallbackMiddleware(IFallbackProviderPool pool) : LlmGatew
             {
                 last = ex;
                 await enumerator.DisposeAsync().ConfigureAwait(false);
+                if (i + 1 < providers.Count)
+                {
+                    await EmitFallbackAsync(i, i + 1, provider, providers[i + 1], ex, cancellationToken).ConfigureAwait(false);
+                }
                 continue;
             }
 
@@ -127,5 +171,7 @@ public static class LlmFallbackServiceCollectionExtensions
             sp => new NamedLlmGatewayMiddlewareRegistration(
                 "Fallback",
                 (_, _) => new LlmFallbackMiddleware(
-                    sp.GetRequiredService<IFallbackProviderPool>())));
+                    sp.GetRequiredService<IFallbackProviderPool>(),
+                    sp.GetService<IAgentEventBus>(),
+                    sp.GetService<IAgentContextAccessor>())));
 }

@@ -227,8 +227,14 @@ public sealed class DefaultToolCallDispatcher : IToolCallDispatcher
             toolError = ex.GetType().Name;
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             activity?.SetTag(AgenticTags.ErrorType, toolError);
+            // The tool genuinely failed (span stays Error), but the dispatcher feeds the error
+            // back to the model rather than aborting the turn — a *recovered* mechanical failure.
+            // Level=Warning lets the run-health rollup distinguish it from a turn-fatal error.
             await _eventBus.PublishAsync(
-                new ToolCallCompleted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName, Succeeded: false, Error: toolError, sw.Elapsed),
+                new ToolCallCompleted(DateTimeOffset.UtcNow, context, request.CallId, request.ToolName, Succeeded: false, Error: toolError, sw.Elapsed)
+                {
+                    Level = FailureLevel.Warning,
+                },
                 cancellationToken).ConfigureAwait(false);
             var failed = new ToolCallOutcome(
                 request.CallId,
