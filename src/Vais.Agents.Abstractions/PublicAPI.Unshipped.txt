@@ -2086,3 +2086,58 @@ static Vais.Agents.LlmFallbackEngaged.operator !=(Vais.Agents.LlmFallbackEngaged
 static Vais.Agents.LlmFallbackEngaged.operator ==(Vais.Agents.LlmFallbackEngaged? left, Vais.Agents.LlmFallbackEngaged? right) -> bool
 Vais.Agents.TurnCompleted.Level.get -> Vais.Agents.FailureLevel
 Vais.Agents.TurnCompleted.Level.init -> void
+Vais.Agents.RunHealth
+Vais.Agents.RunHealth.<Clone>$() -> Vais.Agents.RunHealth!
+Vais.Agents.RunHealth.BackgroundFailures.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>!
+Vais.Agents.RunHealth.BackgroundFailures.init -> void
+Vais.Agents.RunHealth.Deconstruct(out string! RunId, out Vais.Agents.RunHealthLevel Level, out System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>! Signals, out System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>! BackgroundFailures) -> void
+Vais.Agents.RunHealth.Equals(Vais.Agents.RunHealth? other) -> bool
+Vais.Agents.RunHealth.Level.get -> Vais.Agents.RunHealthLevel
+Vais.Agents.RunHealth.Level.init -> void
+Vais.Agents.RunHealth.RunHealth(string! RunId, Vais.Agents.RunHealthLevel Level, System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>! Signals, System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>! BackgroundFailures) -> void
+Vais.Agents.RunHealth.RunId.get -> string!
+Vais.Agents.RunHealth.RunId.init -> void
+Vais.Agents.RunHealth.Signals.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignal!>!
+Vais.Agents.RunHealth.Signals.init -> void
+Vais.Agents.RunHealthLevel
+Vais.Agents.RunHealthLevel.Degraded = 1 -> Vais.Agents.RunHealthLevel
+Vais.Agents.RunHealthLevel.Failed = 2 -> Vais.Agents.RunHealthLevel
+Vais.Agents.RunHealthLevel.Healthy = 0 -> Vais.Agents.RunHealthLevel
+Vais.Agents.RunHealthSignal
+Vais.Agents.RunHealthSignal.<Clone>$() -> Vais.Agents.RunHealthSignal!
+Vais.Agents.RunHealthSignal.At.get -> System.DateTimeOffset
+Vais.Agents.RunHealthSignal.At.init -> void
+Vais.Agents.RunHealthSignal.Deconstruct(out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.RunHealthSignal.Equals(Vais.Agents.RunHealthSignal? other) -> bool
+Vais.Agents.RunHealthSignal.ErrorType.get -> string?
+Vais.Agents.RunHealthSignal.ErrorType.init -> void
+Vais.Agents.RunHealthSignal.IsTransient.get -> bool
+Vais.Agents.RunHealthSignal.IsTransient.init -> void
+Vais.Agents.RunHealthSignal.Kind.get -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignal.Kind.init -> void
+Vais.Agents.RunHealthSignal.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.RunHealthSignal.Level.init -> void
+Vais.Agents.RunHealthSignal.RunHealthSignal(string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.RunHealthSignal.Source.get -> string!
+Vais.Agents.RunHealthSignal.Source.init -> void
+Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.Guardrail = 6 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.LlmFallback = 3 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.LlmRetry = 2 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.McpError = 1 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.NodeFailed = 7 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.ToolError = 0 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.TurnFailed = 4 -> Vais.Agents.RunHealthSignalKind
+Vais.Agents.RunHealthSignalKind.TurnPartial = 5 -> Vais.Agents.RunHealthSignalKind
+override Vais.Agents.RunHealth.Equals(object? obj) -> bool
+override Vais.Agents.RunHealth.GetHashCode() -> int
+override Vais.Agents.RunHealth.ToString() -> string!
+override Vais.Agents.RunHealthSignal.Equals(object? obj) -> bool
+override Vais.Agents.RunHealthSignal.GetHashCode() -> int
+override Vais.Agents.RunHealthSignal.ToString() -> string!
+static Vais.Agents.RunHealth.Healthy(string! runId) -> Vais.Agents.RunHealth!
+static Vais.Agents.RunHealth.ToRunHealthLevel(Vais.Agents.FailureLevel level) -> Vais.Agents.RunHealthLevel
+static Vais.Agents.RunHealth.operator !=(Vais.Agents.RunHealth? left, Vais.Agents.RunHealth? right) -> bool
+static Vais.Agents.RunHealth.operator ==(Vais.Agents.RunHealth? left, Vais.Agents.RunHealth? right) -> bool
+static Vais.Agents.RunHealthSignal.operator !=(Vais.Agents.RunHealthSignal? left, Vais.Agents.RunHealthSignal? right) -> bool
+static Vais.Agents.RunHealthSignal.operator ==(Vais.Agents.RunHealthSignal? left, Vais.Agents.RunHealthSignal? right) -> bool
