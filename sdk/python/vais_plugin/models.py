@@ -137,3 +137,12 @@ class InvokeResponse:
     opaque_state: dict[str, Any] | None = None
     journal: list[JournalEntry] = field(default_factory=list)
     usage: UsageCounts | None = None
+    is_partial: bool = False
+    """``True`` when this is a *degraded* result: the handler produced some content but an internal
+    step failed or was incomplete (e.g. one of N sub-queries failed). The runtime surfaces a partial
+    turn as a WARNING-level signal rather than a clean success, so it shows up in run-health diagnostics
+    instead of looking green. A *hard* failure should ``raise`` a classified error
+    (:class:`LlmGatewayError` / :class:`ToolError` / :class:`Timeout`) instead — never return placeholder
+    text as if it succeeded."""
+    failure_reason: str | None = None
+    """Short operator-readable reason this result is partial; set together with ``is_partial=True``."""

@@ -54,6 +54,16 @@ internal sealed class PluginInvokeResponse
     public JsonElement? OpaqueState { get; init; }
     public IReadOnlyList<PluginJournalEntry>? Journal { get; init; }
     public PluginUsageCounts? Usage { get; init; }
+
+    /// <summary>
+    /// True when the plugin returned a *degraded* result (some content, but an internal step failed
+    /// or was incomplete). The shim surfaces it as a WARNING-level turn rather than a clean success.
+    /// Maps from the wire field <c>is_partial</c> (snake_case).
+    /// </summary>
+    public bool IsPartial { get; init; }
+
+    /// <summary>Operator-readable reason the result is partial; wire field <c>failure_reason</c>.</summary>
+    public string? FailureReason { get; init; }
 }
 
 internal sealed class PluginJournalEntry

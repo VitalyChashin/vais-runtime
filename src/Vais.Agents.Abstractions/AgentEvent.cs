@@ -56,7 +56,17 @@ public sealed record TurnCompleted(
     int? PromptTokens,
     int? CompletionTokens,
     TimeSpan Duration)
-    : AgentEvent(At, Context);
+    : AgentEvent(At, Context)
+{
+    /// <summary>
+    /// Severity of this completed turn. A turn the runtime considers <em>degraded</em> — e.g. a
+    /// plugin that returned <c>is_partial</c> content rather than raising — is
+    /// <see cref="FailureLevel.Warning"/>, so the run-health rollup counts it instead of treating it
+    /// as a clean success. Defaults to <see cref="FailureLevel.Default"/>; the positional constructor
+    /// is unchanged so existing callers are unaffected.
+    /// </summary>
+    public FailureLevel Level { get; init; } = FailureLevel.Default;
+}
 
 /// <summary>
 /// Emitted when a turn ends with an exception. The user turn is still in history

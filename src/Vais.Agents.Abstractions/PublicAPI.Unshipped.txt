@@ -2084,3 +2084,5 @@ override Vais.Agents.LlmFallbackEngaged.ToString() -> string!
 override sealed Vais.Agents.LlmFallbackEngaged.Equals(Vais.Agents.AgentEvent? other) -> bool
 static Vais.Agents.LlmFallbackEngaged.operator !=(Vais.Agents.LlmFallbackEngaged? left, Vais.Agents.LlmFallbackEngaged? right) -> bool
 static Vais.Agents.LlmFallbackEngaged.operator ==(Vais.Agents.LlmFallbackEngaged? left, Vais.Agents.LlmFallbackEngaged? right) -> bool
+Vais.Agents.TurnCompleted.Level.get -> Vais.Agents.FailureLevel
+Vais.Agents.TurnCompleted.Level.init -> void
