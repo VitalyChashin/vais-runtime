@@ -257,19 +257,73 @@ public sealed class EvalRunGrain : Grain, IEvalRunGrain
             }
 
             var allPass = assertionResults.All(a => a.Status == EvalAssertionStatus.Pass || a.Status == EvalAssertionStatus.Skipped);
+            var (mechLevel, mechCount, mechBreakdown) = ComputeMechanicalAxis(events);
             return new EvalCaseResultRecord(
                 evalRunId, @case.Id, agentRunId, startedAt, DateTimeOffset.UtcNow,
                 allPass ? EvalCaseStatus.Pass : EvalCaseStatus.Fail,
-                responseText, assertionResults);
+                responseText, assertionResults,
+                MechanicalLevel: mechLevel,
+                MechanicalFailureCount: mechCount,
+                MechanicalBreakdown: mechBreakdown);
         }
         catch (Exception ex)
         {
             sw.Stop();
             _logger.LogError(ex, "Eval case error: {CaseId}/{EvalRunId}", @case.Id, evalRunId);
+            var (mechLevel, mechCount, mechBreakdown) = ComputeMechanicalAxis(events);
             return new EvalCaseResultRecord(
                 evalRunId, @case.Id, agentRunId, startedAt, DateTimeOffset.UtcNow,
-                EvalCaseStatus.Error, responseText, Array.Empty<EvalAssertionResultRecord>());
+                EvalCaseStatus.Error, responseText, Array.Empty<EvalAssertionResultRecord>(),
+                MechanicalLevel: mechLevel,
+                MechanicalFailureCount: mechCount,
+                MechanicalBreakdown: mechBreakdown);
         }
+    }
+
+    /// <summary>
+    /// Derives the mechanical-failure axis from the events captured during the case run.
+    /// Does not require the RunHealth store — the event bus subscription already collects
+    /// the same signals that <c>RunHealthSignalSubscriber</c> would persist.
+    /// </summary>
+    private static (FailureLevel Level, int Count, IReadOnlyDictionary<string, int>? Breakdown)
+        ComputeMechanicalAxis(IReadOnlyList<AgentEvent> events)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var worst = FailureLevel.Default;
+
+        void Record(string kind, FailureLevel level)
+        {
+            counts[kind] = counts.TryGetValue(kind, out var n) ? n + 1 : 1;
+            if (level > worst) worst = level;
+        }
+
+        foreach (var e in events)
+        {
+            switch (e)
+            {
+                case ToolCallCompleted { Succeeded: false } tc:
+                    Record("toolError", tc.Level);
+                    break;
+                case TurnCompleted { Level: FailureLevel.Warning } tc when tc.Level != FailureLevel.Default:
+                    Record("turnPartial", FailureLevel.Warning);
+                    break;
+                case TurnFailed:
+                    Record("turnFailed", FailureLevel.Error);
+                    break;
+                case LlmCallRetried lr:
+                    Record("llmRetry", lr.Level);
+                    break;
+                case LlmFallbackEngaged lf:
+                    Record("llmFallback", lf.Level);
+                    break;
+                case GuardrailTriggered:
+                    Record("guardrail", FailureLevel.Warning);
+                    break;
+            }
+        }
+
+        var totalCount = counts.Values.Sum();
+        return (worst, totalCount, totalCount > 0 ? counts : null);
     }
 
     private async Task CompleteRunAsync(string evalRunId, CancellationToken ct)

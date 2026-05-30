@@ -227,6 +227,7 @@ internal sealed class EvalResultsCommand : AsyncCommand<EvalResultsCommand.Setti
         var table = new Table()
             .AddColumn("CASE")
             .AddColumn("STATUS")
+            .AddColumn("MECH")
             .AddColumn("ASSERTIONS");
 
         foreach (var c in detail.Cases)
@@ -235,6 +236,13 @@ internal sealed class EvalResultsCommand : AsyncCommand<EvalResultsCommand.Setti
                 : c.Status == EvalCaseStatus.Error ? "[red]error[/]"
                 : "[yellow]fail[/]";
 
+            var mechMarkup = c.MechanicalLevel switch
+            {
+                FailureLevel.Error   => $"[red]failed({c.MechanicalFailureCount})[/]",
+                FailureLevel.Warning => $"[yellow]degraded({c.MechanicalFailureCount})[/]",
+                _                   => "[green]clean[/]",
+            };
+
             var assertions = c.AssertionResults.Count == 0
                 ? "-"
                 : string.Join(", ", c.AssertionResults.Select(a =>
@@ -242,7 +250,7 @@ internal sealed class EvalResultsCommand : AsyncCommand<EvalResultsCommand.Setti
                     : a.Status == EvalAssertionStatus.Error ? $"[red]{Markup.Escape(a.Kind)}![/]"
                     : $"[yellow]{Markup.Escape(a.Kind)}✗[/]"));
 
-            table.AddRow(Markup.Escape(c.CaseId), statusMarkup, assertions);
+            table.AddRow(Markup.Escape(c.CaseId), statusMarkup, mechMarkup, assertions);
         }
 
         AnsiConsole.Write(table);

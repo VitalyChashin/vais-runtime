@@ -21,6 +21,10 @@ public static class EvalServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<IEvalAssertionFactory, NoTurnFailedAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, NoToolErrorAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, NoDegradedResponseAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, MaxRetriesAssertionFactory>();
+        services.AddSingleton<IEvalAssertionFactory, NoFallbackEngagedAssertionFactory>();
         services.AddSingleton<IEvalAssertionFactory, ResponseRegexAssertionFactory>();
         services.AddSingleton<IEvalAssertionFactory, ToolCallSequenceAssertionFactory>();
         services.AddSingleton<IEvalAssertionFactory, JudgeScoreAssertionFactory>();

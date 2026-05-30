@@ -115,7 +115,15 @@ public sealed record EvalRunSummary(
 /// <summary>Full detail of an eval run including per-case and per-assertion results.</summary>
 public sealed record EvalRunDetail(EvalRunSummary Summary, IReadOnlyList<EvalCaseResultRecord> Cases);
 
-/// <summary>Per-case result record written by <see cref="IEvalResultStore"/>.</summary>
+/// <summary>
+/// Per-case result record written by <see cref="IEvalResultStore"/>.
+/// </summary>
+/// <remarks>
+/// Carries two orthogonal axes: the quality axis (<see cref="Status"/>/<see cref="AssertionResults"/>) and
+/// the mechanical axis (<see cref="MechanicalLevel"/>/<see cref="MechanicalFailureCount"/>/<see cref="MechanicalBreakdown"/>).
+/// A case can have <c>Status=Pass</c> while <c>MechanicalLevel=Warning</c> — meaning the agent recovered from
+/// tool errors or retries and still answered correctly. The three new fields default so existing call sites are unaffected.
+/// </remarks>
 public sealed record EvalCaseResultRecord(
     string EvalRunId,
     string CaseId,
@@ -125,7 +133,10 @@ public sealed record EvalCaseResultRecord(
     EvalCaseStatus Status,
     string? ResponseText,
     IReadOnlyList<EvalAssertionResultRecord> AssertionResults,
-    string? ProductionRunId = null);
+    string? ProductionRunId = null,
+    FailureLevel MechanicalLevel = FailureLevel.Default,
+    int MechanicalFailureCount = 0,
+    IReadOnlyDictionary<string, int>? MechanicalBreakdown = null);
 
 /// <summary>Per-assertion result within a case.</summary>
 public sealed record EvalAssertionResultRecord(

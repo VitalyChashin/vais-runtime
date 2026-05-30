@@ -69,20 +69,28 @@ public sealed class PostgresEvalResultStore : IEvalResultStore
         var assertionJson = JsonSerializer.Serialize(result.AssertionResults, JsonOpts);
         await using var conn = await _ds.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var cmd = conn.CreateCommand();
+        var breakdownJson = result.MechanicalBreakdown is null
+            ? null
+            : JsonSerializer.Serialize(result.MechanicalBreakdown, JsonOpts);
         cmd.CommandText = """
             INSERT INTO vais_eval_case_results
                 (eval_run_id, case_id, agent_run_id, started_at, completed_at,
-                 status, response_text, assertion_results, production_run_id)
+                 status, response_text, assertion_results, production_run_id,
+                 mechanical_level, mechanical_failure_count, mechanical_breakdown)
             VALUES
                 (@run, @case, @agent, @started, @completed,
-                 @status, @response, @assertions::jsonb, @prodrun)
+                 @status, @response, @assertions::jsonb, @prodrun,
+                 @mechlevel, @mechcount, @mechbreakdown::jsonb)
             ON CONFLICT (eval_run_id, case_id) DO UPDATE SET
-                agent_run_id      = EXCLUDED.agent_run_id,
-                completed_at      = EXCLUDED.completed_at,
-                status            = EXCLUDED.status,
-                response_text     = EXCLUDED.response_text,
-                assertion_results = EXCLUDED.assertion_results,
-                production_run_id = EXCLUDED.production_run_id
+                agent_run_id              = EXCLUDED.agent_run_id,
+                completed_at              = EXCLUDED.completed_at,
+                status                    = EXCLUDED.status,
+                response_text             = EXCLUDED.response_text,
+                assertion_results         = EXCLUDED.assertion_results,
+                production_run_id         = EXCLUDED.production_run_id,
+                mechanical_level          = EXCLUDED.mechanical_level,
+                mechanical_failure_count  = EXCLUDED.mechanical_failure_count,
+                mechanical_breakdown      = EXCLUDED.mechanical_breakdown
             """;
         cmd.Parameters.AddWithValue("run", result.EvalRunId);
         cmd.Parameters.AddWithValue("case", result.CaseId);
@@ -93,6 +101,9 @@ public sealed class PostgresEvalResultStore : IEvalResultStore
         cmd.Parameters.AddWithValue("response", (object?)result.ResponseText ?? DBNull.Value);
         cmd.Parameters.AddWithValue("assertions", assertionJson);
         cmd.Parameters.AddWithValue("prodrun", (object?)result.ProductionRunId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("mechlevel", (short)result.MechanicalLevel);
+        cmd.Parameters.AddWithValue("mechcount", result.MechanicalFailureCount);
+        cmd.Parameters.AddWithValue("mechbreakdown", (object?)breakdownJson ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
 
@@ -159,7 +170,8 @@ public sealed class PostgresEvalResultStore : IEvalResultStore
         {
             cmd.CommandText = """
                 SELECT eval_run_id, case_id, agent_run_id, started_at, completed_at,
-                       status, response_text, assertion_results, production_run_id
+                       status, response_text, assertion_results, production_run_id,
+                       mechanical_level, mechanical_failure_count, mechanical_breakdown
                 FROM vais_eval_case_results
                 WHERE eval_run_id = @id
                 ORDER BY started_at ASC
@@ -194,15 +206,29 @@ public sealed class PostgresEvalResultStore : IEvalResultStore
         var assertionJson = r.GetString(7);
         var assertions = JsonSerializer.Deserialize<List<EvalAssertionResultRecord>>(assertionJson, JsonOpts)
             ?? [];
+
+        // Columns 9-11 are the CS-1 mechanical axis additions (may be absent in older rows → use IsDBNull).
+        var mechLevel = r.FieldCount > 9 && !r.IsDBNull(9) ? (FailureLevel)r.GetInt16(9) : FailureLevel.Default;
+        var mechCount = r.FieldCount > 10 && !r.IsDBNull(10) ? r.GetInt32(10) : 0;
+        IReadOnlyDictionary<string, int>? mechBreakdown = null;
+        if (r.FieldCount > 11 && !r.IsDBNull(11))
+        {
+            var json = r.GetString(11);
+            mechBreakdown = JsonSerializer.Deserialize<Dictionary<string, int>>(json, JsonOpts);
+        }
+
         return new EvalCaseResultRecord(
-            EvalRunId:         r.GetString(0),
-            CaseId:            r.GetString(1),
-            AgentRunId:        r.IsDBNull(2) ? null : r.GetString(2),
-            StartedAt:         r.GetFieldValue<DateTimeOffset>(3),
-            CompletedAt:       r.IsDBNull(4) ? null : r.GetFieldValue<DateTimeOffset>(4),
-            Status:            (EvalCaseStatus)r.GetInt32(5),
-            ResponseText:      r.IsDBNull(6) ? null : r.GetString(6),
-            AssertionResults:  assertions,
-            ProductionRunId:   r.IsDBNull(8) ? null : r.GetString(8));
+            EvalRunId:               r.GetString(0),
+            CaseId:                  r.GetString(1),
+            AgentRunId:              r.IsDBNull(2) ? null : r.GetString(2),
+            StartedAt:               r.GetFieldValue<DateTimeOffset>(3),
+            CompletedAt:             r.IsDBNull(4) ? null : r.GetFieldValue<DateTimeOffset>(4),
+            Status:                  (EvalCaseStatus)r.GetInt32(5),
+            ResponseText:            r.IsDBNull(6) ? null : r.GetString(6),
+            AssertionResults:        assertions,
+            ProductionRunId:         r.IsDBNull(8) ? null : r.GetString(8),
+            MechanicalLevel:         mechLevel,
+            MechanicalFailureCount:  mechCount,
+            MechanicalBreakdown:     mechBreakdown);
     }
 }

@@ -66,7 +66,13 @@ Vais.Agents.Eval.EvalRunDetail.EvalRunDetail(Vais.Agents.Eval.EvalRunSummary! Su
 Vais.Agents.Eval.EvalRunDetail.Summary.get -> Vais.Agents.Eval.EvalRunSummary!
 Vais.Agents.Eval.EvalRunDetail.Cases.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalCaseResultRecord!>!
 Vais.Agents.Eval.EvalCaseResultRecord
-Vais.Agents.Eval.EvalCaseResultRecord.EvalCaseResultRecord(string! EvalRunId, string! CaseId, string? AgentRunId, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalCaseStatus Status, string? ResponseText, System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, string? ProductionRunId = null) -> void
+Vais.Agents.Eval.EvalCaseResultRecord.EvalCaseResultRecord(string! EvalRunId, string! CaseId, string? AgentRunId, System.DateTimeOffset StartedAt, System.DateTimeOffset? CompletedAt, Vais.Agents.Eval.EvalCaseStatus Status, string? ResponseText, System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, string? ProductionRunId = null, Vais.Agents.FailureLevel MechanicalLevel = Vais.Agents.FailureLevel.Default, int MechanicalFailureCount = 0, System.Collections.Generic.IReadOnlyDictionary<string!, int>? MechanicalBreakdown = null) -> void
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalLevel.get -> Vais.Agents.FailureLevel
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalLevel.init -> void
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalFailureCount.get -> int
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalFailureCount.init -> void
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalBreakdown.get -> System.Collections.Generic.IReadOnlyDictionary<string!, int>?
+Vais.Agents.Eval.EvalCaseResultRecord.MechanicalBreakdown.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.EvalRunId.get -> string!
 Vais.Agents.Eval.EvalCaseResultRecord.CaseId.get -> string!
 Vais.Agents.Eval.EvalCaseResultRecord.AgentRunId.get -> string?
@@ -179,7 +185,7 @@ Vais.Agents.Eval.EvalCaseResultRecord.AgentRunId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.AssertionResults.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.CaseId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.CompletedAt.init -> void
-Vais.Agents.Eval.EvalCaseResultRecord.Deconstruct(out string! EvalRunId, out string! CaseId, out string? AgentRunId, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalCaseStatus Status, out string? ResponseText, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, out string? ProductionRunId) -> void
+Vais.Agents.Eval.EvalCaseResultRecord.Deconstruct(out string! EvalRunId, out string! CaseId, out string? AgentRunId, out System.DateTimeOffset StartedAt, out System.DateTimeOffset? CompletedAt, out Vais.Agents.Eval.EvalCaseStatus Status, out string? ResponseText, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Eval.EvalAssertionResultRecord!>! AssertionResults, out string? ProductionRunId, out Vais.Agents.FailureLevel MechanicalLevel, out int MechanicalFailureCount, out System.Collections.Generic.IReadOnlyDictionary<string!, int>? MechanicalBreakdown) -> void
 Vais.Agents.Eval.EvalCaseResultRecord.Equals(Vais.Agents.Eval.EvalCaseResultRecord? other) -> bool
 Vais.Agents.Eval.EvalCaseResultRecord.EvalRunId.init -> void
 Vais.Agents.Eval.EvalCaseResultRecord.ResponseText.init -> void
