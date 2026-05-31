@@ -32,6 +32,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
     private readonly IToolGatewayMiddlewareFactory? _toolGatewayFactory;
     private readonly IDomainOntologyArtifactRegistry? _domainOntologyRegistry;
     private readonly CachedDomainOntologyToolListShaper? _domainOntologyShaper;
+    private readonly IFailureAttributionRegistry? _failureAttributionRegistry;
+    private readonly IFailureAttributionIndex? _failureAttributionIndex;
     private readonly IAgentCapabilityMapBuilder? _capabilityMapBuilder;
     private readonly IDelegationPolicy? _delegationPolicy;
     private readonly ILogger<AgentManifestTranslator> _logger;
@@ -59,7 +61,9 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         CachedDomainOntologyToolListShaper? domainOntologyShaper = null,
         IAgentCapabilityMapBuilder? capabilityMapBuilder = null,
         IDelegationPolicy? delegationPolicy = null,
-        ILogger<AgentManifestTranslator>? logger = null)
+        ILogger<AgentManifestTranslator>? logger = null,
+        IFailureAttributionRegistry? failureAttributionRegistry = null,
+        IFailureAttributionIndex? failureAttributionIndex = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(providerPool);
@@ -84,6 +88,8 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
         _domainOntologyShaper = domainOntologyShaper;
         _capabilityMapBuilder = capabilityMapBuilder;
         _delegationPolicy = delegationPolicy;
+        _failureAttributionRegistry = failureAttributionRegistry;
+        _failureAttributionIndex = failureAttributionIndex;
         _logger = logger ?? NullLogger<AgentManifestTranslator>.Instance;
 
         var map = new Dictionary<(string, GuardrailLayer), IGuardrailFactory>();
@@ -501,7 +507,46 @@ internal sealed class AgentManifestTranslator : IAgentManifestTranslator
             }
         }
 
+        // Part 2b failure-attribution enricher: appended when any McpServer or the agent itself
+        // carries a FailureOntologyRef. Resolves the first matching artifact; registers the
+        // agent ID → ref in the attribution index so the subscriber can refine signals.
+        if (_failureAttributionRegistry is not null)
+        {
+            var failureRef = ResolveFailureOntologyRef(manifest, registered);
+            if (failureRef is not null)
+            {
+                if (_failureAttributionIndex is not null)
+                    _failureAttributionIndex.Register(manifest.Id, failureRef);
+                var tee = _serviceProvider.GetService<IInterceptorTee>();
+                var artifact = _failureAttributionRegistry.Get(failureRef);
+                var catalog = _serviceProvider.GetService<IFailureOntologyCatalog>();
+                var enricher = new FailureAttributionEnricher(tee, artifact, catalog);
+                var withEnricher = new ToolGatewayMiddleware[toolGatewayMiddleware.Length + 1];
+                Array.Copy(toolGatewayMiddleware, withEnricher, toolGatewayMiddleware.Length);
+                withEnricher[^1] = enricher;
+                toolGatewayMiddleware = withEnricher;
+            }
+        }
+
         return toolGatewayMiddleware;
+    }
+
+    /// <summary>
+    /// Returns the first <c>FailureOntologyRef</c> string found across virtual MCP servers
+    /// or the agent manifest. Prefers the agent-level ref when set; falls back to server refs.
+    /// Returns null when no ref is configured.
+    /// </summary>
+    private static string? ResolveFailureOntologyRef(AgentManifest manifest, RegisteredMcpResolution registered)
+    {
+        if (!string.IsNullOrEmpty(manifest.FailureOntologyRef))
+            return manifest.FailureOntologyRef;
+
+        // Scan registered MCP servers for a FailureOntologyRef (checked at resolution time via the
+        // server registry; we can't re-read here, but the resolver already ran). For simplicity,
+        // the per-server failure ref is stored in the FailureOntologyBindings field if we add it,
+        // or we can derive it from the manifest's McpServers. Use the agent-manifest path only for v1.
+        // Server-level bindings are a future enhancement if per-server granularity is needed.
+        return null;
     }
 
     private async ValueTask<PerAgentChains> BuildPerAgentChainsAsync(

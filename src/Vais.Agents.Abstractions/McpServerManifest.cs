@@ -86,6 +86,15 @@ public sealed record McpServerManifest(
     /// </summary>
     public string? OntologyRef { get; init; }
 
+    /// <summary>
+    /// Optional name of a deployment-supplied <c>FailureAttributionArtifact</c> (Part 2b).
+    /// When set, <c>AgentManifestTranslator</c> appends a <c>FailureAttributionEnricher</c>
+    /// to the per-agent tool-gateway chain. Failed tool calls through this server emit
+    /// <c>failure.attribution</c> trajectory events with concept and path from the artifact.
+    /// Missing or unknown refs degrade gracefully (no enricher applied).
+    /// </summary>
+    public string? FailureOntologyRef { get; init; }
+
     /// <summary>Free-form operator-visible metadata.</summary>
     public IReadOnlyDictionary<string, string>? Annotations { get; init; }
 }

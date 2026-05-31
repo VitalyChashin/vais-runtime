@@ -60,6 +60,7 @@ public sealed class ManifestFieldRoundTripTests
         "Annotations",
         "LlmGatewayRef",
         "McpGatewayRef",
+        "FailureOntologyRef",
     };
 
     // ── round-trip test cases ─────────────────────────────────────────────────
@@ -156,6 +157,10 @@ public sealed class ManifestFieldRoundTripTests
         yield return Row("CodeMode",
             Base() with { CodeMode = new CodeModeSpec { Enabled = true, Toolset = new[] { "crm" } } },
             m => m.CodeMode!.Toolset!.Single(), "crm");
+
+        yield return Row("FailureOntologyRef",
+            Base() with { FailureOntologyRef = "my-failure-ref" },
+            m => m.FailureOntologyRef, "my-failure-ref");
     }
 
     private static object?[] Row(string path, AgentManifest manifest, Func<AgentManifest, object?> extract, object? expected)

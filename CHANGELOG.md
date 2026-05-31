@@ -11,6 +11,19 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Ontology Diagnostics Part 2b — Attribution binding (branch `feat/ontology-diagnostics-part2b`).**
+  Implements the attribution-south half of the ontology-grounded diagnostic layer (research §11.2). Every `RunHealthSignal` now carries an `AttributionPath` — deployment-grounded identification of the failing component.
+  - `FailureAttributionArtifact` + `FailureToolAnnotation` + `FailureAgentAnnotation` records in `Vais.Agents.Abstractions` — deployment-local per-tool/per-agent concept annotations.
+  - `IFailureAttributionRegistry` + `InMemoryFailureAttributionRegistry` + `IFailureAttributionIndex` + `InMemoryFailureAttributionIndex` in Abstractions — registry resolves `FailureOntologyRef → artifact`; index maps `agentId → ref` at activation time.
+  - `FailureAttributionArtifactLoader` in `Manifests.Json` — loads `*.failure-attribution.json` files, mirrors `DomainOntologyArtifactLoader`.
+  - `FailureAttributionEnricher : ToolGatewayMiddleware` in `Manifests.Json` — Observability-kind middleware appended to the per-agent tool chain when `FailureOntologyRef` is set on `AgentManifest`. Emits `failure.attribution` trajectory events to `IInterceptorTee` on failed tool calls.
+  - `McpServerManifest.FailureOntologyRef` + `AgentManifest.FailureOntologyRef` — additive init-only string fields; hand-written loader extensions in both `JsonAgentManifestLoader` and `JsonAgentGraphManifestLoader`; manifest round-trip tests extended.
+  - `ToolCallTrajectoryPayload.AttributionPath` — additive optional field for trajectory attribution.
+  - `RunHealthSignalSubscriber` stamps `AttributionPath = "{agentId}/{toolName}"` (basic) or `"{agentId}/{mcpServerId}/{toolName}"` (artifact-enhanced) on bus signals; optionally overrides `ConceptName` from artifact per-tool annotation (e.g. `McpToolError/AuthExpired`).
+  - `RunHealthAggregator` stamps `AttributionPath` on aggregator-constructed signals (McpError, LlmError, NodeFailed, background); derives agent name from RunId sub-run encoding.
+  - `AgentManifestTranslator` resolves `AgentManifest.FailureOntologyRef` at activation, registers in `IFailureAttributionIndex`, appends `FailureAttributionEnricher` to the tool chain.
+  - CompositionRoot registers `IFailureAttributionRegistry` + `IFailureAttributionIndex` unconditionally; loads artifacts from `VAIS_FAILURE_ATTRIBUTION_DIR`. 9 new tests in `Control.Http.Tests`.
+
 - **Ontology Diagnostics Part 2a — Shared failure taxonomy (branch `feat/ontology-diagnostics-part2a`).**
   Implements the taxonomy-north half of the ontology-grounded diagnostic layer (research §11.2). Defines the shared `IFailureOntologyCatalog` vocabulary once in `Vais.Agents.Abstractions`; every downstream layer (RunHealth, eval assertions, Part 2c diagnostic MCP) references the same concept names.
   - `FailureAxis`, `FailureConcept`, `FailureSeverityRule`, `FailureOntologyOverlay` records in Abstractions.

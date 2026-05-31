@@ -286,6 +286,8 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             ? llmRefEl.GetString() : null;
         var mcpGatewayRef = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("mcpGatewayRef", out var mcpGwRefEl)
             ? mcpGwRefEl.GetString() : null;
+        var failureOntologyRef = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("failureOntologyRef", out var faRefEl)
+            ? faRefEl.GetString() : null;
         var localAgents = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("localAgents", out var laEl)
             ? ParseLocalAgents(laEl, errors, prefix) : null;
         var a2aRemoteAgents = spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("a2aRemoteAgents", out var a2aEl)
@@ -314,6 +316,7 @@ public sealed class JsonAgentManifestLoader : IAgentManifestLoader
             Annotations = annotations,
             LlmGatewayRef = llmGatewayRef,
             McpGatewayRef = mcpGatewayRef,
+            FailureOntologyRef = failureOntologyRef,
             LocalAgents = localAgents,
             A2ARemoteAgents = a2aRemoteAgents,
         };

@@ -17,9 +17,11 @@ namespace Vais.Agents;
 /// <param name="Arguments">Raw arguments JSON — <see cref="TrajectoryArgumentRedactor"/> redacts before storage; raw values never reach the store.</param>
 /// <param name="Outcome">Result categorization (Ok / Error / ShortCircuit + optional error type).</param>
 /// <param name="Duration">Wall-clock duration from request to response phase. Null when not yet known (request-phase only).</param>
+/// <param name="AttributionPath">Deployment-grounded attribution path from <c>FailureAttributionEnricher</c> (Part 2b). Null when no artifact is bound or call succeeded.</param>
 public sealed record ToolCallTrajectoryPayload(
     string ConceptName,
     string Transport,
     JsonElement Arguments,
     TrajectoryOutcome? Outcome = null,
-    TimeSpan? Duration = null);
+    TimeSpan? Duration = null,
+    string? AttributionPath = null);

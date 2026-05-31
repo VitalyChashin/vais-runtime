@@ -103,6 +103,10 @@
         "mcpGatewayRef": {
           "type": "string",
           "description": "Optional reference to a deployed McpGatewayConfigManifest by id. When set, a per-agent ToolGatewayMiddleware chain is built from the referenced config at grain activation, replacing the DI-global chain entirely. Null = DI-global chain applies unchanged."
+        },
+        "failureOntologyRef": {
+          "type": "string",
+          "description": "Optional name of a deployment-supplied FailureAttributionArtifact (Part 2b). When set at the agent level, provides fallback failure attribution for agent-level failures (turn failures, LLM errors) not covered by a per-server binding. Also populates IFailureAttributionIndex so RunHealthSignalSubscriber can refine concepts on in-process tool errors. Missing or unknown refs degrade gracefully."
         }
       },
       "crossRefs": [
@@ -233,6 +237,10 @@
         "ontologyRef": {
           "type": "string",
           "description": "Optional name of a deployment-supplied domain-ontology artifact to bind to this server. When set, the south cartridge resolves the artifact through IDomainOntologyArtifactRegistry and shapes the server\u0027s tools/list \u002B tool-call dispatch with its tags, descriptions, and cross-refs. Missing or unknown refs degrade gracefully (no cartridge applied \u2014 passthrough). Plan C1-7."
+        },
+        "failureOntologyRef": {
+          "type": "string",
+          "description": "Optional name of a deployment-supplied FailureAttributionArtifact (Part 2b). When set, AgentManifestTranslator appends a FailureAttributionEnricher to the per-agent tool-gateway chain. Failed tool calls through this server emit failure.attribution trajectory events with concept and path from the artifact. Missing or unknown refs degrade gracefully (no enricher applied)."
         }
       },
       "crossRefs": [

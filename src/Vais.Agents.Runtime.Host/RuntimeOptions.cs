@@ -268,6 +268,15 @@ internal sealed record RuntimeOptions
     public string? FailureOntologyOverlayPath { get; init; }
 
     /// <summary>
+    /// Path to a directory containing <c>*.failure-attribution.json</c> artifact files (Part 2b).
+    /// When set, each file is loaded into <see cref="IFailureAttributionRegistry"/> keyed by file stem.
+    /// Agents that declare <c>failureOntologyRef</c> in their manifest resolve against this registry.
+    /// Null ⇒ registry is empty (basic <c>AttributionPath</c> stamping only, no concept refinement).
+    /// Set via <c>VAIS_FAILURE_ATTRIBUTION_DIR</c>.
+    /// </summary>
+    public string? FailureAttributionDir { get; init; }
+
+    /// <summary>
     /// Path to a JSON-Lines audit file (Plan B). When set, every control-plane lifecycle verb is
     /// appended as one JSON object per line. Null ⇒ the default <c>LoggerAuditLog</c>.
     /// Set via <c>VAIS_AUDIT_LOG_PATH</c>.
@@ -462,6 +471,7 @@ internal sealed record RuntimeOptions
             CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
             OntologyOverlayPath = Env("VAIS_ONTOLOGY_OVERLAY_PATH"),
             FailureOntologyOverlayPath = Env("VAIS_FAILURE_ONTOLOGY_OVERLAY_PATH"),
+            FailureAttributionDir = Env("VAIS_FAILURE_ATTRIBUTION_DIR"),
             AuditLogPath = Env("VAIS_AUDIT_LOG_PATH"),
             ApprovalsEnabled = string.Equals(Env("VAIS_APPROVALS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase),
             GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),

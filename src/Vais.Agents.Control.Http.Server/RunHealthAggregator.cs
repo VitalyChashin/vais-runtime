@@ -46,6 +46,7 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
     private readonly IRunStore _runs;
     private readonly IBackgroundAgentTracker _background;
     private readonly IFailureOntologyCatalog? _catalog;
+    private readonly IFailureAttributionRegistry? _attributionRegistry;
 
     /// <summary>Creates the aggregator over the durable run-health, gateway, run, and background stores.</summary>
     public RunHealthAggregator(
@@ -54,7 +55,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         IMcpGatewayEventStore mcp,
         IRunStore runs,
         IBackgroundAgentTracker background,
-        IFailureOntologyCatalog? catalog = null)
+        IFailureOntologyCatalog? catalog = null,
+        IFailureAttributionRegistry? attributionRegistry = null)
     {
         _signals = signals;
         _gateway = gateway;
@@ -62,6 +64,7 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         _runs = runs;
         _background = background;
         _catalog = catalog;
+        _attributionRegistry = attributionRegistry;
     }
 
     /// <inheritdoc />
@@ -79,13 +82,19 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         }
 
         // 2. MCP gateway failures — not on the bus for plugin-mediated tool calls.
+        //    ListByRunAsync uses exact run_id match (not a tree prefix query), so events returned
+        //    here are for the root run only. AttributionPath is tool-name based; artifact lookup
+        //    can refine ConceptName and add MCP server context.
         foreach (var e in await _mcp.ListByRunAsync(rootRunId, ct: ct).ConfigureAwait(false))
         {
             if (!string.IsNullOrEmpty(e.ErrorType))
             {
+                var mcpConceptName = _catalog?.FromSignalKind(RunHealthSignalKind.McpError)?.Name;
+                var mcpAttributionPath = BuildMcpAttributionPath(e.ToolName, _attributionRegistry, ref mcpConceptName);
                 signals.Add(new RunHealthSignal(e.ToolName, RunHealthSignalKind.McpError,
                     FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.McpError)?.Name));
+                    ConceptName: mcpConceptName,
+                    AttributionPath: mcpAttributionPath));
             }
         }
 
@@ -98,9 +107,11 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             {
                 if (!string.IsNullOrEmpty(e.ErrorType))
                 {
-                    signals.Add(new RunHealthSignal(e.ModelId ?? "llm-gateway", RunHealthSignalKind.LlmError,
+                    var modelSource = e.ModelId ?? "llm-gateway";
+                    signals.Add(new RunHealthSignal(modelSource, RunHealthSignalKind.LlmError,
                         FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
-                        ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.LlmError)?.Name));
+                        ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.LlmError)?.Name,
+                        AttributionPath: modelSource));
                 }
             }
         }
@@ -111,9 +122,11 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         {
             if (n.Status == RunStatus.Failed)
             {
-                signals.Add(new RunHealthSignal(n.AgentId ?? n.NodeId, RunHealthSignalKind.NodeFailed,
+                var nodeSource = n.AgentId ?? n.NodeId;
+                signals.Add(new RunHealthSignal(nodeSource, RunHealthSignalKind.NodeFailed,
                     FailureLevel.Error, n.Error, IsTransient: false, n.StartedAt,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.NodeFailed)?.Name));
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.NodeFailed)?.Name,
+                    AttributionPath: nodeSource));
             }
         }
 
@@ -125,7 +138,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             {
                 background.Add(new RunHealthSignal(b.ChildAgentId, RunHealthSignalKind.TurnFailed,
                     FailureLevel.Error, b.Error, IsTransient: false, b.StartedAt,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.TurnFailed)?.Name));
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.TurnFailed)?.Name,
+                    AttributionPath: b.ChildAgentId));
             }
         }
 
@@ -140,5 +154,55 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         }
 
         return new RunHealth(rootRunId, worst, signals, background);
+    }
+
+    /// <summary>
+    /// Attempts to extract the agent name from the sub-run ID encoding convention
+    /// <c>{parentRunId}__{agentName}__{hash}</c>. Returns null for root runs or unknown shapes.
+    /// Only applicable to bus-sourced signals; MCP gateway store uses exact run_id match.
+    /// </summary>
+    internal static string? TryExtractAgentFromRunId(string? runId)
+    {
+        if (string.IsNullOrEmpty(runId)) return null;
+        var parts = runId.Split("__", StringSplitOptions.None);
+        return parts.Length >= 3 ? parts[^2] : null;
+    }
+
+    /// <summary>
+    /// Builds an <c>AttributionPath</c> for an MCP-error signal and optionally refines
+    /// <paramref name="conceptName"/> from the first artifact that has a per-tool annotation.
+    /// The aggregator's MCP query is exact-run-id — no agent context available; path is
+    /// tool-name based with optional MCP server from the artifact.
+    /// </summary>
+    /// <summary>
+    /// Builds an <c>AttributionPath</c> for an MCP-error signal and optionally refines
+    /// <paramref name="conceptName"/> from the first artifact that has a per-tool annotation.
+    /// MCP query is exact-run-id (no agent context); path is tool-name based with optional
+    /// MCP server from the artifact.
+    /// </summary>
+    internal static string BuildMcpAttributionPath(
+        string toolName,
+        IFailureAttributionRegistry? registry,
+        ref string? conceptName)
+    {
+        // Scan all registered artifacts for a tool annotation matching this tool.
+        // O(N artifacts) but N is small (deployment-local, bounded).
+        if (registry is not null)
+        {
+            foreach (var refName in registry.Names)
+            {
+                var artifact = registry.Get(refName);
+                var annotation = artifact?.ForTool(toolName);
+                if (annotation is null) continue;
+
+                if (!string.IsNullOrEmpty(annotation.Concept))
+                    conceptName = annotation.Concept;
+
+                var mcpServerId = annotation.McpServerId;
+                return string.IsNullOrEmpty(mcpServerId) ? toolName : $"{mcpServerId}/{toolName}";
+            }
+        }
+
+        return toolName;
     }
 }
