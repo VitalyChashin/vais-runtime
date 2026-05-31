@@ -1104,3 +1104,77 @@ Vais.Agents.Control.Http.AgentControlPlaneClient.ListRecipesAsync(string? concep
 Vais.Agents.Control.Http.AgentControlPlaneClient.GetRecipeAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RecipeProposal?>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.ProposeRecipesAsync(string? agent = null, string? run = null, string? concept = null, string? transport = null, System.DateTimeOffset? since = null, System.DateTimeOffset? until = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
 Vais.Agents.Control.Http.AgentControlPlaneClient.DecideRecipeAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RecipeProposal?>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRunHealthAsync(string? level = null, string? since = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunHealthListResponse!>!
+Vais.Agents.Control.Http.IAgentControlPlaneClient.GetRunHealthSignalsAsync(string? concept = null, string? agentName = null, string? since = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunHealthSignalsResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunHealthAsync(string? level = null, string? since = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunHealthListResponse!>!
+Vais.Agents.Control.Http.AgentControlPlaneClient.GetRunHealthSignalsAsync(string? concept = null, string? agentName = null, string? since = null, int limit = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.Control.Http.RunHealthSignalsResponse!>!
+Vais.Agents.Control.Http.RunHealthListResponse
+Vais.Agents.Control.Http.RunHealthListResponse.<Clone>$() -> Vais.Agents.Control.Http.RunHealthListResponse!
+Vais.Agents.Control.Http.RunHealthListResponse.Count.get -> int
+Vais.Agents.Control.Http.RunHealthListResponse.Count.init -> void
+Vais.Agents.Control.Http.RunHealthListResponse.Deconstruct(out int Count, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthListItemDto!>! Items) -> void
+Vais.Agents.Control.Http.RunHealthListResponse.Equals(Vais.Agents.Control.Http.RunHealthListResponse? other) -> bool
+Vais.Agents.Control.Http.RunHealthListResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthListItemDto!>!
+Vais.Agents.Control.Http.RunHealthListResponse.Items.init -> void
+Vais.Agents.Control.Http.RunHealthListResponse.RunHealthListResponse(int Count, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthListItemDto!>! Items) -> void
+override Vais.Agents.Control.Http.RunHealthListResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthListResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthListResponse.ToString() -> string!
+static Vais.Agents.Control.Http.RunHealthListResponse.operator !=(Vais.Agents.Control.Http.RunHealthListResponse? left, Vais.Agents.Control.Http.RunHealthListResponse? right) -> bool
+static Vais.Agents.Control.Http.RunHealthListResponse.operator ==(Vais.Agents.Control.Http.RunHealthListResponse? left, Vais.Agents.Control.Http.RunHealthListResponse? right) -> bool
+Vais.Agents.Control.Http.RunHealthListItemDto
+Vais.Agents.Control.Http.RunHealthListItemDto.<Clone>$() -> Vais.Agents.Control.Http.RunHealthListItemDto!
+Vais.Agents.Control.Http.RunHealthListItemDto.Deconstruct(out string! RunId, out string! Level, out int SignalCount, out System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Control.Http.RunHealthListItemDto.Equals(Vais.Agents.Control.Http.RunHealthListItemDto? other) -> bool
+Vais.Agents.Control.Http.RunHealthListItemDto.LatestAt.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.RunHealthListItemDto.LatestAt.init -> void
+Vais.Agents.Control.Http.RunHealthListItemDto.Level.get -> string!
+Vais.Agents.Control.Http.RunHealthListItemDto.Level.init -> void
+Vais.Agents.Control.Http.RunHealthListItemDto.RunHealthListItemDto(string! RunId, string! Level, int SignalCount, System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Control.Http.RunHealthListItemDto.RunId.get -> string!
+Vais.Agents.Control.Http.RunHealthListItemDto.RunId.init -> void
+Vais.Agents.Control.Http.RunHealthListItemDto.SignalCount.get -> int
+Vais.Agents.Control.Http.RunHealthListItemDto.SignalCount.init -> void
+override Vais.Agents.Control.Http.RunHealthListItemDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthListItemDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthListItemDto.ToString() -> string!
+static Vais.Agents.Control.Http.RunHealthListItemDto.operator !=(Vais.Agents.Control.Http.RunHealthListItemDto? left, Vais.Agents.Control.Http.RunHealthListItemDto? right) -> bool
+static Vais.Agents.Control.Http.RunHealthListItemDto.operator ==(Vais.Agents.Control.Http.RunHealthListItemDto? left, Vais.Agents.Control.Http.RunHealthListItemDto? right) -> bool
+Vais.Agents.Control.Http.RunHealthSignalsResponse
+Vais.Agents.Control.Http.RunHealthSignalsResponse.<Clone>$() -> Vais.Agents.Control.Http.RunHealthSignalsResponse!
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Count.get -> int
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Count.init -> void
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Deconstruct(out int Count, out System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalRowDto!>! Items) -> void
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Equals(Vais.Agents.Control.Http.RunHealthSignalsResponse? other) -> bool
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Items.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalRowDto!>!
+Vais.Agents.Control.Http.RunHealthSignalsResponse.Items.init -> void
+Vais.Agents.Control.Http.RunHealthSignalsResponse.RunHealthSignalsResponse(int Count, System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.Http.RunHealthSignalRowDto!>! Items) -> void
+override Vais.Agents.Control.Http.RunHealthSignalsResponse.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthSignalsResponse.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthSignalsResponse.ToString() -> string!
+static Vais.Agents.Control.Http.RunHealthSignalsResponse.operator !=(Vais.Agents.Control.Http.RunHealthSignalsResponse? left, Vais.Agents.Control.Http.RunHealthSignalsResponse? right) -> bool
+static Vais.Agents.Control.Http.RunHealthSignalsResponse.operator ==(Vais.Agents.Control.Http.RunHealthSignalsResponse? left, Vais.Agents.Control.Http.RunHealthSignalsResponse? right) -> bool
+Vais.Agents.Control.Http.RunHealthSignalRowDto
+Vais.Agents.Control.Http.RunHealthSignalRowDto.<Clone>$() -> Vais.Agents.Control.Http.RunHealthSignalRowDto!
+Vais.Agents.Control.Http.RunHealthSignalRowDto.At.get -> System.DateTimeOffset
+Vais.Agents.Control.Http.RunHealthSignalRowDto.At.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.AttributionPath.get -> string?
+Vais.Agents.Control.Http.RunHealthSignalRowDto.AttributionPath.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.ConceptName.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalRowDto.ConceptName.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Deconstruct(out string! RunId, out string! ConceptName, out string? AttributionPath, out string! Source, out string! Level, out string? ErrorType, out System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Equals(Vais.Agents.Control.Http.RunHealthSignalRowDto? other) -> bool
+Vais.Agents.Control.Http.RunHealthSignalRowDto.ErrorType.get -> string?
+Vais.Agents.Control.Http.RunHealthSignalRowDto.ErrorType.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Level.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Level.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.RunHealthSignalRowDto(string! RunId, string! ConceptName, string? AttributionPath, string! Source, string! Level, string? ErrorType, System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.RunId.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalRowDto.RunId.init -> void
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Source.get -> string!
+Vais.Agents.Control.Http.RunHealthSignalRowDto.Source.init -> void
+override Vais.Agents.Control.Http.RunHealthSignalRowDto.Equals(object? obj) -> bool
+override Vais.Agents.Control.Http.RunHealthSignalRowDto.GetHashCode() -> int
+override Vais.Agents.Control.Http.RunHealthSignalRowDto.ToString() -> string!
+static Vais.Agents.Control.Http.RunHealthSignalRowDto.operator !=(Vais.Agents.Control.Http.RunHealthSignalRowDto? left, Vais.Agents.Control.Http.RunHealthSignalRowDto? right) -> bool
+static Vais.Agents.Control.Http.RunHealthSignalRowDto.operator ==(Vais.Agents.Control.Http.RunHealthSignalRowDto? left, Vais.Agents.Control.Http.RunHealthSignalRowDto? right) -> bool

@@ -1367,6 +1367,39 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
     }
 
     /// <inheritdoc />
+    public async Task<RunHealthListResponse> GetRunHealthAsync(string? level = null, string? since = null, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrEmpty(level)) qs.Add($"level={Uri.EscapeDataString(level)}");
+        if (!string.IsNullOrEmpty(since)) qs.Add($"since={Uri.EscapeDataString(since)}");
+        if (limit != 50) qs.Add($"limit={limit}");
+        var path = qs.Count > 0 ? $"/v1/run-health?{string.Join('&', qs)}" : "/v1/run-health";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+            return new RunHealthListResponse(0, Array.Empty<RunHealthListItemDto>());
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<RunHealthListResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new RunHealthListResponse(0, Array.Empty<RunHealthListItemDto>());
+    }
+
+    /// <inheritdoc />
+    public async Task<RunHealthSignalsResponse> GetRunHealthSignalsAsync(string? concept = null, string? agentName = null, string? since = null, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        var qs = new List<string>();
+        if (!string.IsNullOrEmpty(concept)) qs.Add($"concept={Uri.EscapeDataString(concept)}");
+        if (!string.IsNullOrEmpty(agentName)) qs.Add($"agentName={Uri.EscapeDataString(agentName)}");
+        if (!string.IsNullOrEmpty(since)) qs.Add($"since={Uri.EscapeDataString(since)}");
+        if (limit != 50) qs.Add($"limit={limit}");
+        var path = qs.Count > 0 ? $"/v1/run-health/signals?{string.Join('&', qs)}" : "/v1/run-health/signals";
+        using var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+            return new RunHealthSignalsResponse(0, Array.Empty<RunHealthSignalRowDto>());
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<RunHealthSignalsResponse>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new RunHealthSignalsResponse(0, Array.Empty<RunHealthSignalRowDto>());
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ApprovalRequest>> ListApprovalsAsync(string? status = null, CancellationToken cancellationToken = default)
     {
         var path = string.IsNullOrWhiteSpace(status) ? "/v1/approvals" : $"/v1/approvals?status={Uri.EscapeDataString(status)}";

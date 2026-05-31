@@ -584,6 +584,20 @@ public interface IAgentControlPlaneClient
     Task<FilterStatusResponse> GetFilterStatusAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new FilterStatusResponse(Array.Empty<FilterCallEntry>(), 0));
 
+    /// <summary>
+    /// Part 2c — GET /v1/run-health: cross-run rollup of recent runs with at least
+    /// <paramref name="level"/> severity. Default: empty (aggregator not configured).
+    /// </summary>
+    Task<RunHealthListResponse> GetRunHealthAsync(string? level = null, string? since = null, int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(new RunHealthListResponse(0, Array.Empty<RunHealthListItemDto>()));
+
+    /// <summary>
+    /// Part 2c — GET /v1/run-health/signals: cross-run signal search by concept / agent / window.
+    /// Default: empty (search service not configured).
+    /// </summary>
+    Task<RunHealthSignalsResponse> GetRunHealthSignalsAsync(string? concept = null, string? agentName = null, string? since = null, int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(new RunHealthSignalsResponse(0, Array.Empty<RunHealthSignalRowDto>()));
+
     /// <summary>GET /v1/approvals — list high-risk mutation approval requests (optional status filter). Default: empty.</summary>
     Task<IReadOnlyList<ApprovalRequest>> ListApprovalsAsync(string? status = null, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<ApprovalRequest>>(Array.Empty<ApprovalRequest>());

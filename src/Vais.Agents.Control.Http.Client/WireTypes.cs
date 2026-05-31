@@ -304,6 +304,27 @@ public sealed record DiagSpanListResponse(IReadOnlyList<Vais.Agents.Control.Diag
 /// <summary>Client-side wire type for <c>GET /v1/diagnostics/filter-status</c>. Mirrors server's <c>FilterStatusResponse</c>.</summary>
 public sealed record FilterStatusResponse(IReadOnlyList<Vais.Agents.Control.FilterCallEntry> Calls, long TotalCalls);
 
+// ── Part 2c — Run-health endpoints ──────────────────────────────────────────
+
+/// <summary>Client-side wire type for <c>GET /v1/run-health</c>. Mirrors server's <c>RunHealthListResponse</c>.</summary>
+public sealed record RunHealthListResponse(int Count, IReadOnlyList<RunHealthListItemDto> Items);
+
+/// <summary>Client-side wire type for one row in <see cref="RunHealthListResponse"/>.</summary>
+public sealed record RunHealthListItemDto(string RunId, string Level, int SignalCount, DateTimeOffset LatestAt);
+
+/// <summary>Client-side wire type for <c>GET /v1/run-health/signals</c>. Mirrors server's <c>RunHealthSignalsResponse</c>.</summary>
+public sealed record RunHealthSignalsResponse(int Count, IReadOnlyList<RunHealthSignalRowDto> Items);
+
+/// <summary>Client-side wire type for one row in <see cref="RunHealthSignalsResponse"/>.</summary>
+public sealed record RunHealthSignalRowDto(
+    string RunId,
+    string ConceptName,
+    string? AttributionPath,
+    string Source,
+    string Level,
+    string? ErrorType,
+    DateTimeOffset At);
+
 // ── Extension wire types ────────────────────────────────────────────────────
 
 /// <summary>Client-side mirror of <c>ExtensionApplyStatus</c> from the server package.</summary>
