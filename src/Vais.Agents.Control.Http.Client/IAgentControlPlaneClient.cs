@@ -239,7 +239,9 @@ public interface IAgentControlPlaneClient
 
     /// <summary>
     /// POST /v1/recipes/propose — run the induction pipeline now and persist any new proposals.
-    /// Returns the proposals just emitted.
+    /// Returns the proposals just emitted. Use <paramref name="source"/> to select between
+    /// behavioral trajectory mining (default, <c>"trajectories"</c>) and failure-prior induction
+    /// (<c>"failures"</c> — requires the run-health store to be configured).
     /// </summary>
     Task<IReadOnlyList<RecipeProposal>> ProposeRecipesAsync(
         string? agent = null,
@@ -248,6 +250,7 @@ public interface IAgentControlPlaneClient
         string? transport = null,
         DateTimeOffset? since = null,
         DateTimeOffset? until = null,
+        string? source = null,
         CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<RecipeProposal>>(Array.Empty<RecipeProposal>());
 

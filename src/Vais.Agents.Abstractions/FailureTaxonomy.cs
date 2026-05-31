@@ -46,15 +46,33 @@ public sealed record FailureSeverityRule(
 
 /// <summary>
 /// Deployment-local overlay that extends the auto-derived base failure taxonomy with
-/// sub-concepts, description overrides, and severity-rule refinements.
+/// sub-concepts, description overrides, severity-rule refinements, and approved
+/// failure-prior annotations produced by <c>FailurePatternInducer</c>.
 /// Content is deployment-specific and never committed to <c>agentic/</c>.
 /// </summary>
 /// <param name="Concepts">Additional or override concepts merged over the base.</param>
 /// <param name="SeverityRules">Per-concept severity overrides.</param>
+/// <param name="Attributions">
+/// Per-attribution-path annotations written when a <see cref="RecipeProposalKind.FailurePrior"/>
+/// proposal is approved. Key is the attribution path (e.g. <c>agent1/mcp-server/tool_name</c>).
+/// </param>
 public sealed record FailureOntologyOverlay(
     IReadOnlyList<FailureConcept>? Concepts = null,
-    IReadOnlyList<FailureSeverityRule>? SeverityRules = null)
+    IReadOnlyList<FailureSeverityRule>? SeverityRules = null,
+    IReadOnlyDictionary<string, FailureAttributionOverlay>? Attributions = null)
 {
     /// <summary>An empty overlay that leaves the base taxonomy unchanged.</summary>
     public static readonly FailureOntologyOverlay Empty = new();
 }
+
+/// <summary>
+/// Per-attribution-path overlay entry. Carries approved <see cref="FailurePriorBody"/> records
+/// that annotate a specific <c>(agent, concept, tool)</c> call path.
+/// </summary>
+/// <param name="FailurePriors">
+/// Approved failure-prior annotations for this path, ordered by most-recently-induced last.
+/// Duplicate priors for the same <see cref="FailurePriorBody.ConceptName"/> are replaced on
+/// re-induction (same concept + path = same prior, updated counts).
+/// </param>
+public sealed record FailureAttributionOverlay(
+    IReadOnlyList<FailurePriorBody>? FailurePriors = null);

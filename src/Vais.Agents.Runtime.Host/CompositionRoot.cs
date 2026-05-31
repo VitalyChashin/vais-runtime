@@ -454,10 +454,11 @@ internal static class CompositionRoot
         // boundary); operator approves it via 'vais approvals approve <id>'; re-running
         // DecideAsync finds the matching approval and flips the proposal to Approved.
         var overlayPathForRecipes = options.OntologyOverlayPath; // captured for decorator wiring
+        var failureOverlayDir = options.FailureOntologyOverlayPath; // captured for failure-prior write-back
         services.TryAddSingleton<IRecipeProposalStore>(sp =>
         {
             var inner = (IRecipeProposalStore)new InMemoryRecipeProposalStore(BuildRecipeApprovalGate(sp));
-            return MaybeWrapWithOverlayPublishing(sp, inner, overlayPathForRecipes);
+            return MaybeWrapWithOverlayPublishing(sp, inner, overlayPathForRecipes, failureOverlayDir);
         });
 
         // Plan D D-8/D-9: register the behavioral inducer as the always-on default so
@@ -466,11 +467,26 @@ internal static class CompositionRoot
         services.TryAddSingleton<IRecipeInducer>(sp =>
             new BehavioralRecipeInducer(sp.GetRequiredService<IInterceptorTeeStore>()));
 
+        // Part 3 FP-3/FP-9: register FailurePatternInducer as a keyed service ("failures") so
+        // `vais recipes propose --source failures` can resolve it. Throws at first use if
+        // IFailureSearchService is absent (VAIS_RUN_HEALTH_STORE_CONNECTION not configured).
+        services.TryAddKeyedSingleton<IRecipeInducer>("failures", (sp, _) =>
+            (IRecipeInducer)new FailurePatternInducer(
+                sp.GetService<IFailureSearchService>()
+                ?? throw new InvalidOperationException(
+                    "IFailureSearchService is not available. Set VAIS_RUN_HEALTH_STORE_CONNECTION to enable failure-prior induction (--source failures).")));
+
         // Plan D D-13: register the JSON overlay writer whenever an overlay path is set so the
         // approval-side-effect decorator can pick it up. The writer itself is stateless.
         if (!string.IsNullOrWhiteSpace(options.OntologyOverlayPath))
         {
             services.TryAddSingleton<IOntologyOverlayWriter, JsonOntologyOverlayWriter>();
+        }
+
+        // Part 3 FP-9: register failure overlay writer when the failure overlay directory is set.
+        if (!string.IsNullOrWhiteSpace(options.FailureOntologyOverlayPath))
+        {
+            services.TryAddSingleton<IFailureOntologyOverlayWriter, JsonFailureOntologyOverlayWriter>();
         }
     }
 
@@ -479,15 +495,34 @@ internal static class CompositionRoot
     /// are configured, wrap the proposal store so approved recipes land in the on-disk
     /// overlay and trigger a catalog reload. Returns <paramref name="inner"/> unchanged when
     /// any dependency is missing (overlay path absent ⇒ no place to write).
+    /// Part 3: also wires the <see cref="IFailureOntologyOverlayWriter"/> for
+    /// <see cref="RecipeProposalKind.FailurePrior"/> write-back when <paramref name="failureOverlayDir"/> is set.
     /// </summary>
-    private static IRecipeProposalStore MaybeWrapWithOverlayPublishing(IServiceProvider sp, IRecipeProposalStore inner, string? overlayPath)
+    private static IRecipeProposalStore MaybeWrapWithOverlayPublishing(
+        IServiceProvider sp,
+        IRecipeProposalStore inner,
+        string? overlayPath,
+        string? failureOverlayDir = null)
     {
         if (string.IsNullOrWhiteSpace(overlayPath)) return inner;
         var writer = sp.GetService<IOntologyOverlayWriter>();
         if (writer is null) return inner;
         var reloader = sp.GetService<IOntologyCatalogReloader>();
         var logger = sp.GetService<ILogger<OverlayPublishingRecipeProposalStoreDecorator>>();
-        return new OverlayPublishingRecipeProposalStoreDecorator(inner, writer, overlayPath, reloader, logger);
+
+        // Part 3: wire failure overlay writer when the directory is set.
+        var failureWriter = string.IsNullOrWhiteSpace(failureOverlayDir)
+            ? null
+            : sp.GetService<IFailureOntologyOverlayWriter>();
+        var failureFilePath = string.IsNullOrWhiteSpace(failureOverlayDir)
+            ? null
+            : Path.Combine(failureOverlayDir, "induced.failure-ontology.json");
+
+        return new OverlayPublishingRecipeProposalStoreDecorator(
+            inner, writer, overlayPath, reloader, logger,
+            throwOnSideEffectFailure: false,
+            failureWriter: failureWriter,
+            failureOverlayPath: failureFilePath);
     }
 
     private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)

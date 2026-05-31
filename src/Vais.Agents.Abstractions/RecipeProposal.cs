@@ -14,6 +14,15 @@ public enum RecipeProposalKind
 
     /// <summary>A description rewrite for a single concept (Writer.com / DRAFT pattern: better text from observed behavior).</summary>
     DescriptionRewrite = 2,
+
+    /// <summary>
+    /// A predictive failure-prior annotation: statistical evidence that a specific
+    /// <c>(concept, attribution-path)</c> pair fails at an elevated rate. Induced from the
+    /// failure-signal corpus (run-health store + MCP gateway event store) by
+    /// <c>FailurePatternInducer</c>. On approval, writes to
+    /// <c>FailureOntologyOverlay.Attributions[path].FailurePriors</c>.
+    /// </summary>
+    FailurePrior = 3,
 }
 
 /// <summary>Operator review state for a recipe proposal.</summary>

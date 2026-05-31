@@ -223,6 +223,26 @@ static Vais.Agents.Core.BehavioralRecipeInducerOptions.operator ==(Vais.Agents.C
 Vais.Agents.Core.BehavioralRecipeInducer
 Vais.Agents.Core.BehavioralRecipeInducer.BehavioralRecipeInducer(Vais.Agents.IInterceptorTeeStore! store, Vais.Agents.Core.BehavioralRecipeInducerOptions? options = null) -> void
 Vais.Agents.Core.BehavioralRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
+Vais.Agents.Core.FailurePatternInducerOptions
+Vais.Agents.Core.FailurePatternInducerOptions.<Clone>$() -> Vais.Agents.Core.FailurePatternInducerOptions!
+Vais.Agents.Core.FailurePatternInducerOptions.Equals(Vais.Agents.Core.FailurePatternInducerOptions? other) -> bool
+Vais.Agents.Core.FailurePatternInducerOptions.FailurePatternInducerOptions() -> void
+Vais.Agents.Core.FailurePatternInducerOptions.MaxFetchLimit.get -> int
+Vais.Agents.Core.FailurePatternInducerOptions.MaxFetchLimit.init -> void
+Vais.Agents.Core.FailurePatternInducerOptions.MediumRiskMinFailureCount.get -> int
+Vais.Agents.Core.FailurePatternInducerOptions.MediumRiskMinFailureCount.init -> void
+Vais.Agents.Core.FailurePatternInducerOptions.MinSupport.get -> int
+Vais.Agents.Core.FailurePatternInducerOptions.MinSupport.init -> void
+Vais.Agents.Core.FailurePatternInducerOptions.RecencyWeightHours.get -> int
+Vais.Agents.Core.FailurePatternInducerOptions.RecencyWeightHours.init -> void
+override Vais.Agents.Core.FailurePatternInducerOptions.Equals(object? obj) -> bool
+override Vais.Agents.Core.FailurePatternInducerOptions.GetHashCode() -> int
+override Vais.Agents.Core.FailurePatternInducerOptions.ToString() -> string!
+static Vais.Agents.Core.FailurePatternInducerOptions.operator !=(Vais.Agents.Core.FailurePatternInducerOptions? left, Vais.Agents.Core.FailurePatternInducerOptions? right) -> bool
+static Vais.Agents.Core.FailurePatternInducerOptions.operator ==(Vais.Agents.Core.FailurePatternInducerOptions? left, Vais.Agents.Core.FailurePatternInducerOptions? right) -> bool
+Vais.Agents.Core.FailurePatternInducer
+Vais.Agents.Core.FailurePatternInducer.FailurePatternInducer(Vais.Agents.Control.IFailureSearchService! searchService, Vais.Agents.Core.FailurePatternInducerOptions? options = null) -> void
+Vais.Agents.Core.FailurePatternInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
 Vais.Agents.Core.LlmAssistedRecipeInducer
 Vais.Agents.Core.LlmAssistedRecipeInducer.LlmAssistedRecipeInducer(Vais.Agents.IRecipeInducer! inner, System.Func<Vais.Agents.RecipeProposal!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string?>!>! enricher) -> void
 Vais.Agents.Core.LlmAssistedRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!

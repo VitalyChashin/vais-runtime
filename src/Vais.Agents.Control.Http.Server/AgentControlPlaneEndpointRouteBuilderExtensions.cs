@@ -672,7 +672,15 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static async Task<IResult> ProposeRecipesAsync(HttpContext http, CancellationToken ct = default)
     {
-        var inducer = http.RequestServices.GetService<IRecipeInducer>();
+        var q = http.Request.Query;
+        var source = q["source"].FirstOrDefault()?.Trim().ToLowerInvariant();
+
+        // source=failures → FailurePatternInducer (keyed "failures"); default → BehavioralRecipeInducer.
+        IRecipeInducer? inducer = source == "failures"
+            ? http.RequestServices.GetKeyedService<IRecipeInducer>("failures")
+              ?? http.RequestServices.GetService<IRecipeInducer>()
+            : http.RequestServices.GetService<IRecipeInducer>();
+
         var store = http.RequestServices.GetService<IRecipeProposalStore>();
         if (inducer is null || store is null)
             return Results.Problem(
@@ -680,7 +688,6 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
                 detail: "Requires both IRecipeInducer and IRecipeProposalStore to be registered.",
                 statusCode: StatusCodes.Status503ServiceUnavailable);
 
-        var q = http.Request.Query;
         var agent = q["agent"].FirstOrDefault();
         var run = q["run"].FirstOrDefault();
         var concept = q["concept"].FirstOrDefault();
