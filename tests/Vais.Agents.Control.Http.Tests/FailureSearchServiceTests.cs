@@ -275,5 +275,8 @@ public sealed class FailureSearchServiceTests
             }
             return false;
         }
+
+        public IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(
+            string conceptName) => [];
     }
 }
