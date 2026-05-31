@@ -2331,3 +2331,9 @@ static Vais.Agents.FailureToolAnnotation.operator !=(Vais.Agents.FailureToolAnno
 static Vais.Agents.FailureToolAnnotation.operator ==(Vais.Agents.FailureToolAnnotation? left, Vais.Agents.FailureToolAnnotation? right) -> bool
 static Vais.Agents.FailureAgentAnnotation.operator !=(Vais.Agents.FailureAgentAnnotation? left, Vais.Agents.FailureAgentAnnotation? right) -> bool
 static Vais.Agents.FailureAgentAnnotation.operator ==(Vais.Agents.FailureAgentAnnotation? left, Vais.Agents.FailureAgentAnnotation? right) -> bool
+Vais.Agents.IFailurePriorEvalGate
+Vais.Agents.IFailurePriorEvalGate.EvaluateAsync(Vais.Agents.RecipeProposal! prior, System.Threading.CancellationToken ct) -> System.Threading.Tasks.Task<(bool Passed, string? Reason)>!
+Vais.Agents.NoOpFailurePriorEvalGate
+Vais.Agents.NoOpFailurePriorEvalGate.EvaluateAsync(Vais.Agents.RecipeProposal! prior, System.Threading.CancellationToken ct) -> System.Threading.Tasks.Task<(bool Passed, string? Reason)>!
+Vais.Agents.NoOpFailurePriorEvalGate.NoOpFailurePriorEvalGate() -> void
+static readonly Vais.Agents.NoOpFailurePriorEvalGate.Instance -> Vais.Agents.NoOpFailurePriorEvalGate!
