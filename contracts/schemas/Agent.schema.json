@@ -633,6 +633,10 @@
         "mcpGatewayRef": {
           "type": "string",
           "description": "Optional reference to a deployed McpGatewayConfigManifest by id. When set, a per-agent ToolGatewayMiddleware chain is built from the referenced config at grain activation, replacing the DI-global chain entirely. Null = DI-global chain applies unchanged."
+        },
+        "failureOntologyRef": {
+          "type": "string",
+          "description": "Optional name of a deployment-supplied FailureAttributionArtifact (Part 2b). When set at the agent level, provides fallback failure attribution for agent-level failures (turn failures, LLM errors) not covered by a per-server binding. Also populates IFailureAttributionIndex so RunHealthSignalSubscriber can refine concepts on in-process tool errors. Missing or unknown refs degrade gracefully."
         }
       },
       "additionalProperties": false

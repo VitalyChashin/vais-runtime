@@ -250,6 +250,10 @@
         "ontologyRef": {
           "type": "string",
           "description": "Optional name of a deployment-supplied domain-ontology artifact to bind to this server. When set, the south cartridge resolves the artifact through IDomainOntologyArtifactRegistry and shapes the server\u0027s tools/list \u002B tool-call dispatch with its tags, descriptions, and cross-refs. Missing or unknown refs degrade gracefully (no cartridge applied \u2014 passthrough). Plan C1-7."
+        },
+        "failureOntologyRef": {
+          "type": "string",
+          "description": "Optional name of a deployment-supplied FailureAttributionArtifact (Part 2b). When set, AgentManifestTranslator appends a FailureAttributionEnricher to the per-agent tool-gateway chain. Failed tool calls through this server emit failure.attribution trajectory events with concept and path from the artifact. Missing or unknown refs degrade gracefully (no enricher applied)."
         }
       },
       "additionalProperties": false
