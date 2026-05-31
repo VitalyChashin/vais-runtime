@@ -61,21 +61,27 @@ public sealed class FailureSearchService : IFailureSearchService
             || !string.Equals(query.ConceptName, "McpToolError", StringComparison.Ordinal);
 
         // ── Bus-sourced (run-health store) ────────────────────────────────────
+        // The store applies exact concept_name match on its filter; to honour Part 2a's
+        // parent-walk promise (querying "ToolError" finds "ToolError/AnyChild"), fetch with
+        // no concept filter, then post-filter via IFailureOntologyCatalog.IsMatchOrDescendant —
+        // identical discipline to the MCP branch below.
         if (wantsBus)
         {
-            // For descendant concepts (e.g. "ToolError/SomeChild"), exact match on the store row.
-            // The subscriber stamps either the base concept (ToolError) or an artifact override.
             var rows = await _runHealth.QuerySignalsAsync(
-                conceptName: query.ConceptName,
+                conceptName: null,
                 agentName: query.AgentName,
                 since: since,
                 limit: limit,
                 ct: ct).ConfigureAwait(false);
             foreach (var r in rows)
             {
+                var concept = r.ConceptName ?? _catalog?.FromSignalKind(r.Kind)?.Name ?? r.Kind.ToString();
+                if (!string.IsNullOrEmpty(query.ConceptName)
+                    && !ConceptMatches(concept, query.ConceptName))
+                    continue;
                 results.Add(new FailureSearchResult(
                     RunId: r.RunId,
-                    ConceptName: r.ConceptName ?? _catalog?.FromSignalKind(r.Kind)?.Name ?? r.Kind.ToString(),
+                    ConceptName: concept,
                     AttributionPath: r.AttributionPath,
                     Source: r.Source,
                     Level: r.Level.ToString().ToLowerInvariant(),
@@ -123,11 +129,33 @@ public sealed class FailureSearchService : IFailureSearchService
     }
 
     private bool IsMcpToolErrorDescendant(string conceptName) =>
-        _catalog?.IsMatchOrDescendant(conceptName, "McpToolError") ?? false;
+        ConceptMatches(conceptName, "McpToolError");
 
-    private bool ConceptMatches(string candidate, string filter) =>
-        _catalog?.IsMatchOrDescendant(candidate, filter)
-        ?? string.Equals(candidate, filter, StringComparison.Ordinal);
+    /// <summary>
+    /// Concept-match with two fallbacks: (1) catalog's <c>IsMatchOrDescendant</c> (cheap;
+    /// works when both names are registered), then (2) slash-path convention — if the
+    /// candidate has the form <c>"Parent/Child"</c> and the parent equals (or descends
+    /// from) the filter, treat the candidate as a descendant. The slash path is the
+    /// documented convention for artifact-supplied sub-concepts that may NOT also be
+    /// registered in an overlay; without this fallback, an artifact concept like
+    /// <c>"McpToolError/AuthExpired"</c> wouldn't match a parent-concept query, even
+    /// though the operator's intent is clearly to attach it under that parent.
+    /// </summary>
+    private bool ConceptMatches(string candidate, string filter)
+    {
+        if (string.Equals(candidate, filter, StringComparison.Ordinal))
+            return true;
+        if (_catalog is not null && _catalog.IsMatchOrDescendant(candidate, filter))
+            return true;
+        var slashIdx = candidate.IndexOf('/', StringComparison.Ordinal);
+        if (slashIdx > 0)
+        {
+            var parent = candidate[..slashIdx];
+            // Recurse on the parent — handles multi-level (X/Y/Z) and re-uses the catalog walk.
+            return ConceptMatches(parent, filter);
+        }
+        return false;
+    }
 
     /// <summary>
     /// Mirrors <see cref="RunHealthAggregator.BuildMcpAttributionPath"/> — re-derives the

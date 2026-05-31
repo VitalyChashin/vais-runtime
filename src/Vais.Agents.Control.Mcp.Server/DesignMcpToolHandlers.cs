@@ -806,14 +806,13 @@ internal static class DesignMcpToolHandlers
             return TextError("Run-health rollup unavailable: IRunHealthAggregator is not registered (set VAIS_RUN_HEALTH_STORE_CONNECTION).");
 
         var levelStr = GetString(args, "level");
+        if (!string.IsNullOrEmpty(levelStr) && levelStr is not ("degraded" or "failed"))
+            return TextError($"Argument 'level' must be 'degraded' or 'failed'; got '{levelStr}'.");
         var minLevel = levelStr switch
         {
             "failed" => FailureLevel.Error,
-            null or "" or "degraded" => FailureLevel.Warning,
-            _ => FailureLevel.Warning,
+            _ => FailureLevel.Warning,  // null/empty/degraded
         };
-        if (!string.IsNullOrEmpty(levelStr) && levelStr is not ("degraded" or "failed"))
-            return TextError($"Argument 'level' must be 'degraded' or 'failed'; got '{levelStr}'.");
 
         var sinceStr = GetString(args, "since");
         DateTimeOffset? since = null;
