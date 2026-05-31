@@ -258,6 +258,16 @@ internal sealed record RuntimeOptions
     public string? OntologyOverlayPath { get; init; }
 
     /// <summary>
+    /// Path to a directory containing <c>*.failure-ontology.json</c> overlay files (Part 2a).
+    /// When set, the merged failure taxonomy (auto-derived base + overlay) backs
+    /// <see cref="IFailureOntologyCatalog"/>, enabling sub-concept extension (e.g.
+    /// <c>McpToolError/AuthExpired</c>), description overrides, and per-concept severity rules.
+    /// Null ⇒ auto-derived base only (no overlay, no I/O). Set via
+    /// <c>VAIS_FAILURE_ONTOLOGY_OVERLAY_PATH</c>.
+    /// </summary>
+    public string? FailureOntologyOverlayPath { get; init; }
+
+    /// <summary>
     /// Path to a JSON-Lines audit file (Plan B). When set, every control-plane lifecycle verb is
     /// appended as one JSON object per line. Null ⇒ the default <c>LoggerAuditLog</c>.
     /// Set via <c>VAIS_AUDIT_LOG_PATH</c>.
@@ -451,6 +461,7 @@ internal sealed record RuntimeOptions
             RunHealthStoreConnection = Env("VAIS_RUN_HEALTH_STORE_CONNECTION"),
             CheckpointerConnection = Env("VAIS_CHECKPOINTER_CONNECTION"),
             OntologyOverlayPath = Env("VAIS_ONTOLOGY_OVERLAY_PATH"),
+            FailureOntologyOverlayPath = Env("VAIS_FAILURE_ONTOLOGY_OVERLAY_PATH"),
             AuditLogPath = Env("VAIS_AUDIT_LOG_PATH"),
             ApprovalsEnabled = string.Equals(Env("VAIS_APPROVALS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase),
             GatewayEventStoreConnection = Env("VAIS_GATEWAY_EVENT_STORE_CONNECTION"),

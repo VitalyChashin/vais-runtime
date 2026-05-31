@@ -448,3 +448,14 @@ Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.Upse
 Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.GetAsync(string! proposalId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
 Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.ListAsync(Vais.Agents.RecipeProposalQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Vais.Agents.RecipeProposal!>!
 Vais.Agents.Control.Manifests.OverlayPublishingRecipeProposalStoreDecorator.DecideAsync(string! proposalId, bool approve, string! decidedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Vais.Agents.RecipeProposal?>
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.OverlaidFailureOntologyCatalog(Vais.Agents.FailureOntologyOverlay! overlay) -> void
+Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader
+static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadFromFile(string! path) -> Vais.Agents.FailureOntologyOverlay!
+static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadFromJson(string! json) -> Vais.Agents.FailureOntologyOverlay!
+static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadAllFromDirectory(string! directory) -> Vais.Agents.FailureOntologyOverlay!

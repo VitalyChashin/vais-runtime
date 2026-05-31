@@ -45,6 +45,7 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
     private readonly IMcpGatewayEventStore _mcp;
     private readonly IRunStore _runs;
     private readonly IBackgroundAgentTracker _background;
+    private readonly IFailureOntologyCatalog? _catalog;
 
     /// <summary>Creates the aggregator over the durable run-health, gateway, run, and background stores.</summary>
     public RunHealthAggregator(
@@ -52,13 +53,15 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         IGatewayEventStore gateway,
         IMcpGatewayEventStore mcp,
         IRunStore runs,
-        IBackgroundAgentTracker background)
+        IBackgroundAgentTracker background,
+        IFailureOntologyCatalog? catalog = null)
     {
         _signals = signals;
         _gateway = gateway;
         _mcp = mcp;
         _runs = runs;
         _background = background;
+        _catalog = catalog;
     }
 
     /// <inheritdoc />
@@ -67,7 +70,13 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         var signals = new List<RunHealthSignal>();
 
         // 1. Bus-sourced mechanical signals across the whole run tree (tool/turn/partial/retry/fallback/guardrail).
-        signals.AddRange(await _signals.ListByRunTreeAsync(rootRunId, ct).ConfigureAwait(false));
+        //    For legacy rows where ConceptName was not yet stamped, fall back to the catalog.
+        foreach (var s in await _signals.ListByRunTreeAsync(rootRunId, ct).ConfigureAwait(false))
+        {
+            signals.Add(s.ConceptName is null && _catalog is not null
+                ? s with { ConceptName = _catalog.FromSignalKind(s.Kind)?.Name }
+                : s);
+        }
 
         // 2. MCP gateway failures — not on the bus for plugin-mediated tool calls.
         foreach (var e in await _mcp.ListByRunAsync(rootRunId, ct: ct).ConfigureAwait(false))
@@ -75,7 +84,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             if (!string.IsNullOrEmpty(e.ErrorType))
             {
                 signals.Add(new RunHealthSignal(e.ToolName, RunHealthSignalKind.McpError,
-                    FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At));
+                    FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.McpError)?.Name));
             }
         }
 
@@ -89,7 +99,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
                 if (!string.IsNullOrEmpty(e.ErrorType))
                 {
                     signals.Add(new RunHealthSignal(e.ModelId ?? "llm-gateway", RunHealthSignalKind.LlmError,
-                        FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At));
+                        FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
+                        ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.LlmError)?.Name));
                 }
             }
         }
@@ -101,7 +112,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             if (n.Status == RunStatus.Failed)
             {
                 signals.Add(new RunHealthSignal(n.AgentId ?? n.NodeId, RunHealthSignalKind.NodeFailed,
-                    FailureLevel.Error, n.Error, IsTransient: false, n.StartedAt));
+                    FailureLevel.Error, n.Error, IsTransient: false, n.StartedAt,
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.NodeFailed)?.Name));
             }
         }
 
@@ -112,7 +124,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             if (b.Status == BackgroundAgentRunStatus.Failed)
             {
                 background.Add(new RunHealthSignal(b.ChildAgentId, RunHealthSignalKind.TurnFailed,
-                    FailureLevel.Error, b.Error, IsTransient: false, b.StartedAt));
+                    FailureLevel.Error, b.Error, IsTransient: false, b.StartedAt,
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.TurnFailed)?.Name));
             }
         }
 

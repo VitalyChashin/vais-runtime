@@ -9,7 +9,57 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ## [Unreleased]
 
+### Added
+
+- **Ontology Diagnostics Part 2a — Shared failure taxonomy (branch `feat/ontology-diagnostics-part2a`).**
+  Implements the taxonomy-north half of the ontology-grounded diagnostic layer (research §11.2). Defines the shared `IFailureOntologyCatalog` vocabulary once in `Vais.Agents.Abstractions`; every downstream layer (RunHealth, eval assertions, Part 2c diagnostic MCP) references the same concept names.
+  - `FailureAxis`, `FailureConcept`, `FailureSeverityRule`, `FailureOntologyOverlay` records in Abstractions.
+  - `IFailureOntologyCatalog` interface + `AutoDerivedFailureOntologyCatalog` (pure-code, auto-derives base from `RunHealthSignalKind` — 9 mechanical + 2 quality seed concepts).
+  - `OverlaidFailureOntologyCatalog` + `FailureOntologyOverlayLoader` in `Vais.Agents.Control.Manifests.Json` — merges `*.failure-ontology.json` deployment overlays (sub-concepts, description overrides, severity rules) over the auto-derived base.
+  - `RunHealthSignal` and `RunHealthSignalRecord` gain two additive optional fields: `ConceptName` (stamped at write time) and `AttributionPath` (for Part 2b).
+  - `RunHealthSignalSubscriber` injects `IFailureOntologyCatalog?` and stamps `ConceptName` via `FromSignalKind` when writing signals.
+  - `PostgresRunHealthStore` — additive schema migration (`ALTER TABLE … ADD COLUMN IF NOT EXISTS concept_name, attribution_path`); INSERT/SELECT updated.
+  - `RunHealthAggregator` falls back to `catalog.FromSignalKind` for legacy null-ConceptName rows; stamps concept on directly-constructed signals (MCP, LLM, node, background).
+  - Four Foundation Part 3 eval assertions (`no-tool-error`, `no-degraded-response`, `max-retries`, `no-fallback-engaged`) accept optional `concept` filter; resolved via `IsMatchOrDescendant` parent-walk. Existing manifests without the filter are unaffected.
+  - `CompositionRoot` registers `IFailureOntologyCatalog` unconditionally (`AutoDerived` by default; `Overlaid` when `VAIS_FAILURE_ONTOLOGY_OVERLAY_PATH` is set).
+  - 12 new unit tests in `Vais.Agents.Eval.Tests` (catalog coverage, overlay merge, parent-walk, concept-filtered assertions, record round-trip).
+
+- **Observability Part 4 — South coverage / D-15 regression (commit `b0450a8`).** Closes Plan D's D-15 partial-verify caveat (producer-side coverage for plugin agents). Audit-first conclusion: the gap was already closed upstream by PAM-11 — the container-gateway `POST /v1/container-gateway/tools/invoke` endpoint resolves the per-agent tool middleware chain via `IAgentManifestTranslator.ResolvePerAgentChainsAsync`, then dispatches via `DefaultToolCallDispatcher` with `IAgentEventBus`/`IAgentJournal` wired in. Plugin tool calls emit `ToolCallStarted/Completed` (with `FailureLevel` from Part 1), `McpGatewayEvent`, and trajectory tee events identically to in-process agents, all keyed to the caller's RunId. The shipped Python SDK exposes only gateway-routed tool surfaces. Three regression tests in `ContainerGatewayToolInvokeObservabilityTests` pin the behaviour. **This commit also marks the observability foundation roadmap complete — the ontology layer (research §11.6) is now unblocked.**
+
+- **Observability Part 3 — Eval mechanical axis (commit `a87ec75`).** Closes L5.
+  `EvalCaseResultRecord` gains three additive optional fields: `MechanicalLevel`, `MechanicalFailureCount`, `MechanicalBreakdown` — a second axis independent of the quality `Status`. `EvalRunGrain.ProcessCaseAsync` derives the mechanical dimension from the already-captured event list. Four new built-in eval assertions: `no-tool-error`, `no-degraded-response`, `max-retries(n)`, `no-fallback-engaged`. Additive `ALTER TABLE … ADD COLUMN IF NOT EXISTS` migration (CS-1) for `vais_eval_case_results`. `vais eval results` shows a `MECH` column (`clean`/`degraded(N)`/`failed(N)`).
+
+- **Observability Part 2 — Run Health rollup + `vais diagnose run` (branch `feat/observability-run-health`).**
+  Closes the core operator gap: a run that `graph.completed` now reveals every mechanical failure beneath it.
+  - `RunHealth` model (`RunHealthLevel.Healthy|Degraded|Failed`, `RunHealthSignal`, `RunHealthSignalKind`) in Abstractions.
+  - `Vais.Agents.Observability.RunHealthStore` package: `vais_run_health_signals` Postgres table + `RunHealthSignalSubscriber` (`IAgentEventBus` listener) that persists recovered tool errors, LLM retries/fallbacks, degraded turns, guardrail trips, and turn failures keyed by `RunId`. Opt-in via `VAIS_RUN_HEALTH_STORE_CONNECTION`.
+  - `ListByRunAsync` added to `IGatewayEventStore` and `IMcpGatewayEventStore`, using the existing `run_id` indexes.
+  - `RunHealthAggregator` folds five signal sources (bus signals, MCP/gateway events by run, graph nodes, background sub-runs) into a worst-level `RunHealth`.
+  - `GET /graphs/{id}/runs/{runId}` gains an optional `health` block (`RunHealthDto`) when the store is configured.
+  - `vais diagnose run <graph-id> <run-id>` CLI command: prints `level`, a signal table (source / kind / level / error_type / transient / timestamp), and background failure counts. `-o json` for machine consumption.
+  - `ContainerAgentShim` and `PythonAgentShim` now set `langfuse.observation.level=WARNING` on partial/degraded results and `ActivityStatusCode.Error` on failure, so Langfuse rolls the trace up to error level automatically. `python.agent.stream` span added (was missing). These fix the original symptom: plugin failures were invisible in Langfuse.
+  - 10 new observability/nesting tests across the Container and Python shim test projects (span level tags, span nesting under ambient parent, TurnCompleted.Level propagation). Full suite: 0 failed.
+
 ### Fixed
+
+- **In-grain AgentContext identity propagation (commit `0cf3e3c`).** Caller
+  identity fields — `AllowedTools`, `PrivilegeLevel`, `AutonomyLevel`,
+  `MaxChainDepth`, `Budget`, `UserId`, `TenantId`, `Scopes`, `BaselineRunId` —
+  now reach in-process grain agents. `AiAgentGrain.AskAsync` (and
+  `StreamAgentAsync`) reads the caller's context from Orleans `RequestContext`
+  via `OrleansAgentContextAccessor` and pushes it onto the static `AsyncLocal`
+  slot before delegating to `StatefulAiAgent`, so in-grain tools and guards see
+  the full context. Consequences: `DefaultToolCallDispatcher` RCB `AllowedTools`
+  enforcement is now active for grain-hosted agents; `LocalAgentTool` chain-depth
+  and privilege guards fire correctly; multi-tenant `TenantId`/`WorkspaceId`
+  scoping reaches in-grain middleware. Symmetric with the G4 container-plugin
+  path (which already threaded claims via call-token). Also extends
+  `OrleansOutgoingActivityFilter` to propagate `UserId` and `TenantId` (keys
+  existed; write side was missing) and adds `AgenticTags.Scopes` /
+  `AgenticTags.BaselineRunId` end-to-end (new tags + filter write + accessor
+  read). `IAgentContextSetter` (`AsyncLocalAgentContextAccessor`) is now
+  registered in silo DI by `AddOrleansAgentRuntime`. 11 new tests in
+  `InGrainContextIdentityPropagationTests`.
 
 - **Section telemetry for C# plugin agents (`ResearchPlannerAgent`).** The planner
   plugin called `LlmGatewayPipeline.InvokeAsync` directly, bypassing `StatefulAiAgent`

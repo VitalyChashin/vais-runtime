@@ -25,18 +25,21 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
     private readonly IAgentEventBus _bus;
     private readonly RunHealthStoreOptions _options;
     private readonly ILogger<RunHealthSignalSubscriber> _logger;
+    private readonly IFailureOntologyCatalog? _catalog;
     private IDisposable? _subscription;
 
     public RunHealthSignalSubscriber(
         IRunHealthStore store,
         IAgentEventBus bus,
         IOptions<RunHealthStoreOptions> options,
-        ILogger<RunHealthSignalSubscriber> logger)
+        ILogger<RunHealthSignalSubscriber> logger,
+        IFailureOntologyCatalog? catalog = null)
     {
         _store = store;
         _bus = bus;
         _options = options.Value;
         _logger = logger;
+        _catalog = catalog;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -62,6 +65,9 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
         {
             return;
         }
+
+        if (_catalog is not null)
+            record = record with { ConceptName = _catalog.FromSignalKind(record.Kind)?.Name };
 
         try
         {

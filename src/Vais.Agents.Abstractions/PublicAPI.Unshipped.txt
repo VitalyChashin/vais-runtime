@@ -2107,7 +2107,8 @@ Vais.Agents.RunHealthSignal
 Vais.Agents.RunHealthSignal.<Clone>$() -> Vais.Agents.RunHealthSignal!
 Vais.Agents.RunHealthSignal.At.get -> System.DateTimeOffset
 Vais.Agents.RunHealthSignal.At.init -> void
-Vais.Agents.RunHealthSignal.Deconstruct(out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.RunHealthSignal.Deconstruct(out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.RunHealthSignal.Deconstruct(out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At, out string? ConceptName, out string? AttributionPath) -> void
 Vais.Agents.RunHealthSignal.Equals(Vais.Agents.RunHealthSignal? other) -> bool
 Vais.Agents.RunHealthSignal.ErrorType.get -> string?
 Vais.Agents.RunHealthSignal.ErrorType.init -> void
@@ -2117,7 +2118,12 @@ Vais.Agents.RunHealthSignal.Kind.get -> Vais.Agents.RunHealthSignalKind
 Vais.Agents.RunHealthSignal.Kind.init -> void
 Vais.Agents.RunHealthSignal.Level.get -> Vais.Agents.FailureLevel
 Vais.Agents.RunHealthSignal.Level.init -> void
-Vais.Agents.RunHealthSignal.RunHealthSignal(string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.RunHealthSignal.RunHealthSignal(string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.RunHealthSignal.RunHealthSignal(string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At, string? ConceptName = null, string? AttributionPath = null) -> void
+Vais.Agents.RunHealthSignal.ConceptName.get -> string?
+Vais.Agents.RunHealthSignal.ConceptName.init -> void
+Vais.Agents.RunHealthSignal.AttributionPath.get -> string?
+Vais.Agents.RunHealthSignal.AttributionPath.init -> void
 Vais.Agents.RunHealthSignal.Source.get -> string!
 Vais.Agents.RunHealthSignal.Source.init -> void
 Vais.Agents.RunHealthSignalKind
@@ -2142,3 +2148,75 @@ static Vais.Agents.RunHealth.operator !=(Vais.Agents.RunHealth? left, Vais.Agent
 static Vais.Agents.RunHealth.operator ==(Vais.Agents.RunHealth? left, Vais.Agents.RunHealth? right) -> bool
 static Vais.Agents.RunHealthSignal.operator !=(Vais.Agents.RunHealthSignal? left, Vais.Agents.RunHealthSignal? right) -> bool
 static Vais.Agents.RunHealthSignal.operator ==(Vais.Agents.RunHealthSignal? left, Vais.Agents.RunHealthSignal? right) -> bool
+Vais.Agents.AutoDerivedFailureOntologyCatalog
+Vais.Agents.AutoDerivedFailureOntologyCatalog.AutoDerivedFailureOntologyCatalog() -> void
+Vais.Agents.AutoDerivedFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
+Vais.Agents.AutoDerivedFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
+Vais.Agents.AutoDerivedFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.AutoDerivedFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
+Vais.Agents.AutoDerivedFailureOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.FailureAxis
+Vais.Agents.FailureAxis.Mechanical = 0 -> Vais.Agents.FailureAxis
+Vais.Agents.FailureAxis.Quality = 1 -> Vais.Agents.FailureAxis
+Vais.Agents.FailureConcept
+Vais.Agents.FailureConcept.<Clone>$() -> Vais.Agents.FailureConcept!
+Vais.Agents.FailureConcept.Axis.get -> Vais.Agents.FailureAxis
+Vais.Agents.FailureConcept.Axis.init -> void
+Vais.Agents.FailureConcept.Deconstruct(out string! Name, out Vais.Agents.FailureAxis Axis, out Vais.Agents.FailureLevel DefaultLevel, out string! Description, out System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignalKind>! SourceKinds, out string? ParentName, out System.Collections.Generic.IReadOnlyList<string!>? Tags) -> void
+Vais.Agents.FailureConcept.DefaultLevel.get -> Vais.Agents.FailureLevel
+Vais.Agents.FailureConcept.DefaultLevel.init -> void
+Vais.Agents.FailureConcept.Description.get -> string!
+Vais.Agents.FailureConcept.Description.init -> void
+Vais.Agents.FailureConcept.Equals(Vais.Agents.FailureConcept? other) -> bool
+Vais.Agents.FailureConcept.FailureConcept(string! Name, Vais.Agents.FailureAxis Axis, Vais.Agents.FailureLevel DefaultLevel, string! Description, System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignalKind>! SourceKinds, string? ParentName = null, System.Collections.Generic.IReadOnlyList<string!>? Tags = null) -> void
+Vais.Agents.FailureConcept.Name.get -> string!
+Vais.Agents.FailureConcept.Name.init -> void
+Vais.Agents.FailureConcept.ParentName.get -> string?
+Vais.Agents.FailureConcept.ParentName.init -> void
+Vais.Agents.FailureConcept.SourceKinds.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.RunHealthSignalKind>!
+Vais.Agents.FailureConcept.SourceKinds.init -> void
+Vais.Agents.FailureConcept.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.FailureConcept.Tags.init -> void
+Vais.Agents.FailureOntologyOverlay
+Vais.Agents.FailureOntologyOverlay.<Clone>$() -> Vais.Agents.FailureOntologyOverlay!
+Vais.Agents.FailureOntologyOverlay.Concepts.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>?
+Vais.Agents.FailureOntologyOverlay.Concepts.init -> void
+Vais.Agents.FailureOntologyOverlay.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts, out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules) -> void
+Vais.Agents.FailureOntologyOverlay.Equals(Vais.Agents.FailureOntologyOverlay? other) -> bool
+Vais.Agents.FailureOntologyOverlay.FailureOntologyOverlay(System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules = null) -> void
+Vais.Agents.FailureOntologyOverlay.SeverityRules.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>?
+Vais.Agents.FailureOntologyOverlay.SeverityRules.init -> void
+Vais.Agents.FailureSeverityRule
+Vais.Agents.FailureSeverityRule.<Clone>$() -> Vais.Agents.FailureSeverityRule!
+Vais.Agents.FailureSeverityRule.ConceptName.get -> string!
+Vais.Agents.FailureSeverityRule.ConceptName.init -> void
+Vais.Agents.FailureSeverityRule.Deconstruct(out string! ConceptName, out Vais.Agents.FailureLevel RecoveredLevel, out Vais.Agents.FailureLevel ExhaustedLevel) -> void
+Vais.Agents.FailureSeverityRule.Equals(Vais.Agents.FailureSeverityRule? other) -> bool
+Vais.Agents.FailureSeverityRule.ExhaustedLevel.get -> Vais.Agents.FailureLevel
+Vais.Agents.FailureSeverityRule.ExhaustedLevel.init -> void
+Vais.Agents.FailureSeverityRule.FailureSeverityRule(string! ConceptName, Vais.Agents.FailureLevel RecoveredLevel, Vais.Agents.FailureLevel ExhaustedLevel) -> void
+Vais.Agents.FailureSeverityRule.RecoveredLevel.get -> Vais.Agents.FailureLevel
+Vais.Agents.FailureSeverityRule.RecoveredLevel.init -> void
+Vais.Agents.IFailureOntologyCatalog
+Vais.Agents.IFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
+Vais.Agents.IFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
+Vais.Agents.IFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.IFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
+Vais.Agents.IFailureOntologyCatalog.OntologyVersion.get -> string!
+override Vais.Agents.FailureConcept.Equals(object? obj) -> bool
+override Vais.Agents.FailureConcept.GetHashCode() -> int
+override Vais.Agents.FailureConcept.ToString() -> string!
+override Vais.Agents.FailureOntologyOverlay.Equals(object? obj) -> bool
+override Vais.Agents.FailureOntologyOverlay.GetHashCode() -> int
+override Vais.Agents.FailureOntologyOverlay.ToString() -> string!
+override Vais.Agents.FailureSeverityRule.Equals(object? obj) -> bool
+override Vais.Agents.FailureSeverityRule.GetHashCode() -> int
+override Vais.Agents.FailureSeverityRule.ToString() -> string!
+static readonly Vais.Agents.AutoDerivedFailureOntologyCatalog.Instance -> Vais.Agents.AutoDerivedFailureOntologyCatalog!
+static readonly Vais.Agents.FailureOntologyOverlay.Empty -> Vais.Agents.FailureOntologyOverlay!
+static Vais.Agents.FailureConcept.operator !=(Vais.Agents.FailureConcept? left, Vais.Agents.FailureConcept? right) -> bool
+static Vais.Agents.FailureConcept.operator ==(Vais.Agents.FailureConcept? left, Vais.Agents.FailureConcept? right) -> bool
+static Vais.Agents.FailureOntologyOverlay.operator !=(Vais.Agents.FailureOntologyOverlay? left, Vais.Agents.FailureOntologyOverlay? right) -> bool
+static Vais.Agents.FailureOntologyOverlay.operator ==(Vais.Agents.FailureOntologyOverlay? left, Vais.Agents.FailureOntologyOverlay? right) -> bool
+static Vais.Agents.FailureSeverityRule.operator !=(Vais.Agents.FailureSeverityRule? left, Vais.Agents.FailureSeverityRule? right) -> bool
+static Vais.Agents.FailureSeverityRule.operator ==(Vais.Agents.FailureSeverityRule? left, Vais.Agents.FailureSeverityRule? right) -> bool

@@ -33,6 +33,7 @@
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <InternalsVisibleTo Include="Vais.Agents.Observability.RunHealthStore.Tests" />
+    <InternalsVisibleTo Include="Vais.Agents.Control.Http.Tests" />
   </ItemGroup>
 
 </Project>
