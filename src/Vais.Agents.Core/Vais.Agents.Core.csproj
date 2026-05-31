@@ -27,6 +27,7 @@
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <InternalsVisibleTo Include="Vais.Agents.Core.Tests" />
     <InternalsVisibleTo Include="Vais.Agents.Orchestration.Graph.MicrosoftAgentFramework" />
+    <InternalsVisibleTo Include="Vais.Agents.Runtime.Host" />
   </ItemGroup>
 
 </Project>

@@ -470,11 +470,28 @@ internal static class CompositionRoot
         // Part 3 FP-3/FP-9: register FailurePatternInducer as a keyed service ("failures") so
         // `vais recipes propose --source failures` can resolve it. Throws at first use if
         // IFailureSearchService is absent (VAIS_RUN_HEALTH_STORE_CONNECTION not configured).
+        // FP-4: wrap with LlmAssistedRecipeInducer when VAIS_FAILURE_PRIOR_NAME_MODEL is set
+        // (format: "provider:id:apiKeyRef", e.g. "openai:gpt-4o-mini:secret://env/OPENAI_API_KEY").
         services.TryAddKeyedSingleton<IRecipeInducer>("failures", (sp, _) =>
-            (IRecipeInducer)new FailurePatternInducer(
+        {
+            IRecipeInducer inner = new FailurePatternInducer(
                 sp.GetService<IFailureSearchService>()
                 ?? throw new InvalidOperationException(
-                    "IFailureSearchService is not available. Set VAIS_RUN_HEALTH_STORE_CONNECTION to enable failure-prior induction (--source failures).")));
+                    "IFailureSearchService is not available. Set VAIS_RUN_HEALTH_STORE_CONNECTION to enable failure-prior induction (--source failures)."));
+
+            var modelSpec = ParseFailurePriorNameModelSpec();
+            if (modelSpec is null) return inner;
+
+            var pool = sp.GetRequiredService<ICompletionProviderPool>();
+            // Eagerly resolve the provider (cached in pool after first call).
+            // GetAwaiter().GetResult() is safe here — runs once at service resolution,
+            // not per induction call. Consistent with Fallback middleware registration.
+            var completionProvider = pool.GetAsync(modelSpec, CancellationToken.None)
+                .AsTask().GetAwaiter().GetResult();
+            return new LlmAssistedRecipeInducer(
+                inner,
+                (proposal, ct) => FailurePriorNameEnricher.GenerateNameAsync(completionProvider, proposal, ct));
+        });
 
         // Plan D D-13: register the JSON overlay writer whenever an overlay path is set so the
         // approval-side-effect decorator can pick it up. The writer itself is stateless.
@@ -1165,6 +1182,27 @@ internal static class CompositionRoot
             providers.Add(pool.GetAsync(modelSpec).AsTask().GetAwaiter().GetResult());
         }
         return [.. providers];
+    }
+
+    // Parses VAIS_FAILURE_PRIOR_NAME_MODEL (format: "provider:id:apiKeyRef") into a ModelSpec.
+    // Splits on the first two colons so apiKeyRef values containing ":" (e.g. "secret://env/KEY")
+    // are preserved intact. Returns null when the env var is absent or malformed.
+    private static ModelSpec? ParseFailurePriorNameModelSpec()
+    {
+        var raw = Environment.GetEnvironmentVariable("VAIS_FAILURE_PRIOR_NAME_MODEL");
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        var parts = raw.Split(':', 3, StringSplitOptions.None);
+        if (parts.Length < 2
+            || string.IsNullOrWhiteSpace(parts[0])
+            || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            return null;
+        }
+
+        var apiKeyRef = parts.Length == 3 && !string.IsNullOrWhiteSpace(parts[2])
+            ? parts[2] : null;
+        return new ModelSpec(parts[0].Trim(), parts[1].Trim(), ApiKeyRef: apiKeyRef?.Trim());
     }
 
     private sealed class PassthroughEvalAssertionKindRegistry : IEvalAssertionKindRegistry

@@ -1127,4 +1127,66 @@ public class CompositionRootTests
         hostOptions.ShutdownTimeout.Should().Be(TimeSpan.FromSeconds(42),
             because: "Program.cs wires HostOptions.ShutdownTimeout from RuntimeOptions.ShutdownTimeoutSeconds.");
     }
+
+    // ── FP-4: failure-prior LLM name decorator wiring ────────────────────────
+
+    [Fact]
+    public void FailurePriorInducer_NoEnvVar_RegistersBareFailurePatternInducer()
+    {
+        // Without VAIS_FAILURE_PRIOR_NAME_MODEL, the "failures" keyed service must
+        // resolve as a bare FailurePatternInducer — no LlmAssistedRecipeInducer wrap.
+        Environment.SetEnvironmentVariable("VAIS_FAILURE_PRIOR_NAME_MODEL", null);
+        try
+        {
+            var services = BuildBaseline();
+            services.AddSingleton(Substitute.For<IFailureSearchService>());
+            CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+            using var sp = services.BuildServiceProvider();
+            var inducer = sp.GetRequiredKeyedService<IRecipeInducer>("failures");
+
+            inducer.Should().BeOfType<FailurePatternInducer>(
+                because: "without VAIS_FAILURE_PRIOR_NAME_MODEL the inducer is registered bare.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_FAILURE_PRIOR_NAME_MODEL", null);
+        }
+    }
+
+    [Fact]
+    public void FailurePriorInducer_WithEnvVar_WrapsWithLlmAssistedRecipeInducer()
+    {
+        // With VAIS_FAILURE_PRIOR_NAME_MODEL set, the "failures" keyed service must
+        // resolve as a LlmAssistedRecipeInducer wrapping the bare FailurePatternInducer.
+        Environment.SetEnvironmentVariable(
+            "VAIS_FAILURE_PRIOR_NAME_MODEL",
+            "openai:gpt-4o-mini:secret://env/TEST_KEY");
+        try
+        {
+            var services = BuildBaseline();
+            services.AddSingleton(Substitute.For<IFailureSearchService>());
+
+            // Pre-register a stub pool so it wins over the real CompletionProviderPool
+            // (TryAdd doesn't replace an existing registration). The stub returns a
+            // stub provider, preventing any real network calls during the test.
+            var stubProvider = Substitute.For<ICompletionProvider>();
+            var stubPool = Substitute.For<ICompletionProviderPool>();
+            stubPool.GetAsync(Arg.Any<ModelSpec>(), Arg.Any<CancellationToken>())
+                .Returns(new ValueTask<ICompletionProvider>(stubProvider));
+            services.AddSingleton(stubPool);
+
+            CompositionRoot.ConfigureServices(services, new RuntimeOptions());
+
+            using var sp = services.BuildServiceProvider();
+            var inducer = sp.GetRequiredKeyedService<IRecipeInducer>("failures");
+
+            inducer.Should().BeOfType<LlmAssistedRecipeInducer>(
+                because: "VAIS_FAILURE_PRIOR_NAME_MODEL set means the inducer is wrapped with the name decorator.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("VAIS_FAILURE_PRIOR_NAME_MODEL", null);
+        }
+    }
 }
