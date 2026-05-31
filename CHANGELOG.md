@@ -11,6 +11,22 @@ Version scheme: `0.X.0-preview` where X is the pillar number. Breaking changes a
 
 ### Added
 
+- **Ontology Diagnostics Part 2c — Diagnostic MCP verbs + resources (branch `feat/ontology-diagnostics-part2c`).**
+  Closes research §11.3 (north-serve phase) and §11.4 (diagnose→author-fix→verify loop). Exposes the Run Health rollup + failure taxonomy over the existing `/design-mcp` server, with matching REST endpoints and CLI subcommands.
+  - **Three new MCP tools** appended to `DesignMcpToolHandlers.DesignTools` (read-only baseline):
+    - `vais.diagnose(runId)` — per-run rollup; reshapes the *domain* `RunHealth` directly into MCP JSON so Part 2a `conceptName` + Part 2b `attributionPath` reach the caller intact.
+    - `vais.runHealth(level, since, limit)` — cross-run rollup; v1 indexes bus-sourced signals only (MCP-only / LLM-gateway-only / node-only failures are documented as not-yet-enumerated cross-run).
+    - `vais.failures(concept, agentName, since, limit)` — cross-run search; queries the run-health store (bus-sourced) AND the MCP gateway event store (McpToolError) with concept + attribution re-derivation. Concept matching uses `IFailureOntologyCatalog.IsMatchOrDescendant` parent-walk on BOTH branches plus a slash-path fallback for artifact-supplied sub-concepts that aren't separately registered (e.g. `McpToolError/AuthExpired`).
+  - **Two new MCP resources**:
+    - `vais-ontology://Failure` (full taxonomy catalog) + `vais-ontology://Failure/{conceptName}` (concept details with children) — conditional on `IFailureOntologyCatalog` being registered.
+    - `vais-diagnostics://run/{runId}` — byte-identical payload to `vais.diagnose(runId)` served as a resource.
+  - **Plumbing**: `IRunHealthAggregator` moved to `Vais.Agents.Control.Abstractions` so `Mcp.Server` can resolve it without a project-reference on `Http.Server`. New `IFailureSearchService` interface in Control.Abstractions, impl `FailureSearchService` in Http.Server. `IRunHealthAggregator` gains `ListDegradedRunsAsync`; `IRunHealthStore` gains `QuerySignalsAsync` + `ListDegradedRunsAsync`; `IMcpGatewayEventStore` gains `QueryFailedAcrossGatewaysAsync`.
+  - **DTO fix**: `RunHealthSignalDto` (shipped REST projection) gains `ConceptName` + `AttributionPath` — the Part 2a/2b fields it had been silently dropping. Additive nullable, OpenAPI snapshot unchanged.
+  - **REST endpoints**: `GET /v1/run-health` + `GET /v1/run-health/signals` mounted on `MapDiagnosticsControlPlane`; call the same backing services the MCP handlers call (CLI/REST and MCP cannot drift).
+  - **CLI**: `vais diagnose runs` + `vais diagnose failures` under the existing `diagnose` branch. Spectre.Console tables + `--output json`.
+  - **Tests**: 34 new tests across `Control.Mcp.Server.Tests` + `Control.Http.Tests` covering reshape preservation, parent-walk symmetry, cross-source merge, byte-identical resource/tool payload, REST endpoint routing, level/since validation. Existing test suites green.
+  - **Open verification gates** (filed at `plans/gaps/part2c-live-loop-and-pg-integration-2026-05-31.md`): the end-to-end live transcript (exit #5) is unverified — the agent-developer guide `docs/guides/diagnose-over-mcp.md` is explicitly marked illustrative. The three new Postgres queries (`QuerySignalsAsync`, `ListDegradedRunsAsync`, `QueryFailedAcrossGatewaysAsync`) are covered by C# stubs only; no real-Postgres integration suite exists yet for `RunHealthStore` / `McpGatewayEventStore.QueryFailedAcrossGatewaysAsync`. CLI commands `vais diagnose runs|failures` rely on the shared backing service for parity; no dedicated command tests yet (request→client→DTO wiring is exercised by REST endpoint tests).
+
 - **Ontology Diagnostics Part 2b — Attribution binding (branch `feat/ontology-diagnostics-part2b`).**
   Implements the attribution-south half of the ontology-grounded diagnostic layer (research §11.2). Every `RunHealthSignal` now carries an `AttributionPath` — deployment-grounded identification of the failing component.
   - `FailureAttributionArtifact` + `FailureToolAnnotation` + `FailureAgentAnnotation` records in `Vais.Agents.Abstractions` — deployment-local per-tool/per-agent concept annotations.
