@@ -46,6 +46,7 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
     private readonly IRunStore _runs;
     private readonly IBackgroundAgentTracker _background;
     private readonly IFailureOntologyCatalog? _catalog;
+    private readonly IFailureAttributionRegistry? _attributionRegistry;
 
     /// <summary>Creates the aggregator over the durable run-health, gateway, run, and background stores.</summary>
     public RunHealthAggregator(
@@ -54,7 +55,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         IMcpGatewayEventStore mcp,
         IRunStore runs,
         IBackgroundAgentTracker background,
-        IFailureOntologyCatalog? catalog = null)
+        IFailureOntologyCatalog? catalog = null,
+        IFailureAttributionRegistry? attributionRegistry = null)
     {
         _signals = signals;
         _gateway = gateway;
@@ -62,6 +64,7 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         _runs = runs;
         _background = background;
         _catalog = catalog;
+        _attributionRegistry = attributionRegistry;
     }
 
     /// <inheritdoc />
@@ -79,13 +82,18 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         }
 
         // 2. MCP gateway failures — not on the bus for plugin-mediated tool calls.
+        //    AttributionPath: derive agent name from RunId encoding ({parent}__{agentName}__{hash})
+        //    when available; fall back to tool name alone. Concept: artifact lookup by tool name.
         foreach (var e in await _mcp.ListByRunAsync(rootRunId, ct: ct).ConfigureAwait(false))
         {
             if (!string.IsNullOrEmpty(e.ErrorType))
             {
+                var mcpConceptName = _catalog?.FromSignalKind(RunHealthSignalKind.McpError)?.Name;
+                var mcpAttributionPath = BuildMcpAttributionPath(e.ToolName, e.RunId, mcpConceptName, ref mcpConceptName);
                 signals.Add(new RunHealthSignal(e.ToolName, RunHealthSignalKind.McpError,
                     FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.McpError)?.Name));
+                    ConceptName: mcpConceptName,
+                    AttributionPath: mcpAttributionPath));
             }
         }
 
@@ -98,9 +106,13 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             {
                 if (!string.IsNullOrEmpty(e.ErrorType))
                 {
-                    signals.Add(new RunHealthSignal(e.ModelId ?? "llm-gateway", RunHealthSignalKind.LlmError,
+                    var modelSource = e.ModelId ?? "llm-gateway";
+                    var llmAgentId = TryExtractAgentFromRunId(rootRunId);
+                    var llmPath = string.IsNullOrEmpty(llmAgentId) ? modelSource : $"{llmAgentId}/{modelSource}";
+                    signals.Add(new RunHealthSignal(modelSource, RunHealthSignalKind.LlmError,
                         FailureLevel.Warning, e.ErrorType, IsTransient: false, e.At,
-                        ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.LlmError)?.Name));
+                        ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.LlmError)?.Name,
+                        AttributionPath: llmPath));
                 }
             }
         }
@@ -111,9 +123,11 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         {
             if (n.Status == RunStatus.Failed)
             {
-                signals.Add(new RunHealthSignal(n.AgentId ?? n.NodeId, RunHealthSignalKind.NodeFailed,
+                var nodeSource = n.AgentId ?? n.NodeId;
+                signals.Add(new RunHealthSignal(nodeSource, RunHealthSignalKind.NodeFailed,
                     FailureLevel.Error, n.Error, IsTransient: false, n.StartedAt,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.NodeFailed)?.Name));
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.NodeFailed)?.Name,
+                    AttributionPath: nodeSource));
             }
         }
 
@@ -125,7 +139,8 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
             {
                 background.Add(new RunHealthSignal(b.ChildAgentId, RunHealthSignalKind.TurnFailed,
                     FailureLevel.Error, b.Error, IsTransient: false, b.StartedAt,
-                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.TurnFailed)?.Name));
+                    ConceptName: _catalog?.FromSignalKind(RunHealthSignalKind.TurnFailed)?.Name,
+                    AttributionPath: b.ChildAgentId));
             }
         }
 
@@ -140,5 +155,57 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         }
 
         return new RunHealth(rootRunId, worst, signals, background);
+    }
+
+    /// <summary>
+    /// Attempts to extract the agent name from the sub-run ID encoding convention
+    /// <c>{parentRunId}__{agentName}__{hash}</c>. Returns null for root runs or unknown shapes.
+    /// </summary>
+    private static string? TryExtractAgentFromRunId(string? runId)
+    {
+        if (string.IsNullOrEmpty(runId)) return null;
+        var parts = runId.Split("__", StringSplitOptions.None);
+        return parts.Length >= 3 ? parts[^2] : null;
+    }
+
+    /// <summary>
+    /// Builds an <c>AttributionPath</c> for an MCP-error signal. If the registry has an artifact
+    /// with a per-tool annotation for <paramref name="toolName"/>, the concept name and MCP server
+    /// ID from the annotation are used. Otherwise falls back to the base catalog concept + tool name.
+    /// </summary>
+    private string BuildMcpAttributionPath(
+        string toolName,
+        string? runId,
+        string? baseConcept,
+        ref string? conceptName)
+    {
+        var agentId = TryExtractAgentFromRunId(runId);
+
+        // Scan all registered artifacts for a tool annotation matching this tool.
+        // This is O(N artifacts) but N is small (deployment-local, bounded).
+        if (_attributionRegistry is not null)
+        {
+            foreach (var refName in _attributionRegistry.Names)
+            {
+                var artifact = _attributionRegistry.Get(refName);
+                var annotation = artifact?.ForTool(toolName);
+                if (annotation is null) continue;
+
+                if (!string.IsNullOrEmpty(annotation.Concept))
+                    conceptName = annotation.Concept;
+
+                var mcpServerId = annotation.McpServerId;
+                if (!string.IsNullOrEmpty(agentId) && !string.IsNullOrEmpty(mcpServerId))
+                    return $"{agentId}/{mcpServerId}/{toolName}";
+                if (!string.IsNullOrEmpty(agentId))
+                    return $"{agentId}/{toolName}";
+                if (!string.IsNullOrEmpty(mcpServerId))
+                    return $"{mcpServerId}/{toolName}";
+                return toolName;
+            }
+        }
+
+        // No artifact match: basic path from agent (if derivable) + tool name.
+        return string.IsNullOrEmpty(agentId) ? toolName : $"{agentId}/{toolName}";
     }
 }

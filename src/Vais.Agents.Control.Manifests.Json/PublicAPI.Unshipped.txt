@@ -459,3 +459,33 @@ Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader
 static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadFromFile(string! path) -> Vais.Agents.FailureOntologyOverlay!
 static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadFromJson(string! json) -> Vais.Agents.FailureOntologyOverlay!
 static Vais.Agents.Control.Manifests.FailureOntologyOverlayLoader.LoadAllFromDirectory(string! directory) -> Vais.Agents.FailureOntologyOverlay!
+Vais.Agents.Control.Manifests.FailureAttributionArtifactLoader
+static Vais.Agents.Control.Manifests.FailureAttributionArtifactLoader.LoadFromFile(string! path) -> Vais.Agents.FailureAttributionArtifact!
+static Vais.Agents.Control.Manifests.FailureAttributionArtifactLoader.LoadFromJson(string! json) -> Vais.Agents.FailureAttributionArtifact!
+static Vais.Agents.Control.Manifests.FailureAttributionArtifactLoader.LoadAllFromDirectory(string! directory) -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAttributionArtifact!>!
+Vais.Agents.Control.Manifests.FailureAttributionEnricher
+Vais.Agents.Control.Manifests.FailureAttributionEnricher.FailureAttributionEnricher(Vais.Agents.IInterceptorTee? tee, Vais.Agents.FailureAttributionArtifact? artifact, Vais.Agents.IFailureOntologyCatalog? catalog) -> void
+override Vais.Agents.Control.Manifests.FailureAttributionEnricher.Kind.get -> Vais.Agents.InterceptorKind
+override Vais.Agents.Control.Manifests.FailureAttributionEnricher.InvokeAsync(Vais.Agents.ToolGatewayContext! context, System.Func<System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!>! next, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.ToolCallOutcome!>!
+Vais.Agents.Control.Manifests.FailureAttributionPayload
+Vais.Agents.Control.Manifests.FailureAttributionPayload.<Clone>$() -> Vais.Agents.Control.Manifests.FailureAttributionPayload!
+Vais.Agents.Control.Manifests.FailureAttributionPayload.AttributionPath.get -> string!
+Vais.Agents.Control.Manifests.FailureAttributionPayload.AttributionPath.init -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ConceptName.get -> string!
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ConceptName.init -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.Deconstruct(out string! ToolName, out string! ConceptName, out string! AttributionPath, out string? ErrorType, out System.Collections.Generic.IReadOnlyList<string!>? Tags) -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.Equals(Vais.Agents.Control.Manifests.FailureAttributionPayload? other) -> bool
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ErrorType.get -> string?
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ErrorType.init -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.FailureAttributionPayload(string! ToolName, string! ConceptName, string! AttributionPath, string? ErrorType, System.Collections.Generic.IReadOnlyList<string!>? Tags) -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.Control.Manifests.FailureAttributionPayload.Tags.init -> void
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ToolName.get -> string!
+Vais.Agents.Control.Manifests.FailureAttributionPayload.ToolName.init -> void
+Vais.Agents.Control.Manifests.FailureAttributionInterceptionContext
+Vais.Agents.Control.Manifests.FailureAttributionInterceptionContext.FailureAttributionInterceptionContext() -> void
+override Vais.Agents.Control.Manifests.FailureAttributionPayload.Equals(object? obj) -> bool
+override Vais.Agents.Control.Manifests.FailureAttributionPayload.GetHashCode() -> int
+override Vais.Agents.Control.Manifests.FailureAttributionPayload.ToString() -> string!
+static Vais.Agents.Control.Manifests.FailureAttributionPayload.operator !=(Vais.Agents.Control.Manifests.FailureAttributionPayload? left, Vais.Agents.Control.Manifests.FailureAttributionPayload? right) -> bool
+static Vais.Agents.Control.Manifests.FailureAttributionPayload.operator ==(Vais.Agents.Control.Manifests.FailureAttributionPayload? left, Vais.Agents.Control.Manifests.FailureAttributionPayload? right) -> bool

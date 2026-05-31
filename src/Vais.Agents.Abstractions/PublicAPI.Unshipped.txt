@@ -1991,9 +1991,13 @@ Vais.Agents.IRecipeInducer
 Vais.Agents.IRecipeInducer.InduceAsync(Vais.Agents.TrajectoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.RecipeProposal!>!>!
 Vais.Agents.ToolCallTrajectoryPayload
 Vais.Agents.ToolCallTrajectoryPayload.<Clone>$() -> Vais.Agents.ToolCallTrajectoryPayload!
-Vais.Agents.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration) -> void
+*REMOVED*Vais.Agents.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration) -> void
+Vais.Agents.ToolCallTrajectoryPayload.Deconstruct(out string! ConceptName, out string! Transport, out System.Text.Json.JsonElement Arguments, out Vais.Agents.TrajectoryOutcome? Outcome, out System.TimeSpan? Duration, out string? AttributionPath) -> void
 Vais.Agents.ToolCallTrajectoryPayload.Equals(Vais.Agents.ToolCallTrajectoryPayload? other) -> bool
-Vais.Agents.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null) -> void
+*REMOVED*Vais.Agents.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null) -> void
+Vais.Agents.ToolCallTrajectoryPayload.ToolCallTrajectoryPayload(string! ConceptName, string! Transport, System.Text.Json.JsonElement Arguments, Vais.Agents.TrajectoryOutcome? Outcome = null, System.TimeSpan? Duration = null, string? AttributionPath = null) -> void
+Vais.Agents.ToolCallTrajectoryPayload.AttributionPath.get -> string?
+Vais.Agents.ToolCallTrajectoryPayload.AttributionPath.init -> void
 Vais.Agents.ToolCallTrajectoryPayload.ConceptName.get -> string!
 Vais.Agents.ToolCallTrajectoryPayload.ConceptName.init -> void
 Vais.Agents.ToolCallTrajectoryPayload.Transport.get -> string!
@@ -2220,3 +2224,70 @@ static Vais.Agents.FailureOntologyOverlay.operator !=(Vais.Agents.FailureOntolog
 static Vais.Agents.FailureOntologyOverlay.operator ==(Vais.Agents.FailureOntologyOverlay? left, Vais.Agents.FailureOntologyOverlay? right) -> bool
 static Vais.Agents.FailureSeverityRule.operator !=(Vais.Agents.FailureSeverityRule? left, Vais.Agents.FailureSeverityRule? right) -> bool
 static Vais.Agents.FailureSeverityRule.operator ==(Vais.Agents.FailureSeverityRule? left, Vais.Agents.FailureSeverityRule? right) -> bool
+Vais.Agents.McpServerManifest.FailureOntologyRef.get -> string?
+Vais.Agents.McpServerManifest.FailureOntologyRef.init -> void
+Vais.Agents.AgentManifest.FailureOntologyRef.get -> string?
+Vais.Agents.AgentManifest.FailureOntologyRef.init -> void
+Vais.Agents.FailureAttributionArtifact
+Vais.Agents.FailureAttributionArtifact.<Clone>$() -> Vais.Agents.FailureAttributionArtifact!
+Vais.Agents.FailureAttributionArtifact.Agents.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAgentAnnotation!>?
+Vais.Agents.FailureAttributionArtifact.Agents.init -> void
+Vais.Agents.FailureAttributionArtifact.Deconstruct(out string? OntologyVersion, out System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureToolAnnotation!>? Tools, out System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAgentAnnotation!>? Agents) -> void
+Vais.Agents.FailureAttributionArtifact.Equals(Vais.Agents.FailureAttributionArtifact? other) -> bool
+Vais.Agents.FailureAttributionArtifact.FailureAttributionArtifact(string? OntologyVersion = null, System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureToolAnnotation!>? Tools = null, System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAgentAnnotation!>? Agents = null) -> void
+Vais.Agents.FailureAttributionArtifact.ForAgent(string! agentId) -> Vais.Agents.FailureAgentAnnotation?
+Vais.Agents.FailureAttributionArtifact.ForTool(string! toolName) -> Vais.Agents.FailureToolAnnotation?
+Vais.Agents.FailureAttributionArtifact.OntologyVersion.get -> string?
+Vais.Agents.FailureAttributionArtifact.OntologyVersion.init -> void
+Vais.Agents.FailureAttributionArtifact.Tools.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureToolAnnotation!>?
+Vais.Agents.FailureAttributionArtifact.Tools.init -> void
+Vais.Agents.FailureToolAnnotation
+Vais.Agents.FailureToolAnnotation.<Clone>$() -> Vais.Agents.FailureToolAnnotation!
+Vais.Agents.FailureToolAnnotation.Concept.get -> string?
+Vais.Agents.FailureToolAnnotation.Concept.init -> void
+Vais.Agents.FailureToolAnnotation.Deconstruct(out string? Concept, out string? McpServerId, out System.Collections.Generic.IReadOnlyList<string!>? Tags) -> void
+Vais.Agents.FailureToolAnnotation.Equals(Vais.Agents.FailureToolAnnotation? other) -> bool
+Vais.Agents.FailureToolAnnotation.FailureToolAnnotation(string? Concept = null, string? McpServerId = null, System.Collections.Generic.IReadOnlyList<string!>? Tags = null) -> void
+Vais.Agents.FailureToolAnnotation.McpServerId.get -> string?
+Vais.Agents.FailureToolAnnotation.McpServerId.init -> void
+Vais.Agents.FailureToolAnnotation.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Vais.Agents.FailureToolAnnotation.Tags.init -> void
+Vais.Agents.FailureAgentAnnotation
+Vais.Agents.FailureAgentAnnotation.<Clone>$() -> Vais.Agents.FailureAgentAnnotation!
+Vais.Agents.FailureAgentAnnotation.Concept.get -> string?
+Vais.Agents.FailureAgentAnnotation.Concept.init -> void
+Vais.Agents.FailureAgentAnnotation.Deconstruct(out string? Concept) -> void
+Vais.Agents.FailureAgentAnnotation.Equals(Vais.Agents.FailureAgentAnnotation? other) -> bool
+Vais.Agents.FailureAgentAnnotation.FailureAgentAnnotation(string? Concept = null) -> void
+Vais.Agents.IFailureAttributionRegistry
+Vais.Agents.IFailureAttributionRegistry.Get(string! name) -> Vais.Agents.FailureAttributionArtifact?
+Vais.Agents.IFailureAttributionRegistry.Names.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.IFailureAttributionRegistry.Register(string! name, Vais.Agents.FailureAttributionArtifact! artifact) -> void
+Vais.Agents.IFailureAttributionIndex
+Vais.Agents.IFailureAttributionIndex.Register(string! agentId, string! failureOntologyRef) -> void
+Vais.Agents.IFailureAttributionIndex.TryGet(string! agentId, out string! failureOntologyRef) -> bool
+Vais.Agents.InMemoryFailureAttributionRegistry
+Vais.Agents.InMemoryFailureAttributionRegistry.Get(string! name) -> Vais.Agents.FailureAttributionArtifact?
+Vais.Agents.InMemoryFailureAttributionRegistry.InMemoryFailureAttributionRegistry() -> void
+Vais.Agents.InMemoryFailureAttributionRegistry.Names.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Vais.Agents.InMemoryFailureAttributionRegistry.Register(string! name, Vais.Agents.FailureAttributionArtifact! artifact) -> void
+Vais.Agents.InMemoryFailureAttributionRegistry.RegisterAll(System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAttributionArtifact!>! map) -> void
+Vais.Agents.InMemoryFailureAttributionIndex
+Vais.Agents.InMemoryFailureAttributionIndex.InMemoryFailureAttributionIndex() -> void
+Vais.Agents.InMemoryFailureAttributionIndex.Register(string! agentId, string! failureOntologyRef) -> void
+Vais.Agents.InMemoryFailureAttributionIndex.TryGet(string! agentId, out string! failureOntologyRef) -> bool
+override Vais.Agents.FailureAttributionArtifact.Equals(object? obj) -> bool
+override Vais.Agents.FailureAttributionArtifact.GetHashCode() -> int
+override Vais.Agents.FailureAttributionArtifact.ToString() -> string!
+override Vais.Agents.FailureToolAnnotation.Equals(object? obj) -> bool
+override Vais.Agents.FailureToolAnnotation.GetHashCode() -> int
+override Vais.Agents.FailureToolAnnotation.ToString() -> string!
+override Vais.Agents.FailureAgentAnnotation.Equals(object? obj) -> bool
+override Vais.Agents.FailureAgentAnnotation.GetHashCode() -> int
+override Vais.Agents.FailureAgentAnnotation.ToString() -> string!
+static Vais.Agents.FailureAttributionArtifact.operator !=(Vais.Agents.FailureAttributionArtifact? left, Vais.Agents.FailureAttributionArtifact? right) -> bool
+static Vais.Agents.FailureAttributionArtifact.operator ==(Vais.Agents.FailureAttributionArtifact? left, Vais.Agents.FailureAttributionArtifact? right) -> bool
+static Vais.Agents.FailureToolAnnotation.operator !=(Vais.Agents.FailureToolAnnotation? left, Vais.Agents.FailureToolAnnotation? right) -> bool
+static Vais.Agents.FailureToolAnnotation.operator ==(Vais.Agents.FailureToolAnnotation? left, Vais.Agents.FailureToolAnnotation? right) -> bool
+static Vais.Agents.FailureAgentAnnotation.operator !=(Vais.Agents.FailureAgentAnnotation? left, Vais.Agents.FailureAgentAnnotation? right) -> bool
+static Vais.Agents.FailureAgentAnnotation.operator ==(Vais.Agents.FailureAgentAnnotation? left, Vais.Agents.FailureAgentAnnotation? right) -> bool

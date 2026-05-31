@@ -26,6 +26,8 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
     private readonly RunHealthStoreOptions _options;
     private readonly ILogger<RunHealthSignalSubscriber> _logger;
     private readonly IFailureOntologyCatalog? _catalog;
+    private readonly IFailureAttributionRegistry? _attributionRegistry;
+    private readonly IFailureAttributionIndex? _attributionIndex;
     private IDisposable? _subscription;
 
     public RunHealthSignalSubscriber(
@@ -33,13 +35,17 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
         IAgentEventBus bus,
         IOptions<RunHealthStoreOptions> options,
         ILogger<RunHealthSignalSubscriber> logger,
-        IFailureOntologyCatalog? catalog = null)
+        IFailureOntologyCatalog? catalog = null,
+        IFailureAttributionRegistry? attributionRegistry = null,
+        IFailureAttributionIndex? attributionIndex = null)
     {
         _store = store;
         _bus = bus;
         _options = options.Value;
         _logger = logger;
         _catalog = catalog;
+        _attributionRegistry = attributionRegistry;
+        _attributionIndex = attributionIndex;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -66,8 +72,12 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
             return;
         }
 
+        // Part 2a: stamp base concept name from the taxonomy catalog.
         if (_catalog is not null)
             record = record with { ConceptName = _catalog.FromSignalKind(record.Kind)?.Name };
+
+        // Part 2b: stamp AttributionPath and optionally refine ConceptName from the deployment artifact.
+        record = StampAttribution(record, evt);
 
         try
         {
@@ -78,6 +88,51 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
             _logger.LogWarning(ex, "RunHealthStore failed to persist {Kind} signal for run {RunId}.",
                 record.Kind, record.RunId);
         }
+    }
+
+    private RunHealthSignalRecord StampAttribution(RunHealthSignalRecord record, AgentEvent evt)
+    {
+        var agentId = evt.Context.AgentName;
+        if (string.IsNullOrEmpty(agentId))
+            return record;
+
+        // Derive the basic attribution path from agent identity + source.
+        var basicPath = string.IsNullOrEmpty(record.Source)
+            ? agentId
+            : $"{agentId}/{record.Source}";
+
+        string? conceptOverride = null;
+        string? attributionPath = basicPath;
+
+        // If an artifact is bound to this agent, use it to refine path and concept.
+        if (_attributionIndex is not null && _attributionRegistry is not null
+            && _attributionIndex.TryGet(agentId, out var ontologyRef)
+            && _attributionRegistry.Get(ontologyRef) is { } artifact)
+        {
+            if (record.Kind == RunHealthSignalKind.ToolError)
+            {
+                var toolAnnotation = artifact.ForTool(record.Source);
+                if (toolAnnotation is not null)
+                {
+                    if (!string.IsNullOrEmpty(toolAnnotation.McpServerId))
+                        attributionPath = $"{agentId}/{toolAnnotation.McpServerId}/{record.Source}";
+                    if (!string.IsNullOrEmpty(toolAnnotation.Concept))
+                        conceptOverride = toolAnnotation.Concept;
+                }
+            }
+            else
+            {
+                var agentAnnotation = artifact.ForAgent(agentId);
+                if (!string.IsNullOrEmpty(agentAnnotation?.Concept))
+                    conceptOverride = agentAnnotation!.Concept;
+            }
+        }
+
+        return record with
+        {
+            AttributionPath = attributionPath,
+            ConceptName = conceptOverride ?? record.ConceptName,
+        };
     }
 
     /// <summary>

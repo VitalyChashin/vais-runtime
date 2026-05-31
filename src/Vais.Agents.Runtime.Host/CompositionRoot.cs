@@ -784,6 +784,19 @@ internal static class CompositionRoot
             services.AddSingleton<IFailureOntologyCatalog>(AutoDerivedFailureOntologyCatalog.Instance);
         }
 
+        // Part 2b — failure attribution registry + index. The registry is populated at startup from
+        // *.failure-attribution.json files in VAIS_FAILURE_ATTRIBUTION_DIR; the index is an in-memory
+        // map populated at agent activation. Both registered unconditionally.
+        var failureAttributionRegistry = new InMemoryFailureAttributionRegistry();
+        var failureAttributionDir = options.FailureAttributionDir;
+        if (!string.IsNullOrWhiteSpace(failureAttributionDir))
+        {
+            var artifacts = FailureAttributionArtifactLoader.LoadAllFromDirectory(failureAttributionDir);
+            failureAttributionRegistry.RegisterAll(artifacts);
+        }
+        services.AddSingleton<IFailureAttributionRegistry>(failureAttributionRegistry);
+        services.AddSingleton<IFailureAttributionIndex>(new InMemoryFailureAttributionIndex());
+
         // Run-health signal store. When VAIS_RUN_HEALTH_STORE_CONNECTION is set, the
         // RunHealthSignalSubscriber persists the mechanical-failure events from the agent event
         // bus (recovered tool errors, LLM retries/fallbacks, degraded turns, guardrail trips,

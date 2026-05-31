@@ -833,6 +833,7 @@ public sealed class JsonAgentGraphManifestLoader
         var tools = ParseStringArray(spec, "tools");
         string? mcpGatewayRef = spec.TryGetProperty("mcpGatewayRef", out var mgEl) ? mgEl.GetString() : null;
         string? ontologyRef = spec.TryGetProperty("ontologyRef", out var orEl) ? orEl.GetString() : null;
+        string? failureOntologyRef = spec.TryGetProperty("failureOntologyRef", out var faRefEl) ? faRefEl.GetString() : null;
 
         // Parse virtual sources
         IReadOnlyList<McpServerSourceRef>? sources = null;
@@ -925,6 +926,7 @@ public sealed class JsonAgentGraphManifestLoader
             ToolProjection = toolProjection,
             McpGatewayRef = mcpGatewayRef,
             OntologyRef = ontologyRef,
+            FailureOntologyRef = failureOntologyRef,
             Annotations = annotations,
         };
     }

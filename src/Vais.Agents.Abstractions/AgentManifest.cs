@@ -117,6 +117,16 @@ public sealed record AgentManifest(
     /// Null = DI-global chain applies unchanged.
     /// </summary>
     public string? McpGatewayRef { get; init; }
+
+    /// <summary>
+    /// Optional name of a deployment-supplied <c>FailureAttributionArtifact</c> (Part 2b).
+    /// When set at the agent level, provides fallback failure attribution for agent-level
+    /// failures (turn failures, LLM errors) not covered by a per-server binding.
+    /// Also populates <c>IFailureAttributionIndex</c> so <c>RunHealthSignalSubscriber</c>
+    /// can refine concepts on in-process tool errors.
+    /// Missing or unknown refs degrade gracefully.
+    /// </summary>
+    public string? FailureOntologyRef { get; init; }
 }
 
 /// <summary>Reference to the code or image that implements an agent's handler.</summary>
