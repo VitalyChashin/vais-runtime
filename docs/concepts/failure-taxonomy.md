@@ -69,6 +69,58 @@ assertions:
 
 A filter matches if the event's concept is exactly `concept` **or is a descendant** of it via the `ParentName` chain. Without a filter the assertion behaves as before (all matching events).
 
+## Per-deployment attribution (Part 2b)
+
+Every `RunHealthSignal` carries two fields for deployment-grounded diagnosis:
+
+- **`ConceptName`** — *what* failed (taxonomy concept, e.g. `McpToolError/AuthExpired`)
+- **`AttributionPath`** — *where* in the deployment it failed (e.g. `confluence-agent/confluence-mcp/confluence_search`)
+
+### Attribution path format
+
+| Source | Format |
+|---|---|
+| In-process tool error (bus) | `{agentId}/{toolName}` or `{agentId}/{mcpServerId}/{toolName}` (artifact-enhanced) |
+| Agent-level failure (turn/LLM/guardrail) | `{agentId}` |
+| MCP gateway error (aggregator) | `{toolName}` or `{mcpServerId}/{toolName}` (artifact-enhanced) |
+| Graph node failure | `{agentId}/{nodeId}` |
+| Background sub-run failure | `{childAgentId}` |
+
+### Attribution artifacts
+
+A `*.failure-attribution.json` file provides per-tool and per-agent concept overrides. Place files in the directory pointed to by `VAIS_FAILURE_ATTRIBUTION_DIR`.
+
+Example — maps a tool to a sub-concept and adds routing context:
+
+```json
+{
+  "tools": {
+    "confluence_search": {
+      "concept": "McpToolError/AuthExpired",
+      "mcpServerId": "confluence-mcp",
+      "tags": ["auth"]
+    }
+  },
+  "agents": {
+    "confluence-agent": {
+      "concept": "McpToolError"
+    }
+  }
+}
+```
+
+Bind an artifact to an agent via the manifest:
+
+```yaml
+kind: Agent
+spec:
+  failureOntologyRef: my-confluence-artifact
+```
+
+When `failureOntologyRef` is set, `AgentManifestTranslator` registers the agent in `IFailureAttributionIndex` and appends `FailureAttributionEnricher` to the tool dispatch chain. On a failed tool call, the enricher emits a `failure.attribution` trajectory event to the tee store.
+
+`McpServerManifest` also accepts `failureOntologyRef` for future per-server enricher binding (wired in a follow-on).
+
 ## Related
 
 - `IFailureOntologyCatalog` — `agentic/src/Vais.Agents.Abstractions/IFailureOntologyCatalog.cs`

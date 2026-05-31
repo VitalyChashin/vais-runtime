@@ -90,24 +90,35 @@ internal sealed class RunHealthSignalSubscriber : IHostedService
         }
     }
 
-    private RunHealthSignalRecord StampAttribution(RunHealthSignalRecord record, AgentEvent evt)
+    private RunHealthSignalRecord StampAttribution(RunHealthSignalRecord record, AgentEvent evt) =>
+        StampAttribution(record, evt.Context.AgentName, _attributionRegistry, _attributionIndex);
+
+    /// <summary>
+    /// Stamps <see cref="RunHealthSignalRecord.AttributionPath"/> from the event's agent context
+    /// and, when an artifact is bound via <paramref name="index"/>, refines
+    /// <see cref="RunHealthSignalRecord.ConceptName"/> from the per-tool annotation.
+    /// Extracted as a static helper for testability.
+    /// </summary>
+    internal static RunHealthSignalRecord StampAttribution(
+        RunHealthSignalRecord record,
+        string? agentId,
+        IFailureAttributionRegistry? registry,
+        IFailureAttributionIndex? index)
     {
-        var agentId = evt.Context.AgentName;
         if (string.IsNullOrEmpty(agentId))
             return record;
 
-        // Derive the basic attribution path from agent identity + source.
-        var basicPath = string.IsNullOrEmpty(record.Source)
+        // For ToolError, source is the tool name — different from agentId.
+        // For all other kinds, source is the agent name itself (redundant): use agentId alone.
+        var basicPath = string.IsNullOrEmpty(record.Source) || record.Source == agentId
             ? agentId
             : $"{agentId}/{record.Source}";
-
         string? conceptOverride = null;
-        string? attributionPath = basicPath;
+        var attributionPath = basicPath;
 
-        // If an artifact is bound to this agent, use it to refine path and concept.
-        if (_attributionIndex is not null && _attributionRegistry is not null
-            && _attributionIndex.TryGet(agentId, out var ontologyRef)
-            && _attributionRegistry.Get(ontologyRef) is { } artifact)
+        if (index is not null && registry is not null
+            && index.TryGet(agentId, out var ontologyRef)
+            && registry.Get(ontologyRef) is { } artifact)
         {
             if (record.Kind == RunHealthSignalKind.ToolError)
             {
