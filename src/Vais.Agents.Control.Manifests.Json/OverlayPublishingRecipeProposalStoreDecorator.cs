@@ -10,8 +10,10 @@ namespace Vais.Agents.Control.Manifests;
 /// approve → overlay-write → catalog-reload pipeline. On a successful
 /// <see cref="IRecipeProposalStore.DecideAsync"/> with <c>approve = true</c>,
 /// merges the proposal into the overlay file via <see cref="IOntologyOverlayWriter"/>
-/// and then triggers <see cref="IOntologyCatalogReloader.ReloadAsync"/> so the
-/// next <c>vais.describe</c> reflects the change without a runtime restart.
+/// (north overlay kinds) or <see cref="IFailureOntologyOverlayWriter"/> (Part 3
+/// <see cref="RecipeProposalKind.FailurePrior"/>), then triggers
+/// <see cref="IOntologyCatalogReloader.ReloadAsync"/> so the next <c>vais.describe</c>
+/// reflects the change without a runtime restart.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,13 +30,21 @@ namespace Vais.Agents.Control.Manifests;
 /// hasn't wired the hot-reloadable catalog (the file is still updated, but the
 /// in-process catalog stays stale until restart).
 /// </para>
+/// <para>
+/// <see cref="RecipeProposalKind.FailurePrior"/> proposals are written to the
+/// <see cref="FailureOntologyOverlay"/> file via <see cref="IFailureOntologyOverlayWriter"/>.
+/// When either the writer or the failure overlay path is null, approved failure priors are
+/// logged and skipped rather than written.
+/// </para>
 /// </remarks>
 public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipeProposalStore
 {
     private readonly IRecipeProposalStore _inner;
     private readonly IOntologyOverlayWriter _writer;
+    private readonly IFailureOntologyOverlayWriter? _failureWriter;
     private readonly IOntologyCatalogReloader? _reloader;
     private readonly string _overlayPath;
+    private readonly string? _failureOverlayPath;
     private readonly Microsoft.Extensions.Logging.ILogger? _logger;
     private readonly bool _throwOnSideEffectFailure;
 
@@ -45,12 +55,16 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
         string overlayPath,
         IOntologyCatalogReloader? reloader = null,
         Microsoft.Extensions.Logging.ILogger? logger = null,
-        bool throwOnSideEffectFailure = false)
+        bool throwOnSideEffectFailure = false,
+        IFailureOntologyOverlayWriter? failureWriter = null,
+        string? failureOverlayPath = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _writer = writer ?? throw new ArgumentNullException(nameof(writer));
         ArgumentException.ThrowIfNullOrWhiteSpace(overlayPath);
         _overlayPath = overlayPath;
+        _failureWriter = failureWriter;
+        _failureOverlayPath = failureOverlayPath;
         _reloader = reloader;
         _logger = logger;
         _throwOnSideEffectFailure = throwOnSideEffectFailure;
@@ -76,7 +90,23 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
 
         try
         {
-            var changed = await _writer.MergeAsync(result, _overlayPath, cancellationToken).ConfigureAwait(false);
+            bool changed;
+            if (result.Kind == RecipeProposalKind.FailurePrior)
+            {
+                if (_failureWriter is null || string.IsNullOrEmpty(_failureOverlayPath))
+                {
+                    _logger?.LogInformation(
+                        "FailurePrior proposal {ProposalId} approved but no IFailureOntologyOverlayWriter/failure overlay path is configured — skipping write.",
+                        result.ProposalId);
+                    return result;
+                }
+                changed = await _failureWriter.MergeAsync(result, _failureOverlayPath, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                changed = await _writer.MergeAsync(result, _overlayPath, cancellationToken).ConfigureAwait(false);
+            }
+
             if (changed && _reloader is not null)
             {
                 await _reloader.ReloadAsync(cancellationToken).ConfigureAwait(false);
@@ -85,14 +115,15 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
             {
                 _logger?.LogInformation(
                     "Recipe {ProposalId} merged into overlay {OverlayPath}; in-process catalog reload skipped (no IOntologyCatalogReloader registered).",
-                    result.ProposalId, _overlayPath);
+                    result.ProposalId, result.Kind == RecipeProposalKind.FailurePrior ? _failureOverlayPath : _overlayPath);
             }
         }
         catch (Exception ex)
         {
+            var path = result.Kind == RecipeProposalKind.FailurePrior ? _failureOverlayPath : _overlayPath;
             _logger?.LogError(ex,
                 "Failed to publish approved recipe {ProposalId} to overlay {OverlayPath}.",
-                result.ProposalId, _overlayPath);
+                result.ProposalId, path);
             if (_throwOnSideEffectFailure) throw;
         }
 

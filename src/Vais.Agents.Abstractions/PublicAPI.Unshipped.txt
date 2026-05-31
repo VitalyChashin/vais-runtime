@@ -1943,6 +1943,7 @@ Vais.Agents.RecipeProposalKind
 Vais.Agents.RecipeProposalKind.WorkflowRecipe = 0 -> Vais.Agents.RecipeProposalKind
 Vais.Agents.RecipeProposalKind.TagSuggestion = 1 -> Vais.Agents.RecipeProposalKind
 Vais.Agents.RecipeProposalKind.DescriptionRewrite = 2 -> Vais.Agents.RecipeProposalKind
+Vais.Agents.RecipeProposalKind.FailurePrior = 3 -> Vais.Agents.RecipeProposalKind
 Vais.Agents.RecipeProposalStatus
 Vais.Agents.RecipeProposalStatus.Pending = 0 -> Vais.Agents.RecipeProposalStatus
 Vais.Agents.RecipeProposalStatus.Approved = 1 -> Vais.Agents.RecipeProposalStatus
@@ -2159,9 +2160,44 @@ Vais.Agents.AutoDerivedFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHeal
 Vais.Agents.AutoDerivedFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
 Vais.Agents.AutoDerivedFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
 Vais.Agents.AutoDerivedFailureOntologyCatalog.OntologyVersion.get -> string!
+Vais.Agents.FailureAttributionOverlay
+Vais.Agents.FailureAttributionOverlay.<Clone>$() -> Vais.Agents.FailureAttributionOverlay!
+Vais.Agents.FailureAttributionOverlay.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailurePriorBody!>? FailurePriors) -> void
+Vais.Agents.FailureAttributionOverlay.Equals(Vais.Agents.FailureAttributionOverlay? other) -> bool
+Vais.Agents.FailureAttributionOverlay.FailureAttributionOverlay(System.Collections.Generic.IReadOnlyList<Vais.Agents.FailurePriorBody!>? FailurePriors = null) -> void
+Vais.Agents.FailureAttributionOverlay.FailurePriors.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.FailurePriorBody!>?
+Vais.Agents.FailureAttributionOverlay.FailurePriors.init -> void
+override Vais.Agents.FailureAttributionOverlay.Equals(object? obj) -> bool
+override Vais.Agents.FailureAttributionOverlay.GetHashCode() -> int
+override Vais.Agents.FailureAttributionOverlay.ToString() -> string!
+static Vais.Agents.FailureAttributionOverlay.operator !=(Vais.Agents.FailureAttributionOverlay? left, Vais.Agents.FailureAttributionOverlay? right) -> bool
+static Vais.Agents.FailureAttributionOverlay.operator ==(Vais.Agents.FailureAttributionOverlay? left, Vais.Agents.FailureAttributionOverlay? right) -> bool
 Vais.Agents.FailureAxis
 Vais.Agents.FailureAxis.Mechanical = 0 -> Vais.Agents.FailureAxis
 Vais.Agents.FailureAxis.Quality = 1 -> Vais.Agents.FailureAxis
+Vais.Agents.FailurePriorBody
+Vais.Agents.FailurePriorBody.<Clone>$() -> Vais.Agents.FailurePriorBody!
+Vais.Agents.FailurePriorBody.AgentName.get -> string!
+Vais.Agents.FailurePriorBody.AgentName.init -> void
+Vais.Agents.FailurePriorBody.AttributionPath.get -> string!
+Vais.Agents.FailurePriorBody.AttributionPath.init -> void
+Vais.Agents.FailurePriorBody.ConceptName.get -> string!
+Vais.Agents.FailurePriorBody.ConceptName.init -> void
+Vais.Agents.FailurePriorBody.Equals(Vais.Agents.FailurePriorBody? other) -> bool
+Vais.Agents.FailurePriorBody.FailureCount.get -> int
+Vais.Agents.FailurePriorBody.FailureCount.init -> void
+Vais.Agents.FailurePriorBody.FailurePriorBody() -> void
+Vais.Agents.FailurePriorBody.FirstSeen.get -> System.DateTimeOffset
+Vais.Agents.FailurePriorBody.FirstSeen.init -> void
+Vais.Agents.FailurePriorBody.LastSeen.get -> System.DateTimeOffset
+Vais.Agents.FailurePriorBody.LastSeen.init -> void
+Vais.Agents.FailurePriorBody.ToolName.get -> string?
+Vais.Agents.FailurePriorBody.ToolName.init -> void
+override Vais.Agents.FailurePriorBody.Equals(object? obj) -> bool
+override Vais.Agents.FailurePriorBody.GetHashCode() -> int
+override Vais.Agents.FailurePriorBody.ToString() -> string!
+static Vais.Agents.FailurePriorBody.operator !=(Vais.Agents.FailurePriorBody? left, Vais.Agents.FailurePriorBody? right) -> bool
+static Vais.Agents.FailurePriorBody.operator ==(Vais.Agents.FailurePriorBody? left, Vais.Agents.FailurePriorBody? right) -> bool
 Vais.Agents.FailureConcept
 Vais.Agents.FailureConcept.<Clone>$() -> Vais.Agents.FailureConcept!
 Vais.Agents.FailureConcept.Axis.get -> Vais.Agents.FailureAxis
@@ -2185,9 +2221,13 @@ Vais.Agents.FailureOntologyOverlay
 Vais.Agents.FailureOntologyOverlay.<Clone>$() -> Vais.Agents.FailureOntologyOverlay!
 Vais.Agents.FailureOntologyOverlay.Concepts.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>?
 Vais.Agents.FailureOntologyOverlay.Concepts.init -> void
-Vais.Agents.FailureOntologyOverlay.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts, out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules) -> void
+*REMOVED*Vais.Agents.FailureOntologyOverlay.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts, out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules) -> void
+Vais.Agents.FailureOntologyOverlay.Deconstruct(out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts, out System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules, out System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAttributionOverlay!>? Attributions) -> void
+Vais.Agents.FailureOntologyOverlay.Attributions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAttributionOverlay!>?
+Vais.Agents.FailureOntologyOverlay.Attributions.init -> void
 Vais.Agents.FailureOntologyOverlay.Equals(Vais.Agents.FailureOntologyOverlay? other) -> bool
-Vais.Agents.FailureOntologyOverlay.FailureOntologyOverlay(System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules = null) -> void
+*REMOVED*Vais.Agents.FailureOntologyOverlay.FailureOntologyOverlay(System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules = null) -> void
+Vais.Agents.FailureOntologyOverlay.FailureOntologyOverlay(System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureConcept!>? Concepts = null, System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>? SeverityRules = null, System.Collections.Generic.IReadOnlyDictionary<string!, Vais.Agents.FailureAttributionOverlay!>? Attributions = null) -> void
 Vais.Agents.FailureOntologyOverlay.SeverityRules.get -> System.Collections.Generic.IReadOnlyList<Vais.Agents.FailureSeverityRule!>?
 Vais.Agents.FailureOntologyOverlay.SeverityRules.init -> void
 Vais.Agents.FailureSeverityRule

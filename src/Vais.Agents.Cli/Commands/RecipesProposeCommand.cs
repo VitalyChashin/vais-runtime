@@ -41,6 +41,10 @@ internal sealed class RecipesProposeCommand : AsyncCommand<RecipesProposeCommand
         [CommandOption("--until")]
         public string? Until { get; init; }
 
+        [Description("Inducer source: trajectories (default, behavioral patterns) | failures (failure-prior induction from run-health + MCP gateway stores).")]
+        [CommandOption("--source")]
+        public string? Source { get; init; }
+
         [Description("Output format: table | json. Default: table.")]
         [CommandOption("-o|--output")]
         public string? Output { get; init; }
@@ -71,6 +75,7 @@ internal sealed class RecipesProposeCommand : AsyncCommand<RecipesProposeCommand
                 transport: settings.Transport,
                 since: since,
                 until: until,
+                source: settings.Source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var format = OutputFormatter.Parse(settings.Output, OutputFormat.Table);

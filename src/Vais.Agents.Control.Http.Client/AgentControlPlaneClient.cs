@@ -579,6 +579,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         string? transport = null,
         DateTimeOffset? since = null,
         DateTimeOffset? until = null,
+        string? source = null,
         CancellationToken cancellationToken = default)
     {
         var qs = new List<string>();
@@ -588,6 +589,7 @@ public sealed class AgentControlPlaneClient : IAgentControlPlaneClient
         if (!string.IsNullOrWhiteSpace(transport)) qs.Add($"transport={Uri.EscapeDataString(transport)}");
         if (since.HasValue) qs.Add($"since={Uri.EscapeDataString(since.Value.ToString("O"))}");
         if (until.HasValue) qs.Add($"until={Uri.EscapeDataString(until.Value.ToString("O"))}");
+        if (!string.IsNullOrWhiteSpace(source)) qs.Add($"source={Uri.EscapeDataString(source)}");
         var path = qs.Count > 0 ? $"/v1/recipes/propose?{string.Join('&', qs)}" : "/v1/recipes/propose";
         using var response = await _http.PostAsync(path, content: null, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
