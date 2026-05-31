@@ -77,7 +77,7 @@
     <PackageVersion Include="Spectre.Console.Testing" Version="0.55.0" />
   </ItemGroup>
   <ItemGroup Label="Public API surface guard">
-    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.24629.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.11.0-beta1.26075.3" />
   </ItemGroup>
   <ItemGroup Label="Observability (OpenTelemetry).">
     <PackageVersion Include="OpenTelemetry" Version="1.15.3" />
