@@ -70,12 +70,58 @@ public sealed record RunHealthDto(
 /// <param name="ErrorType">CLR/error type name when known, or <see langword="null"/>.</param>
 /// <param name="IsTransient">Whether the underlying failure was classified transient.</param>
 /// <param name="At">UTC timestamp of the signal.</param>
+/// <param name="ConceptName">Ontology concept name from <see cref="IFailureOntologyCatalog"/> (Part 2a). Null on legacy rows.</param>
+/// <param name="AttributionPath">Deployment-grounded attribution from <c>FailureAttributionArtifact</c> (Part 2b). Null when no artifact bound.</param>
 public sealed record RunHealthSignalDto(
     string Source,
     string Kind,
     string Level,
     string? ErrorType,
     bool IsTransient,
+    DateTimeOffset At,
+    string? ConceptName = null,
+    string? AttributionPath = null);
+
+/// <summary>Part 2c (DM-5) — response shape for <c>GET /v1/run-health</c>.</summary>
+/// <param name="Count">Number of items in the response.</param>
+/// <param name="Items">The run summary rows.</param>
+public sealed record RunHealthListResponse(
+    int Count,
+    IReadOnlyList<RunHealthListItemDto> Items);
+
+/// <summary>One row in <see cref="RunHealthListResponse"/>.</summary>
+/// <param name="RunId">The run id.</param>
+/// <param name="Level">Run-level health: <c>healthy</c>, <c>degraded</c>, or <c>failed</c>.</param>
+/// <param name="SignalCount">Number of persisted bus-sourced signals for this run.</param>
+/// <param name="LatestAt">Timestamp of the most recent signal in the queried window.</param>
+public sealed record RunHealthListItemDto(
+    string RunId,
+    string Level,
+    int SignalCount,
+    DateTimeOffset LatestAt);
+
+/// <summary>Part 2c (DM-5) — response shape for <c>GET /v1/run-health/signals</c>.</summary>
+/// <param name="Count">Number of items in the response.</param>
+/// <param name="Items">The matched failure signal rows.</param>
+public sealed record RunHealthSignalsResponse(
+    int Count,
+    IReadOnlyList<RunHealthSignalRowDto> Items);
+
+/// <summary>One row in <see cref="RunHealthSignalsResponse"/>.</summary>
+/// <param name="RunId">The run that produced this signal.</param>
+/// <param name="ConceptName">Failure concept (catalog or artifact-refined).</param>
+/// <param name="AttributionPath">Deployment-grounded attribution path; null when no artifact / no agent context.</param>
+/// <param name="Source">Source: agent name, tool name, or node id.</param>
+/// <param name="Level">Severity: <c>warning</c> or <c>error</c>.</param>
+/// <param name="ErrorType">Error type from the originating store.</param>
+/// <param name="At">UTC timestamp.</param>
+public sealed record RunHealthSignalRowDto(
+    string RunId,
+    string ConceptName,
+    string? AttributionPath,
+    string Source,
+    string Level,
+    string? ErrorType,
     DateTimeOffset At);
 
 /// <summary>DTO for a single node execution returned by run-history endpoints.</summary>

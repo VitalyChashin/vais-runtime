@@ -508,7 +508,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static RunHealthSignalDto ToRunHealthSignalDto(RunHealthSignal s) =>
         new(s.Source, ToCamel(s.Kind.ToString()), s.Level.ToString().ToLowerInvariant(),
-            s.ErrorType, s.IsTransient, s.At);
+            s.ErrorType, s.IsTransient, s.At, s.ConceptName, s.AttributionPath);
 
     private static string ToCamel(string pascal) =>
         string.IsNullOrEmpty(pascal) ? pascal : char.ToLowerInvariant(pascal[0]) + pascal[1..];
@@ -4087,7 +4087,99 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
             .WithSummary("Returns per-interface call counters recorded by OrleansOutgoingActivityFilter.")
             .Produces<FilterStatusResponse>(StatusCodes.Status200OK);
 
+        // Part 2c (DM-5) — cross-run rollup + cross-run failure search. Both endpoints route
+        // through the same services the /design-mcp handlers use (IRunHealthAggregator and
+        // IFailureSearchService) so CLI/REST and MCP cannot drift.
+        group.MapGet("/run-health", RunHealthListAsync)
+            .WithName("Diagnostics.RunHealth.List")
+            .WithSummary("Cross-run rollup: list recent runs whose worst persisted mechanical-failure level is at least the requested minimum.")
+            .Produces<RunHealthListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/run-health/signals", RunHealthSignalsAsync)
+            .WithName("Diagnostics.RunHealth.Signals")
+            .WithSummary("Cross-run signal search: bus-sourced concepts + MCP gateway failures, concept-filtered via parent walk.")
+            .Produces<RunHealthSignalsResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return builder;
+    }
+
+    private static async Task<IResult> RunHealthListAsync(
+        HttpContext http,
+        string? level = null,
+        string? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var aggregator = http.RequestServices.GetService<IRunHealthAggregator>();
+        if (aggregator is null)
+            return Results.Problem(
+                title: "Run-health aggregator not configured",
+                detail: "Set VAIS_RUN_HEALTH_STORE_CONNECTION to enable cross-run rollup.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:run-health-aggregator-not-configured");
+
+        if (!string.IsNullOrEmpty(level) && level is not ("degraded" or "failed"))
+            return Results.Problem(
+                title: "Invalid level",
+                detail: $"'level' must be 'degraded' or 'failed'; got '{level}'.",
+                statusCode: StatusCodes.Status400BadRequest);
+        var minLevel = level == "failed" ? FailureLevel.Error : FailureLevel.Warning;
+
+        DateTimeOffset? sinceTs = null;
+        if (!string.IsNullOrEmpty(since))
+        {
+            if (!DateTimeOffset.TryParse(since, out var parsed))
+                return Results.Problem(
+                    title: "Invalid since",
+                    detail: $"'since' must be a valid ISO-8601 timestamp; got '{since}'.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            sinceTs = parsed;
+        }
+
+        var items = await aggregator.ListDegradedRunsAsync(minLevel, sinceTs, limit, ct).ConfigureAwait(false);
+        var dtos = items.Select(i => new RunHealthListItemDto(i.RunId, i.Level, i.SignalCount, i.LatestAt)).ToList();
+        return Results.Ok(new RunHealthListResponse(dtos.Count, dtos));
+    }
+
+    private static async Task<IResult> RunHealthSignalsAsync(
+        HttpContext http,
+        string? concept = null,
+        string? agentName = null,
+        string? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var search = http.RequestServices.GetService<IFailureSearchService>();
+        if (search is null)
+            return Results.Problem(
+                title: "Failure search not configured",
+                detail: "Set VAIS_RUN_HEALTH_STORE_CONNECTION to enable cross-run failure search.",
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                type: "urn:vais-agents:failure-search-not-configured");
+
+        DateTimeOffset? sinceTs = null;
+        if (!string.IsNullOrEmpty(since))
+        {
+            if (!DateTimeOffset.TryParse(since, out var parsed))
+                return Results.Problem(
+                    title: "Invalid since",
+                    detail: $"'since' must be a valid ISO-8601 timestamp; got '{since}'.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            sinceTs = parsed;
+        }
+
+        var results = await search.SearchAsync(
+            new FailureSearchQuery(
+                ConceptName: concept,
+                AgentName: agentName,
+                Since: sinceTs,
+                Limit: limit),
+            ct).ConfigureAwait(false);
+        var dtos = results.Select(r =>
+            new RunHealthSignalRowDto(r.RunId, r.ConceptName, r.AttributionPath, r.Source, r.Level, r.ErrorType, r.At)).ToList();
+        return Results.Ok(new RunHealthSignalsResponse(dtos.Count, dtos));
     }
 
     private static IResult DiagnosticsSpansAsync(

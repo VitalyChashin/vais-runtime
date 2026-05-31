@@ -350,3 +350,68 @@ Vais.Agents.Control.AgentHandleNotFoundException
 Vais.Agents.Control.AgentHandleNotFoundException.AgentHandleNotFoundException(string! agentId, string! version) -> void
 Vais.Agents.Control.AgentHandleNotFoundException.AgentId.get -> string!
 Vais.Agents.Control.AgentHandleNotFoundException.Version.get -> string!
+Vais.Agents.Control.IRunHealthAggregator
+Vais.Agents.Control.IRunHealthAggregator.GetRunHealthAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RunHealth!>!
+Vais.Agents.Control.IFailureSearchService
+Vais.Agents.Control.IFailureSearchService.SearchAsync(Vais.Agents.Control.FailureSearchQuery! query, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FailureSearchResult!>!>!
+Vais.Agents.Control.FailureSearchQuery
+Vais.Agents.Control.FailureSearchQuery.<Clone>$() -> Vais.Agents.Control.FailureSearchQuery!
+Vais.Agents.Control.FailureSearchQuery.AgentName.get -> string?
+Vais.Agents.Control.FailureSearchQuery.AgentName.init -> void
+Vais.Agents.Control.FailureSearchQuery.ConceptName.get -> string?
+Vais.Agents.Control.FailureSearchQuery.ConceptName.init -> void
+Vais.Agents.Control.FailureSearchQuery.Deconstruct(out string? ConceptName, out string? AgentName, out System.DateTimeOffset? Since, out int Limit) -> void
+Vais.Agents.Control.FailureSearchQuery.Equals(Vais.Agents.Control.FailureSearchQuery? other) -> bool
+Vais.Agents.Control.FailureSearchQuery.FailureSearchQuery(string? ConceptName = null, string? AgentName = null, System.DateTimeOffset? Since = null, int Limit = 50) -> void
+Vais.Agents.Control.FailureSearchQuery.Limit.get -> int
+Vais.Agents.Control.FailureSearchQuery.Limit.init -> void
+Vais.Agents.Control.FailureSearchQuery.Since.get -> System.DateTimeOffset?
+Vais.Agents.Control.FailureSearchQuery.Since.init -> void
+override Vais.Agents.Control.FailureSearchQuery.Equals(object? obj) -> bool
+override Vais.Agents.Control.FailureSearchQuery.GetHashCode() -> int
+override Vais.Agents.Control.FailureSearchQuery.ToString() -> string!
+static Vais.Agents.Control.FailureSearchQuery.operator !=(Vais.Agents.Control.FailureSearchQuery? left, Vais.Agents.Control.FailureSearchQuery? right) -> bool
+static Vais.Agents.Control.FailureSearchQuery.operator ==(Vais.Agents.Control.FailureSearchQuery? left, Vais.Agents.Control.FailureSearchQuery? right) -> bool
+Vais.Agents.Control.FailureSearchResult
+Vais.Agents.Control.FailureSearchResult.<Clone>$() -> Vais.Agents.Control.FailureSearchResult!
+Vais.Agents.Control.FailureSearchResult.At.get -> System.DateTimeOffset
+Vais.Agents.Control.FailureSearchResult.At.init -> void
+Vais.Agents.Control.FailureSearchResult.AttributionPath.get -> string?
+Vais.Agents.Control.FailureSearchResult.AttributionPath.init -> void
+Vais.Agents.Control.FailureSearchResult.ConceptName.get -> string!
+Vais.Agents.Control.FailureSearchResult.ConceptName.init -> void
+Vais.Agents.Control.FailureSearchResult.Deconstruct(out string! RunId, out string! ConceptName, out string? AttributionPath, out string! Source, out string! Level, out string? ErrorType, out System.DateTimeOffset At) -> void
+Vais.Agents.Control.FailureSearchResult.Equals(Vais.Agents.Control.FailureSearchResult? other) -> bool
+Vais.Agents.Control.FailureSearchResult.ErrorType.get -> string?
+Vais.Agents.Control.FailureSearchResult.ErrorType.init -> void
+Vais.Agents.Control.FailureSearchResult.FailureSearchResult(string! RunId, string! ConceptName, string? AttributionPath, string! Source, string! Level, string? ErrorType, System.DateTimeOffset At) -> void
+Vais.Agents.Control.FailureSearchResult.Level.get -> string!
+Vais.Agents.Control.FailureSearchResult.Level.init -> void
+Vais.Agents.Control.FailureSearchResult.RunId.get -> string!
+Vais.Agents.Control.FailureSearchResult.RunId.init -> void
+Vais.Agents.Control.FailureSearchResult.Source.get -> string!
+Vais.Agents.Control.FailureSearchResult.Source.init -> void
+override Vais.Agents.Control.FailureSearchResult.Equals(object? obj) -> bool
+override Vais.Agents.Control.FailureSearchResult.GetHashCode() -> int
+override Vais.Agents.Control.FailureSearchResult.ToString() -> string!
+static Vais.Agents.Control.FailureSearchResult.operator !=(Vais.Agents.Control.FailureSearchResult? left, Vais.Agents.Control.FailureSearchResult? right) -> bool
+static Vais.Agents.Control.FailureSearchResult.operator ==(Vais.Agents.Control.FailureSearchResult? left, Vais.Agents.Control.FailureSearchResult? right) -> bool
+Vais.Agents.Control.IRunHealthAggregator.ListDegradedRunsAsync(Vais.Agents.FailureLevel minLevel = Vais.Agents.FailureLevel.Warning, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.RunHealthListItem!>!>!
+Vais.Agents.Control.RunHealthListItem
+Vais.Agents.Control.RunHealthListItem.<Clone>$() -> Vais.Agents.Control.RunHealthListItem!
+Vais.Agents.Control.RunHealthListItem.Deconstruct(out string! RunId, out string! Level, out int SignalCount, out System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Control.RunHealthListItem.Equals(Vais.Agents.Control.RunHealthListItem? other) -> bool
+Vais.Agents.Control.RunHealthListItem.LatestAt.get -> System.DateTimeOffset
+Vais.Agents.Control.RunHealthListItem.LatestAt.init -> void
+Vais.Agents.Control.RunHealthListItem.Level.get -> string!
+Vais.Agents.Control.RunHealthListItem.Level.init -> void
+Vais.Agents.Control.RunHealthListItem.RunHealthListItem(string! RunId, string! Level, int SignalCount, System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Control.RunHealthListItem.RunId.get -> string!
+Vais.Agents.Control.RunHealthListItem.RunId.init -> void
+Vais.Agents.Control.RunHealthListItem.SignalCount.get -> int
+Vais.Agents.Control.RunHealthListItem.SignalCount.init -> void
+override Vais.Agents.Control.RunHealthListItem.Equals(object? obj) -> bool
+override Vais.Agents.Control.RunHealthListItem.GetHashCode() -> int
+override Vais.Agents.Control.RunHealthListItem.ToString() -> string!
+static Vais.Agents.Control.RunHealthListItem.operator !=(Vais.Agents.Control.RunHealthListItem? left, Vais.Agents.Control.RunHealthListItem? right) -> bool
+static Vais.Agents.Control.RunHealthListItem.operator ==(Vais.Agents.Control.RunHealthListItem? left, Vais.Agents.Control.RunHealthListItem? right) -> bool

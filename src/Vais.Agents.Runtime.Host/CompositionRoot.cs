@@ -811,6 +811,10 @@ internal static class CompositionRoot
             // background sub-runs into a per-run RunHealth for GET /graphs/{id}/runs/{runId} and
             // `vais diagnose`. Registered only when the run-health store is configured.
             services.AddSingleton<IRunHealthAggregator, RunHealthAggregator>();
+            // Part 2c — cross-run failure search that powers `vais.failures` on /design-mcp and
+            // the matching REST endpoint. Fans out across the run-health store + MCP gateway
+            // event store with concept/attribution re-derivation from the shared catalog.
+            services.AddSingleton<IFailureSearchService, FailureSearchService>();
         }
 
         // Plan D — Postgres-backed trajectory store. When VAIS_INTERCEPTOR_TEE_STORE_CONNECTION

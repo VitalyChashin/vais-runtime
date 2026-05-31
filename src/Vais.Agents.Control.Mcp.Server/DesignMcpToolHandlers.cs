@@ -113,6 +113,57 @@ internal static class DesignMcpToolHandlers
                 }
                 """),
         },
+        new Tool
+        {
+            Name = "vais.diagnose",
+            Title = "Diagnose a run",
+            Description = "Return the mechanical-failure health rollup for a graph run: worst level (healthy|degraded|failed) plus every attributed failure signal across the run tree and background sub-runs. Each signal carries the ontology concept name (e.g. McpToolError) and the deployment attribution path (e.g. confluence-agent/confluence-mcp/confluence_search). Requires the run-health aggregator to be configured (VAIS_RUN_HEALTH_STORE_CONNECTION).",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "runId": {
+                      "type": "string",
+                      "description": "Root run id whose tree to diagnose. Sub-run trees are folded in automatically via the {parent}__{name}__{hash} convention."
+                    }
+                  },
+                  "required": ["runId"]
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.runHealth",
+            Title = "Recent degraded/failed runs",
+            Description = "Cross-run rollup: list recent runs whose worst mechanical-failure level is at least the requested minimum. Returns lightweight summaries { runId, level, signalCount, latestAt } for at-a-glance investigation. v1 indexes only bus-sourced signals (runs whose only failures came from the MCP gateway / LLM gateway / graph node stores are NOT yet enumerated cross-run — use vais.diagnose per-run for those).",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "level": { "type": "string", "enum": ["degraded", "failed"], "description": "Minimum severity to include. Default: degraded." },
+                    "since": { "type": "string", "description": "ISO-8601 timestamp; default: 24h ago." },
+                    "limit": { "type": "integer", "description": "Maximum runs to return (default 50, max 200).", "minimum": 1, "maximum": 200 }
+                  }
+                }
+                """),
+        },
+        new Tool
+        {
+            Name = "vais.failures",
+            Title = "Search failures across runs",
+            Description = "Cross-run search for mechanical-failure signals. Powers the diagnose loop's \"is this a one-off or a pattern?\" question. Returns the most recent matching signals as { runId, conceptName, attributionPath, source, errorType, at }. v1 indexes bus-sourced concepts (ToolError, TurnFailed, PluginPartial, LlmCallRetried, LlmFallbackEngaged, GuardrailTriggered) via the run-health store AND McpToolError via the MCP gateway event store. NodeFailed / LlmCallFailure (plugin-path) / background failures are NOT yet indexed cross-run; only per-run via vais.diagnose.",
+            InputSchema = ParseSchema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "concept":  { "type": "string", "description": "Failure concept to match (e.g. \"McpToolError\" or \"ToolError\"). Sub-concepts via parent-walk. Null returns all indexed concepts." },
+                    "agentName": { "type": "string", "description": "Filter to a specific source agent name (run-health store only)." },
+                    "since":    { "type": "string", "description": "ISO-8601 timestamp; only signals at or after this time are returned. Default: 24h ago." },
+                    "limit":    { "type": "integer", "description": "Maximum signals to return (default 50, max 200).", "minimum": 1, "maximum": 200 }
+                  }
+                }
+                """),
+        },
     ];
 
     // ── Mutating tool declarations (NB-9, NB-10) ──────────────────────────────
@@ -253,6 +304,9 @@ internal static class DesignMcpToolHandlers
                 "vais.delete"   => await HandleDeleteAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.eval"     => await HandleEvalAsync(args, sp, ct).ConfigureAwait(false),
                 "vais.eval.status" => await HandleEvalStatusAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.diagnose" => await HandleDiagnoseAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.runHealth" => await HandleRunHealthAsync(args, sp, ct).ConfigureAwait(false),
+                "vais.failures" => await HandleFailuresAsync(args, sp, ct).ConfigureAwait(false),
                 _               => TextError($"Unknown design tool '{name}'."),
             };
         }
@@ -373,6 +427,50 @@ internal static class DesignMcpToolHandlers
         if (entry.ManualConcept is not null)
             result["manualConcept"] = entry.ManualConcept;
         return result;
+    }
+
+    // ── Failure taxonomy projection (Part 2c — DM-6) ──────────────────────────
+
+    /// <summary>Renders the full failure taxonomy as a single JSON object.</summary>
+    internal static JsonObject BuildFailureCatalogJson(IFailureOntologyCatalog catalog) => new()
+    {
+        ["ontologyVersion"] = catalog.OntologyVersion,
+        ["concepts"] = new JsonArray([.. catalog.Concepts.Select(c => (JsonNode?)BuildFailureConceptJsonCore(c))]),
+    };
+
+    /// <summary>Renders a single failure concept as JSON, including its children (sub-concepts).</summary>
+    internal static JsonObject BuildFailureConceptJson(
+        IFailureOntologyCatalog catalog, string conceptName, string uriForError)
+    {
+        var concept = catalog.Get(conceptName)
+            ?? throw new ArgumentException(
+                $"Concept '{conceptName}' not found in the failure taxonomy.", nameof(uriForError));
+        var node = BuildFailureConceptJsonCore(concept);
+
+        // Add the children (concepts whose ParentName == this concept) so the resource is
+        // self-contained — a caller can navigate the taxonomy without reading the full catalog.
+        var children = catalog.Concepts
+            .Where(c => string.Equals(c.ParentName, conceptName, StringComparison.Ordinal))
+            .Select(c => c.Name)
+            .ToList();
+        node["children"] = new JsonArray([.. children.Select(n => (JsonNode?)JsonValue.Create(n))]);
+        return node;
+    }
+
+    private static JsonObject BuildFailureConceptJsonCore(FailureConcept c)
+    {
+        var obj = new JsonObject
+        {
+            ["name"] = c.Name,
+            ["axis"] = c.Axis.ToString(),
+            ["defaultLevel"] = c.DefaultLevel.ToString(),
+            ["description"] = c.Description,
+            ["parentName"] = c.ParentName,
+            ["sourceKinds"] = new JsonArray([.. c.SourceKinds.Select(k => (JsonNode?)JsonValue.Create(k.ToString()))]),
+        };
+        if (c.Tags is { Count: > 0 })
+            obj["tags"] = new JsonArray([.. c.Tags.Select(t => (JsonNode?)JsonValue.Create(t))]);
+        return obj;
     }
 
     // ── vais.diff ─────────────────────────────────────────────────────────────
@@ -642,6 +740,165 @@ internal static class DesignMcpToolHandlers
     private static JsonArray StrArray(IEnumerable<string> items)
         => new(items.Select(e => (JsonNode?)JsonValue.Create(e)).ToArray());
 
+    // ── vais.diagnose (Part 2c — DM-2) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the per-run mechanical-failure health rollup. Reshapes the domain
+    /// <see cref="RunHealth"/> directly into MCP JSON so <c>ConceptName</c> and
+    /// <c>AttributionPath</c> from Parts 2a/2b reach the caller — the REST DTO path
+    /// (<c>RunHealthSignalDto</c>) is bypassed deliberately to avoid any silent drop
+    /// if its projection ever drifts again.
+    /// </summary>
+    private static async ValueTask<CallToolResult> HandleDiagnoseAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var runId = GetString(args, "runId");
+        if (string.IsNullOrWhiteSpace(runId))
+            return TextError("Missing required argument 'runId'.");
+
+        var aggregator = sp.GetService<IRunHealthAggregator>();
+        if (aggregator is null)
+            return TextError("Diagnose unavailable: IRunHealthAggregator is not registered (set VAIS_RUN_HEALTH_STORE_CONNECTION).");
+
+        var health = await aggregator.GetRunHealthAsync(runId, ct).ConfigureAwait(false);
+        return TextSuccess(BuildDiagnoseJson(health).ToJsonString());
+    }
+
+    /// <summary>
+    /// Projects a domain <see cref="RunHealth"/> to the MCP JSON shape. Exposed for the
+    /// <c>vais-diagnostics://run/{id}</c> resource handler so the resource and tool produce
+    /// byte-identical bodies.
+    /// </summary>
+    internal static JsonObject BuildDiagnoseJson(RunHealth health) => new()
+    {
+        ["runId"] = health.RunId,
+        ["level"] = health.Level.ToString().ToLowerInvariant(),
+        ["signals"] = new JsonArray([.. health.Signals.Select(BuildSignalJson)]),
+        ["backgroundFailures"] = new JsonArray([.. health.BackgroundFailures.Select(BuildSignalJson)]),
+    };
+
+    private static JsonNode BuildSignalJson(RunHealthSignal s) => new JsonObject
+    {
+        ["source"] = s.Source,
+        ["kind"] = ToCamel(s.Kind.ToString()),
+        ["level"] = s.Level.ToString().ToLowerInvariant(),
+        ["errorType"] = s.ErrorType,
+        ["isTransient"] = s.IsTransient,
+        ["at"] = s.At.ToString("o"),
+        ["conceptName"] = s.ConceptName,
+        ["attributionPath"] = s.AttributionPath,
+    };
+
+    private static string ToCamel(string pascal) =>
+        string.IsNullOrEmpty(pascal) ? pascal : char.ToLowerInvariant(pascal[0]) + pascal[1..];
+
+    // ── vais.runHealth (Part 2c — DM-3) ────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleRunHealthAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var aggregator = sp.GetService<IRunHealthAggregator>();
+        if (aggregator is null)
+            return TextError("Run-health rollup unavailable: IRunHealthAggregator is not registered (set VAIS_RUN_HEALTH_STORE_CONNECTION).");
+
+        var levelStr = GetString(args, "level");
+        if (!string.IsNullOrEmpty(levelStr) && levelStr is not ("degraded" or "failed"))
+            return TextError($"Argument 'level' must be 'degraded' or 'failed'; got '{levelStr}'.");
+        var minLevel = levelStr switch
+        {
+            "failed" => FailureLevel.Error,
+            _ => FailureLevel.Warning,  // null/empty/degraded
+        };
+
+        var sinceStr = GetString(args, "since");
+        DateTimeOffset? since = null;
+        if (!string.IsNullOrWhiteSpace(sinceStr))
+        {
+            if (!DateTimeOffset.TryParse(sinceStr, out var parsed))
+                return TextError($"Argument 'since' must be a valid ISO-8601 timestamp; got '{sinceStr}'.");
+            since = parsed;
+        }
+        var limit = 50;
+        if (args?.TryGetValue("limit", out var limEl) == true && limEl.ValueKind == JsonValueKind.Number
+            && limEl.TryGetInt32(out var limInt))
+            limit = limInt;
+
+        var rows = await aggregator.ListDegradedRunsAsync(minLevel, since, limit, ct).ConfigureAwait(false);
+        var items = new JsonArray([.. rows.Select(BuildRunHealthRowJson)]);
+        var payload = new JsonObject
+        {
+            ["count"] = rows.Count,
+            ["items"] = items,
+        };
+        return TextSuccess(payload.ToJsonString());
+    }
+
+    private static JsonNode BuildRunHealthRowJson(RunHealthListItem r) => new JsonObject
+    {
+        ["runId"] = r.RunId,
+        ["level"] = r.Level,
+        ["signalCount"] = r.SignalCount,
+        ["latestAt"] = r.LatestAt.ToString("o"),
+    };
+
+    // ── vais.failures (Part 2c — DM-4) ─────────────────────────────────────────
+
+    private static async ValueTask<CallToolResult> HandleFailuresAsync(
+        IDictionary<string, JsonElement>? args,
+        IServiceProvider sp,
+        CancellationToken ct)
+    {
+        var search = sp.GetService<IFailureSearchService>();
+        if (search is null)
+            return TextError("Search unavailable: IFailureSearchService is not registered (set VAIS_RUN_HEALTH_STORE_CONNECTION).");
+
+        var concept = GetString(args, "concept");
+        var agentName = GetString(args, "agentName");
+        var sinceStr = GetString(args, "since");
+        DateTimeOffset? since = null;
+        if (!string.IsNullOrWhiteSpace(sinceStr))
+        {
+            if (!DateTimeOffset.TryParse(sinceStr, out var parsed))
+                return TextError($"Argument 'since' must be a valid ISO-8601 timestamp; got '{sinceStr}'.");
+            since = parsed;
+        }
+        var limit = 50;
+        if (args?.TryGetValue("limit", out var limEl) == true && limEl.ValueKind == JsonValueKind.Number
+            && limEl.TryGetInt32(out var limInt))
+            limit = limInt;
+
+        var rows = await search.SearchAsync(
+            new FailureSearchQuery(
+                ConceptName: concept,
+                AgentName: agentName,
+                Since: since,
+                Limit: limit),
+            ct).ConfigureAwait(false);
+
+        var items = new JsonArray([.. rows.Select(BuildFailureSearchRowJson)]);
+        var payload = new JsonObject
+        {
+            ["count"] = rows.Count,
+            ["items"] = items,
+        };
+        return TextSuccess(payload.ToJsonString());
+    }
+
+    private static JsonNode BuildFailureSearchRowJson(FailureSearchResult r) => new JsonObject
+    {
+        ["runId"] = r.RunId,
+        ["conceptName"] = r.ConceptName,
+        ["attributionPath"] = r.AttributionPath,
+        ["source"] = r.Source,
+        ["level"] = r.Level,
+        ["errorType"] = r.ErrorType,
+        ["at"] = r.At.ToString("o"),
+    };
+
     // ── Resource handlers (ND-8) ──────────────────────────────────────────────
 
     internal static ValueTask<ListResourcesResult> HandleListResourcesAsync(
@@ -652,7 +909,13 @@ internal static class DesignMcpToolHandlers
     internal static ValueTask<ReadResourceResult> HandleReadResourceAsync(
         RequestContext<ReadResourceRequestParams> ctx,
         CancellationToken ct)
-        => ReadOntologyResourceAsync(ctx.Params?.Uri ?? string.Empty, ctx.Services!);
+    {
+        var uri = ctx.Params?.Uri ?? string.Empty;
+        // Part 2c (DM-7): per-run diagnostics resource — same payload as vais.diagnose.
+        if (uri.StartsWith("vais-diagnostics://", StringComparison.OrdinalIgnoreCase))
+            return ReadDiagnosticsResourceAsync(uri, ctx.Services!, ct);
+        return ReadOntologyResourceAsync(uri, ctx.Services!);
+    }
 
     /// <summary>Testable overload — returns all vais-ontology:// resources.</summary>
     internal static ValueTask<ListResourcesResult> ListOntologyResourcesAsync(IServiceProvider sp)
@@ -672,6 +935,21 @@ internal static class DesignMcpToolHandlers
                 };
             })
             .ToList();
+
+        // Part 2c (DM-6): expose the failure taxonomy as a vais-ontology:// resource so
+        // a coding agent can discover the concept vocabulary alongside the manifest kinds.
+        var failureCatalog = sp.GetService<IFailureOntologyCatalog>();
+        if (failureCatalog is not null)
+        {
+            resources.Add(new Resource
+            {
+                Uri = "vais-ontology://Failure",
+                Name = "Failure",
+                Title = "Failure ontology",
+                Description = "Shared failure-concept vocabulary (mechanical + quality axes). Per-concept details under vais-ontology://Failure/{conceptName}.",
+                MimeType = "application/json",
+            });
+        }
         return new(new ListResourcesResult { Resources = resources });
     }
 
@@ -683,16 +961,68 @@ internal static class DesignMcpToolHandlers
             throw new ArgumentException(
                 $"Unknown resource scheme in '{uri}'. Expected 'vais-ontology://<Kind>'.", nameof(uri));
 
-        var kind = uri[prefix.Length..].Trim('/');
+        var path = uri[prefix.Length..].Trim('/');
+
+        // Part 2c (DM-6): Failure taxonomy resource — root catalog + per-concept details.
+        if (path.Equals("Failure", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("Failure/", StringComparison.OrdinalIgnoreCase))
+        {
+            var failureCatalog = sp.GetService<IFailureOntologyCatalog>()
+                ?? throw new ArgumentException(
+                    $"Failure taxonomy resource '{uri}' requires IFailureOntologyCatalog (Part 2a) to be registered.", nameof(uri));
+            var failureText = path.Length <= "Failure".Length
+                ? BuildFailureCatalogJson(failureCatalog).ToJsonString()
+                : BuildFailureConceptJson(failureCatalog, path["Failure/".Length..], uri).ToJsonString();
+            return new(new ReadResourceResult
+            {
+                Contents = [new TextResourceContents { Uri = uri, MimeType = "application/json", Text = failureText }],
+            });
+        }
+
         var catalog = sp.GetRequiredService<IOntologyCatalog>();
-        if (!catalog.TryGet(kind, out var entry))
-            throw new ArgumentException($"Kind '{kind}' not found in the ontology catalog.", nameof(uri));
+        if (!catalog.TryGet(path, out var entry))
+            throw new ArgumentException($"Kind '{path}' not found in the ontology catalog.", nameof(uri));
 
         var text = BuildOntologyJson(entry).ToJsonString();
         return new(new ReadResourceResult
         {
             Contents = [new TextResourceContents { Uri = uri, MimeType = "application/json", Text = text }],
         });
+    }
+
+    /// <summary>
+    /// Part 2c (DM-7) — serves <c>vais-diagnostics://run/{runId}</c> with the same payload
+    /// <c>vais.diagnose(runId)</c> returns. Exposed so a coding agent can pull a specific
+    /// run's diagnostics via the resource API without a tool call.
+    /// </summary>
+    internal static async ValueTask<ReadResourceResult> ReadDiagnosticsResourceAsync(
+        string uri, IServiceProvider sp, CancellationToken ct)
+    {
+        const string prefix = "vais-diagnostics://";
+        if (!uri.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                $"Unknown resource scheme in '{uri}'. Expected '{prefix}run/<runId>'.", nameof(uri));
+
+        var path = uri[prefix.Length..].Trim('/');
+        const string runPrefix = "run/";
+        if (!path.StartsWith(runPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                $"Unknown diagnostics resource '{uri}'. Expected '{prefix}run/<runId>'.", nameof(uri));
+
+        var runId = path[runPrefix.Length..].Trim('/');
+        if (string.IsNullOrWhiteSpace(runId))
+            throw new ArgumentException($"Missing run id in '{uri}'.", nameof(uri));
+
+        var aggregator = sp.GetService<IRunHealthAggregator>()
+            ?? throw new ArgumentException(
+                $"Diagnostics resource '{uri}' requires IRunHealthAggregator to be registered (set VAIS_RUN_HEALTH_STORE_CONNECTION).", nameof(uri));
+
+        var health = await aggregator.GetRunHealthAsync(runId, ct).ConfigureAwait(false);
+        var text = BuildDiagnoseJson(health).ToJsonString();
+        return new ReadResourceResult
+        {
+            Contents = [new TextResourceContents { Uri = uri, MimeType = "application/json", Text = text }],
+        };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

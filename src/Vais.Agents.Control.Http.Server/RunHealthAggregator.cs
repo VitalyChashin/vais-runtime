@@ -2,24 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using Vais.Agents;
+using Vais.Agents.Control;
 using Vais.Agents.Observability.GatewayEventStore;
 using Vais.Agents.Observability.McpGatewayEventStore;
 using Vais.Agents.Observability.RunHealthStore;
 using Vais.Agents.Observability.RunStore;
 
 namespace Vais.Agents.Control.Http;
-
-/// <summary>
-/// Rolls a whole run tree (the root run plus every agent-as-tool descendant and background sub-run)
-/// up into a single <see cref="RunHealth"/>. Composes the durable run-health signal store, the
-/// gateway/MCP event stores (queried by run), the graph run store, and the background-run tracker —
-/// so a run that "completed" still reveals every recovered or fatal mechanical failure beneath it.
-/// </summary>
-public interface IRunHealthAggregator
-{
-    /// <summary>Computes the health rollup for the run tree rooted at <paramref name="rootRunId"/>.</summary>
-    Task<RunHealth> GetRunHealthAsync(string rootRunId, CancellationToken ct = default);
-}
 
 /// <summary>
 /// Default <see cref="IRunHealthAggregator"/>: an on-demand read over the durable stores, keyed by
@@ -168,12 +157,24 @@ public sealed class RunHealthAggregator : IRunHealthAggregator
         return parts.Length >= 3 ? parts[^2] : null;
     }
 
-    /// <summary>
-    /// Builds an <c>AttributionPath</c> for an MCP-error signal and optionally refines
-    /// <paramref name="conceptName"/> from the first artifact that has a per-tool annotation.
-    /// The aggregator's MCP query is exact-run-id — no agent context available; path is
-    /// tool-name based with optional MCP server from the artifact.
-    /// </summary>
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RunHealthListItem>> ListDegradedRunsAsync(
+        FailureLevel minLevel = FailureLevel.Warning,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var clampedLimit = Math.Clamp(limit, 1, 200);
+        var rows = await _signals.ListDegradedRunsAsync(minLevel, since, clampedLimit, ct).ConfigureAwait(false);
+        return rows
+            .Select(r => new RunHealthListItem(
+                RunId: r.RunId,
+                Level: RunHealth.ToRunHealthLevel(r.WorstLevel).ToString().ToLowerInvariant(),
+                SignalCount: r.SignalCount,
+                LatestAt: r.LatestAt))
+            .ToList();
+    }
+
     /// <summary>
     /// Builds an <c>AttributionPath</c> for an MCP-error signal and optionally refines
     /// <paramref name="conceptName"/> from the first artifact that has a per-tool annotation.

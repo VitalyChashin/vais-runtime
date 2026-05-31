@@ -43,4 +43,19 @@ public interface IMcpGatewayEventStore
 
     /// <summary>Deletes events whose <c>created_at</c> is older than <paramref name="cutoff"/>.</summary>
     Task DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken ct = default);
+
+    /// <summary>
+    /// Part 2c (DM-4) — cross-run, cross-gateway search for failed MCP tool calls. Used by
+    /// <c>vais.failures concept=McpToolError</c> on the diagnostic MCP surface. Returns the
+    /// most recent failed events (<c>error_type IS NOT NULL</c>) matching the optional filters.
+    /// </summary>
+    /// <param name="toolName">Filter to a specific tool name; null returns all.</param>
+    /// <param name="since">Earliest <c>at</c> timestamp; null means no lower bound.</param>
+    /// <param name="limit">Maximum number of events to return (default 50).</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<McpGatewayEvent>> QueryFailedAcrossGatewaysAsync(
+        string? toolName = null,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default);
 }

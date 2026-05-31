@@ -128,4 +128,111 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
         cmd.Parameters.AddWithValue(cutoff);
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RunHealthSignalRecord>> QuerySignalsAsync(
+        string? conceptName = null,
+        string? agentName = null,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        // Build a parameterised WHERE clause matching only the filters that were supplied —
+        // each filter is opt-in so callers can compose narrow or wide queries without forking SQL.
+        var conditions = new List<string>();
+        var parameters = new List<object>();
+
+        if (!string.IsNullOrEmpty(conceptName))
+        {
+            conditions.Add($"concept_name = ${parameters.Count + 1}");
+            parameters.Add(conceptName);
+        }
+        if (!string.IsNullOrEmpty(agentName))
+        {
+            conditions.Add($"source = ${parameters.Count + 1}");
+            parameters.Add(agentName);
+        }
+        if (since.HasValue)
+        {
+            conditions.Add($"at >= ${parameters.Count + 1}");
+            parameters.Add(since.Value);
+        }
+
+        var where = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var limitParam = $"${parameters.Count + 1}";
+        parameters.Add(limit);
+
+        var sql = $"""
+            SELECT run_id, correlation_id, source, signal_kind, level, error_type, is_transient, at, concept_name, attribution_path
+            FROM vais_run_health_signals
+            {where}
+            ORDER BY at DESC
+            LIMIT {limitParam}
+            """;
+
+        await using var conn = await OpenAsync(ct).ConfigureAwait(false);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        foreach (var p in parameters)
+            cmd.Parameters.AddWithValue(p);
+
+        var result = new List<RunHealthSignalRecord>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            var runId = reader.GetString(0);
+            var correlationId = reader.IsDBNull(1) ? null : reader.GetString(1);
+            var source = reader.GetString(2);
+            var kind = Enum.TryParse<RunHealthSignalKind>(reader.GetString(3), out var k) ? k : RunHealthSignalKind.TurnFailed;
+            var level = (FailureLevel)reader.GetInt16(4);
+            var errorType = reader.IsDBNull(5) ? null : reader.GetString(5);
+            var isTransient = reader.GetBoolean(6);
+            var at = reader.GetFieldValue<DateTimeOffset>(7);
+            var conceptVal = reader.IsDBNull(8) ? null : reader.GetString(8);
+            var attributionPath = reader.IsDBNull(9) ? null : reader.GetString(9);
+            result.Add(new RunHealthSignalRecord(
+                runId, correlationId, source, kind, level, errorType, isTransient, at,
+                ConceptName: conceptVal, AttributionPath: attributionPath));
+        }
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RunHealthRunSummary>> ListDegradedRunsAsync(
+        FailureLevel minLevel = FailureLevel.Warning,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var effectiveSince = since ?? DateTimeOffset.UtcNow - TimeSpan.FromHours(24);
+        // GROUP BY run_id; filter rows with level >= minLevel; return aggregates.
+        const string sql = """
+            SELECT run_id, MAX(level) AS worst_level, COUNT(*) AS signal_count, MAX(at) AS latest_at
+            FROM vais_run_health_signals
+            WHERE at >= $1
+            GROUP BY run_id
+            HAVING MAX(level) >= $2
+            ORDER BY MAX(at) DESC
+            LIMIT $3
+            """;
+
+        await using var conn = await OpenAsync(ct).ConfigureAwait(false);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue(effectiveSince);
+        cmd.Parameters.AddWithValue((short)minLevel);
+        cmd.Parameters.AddWithValue(limit);
+
+        var result = new List<RunHealthRunSummary>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            result.Add(new RunHealthRunSummary(
+                RunId: reader.GetString(0),
+                WorstLevel: (FailureLevel)reader.GetInt16(1),
+                SignalCount: (int)reader.GetInt64(2),
+                LatestAt: reader.GetFieldValue<DateTimeOffset>(3)));
+        }
+        return result;
+    }
 }

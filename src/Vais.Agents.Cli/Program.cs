@@ -200,6 +200,12 @@ app.Configure(config =>
 
         branch.AddCommand<DiagnoseRunCommand>("run")
             .WithDescription("Show the mechanical-failure health rollup for a run (requires VAIS_RUN_HEALTH_STORE_CONNECTION).");
+
+        branch.AddCommand<DiagnoseRunsCommand>("runs")
+            .WithDescription("List recent degraded/failed runs (Part 2c cross-run rollup; requires VAIS_RUN_HEALTH_STORE_CONNECTION).");
+
+        branch.AddCommand<DiagnoseFailuresCommand>("failures")
+            .WithDescription("Search failure signals across runs (Part 2c cross-run failure search).");
     });
 
     config.AddBranch("config", branch =>
