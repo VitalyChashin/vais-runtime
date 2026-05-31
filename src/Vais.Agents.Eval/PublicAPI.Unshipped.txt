@@ -247,3 +247,6 @@ Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.ObserveAssertionScor
 Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.RecordSample(string! suiteId, string! status) -> void
 Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.SetWindowSampledCount(string! suiteId, double count) -> void
 Vais.Agents.Eval.Continuous.NoopContinuousScoringMetricSink.SetWindowSecondsRemaining(string! suiteId, double seconds) -> void
+Vais.Agents.Eval.EvalGatedFailurePriorWriter
+Vais.Agents.Eval.EvalGatedFailurePriorWriter.EvalGatedFailurePriorWriter(Vais.Agents.IEvalSuiteRegistry! registry, Vais.Agents.Eval.IEvalRunLifecycleManager! lifecycle, string! workspace, System.TimeSpan? timeout = null, Microsoft.Extensions.Logging.ILogger<Vais.Agents.Eval.EvalGatedFailurePriorWriter!>? logger = null) -> void
+Vais.Agents.Eval.EvalGatedFailurePriorWriter.EvaluateAsync(Vais.Agents.RecipeProposal! prior, System.Threading.CancellationToken ct) -> System.Threading.Tasks.Task<(bool Passed, string? Reason)>!

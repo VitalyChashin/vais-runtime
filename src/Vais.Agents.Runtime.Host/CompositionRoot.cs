@@ -518,11 +518,34 @@ internal static class CompositionRoot
             ? null
             : Path.Combine(failureOverlayDir, "induced.failure-ontology.json");
 
+        // FP-8: opt-in eval gate — corroborates FailurePrior quality before overlay write.
+        IFailurePriorEvalGate? evalGate = null;
+        var gateEnv = Environment.GetEnvironmentVariable("VAIS_FAILURE_PRIOR_EVAL_GATE");
+        if (string.Equals(gateEnv, "true", StringComparison.OrdinalIgnoreCase)
+            || gateEnv == "1"
+            || string.Equals(gateEnv, "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            var suiteRegistry = sp.GetService<IEvalSuiteRegistry>();
+            var lifecycleManager = sp.GetService<IEvalRunLifecycleManager>();
+            if (suiteRegistry is not null && lifecycleManager is not null)
+            {
+                var gateLogger = sp.GetService<ILogger<EvalGatedFailurePriorWriter>>();
+                evalGate = new EvalGatedFailurePriorWriter(
+                    suiteRegistry, lifecycleManager, workspace: "default", logger: gateLogger);
+            }
+            else
+            {
+                logger?.LogWarning(
+                    "VAIS_FAILURE_PRIOR_EVAL_GATE=true but IEvalSuiteRegistry or IEvalRunLifecycleManager is not registered — eval gate will not run.");
+            }
+        }
+
         return new OverlayPublishingRecipeProposalStoreDecorator(
             inner, writer, overlayPath, reloader, logger,
             throwOnSideEffectFailure: false,
             failureWriter: failureWriter,
-            failureOverlayPath: failureFilePath);
+            failureOverlayPath: failureFilePath,
+            evalGate: evalGate);
     }
 
     private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)

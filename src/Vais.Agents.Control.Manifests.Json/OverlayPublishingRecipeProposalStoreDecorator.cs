@@ -43,6 +43,7 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
     private readonly IOntologyOverlayWriter _writer;
     private readonly IFailureOntologyOverlayWriter? _failureWriter;
     private readonly IOntologyCatalogReloader? _reloader;
+    private readonly IFailurePriorEvalGate? _evalGate;
     private readonly string _overlayPath;
     private readonly string? _failureOverlayPath;
     private readonly Microsoft.Extensions.Logging.ILogger? _logger;
@@ -57,7 +58,8 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
         Microsoft.Extensions.Logging.ILogger? logger = null,
         bool throwOnSideEffectFailure = false,
         IFailureOntologyOverlayWriter? failureWriter = null,
-        string? failureOverlayPath = null)
+        string? failureOverlayPath = null,
+        IFailurePriorEvalGate? evalGate = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _writer = writer ?? throw new ArgumentNullException(nameof(writer));
@@ -68,6 +70,7 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
         _reloader = reloader;
         _logger = logger;
         _throwOnSideEffectFailure = throwOnSideEffectFailure;
+        _evalGate = evalGate;
     }
 
     /// <inheritdoc />
@@ -85,6 +88,25 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
     /// <inheritdoc />
     public async ValueTask<RecipeProposal?> DecideAsync(string proposalId, bool approve, string decidedBy, CancellationToken cancellationToken = default)
     {
+        // Run the eval gate BEFORE the inner store commits so that a gate-reject can flip the
+        // proposal to Rejected without hitting the sticky-decision invariant (once Approved the
+        // store ignores further Decide calls).
+        if (approve && _evalGate is not null)
+        {
+            var current = await _inner.GetAsync(proposalId, cancellationToken).ConfigureAwait(false);
+            if (current is { Kind: RecipeProposalKind.FailurePrior, Status: RecipeProposalStatus.Pending })
+            {
+                var (passed, reason) = await _evalGate.EvaluateAsync(current, cancellationToken).ConfigureAwait(false);
+                if (!passed)
+                {
+                    _logger?.LogWarning(
+                        "FailurePrior proposal {ProposalId} blocked by eval gate: {Reason}. Flipping to Rejected.",
+                        proposalId, reason);
+                    return await _inner.DecideAsync(proposalId, approve: false, decidedBy: "eval-gate", cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
         var result = await _inner.DecideAsync(proposalId, approve, decidedBy, cancellationToken).ConfigureAwait(false);
         if (result is null || result.Status != RecipeProposalStatus.Approved) return result;
 
