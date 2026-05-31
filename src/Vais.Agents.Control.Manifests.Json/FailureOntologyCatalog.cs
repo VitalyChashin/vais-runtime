@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Vais.Agents.Control.Manifests;
 
@@ -30,7 +31,8 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
         if (overlay.Concepts is not null)
         {
             foreach (var c in overlay.Concepts)
-                all[c.Name] = c;
+                // Normalize null SourceKinds (may occur when JSON omits the field) to empty list.
+                all[c.Name] = c.SourceKinds is null ? c with { SourceKinds = [] } : c;
         }
 
         _all = all;
@@ -80,7 +82,10 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
 /// </summary>
 public static class FailureOntologyOverlayLoader
 {
-    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     /// <summary>Loads an overlay from a JSON file at <paramref name="path"/>.</summary>
     public static FailureOntologyOverlay LoadFromFile(string path)
