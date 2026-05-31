@@ -416,7 +416,12 @@ Vais.Agents.Control.Http.RunHealthSignalDto
 Vais.Agents.Control.Http.RunHealthSignalDto.<Clone>$() -> Vais.Agents.Control.Http.RunHealthSignalDto!
 Vais.Agents.Control.Http.RunHealthSignalDto.At.get -> System.DateTimeOffset
 Vais.Agents.Control.Http.RunHealthSignalDto.At.init -> void
-Vais.Agents.Control.Http.RunHealthSignalDto.Deconstruct(out string! Source, out string! Kind, out string! Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.Control.Http.RunHealthSignalDto.Deconstruct(out string! Source, out string! Kind, out string! Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.Deconstruct(out string! Source, out string! Kind, out string! Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At, out string? ConceptName, out string? AttributionPath) -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.ConceptName.get -> string?
+Vais.Agents.Control.Http.RunHealthSignalDto.ConceptName.init -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.AttributionPath.get -> string?
+Vais.Agents.Control.Http.RunHealthSignalDto.AttributionPath.init -> void
 Vais.Agents.Control.Http.RunHealthSignalDto.Equals(Vais.Agents.Control.Http.RunHealthSignalDto? other) -> bool
 Vais.Agents.Control.Http.RunHealthSignalDto.ErrorType.get -> string?
 Vais.Agents.Control.Http.RunHealthSignalDto.ErrorType.init -> void
@@ -426,7 +431,8 @@ Vais.Agents.Control.Http.RunHealthSignalDto.Kind.get -> string!
 Vais.Agents.Control.Http.RunHealthSignalDto.Kind.init -> void
 Vais.Agents.Control.Http.RunHealthSignalDto.Level.get -> string!
 Vais.Agents.Control.Http.RunHealthSignalDto.Level.init -> void
-Vais.Agents.Control.Http.RunHealthSignalDto.RunHealthSignalDto(string! Source, string! Kind, string! Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.Control.Http.RunHealthSignalDto.RunHealthSignalDto(string! Source, string! Kind, string! Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.Control.Http.RunHealthSignalDto.RunHealthSignalDto(string! Source, string! Kind, string! Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At, string? ConceptName = null, string? AttributionPath = null) -> void
 Vais.Agents.Control.Http.RunHealthSignalDto.Source.get -> string!
 Vais.Agents.Control.Http.RunHealthSignalDto.Source.init -> void
 override Vais.Agents.Control.Http.RunHealthDto.Equals(object? obj) -> bool
@@ -1124,10 +1130,14 @@ override Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtension
 override Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.ToString() -> string!
 static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.operator !=(Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? left, Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? right) -> bool
 static Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest.operator ==(Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? left, Vais.Agents.Control.Http.AgentControlPlaneEndpointRouteBuilderExtensions.RecipeDecideRequest? right) -> bool
-Vais.Agents.Control.Http.IRunHealthAggregator
-Vais.Agents.Control.Http.IRunHealthAggregator.GetRunHealthAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RunHealth!>!
+*REMOVED*Vais.Agents.Control.Http.IRunHealthAggregator
+*REMOVED*Vais.Agents.Control.Http.IRunHealthAggregator.GetRunHealthAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RunHealth!>!
 Vais.Agents.Control.Http.RunHealthAggregator
 Vais.Agents.Control.Http.RunHealthAggregator.GetRunHealthAsync(string! rootRunId, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Vais.Agents.RunHealth!>!
 *REMOVED*Vais.Agents.Control.Http.RunHealthAggregator.RunHealthAggregator(Vais.Agents.Observability.RunHealthStore.IRunHealthStore! signals, Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore! gateway, Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore! mcp, Vais.Agents.Observability.RunStore.IRunStore! runs, Vais.Agents.IBackgroundAgentTracker! background) -> void
 *REMOVED*Vais.Agents.Control.Http.RunHealthAggregator.RunHealthAggregator(Vais.Agents.Observability.RunHealthStore.IRunHealthStore! signals, Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore! gateway, Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore! mcp, Vais.Agents.Observability.RunStore.IRunStore! runs, Vais.Agents.IBackgroundAgentTracker! background, Vais.Agents.IFailureOntologyCatalog? catalog = null) -> void
 Vais.Agents.Control.Http.RunHealthAggregator.RunHealthAggregator(Vais.Agents.Observability.RunHealthStore.IRunHealthStore! signals, Vais.Agents.Observability.GatewayEventStore.IGatewayEventStore! gateway, Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore! mcp, Vais.Agents.Observability.RunStore.IRunStore! runs, Vais.Agents.IBackgroundAgentTracker! background, Vais.Agents.IFailureOntologyCatalog? catalog = null, Vais.Agents.IFailureAttributionRegistry? attributionRegistry = null) -> void
+Vais.Agents.Control.Http.FailureSearchService
+Vais.Agents.Control.Http.FailureSearchService.FailureSearchService(Vais.Agents.Observability.RunHealthStore.IRunHealthStore! runHealth, Vais.Agents.Observability.McpGatewayEventStore.IMcpGatewayEventStore! mcp, Vais.Agents.IFailureOntologyCatalog? catalog = null, Vais.Agents.IFailureAttributionRegistry? attributionRegistry = null) -> void
+Vais.Agents.Control.Http.FailureSearchService.SearchAsync(Vais.Agents.Control.FailureSearchQuery! query, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.FailureSearchResult!>!>!
+Vais.Agents.Control.Http.RunHealthAggregator.ListDegradedRunsAsync(Vais.Agents.FailureLevel minLevel = Vais.Agents.FailureLevel.Warning, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Control.RunHealthListItem!>!>!

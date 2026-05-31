@@ -70,13 +70,17 @@ public sealed record RunHealthDto(
 /// <param name="ErrorType">CLR/error type name when known, or <see langword="null"/>.</param>
 /// <param name="IsTransient">Whether the underlying failure was classified transient.</param>
 /// <param name="At">UTC timestamp of the signal.</param>
+/// <param name="ConceptName">Ontology concept name from <see cref="IFailureOntologyCatalog"/> (Part 2a). Null on legacy rows.</param>
+/// <param name="AttributionPath">Deployment-grounded attribution from <c>FailureAttributionArtifact</c> (Part 2b). Null when no artifact bound.</param>
 public sealed record RunHealthSignalDto(
     string Source,
     string Kind,
     string Level,
     string? ErrorType,
     bool IsTransient,
-    DateTimeOffset At);
+    DateTimeOffset At,
+    string? ConceptName = null,
+    string? AttributionPath = null);
 
 /// <summary>DTO for a single node execution returned by run-history endpoints.</summary>
 /// <param name="RunId">Identifier of the containing run.</param>

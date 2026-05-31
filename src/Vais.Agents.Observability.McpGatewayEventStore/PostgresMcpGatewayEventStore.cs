@@ -149,6 +149,51 @@ internal sealed class PostgresMcpGatewayEventStore : IMcpGatewayEventStore
             _logger.LogInformation("McpGatewayEventStore pruned {Count} events older than {Cutoff:u}.", deleted, cutoff);
     }
 
+    public async Task<IReadOnlyList<McpGatewayEvent>> QueryFailedAcrossGatewaysAsync(
+        string? toolName = null,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default)
+    {
+        var conditions = new List<string> { "error_type IS NOT NULL" };
+        var parameters = new List<object>();
+        if (!string.IsNullOrEmpty(toolName))
+        {
+            conditions.Add($"tool_name = ${parameters.Count + 1}");
+            parameters.Add(toolName);
+        }
+        if (since.HasValue)
+        {
+            conditions.Add($"at >= ${parameters.Count + 1}");
+            parameters.Add(since.Value);
+        }
+
+        var limitParam = $"${parameters.Count + 1}";
+        parameters.Add(limit);
+
+        var sql = $"""
+            SELECT event_id, gateway_id, tool_name, event_kind, duration_ms, cache_hit,
+                   blocked_reason, error_type, at, correlation_id, run_id,
+                   input_json, output_json
+            FROM vais_mcp_gateway_events
+            WHERE {string.Join(" AND ", conditions)}
+            ORDER BY at DESC
+            LIMIT {limitParam}
+            """;
+
+        await using var conn = await OpenAsync(ct).ConfigureAwait(false);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        foreach (var p in parameters)
+            cmd.Parameters.AddWithValue(p);
+
+        var result = new List<McpGatewayEvent>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+            result.Add(ReadEvent(reader));
+        return result;
+    }
+
     private async ValueTask<NpgsqlConnection> OpenAsync(CancellationToken ct)
     {
         var conn = new NpgsqlConnection(_connectionString);

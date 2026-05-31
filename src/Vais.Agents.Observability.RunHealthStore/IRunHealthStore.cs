@@ -33,7 +33,60 @@ public interface IRunHealthStore
 
     /// <summary>Deletes signals whose <c>created_at</c> is older than <paramref name="cutoff"/>.</summary>
     Task DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken ct = default);
+
+    /// <summary>
+    /// Part 2c (DM-4) — cross-run signal search. Returns the most recent bus-sourced signals
+    /// matching the optional filters. Concept matching is exact on <c>concept_name</c>;
+    /// the caller is expected to expand the catalog parent walk (via <c>IFailureOntologyCatalog.IsMatchOrDescendant</c>)
+    /// and pass the resolved concept set, or filter post-fetch.
+    /// MCP / LLM gateway / NodeFailed / background failures are NOT in this store — they live in
+    /// <c>IMcpGatewayEventStore</c> / <c>IGatewayEventStore</c> / the run + background stores and
+    /// are synthesised per-run by the aggregator. Cross-run queries for those concepts must hit
+    /// their respective stores.
+    /// </summary>
+    /// <param name="conceptName">Filter to a specific concept name (exact match). Null returns all.</param>
+    /// <param name="agentName">Filter to signals whose Source equals this agent or whose CorrelationId matches. Null returns all.</param>
+    /// <param name="since">Earliest <c>at</c> timestamp to include. Null means no lower bound.</param>
+    /// <param name="limit">Maximum number of signals to return (default 50).</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<RunHealthSignalRecord>> QuerySignalsAsync(
+        string? conceptName = null,
+        string? agentName = null,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Part 2c (DM-3) — cross-run rollup. Lists recent runs that have at least one persisted
+    /// mechanical-failure signal, computing each run's worst level (warning|error) on the fly.
+    /// Caveat: runs whose only failures came from the MCP / LLM gateway / graph node stores
+    /// (synthesised at read time by the aggregator) will NOT appear here. v1 trades completeness
+    /// for cost — a full cross-run rollup requires either pre-computing per-run health on write
+    /// or fanning out the aggregator across every recent run.
+    /// </summary>
+    /// <param name="minLevel">Minimum level to include: <see cref="FailureLevel.Warning"/> for degraded+failed, <see cref="FailureLevel.Error"/> for failed only.</param>
+    /// <param name="since">Earliest signal timestamp to consider; null defaults to 24h ago.</param>
+    /// <param name="limit">Maximum runs to return (default 50).</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<IReadOnlyList<RunHealthRunSummary>> ListDegradedRunsAsync(
+        FailureLevel minLevel = FailureLevel.Warning,
+        DateTimeOffset? since = null,
+        int limit = 50,
+        CancellationToken ct = default);
 }
+
+/// <summary>
+/// Per-run summary row returned by <see cref="IRunHealthStore.ListDegradedRunsAsync"/>.
+/// </summary>
+/// <param name="RunId">The run id.</param>
+/// <param name="WorstLevel">Worst <see cref="FailureLevel"/> across the run's persisted signals.</param>
+/// <param name="SignalCount">Number of persisted signals for this run in the queried window.</param>
+/// <param name="LatestAt">Timestamp of the most recent signal in the window.</param>
+public sealed record RunHealthRunSummary(
+    string RunId,
+    FailureLevel WorstLevel,
+    int SignalCount,
+    DateTimeOffset LatestAt);
 
 /// <summary>
 /// Write shape for <see cref="IRunHealthStore.RecordSignalAsync"/>: a <see cref="RunHealthSignal"/>

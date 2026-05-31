@@ -508,7 +508,7 @@ public static class AgentControlPlaneEndpointRouteBuilderExtensions
 
     private static RunHealthSignalDto ToRunHealthSignalDto(RunHealthSignal s) =>
         new(s.Source, ToCamel(s.Kind.ToString()), s.Level.ToString().ToLowerInvariant(),
-            s.ErrorType, s.IsTransient, s.At);
+            s.ErrorType, s.IsTransient, s.At, s.ConceptName, s.AttributionPath);
 
     private static string ToCamel(string pascal) =>
         string.IsNullOrEmpty(pascal) ? pascal : char.ToLowerInvariant(pascal[0]) + pascal[1..];

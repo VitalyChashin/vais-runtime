@@ -50,3 +50,25 @@ override Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ToString
 static Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.operator !=(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? left, Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? right) -> bool
 static Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.operator ==(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? left, Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? right) -> bool
 static Vais.Agents.Observability.RunHealthStore.RunHealthStoreExtensions.AddRunHealthStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Vais.Agents.Observability.RunHealthStore.RunHealthStoreOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.QuerySignalsAsync(string? conceptName = null, string? agentName = null, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord!>!>!
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.QuerySignalsAsync(string? conceptName = null, string? agentName = null, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord!>!>!
+Vais.Agents.Observability.RunHealthStore.IRunHealthStore.ListDegradedRunsAsync(Vais.Agents.FailureLevel minLevel = Vais.Agents.FailureLevel.Warning, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary!>!>!
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.<Clone>$() -> Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary!
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.Deconstruct(out string! RunId, out Vais.Agents.FailureLevel WorstLevel, out int SignalCount, out System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.Equals(Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary? other) -> bool
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.LatestAt.get -> System.DateTimeOffset
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.LatestAt.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.RunHealthRunSummary(string! RunId, Vais.Agents.FailureLevel WorstLevel, int SignalCount, System.DateTimeOffset LatestAt) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.RunId.get -> string!
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.RunId.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.SignalCount.get -> int
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.SignalCount.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.WorstLevel.get -> Vais.Agents.FailureLevel
+Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.WorstLevel.init -> void
+override Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.Equals(object? obj) -> bool
+override Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.GetHashCode() -> int
+override Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.ToString() -> string!
+static Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.operator !=(Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary? left, Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary? right) -> bool
+static Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary.operator ==(Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary? left, Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary? right) -> bool
+Vais.Agents.Observability.RunHealthStore.PostgresRunHealthStore.ListDegradedRunsAsync(Vais.Agents.FailureLevel minLevel = Vais.Agents.FailureLevel.Warning, System.DateTimeOffset? since = null, int limit = 50, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Vais.Agents.Observability.RunHealthStore.RunHealthRunSummary!>!>!
