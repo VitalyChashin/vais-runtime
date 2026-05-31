@@ -17,6 +17,7 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
 {
     private readonly IReadOnlyDictionary<string, FailureConcept> _all;
     private readonly IReadOnlyDictionary<RunHealthSignalKind, FailureConcept> _byKind;
+    private readonly IReadOnlyDictionary<string, FailureAttributionOverlay> _attributions;
 
     /// <summary>Builds the catalog from the given overlay merged over the auto-derived base.</summary>
     public OverlaidFailureOntologyCatalog(FailureOntologyOverlay overlay)
@@ -36,6 +37,8 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
         }
 
         _all = all;
+        _attributions = overlay.Attributions
+            ?? (IReadOnlyDictionary<string, FailureAttributionOverlay>)new Dictionary<string, FailureAttributionOverlay>();
 
         // For kind-based lookup, base catalog wins (only base concepts have SourceKinds).
         _byKind = base_.Concepts
@@ -73,6 +76,23 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
             current = Get(current.ParentName);
         }
         return false;
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(
+        string conceptName)
+    {
+        var results = new List<(string, FailurePriorBody)>();
+        foreach (var (path, attrOverlay) in _attributions)
+        {
+            if (attrOverlay.FailurePriors is null) continue;
+            foreach (var prior in attrOverlay.FailurePriors)
+            {
+                if (string.Equals(prior.ConceptName, conceptName, StringComparison.Ordinal))
+                    results.Add((path, prior));
+            }
+        }
+        return results;
     }
 }
 
@@ -119,15 +139,28 @@ public static class FailureOntologyOverlayLoader
 
         var concepts = new List<FailureConcept>();
         var rules = new List<FailureSeverityRule>();
+        var attributions = new Dictionary<string, FailureAttributionOverlay>(StringComparer.Ordinal);
         foreach (var file in files)
         {
             var overlay = LoadFromFile(file);
             if (overlay.Concepts is not null) concepts.AddRange(overlay.Concepts);
             if (overlay.SeverityRules is not null) rules.AddRange(overlay.SeverityRules);
+            if (overlay.Attributions is not null)
+            {
+                foreach (var (path, attr) in overlay.Attributions)
+                {
+                    if (!attributions.TryGetValue(path, out var existing) || existing.FailurePriors is null)
+                        attributions[path] = attr;
+                    else if (attr.FailurePriors is not null)
+                        attributions[path] = new FailureAttributionOverlay(
+                            [.. existing.FailurePriors, .. attr.FailurePriors]);
+                }
+            }
         }
 
         return new FailureOntologyOverlay(
             Concepts: concepts.Count > 0 ? concepts : null,
-            SeverityRules: rules.Count > 0 ? rules : null);
+            SeverityRules: rules.Count > 0 ? rules : null,
+            Attributions: attributions.Count > 0 ? attributions : null);
     }
 }

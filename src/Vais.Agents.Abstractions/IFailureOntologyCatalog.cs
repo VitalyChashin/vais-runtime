@@ -45,4 +45,11 @@ public interface IFailureOntologyCatalog
     /// is a descendant of it. Used by concept-filtered eval assertions.
     /// </summary>
     bool IsMatchOrDescendant(string candidateName, string filterName);
+
+    /// <summary>
+    /// Returns all inducted failure priors whose <see cref="FailurePriorBody.ConceptName"/>
+    /// matches <paramref name="conceptName"/>, paired with their attribution path.
+    /// Returns an empty list for catalogs with no overlay (base or auto-derived).
+    /// </summary>
+    IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(string conceptName);
 }
