@@ -454,6 +454,22 @@ internal static class DesignMcpToolHandlers
             .Select(c => c.Name)
             .ToList();
         node["children"] = new JsonArray([.. children.Select(n => (JsonNode?)JsonValue.Create(n))]);
+
+        // Part 3 FP-11 read path: include inducted failure priors for this concept.
+        var priors = catalog.GetPriorsForConcept(conceptName);
+        if (priors.Count > 0)
+        {
+            node["priors"] = new JsonArray([.. priors.Select(p => (JsonNode?)new JsonObject
+            {
+                ["attributionPath"] = p.AttributionPath,
+                ["agentName"] = p.Prior.AgentName,
+                ["toolName"] = p.Prior.ToolName,
+                ["failureCount"] = p.Prior.FailureCount,
+                ["firstSeen"] = p.Prior.FirstSeen.ToString("o"),
+                ["lastSeen"] = p.Prior.LastSeen.ToString("o"),
+            })]);
+        }
+
         return node;
     }
 

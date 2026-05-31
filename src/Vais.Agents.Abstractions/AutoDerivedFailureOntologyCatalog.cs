@@ -100,4 +100,8 @@ public sealed class AutoDerivedFailureOntologyCatalog : IFailureOntologyCatalog
         }
         return false;
     }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(
+        string conceptName) => [];
 }

@@ -257,5 +257,8 @@ public sealed class FailureTaxonomyTests
             }
             return false;
         }
+
+        public IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(
+            string conceptName) => [];
     }
 }

@@ -2158,6 +2158,7 @@ Vais.Agents.AutoDerivedFailureOntologyCatalog.AutoDerivedFailureOntologyCatalog(
 Vais.Agents.AutoDerivedFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
 Vais.Agents.AutoDerivedFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
 Vais.Agents.AutoDerivedFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.AutoDerivedFailureOntologyCatalog.GetPriorsForConcept(string! conceptName) -> System.Collections.Generic.IReadOnlyList<(string! AttributionPath, Vais.Agents.FailurePriorBody! Prior)>!
 Vais.Agents.AutoDerivedFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
 Vais.Agents.AutoDerivedFailureOntologyCatalog.OntologyVersion.get -> string!
 Vais.Agents.FailureAttributionOverlay
@@ -2245,6 +2246,7 @@ Vais.Agents.IFailureOntologyCatalog
 Vais.Agents.IFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
 Vais.Agents.IFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
 Vais.Agents.IFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.IFailureOntologyCatalog.GetPriorsForConcept(string! conceptName) -> System.Collections.Generic.IReadOnlyList<(string! AttributionPath, Vais.Agents.FailurePriorBody! Prior)>!
 Vais.Agents.IFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
 Vais.Agents.IFailureOntologyCatalog.OntologyVersion.get -> string!
 override Vais.Agents.FailureConcept.Equals(object? obj) -> bool

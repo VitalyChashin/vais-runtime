@@ -460,6 +460,7 @@ Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.Concepts.get -> System.Collections.Generic.IReadOnlyCollection<Vais.Agents.FailureConcept!>!
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.FromSignalKind(Vais.Agents.RunHealthSignalKind kind) -> Vais.Agents.FailureConcept?
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.Get(string! conceptName) -> Vais.Agents.FailureConcept?
+Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.GetPriorsForConcept(string! conceptName) -> System.Collections.Generic.IReadOnlyList<(string! AttributionPath, Vais.Agents.FailurePriorBody! Prior)>!
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.IsMatchOrDescendant(string! candidateName, string! filterName) -> bool
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.OntologyVersion.get -> string!
 Vais.Agents.Control.Manifests.OverlaidFailureOntologyCatalog.OverlaidFailureOntologyCatalog(Vais.Agents.FailureOntologyOverlay! overlay) -> void
