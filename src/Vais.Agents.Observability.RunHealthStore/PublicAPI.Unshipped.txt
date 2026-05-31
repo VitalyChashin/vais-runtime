@@ -16,7 +16,8 @@ Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.At.get -> System.
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.At.init -> void
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.CorrelationId.get -> string?
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.CorrelationId.init -> void
-Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Deconstruct(out string! RunId, out string? CorrelationId, out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Deconstruct(out string! RunId, out string? CorrelationId, out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Deconstruct(out string! RunId, out string? CorrelationId, out string! Source, out Vais.Agents.RunHealthSignalKind Kind, out Vais.Agents.FailureLevel Level, out string? ErrorType, out bool IsTransient, out System.DateTimeOffset At, out string? ConceptName, out string? AttributionPath) -> void
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Equals(Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord? other) -> bool
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ErrorType.get -> string?
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ErrorType.init -> void
@@ -26,7 +27,12 @@ Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Kind.get -> Vais.
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Kind.init -> void
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Level.get -> Vais.Agents.FailureLevel
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Level.init -> void
-Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunHealthSignalRecord(string! RunId, string? CorrelationId, string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+*REMOVED*Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunHealthSignalRecord(string! RunId, string? CorrelationId, string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunHealthSignalRecord(string! RunId, string? CorrelationId, string! Source, Vais.Agents.RunHealthSignalKind Kind, Vais.Agents.FailureLevel Level, string? ErrorType, bool IsTransient, System.DateTimeOffset At, string? ConceptName = null, string? AttributionPath = null) -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ConceptName.get -> string?
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.ConceptName.init -> void
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.AttributionPath.get -> string?
+Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.AttributionPath.init -> void
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunId.get -> string!
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.RunId.init -> void
 Vais.Agents.Observability.RunHealthStore.RunHealthSignalRecord.Source.get -> string!

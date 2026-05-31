@@ -73,13 +73,17 @@ public enum RunHealthSignalKind
 /// <param name="ErrorType">CLR/error type name when known; otherwise <see langword="null"/>.</param>
 /// <param name="IsTransient">Whether the underlying failure was classified transient (retryable).</param>
 /// <param name="At">UTC timestamp of the signal.</param>
+/// <param name="ConceptName">Ontology concept name from <see cref="IFailureOntologyCatalog"/> — e.g. <c>McpToolError</c>. Stamped by <c>RunHealthSignalSubscriber</c>; <see langword="null"/> for legacy rows (aggregator falls back to <c>FromSignalKind</c>).</param>
+/// <param name="AttributionPath">Deployment-grounded attribution from the per-agent <c>FailureOntologyRef</c> binding. Populated by Part 2b; <see langword="null"/> in Part 2a.</param>
 public sealed record RunHealthSignal(
     string Source,
     RunHealthSignalKind Kind,
     FailureLevel Level,
     string? ErrorType,
     bool IsTransient,
-    DateTimeOffset At);
+    DateTimeOffset At,
+    string? ConceptName = null,
+    string? AttributionPath = null);
 
 /// <summary>
 /// The per-run health rollup: the worst level across the run tree, the attributed leaf-failure

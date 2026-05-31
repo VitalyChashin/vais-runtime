@@ -48,6 +48,8 @@ public interface IRunHealthStore
 /// <param name="ErrorType">CLR/error type name when known.</param>
 /// <param name="IsTransient">Whether the underlying failure was classified transient.</param>
 /// <param name="At">UTC timestamp of the signal — part of the dedup key.</param>
+/// <param name="ConceptName">Ontology concept name stamped by <c>RunHealthSignalSubscriber</c>. Null for pre-2a rows.</param>
+/// <param name="AttributionPath">Deployment attribution from Part 2b. Null in Part 2a.</param>
 public sealed record RunHealthSignalRecord(
     string RunId,
     string? CorrelationId,
@@ -56,4 +58,6 @@ public sealed record RunHealthSignalRecord(
     FailureLevel Level,
     string? ErrorType,
     bool IsTransient,
-    DateTimeOffset At);
+    DateTimeOffset At,
+    string? ConceptName = null,
+    string? AttributionPath = null);

@@ -46,6 +46,8 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
             );
             CREATE INDEX IF NOT EXISTS idx_vais_run_health_run_id ON vais_run_health_signals(run_id);
             CREATE INDEX IF NOT EXISTS idx_vais_run_health_correlation_id ON vais_run_health_signals(correlation_id) WHERE correlation_id IS NOT NULL;
+            ALTER TABLE vais_run_health_signals ADD COLUMN IF NOT EXISTS concept_name TEXT;
+            ALTER TABLE vais_run_health_signals ADD COLUMN IF NOT EXISTS attribution_path TEXT;
             """;
 
         await using var conn = await OpenAsync(ct).ConfigureAwait(false);
@@ -61,8 +63,8 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
 
         const string sql = """
             INSERT INTO vais_run_health_signals
-                (run_id, correlation_id, signal_kind, level, source, error_type, is_transient, at)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                (run_id, correlation_id, signal_kind, level, source, error_type, is_transient, at, concept_name, attribution_path)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             ON CONFLICT (run_id, at, signal_kind, source) DO NOTHING
             """;
 
@@ -77,6 +79,8 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
         cmd.Parameters.AddWithValue((object?)record.ErrorType ?? DBNull.Value);
         cmd.Parameters.AddWithValue(record.IsTransient);
         cmd.Parameters.AddWithValue(record.At);
+        cmd.Parameters.AddWithValue((object?)record.ConceptName ?? DBNull.Value);
+        cmd.Parameters.AddWithValue((object?)record.AttributionPath ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
 
@@ -86,7 +90,7 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
         // The run tree: the exact root plus all agent-as-tool descendants, whose run ids are
         // "{parentRun}__{name}__{hash}" — so every descendant is prefixed by "{root}__".
         const string sql = """
-            SELECT source, signal_kind, level, error_type, is_transient, at
+            SELECT source, signal_kind, level, error_type, is_transient, at, concept_name, attribution_path
             FROM vais_run_health_signals
             WHERE run_id = $1 OR starts_with(run_id, $2)
             ORDER BY at
@@ -108,7 +112,9 @@ public sealed class PostgresRunHealthStore : IRunHealthStore
             var errorType = reader.IsDBNull(3) ? null : reader.GetString(3);
             var isTransient = reader.GetBoolean(4);
             var at = reader.GetFieldValue<DateTimeOffset>(5);
-            result.Add(new RunHealthSignal(source, kind, level, errorType, isTransient, at));
+            var conceptName = reader.IsDBNull(6) ? null : reader.GetString(6);
+            var attributionPath = reader.IsDBNull(7) ? null : reader.GetString(7);
+            result.Add(new RunHealthSignal(source, kind, level, errorType, isTransient, at, conceptName, attributionPath));
         }
         return result;
     }

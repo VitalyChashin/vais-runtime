@@ -769,6 +769,21 @@ internal static class CompositionRoot
                 "SELECT COUNT(*) FROM vais_agent_runs LIMIT 1"));
         }
 
+        // Part 2a — shared failure taxonomy catalog. When VAIS_FAILURE_ONTOLOGY_OVERLAY_PATH is set,
+        // loads a *.failure-ontology.json overlay from that directory and builds an OverlaidFailureOntologyCatalog.
+        // Otherwise falls back to the auto-derived base (no I/O). The catalog is registered unconditionally
+        // so RunHealthSignalSubscriber and the eval assertions can always resolve it.
+        var overlayPath = options.FailureOntologyOverlayPath;
+        if (!string.IsNullOrWhiteSpace(overlayPath))
+        {
+            var overlay = FailureOntologyOverlayLoader.LoadAllFromDirectory(overlayPath);
+            services.AddSingleton<IFailureOntologyCatalog>(new OverlaidFailureOntologyCatalog(overlay));
+        }
+        else
+        {
+            services.AddSingleton<IFailureOntologyCatalog>(AutoDerivedFailureOntologyCatalog.Instance);
+        }
+
         // Run-health signal store. When VAIS_RUN_HEALTH_STORE_CONNECTION is set, the
         // RunHealthSignalSubscriber persists the mechanical-failure events from the agent event
         // bus (recovered tool errors, LLM retries/fallbacks, degraded turns, guardrail trips,
