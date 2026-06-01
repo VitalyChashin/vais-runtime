@@ -138,7 +138,7 @@ File path: `local-dev/overlays/failure/induced.failure-ontology.json` (on the ho
 
 ### Step 6 — Confirm diagnose visibility (MCP)
 
-After restarting the runtime so `FailureOntologyOverlayLoader.LoadAllFromDirectory` picks up the updated file, read the `McpToolError` concept via the `/design-mcp` MCP server:
+After approving and confirming below that the prior is visible without restart, read the `McpToolError` concept via the `/design-mcp` MCP server:
 
 ```
 POST http://localhost:8080/design-mcp
@@ -212,12 +212,6 @@ This shows the six underlying failure signals that drove the induction. Use the 
 
 ## Catalog hot-reload
 
-`IFailureOntologyCatalog` is registered at startup from files on disk (`FailureOntologyOverlayLoader.LoadAllFromDirectory`). The overlay file written by `vais recipes approve` is not hot-reloaded by the current `IOntologyCatalogReloader` implementation (which targets the behavioural ontology). After each new approval:
+`IFailureOntologyCatalog` is backed by `HotReloadableFailureOntologyCatalog`, which is registered as both `IFailureOntologyCatalog` and `IFailureOntologyCatalogReloader`. When `vais recipes approve` writes an approved `FailurePrior` overlay via `OverlayPublishingRecipeProposalStoreDecorator`, the decorator immediately calls `IFailureOntologyCatalogReloader.ReloadAsync()`, which re-runs `FailureOntologyOverlayLoader.LoadAllFromDirectory` and atomically swaps the in-process catalog. The new prior is visible in `vais-ontology://Failure/{concept}` on the next request — **no runtime restart required**.
 
-```powershell
-cd local-dev
-.\dev.ps1 stop
-.\dev.ps1 start
-```
-
-A full hot-reload path for the failure catalog is tracked at `plans/gaps/failure-ontology-catalog-hot-reload-gap-2026-05-31.md`.
+A runtime restart is only needed if the overlay files are edited directly on disk outside the normal `vais recipes approve` flow.
