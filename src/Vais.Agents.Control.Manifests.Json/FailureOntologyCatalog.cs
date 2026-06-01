@@ -97,6 +97,73 @@ public sealed class OverlaidFailureOntologyCatalog : IFailureOntologyCatalog
 }
 
 /// <summary>
+/// Hot-reloadable facade over <see cref="IFailureOntologyCatalog"/>. Mirrors
+/// <see cref="HotReloadableOntologyCatalog"/> but targets the failure catalog.
+/// The composition root registers a single instance as both
+/// <see cref="IFailureOntologyCatalog"/> and <see cref="IFailureOntologyCatalogReloader"/>.
+/// </summary>
+/// <remarks>
+/// Reads are lock-free (Volatile.Read on the inner reference). Reload is single-flight:
+/// only one rebuild executes at a time; subsequent callers see the post-swap catalog on
+/// the next read. The rebuild re-runs <see cref="FailureOntologyOverlayLoader.LoadAllFromDirectory"/>
+/// against the configured overlay directory — the same directory-glob semantics used at startup.
+/// </remarks>
+public sealed class HotReloadableFailureOntologyCatalog
+    : IFailureOntologyCatalog, IFailureOntologyCatalogReloader
+{
+    private IFailureOntologyCatalog _inner;
+    private readonly string _overlayPath;
+    private readonly object _reloadLock = new();
+
+    /// <summary>Build the facade. <paramref name="initial"/> is the catalog at startup.</summary>
+    public HotReloadableFailureOntologyCatalog(IFailureOntologyCatalog initial, string overlayPath)
+    {
+        ArgumentNullException.ThrowIfNull(initial);
+        ArgumentException.ThrowIfNullOrWhiteSpace(overlayPath);
+        _inner = initial;
+        _overlayPath = overlayPath;
+    }
+
+    private IFailureOntologyCatalog Current => Volatile.Read(ref _inner);
+
+    /// <inheritdoc />
+    public Task<IFailureOntologyCatalog> ReloadAsync(CancellationToken cancellationToken = default)
+    {
+        IFailureOntologyCatalog rebuilt;
+        lock (_reloadLock)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var overlay = FailureOntologyOverlayLoader.LoadAllFromDirectory(_overlayPath);
+            rebuilt = new OverlaidFailureOntologyCatalog(overlay);
+            Volatile.Write(ref _inner, rebuilt);
+        }
+        return Task.FromResult(rebuilt);
+    }
+
+    // ── IFailureOntologyCatalog forwarding ────────────────────────────────────
+
+    /// <inheritdoc />
+    public string OntologyVersion => Current.OntologyVersion;
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<FailureConcept> Concepts => Current.Concepts;
+
+    /// <inheritdoc />
+    public FailureConcept? Get(string conceptName) => Current.Get(conceptName);
+
+    /// <inheritdoc />
+    public FailureConcept? FromSignalKind(RunHealthSignalKind kind) => Current.FromSignalKind(kind);
+
+    /// <inheritdoc />
+    public bool IsMatchOrDescendant(string candidateName, string filterName)
+        => Current.IsMatchOrDescendant(candidateName, filterName);
+
+    /// <inheritdoc />
+    public IReadOnlyList<(string AttributionPath, FailurePriorBody Prior)> GetPriorsForConcept(
+        string conceptName) => Current.GetPriorsForConcept(conceptName);
+}
+
+/// <summary>
 /// Loads a <see cref="FailureOntologyOverlay"/> from a JSON file or JSON string. File glob:
 /// <c>*.failure-ontology.json</c>. Mirrors <c>OntologyOverlayLoader</c>'s static-method shape.
 /// </summary>

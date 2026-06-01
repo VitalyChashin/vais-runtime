@@ -525,6 +525,7 @@ internal static class CompositionRoot
         var writer = sp.GetService<IOntologyOverlayWriter>();
         if (writer is null) return inner;
         var reloader = sp.GetService<IOntologyCatalogReloader>();
+        var failureCatalogReloader = sp.GetService<IFailureOntologyCatalogReloader>();
         var logger = sp.GetService<ILogger<OverlayPublishingRecipeProposalStoreDecorator>>();
 
         // Part 3: wire failure overlay writer when the directory is set.
@@ -562,7 +563,8 @@ internal static class CompositionRoot
             throwOnSideEffectFailure: false,
             failureWriter: failureWriter,
             failureOverlayPath: failureFilePath,
-            evalGate: evalGate);
+            evalGate: evalGate,
+            failureReloader: failureCatalogReloader);
     }
 
     private static Func<RecipeProposal, string, CancellationToken, ValueTask>? BuildRecipeApprovalGate(IServiceProvider sp)
@@ -852,7 +854,10 @@ internal static class CompositionRoot
         if (!string.IsNullOrWhiteSpace(overlayPath))
         {
             var overlay = FailureOntologyOverlayLoader.LoadAllFromDirectory(overlayPath);
-            services.AddSingleton<IFailureOntologyCatalog>(new OverlaidFailureOntologyCatalog(overlay));
+            var hotReloadableFailure = new HotReloadableFailureOntologyCatalog(
+                new OverlaidFailureOntologyCatalog(overlay), overlayPath);
+            services.AddSingleton<IFailureOntologyCatalog>(hotReloadableFailure);
+            services.AddSingleton<IFailureOntologyCatalogReloader>(hotReloadableFailure);
         }
         else
         {

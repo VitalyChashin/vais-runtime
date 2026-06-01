@@ -43,6 +43,7 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
     private readonly IOntologyOverlayWriter _writer;
     private readonly IFailureOntologyOverlayWriter? _failureWriter;
     private readonly IOntologyCatalogReloader? _reloader;
+    private readonly IFailureOntologyCatalogReloader? _failureReloader;
     private readonly IFailurePriorEvalGate? _evalGate;
     private readonly string _overlayPath;
     private readonly string? _failureOverlayPath;
@@ -59,7 +60,8 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
         bool throwOnSideEffectFailure = false,
         IFailureOntologyOverlayWriter? failureWriter = null,
         string? failureOverlayPath = null,
-        IFailurePriorEvalGate? evalGate = null)
+        IFailurePriorEvalGate? evalGate = null,
+        IFailureOntologyCatalogReloader? failureReloader = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _writer = writer ?? throw new ArgumentNullException(nameof(writer));
@@ -68,6 +70,7 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
         _failureWriter = failureWriter;
         _failureOverlayPath = failureOverlayPath;
         _reloader = reloader;
+        _failureReloader = failureReloader;
         _logger = logger;
         _throwOnSideEffectFailure = throwOnSideEffectFailure;
         _evalGate = evalGate;
@@ -129,15 +132,26 @@ public sealed class OverlayPublishingRecipeProposalStoreDecorator : IRecipePropo
                 changed = await _writer.MergeAsync(result, _overlayPath, cancellationToken).ConfigureAwait(false);
             }
 
-            if (changed && _reloader is not null)
+            if (changed)
             {
-                await _reloader.ReloadAsync(cancellationToken).ConfigureAwait(false);
-            }
-            else if (changed)
-            {
-                _logger?.LogInformation(
-                    "Recipe {ProposalId} merged into overlay {OverlayPath}; in-process catalog reload skipped (no IOntologyCatalogReloader registered).",
-                    result.ProposalId, result.Kind == RecipeProposalKind.FailurePrior ? _failureOverlayPath : _overlayPath);
+                if (result.Kind == RecipeProposalKind.FailurePrior)
+                {
+                    if (_failureReloader is not null)
+                        await _failureReloader.ReloadAsync(cancellationToken).ConfigureAwait(false);
+                    else
+                        _logger?.LogInformation(
+                            "Recipe {ProposalId} merged into failure overlay {OverlayPath}; in-process catalog reload skipped (no IFailureOntologyCatalogReloader registered).",
+                            result.ProposalId, _failureOverlayPath);
+                }
+                else
+                {
+                    if (_reloader is not null)
+                        await _reloader.ReloadAsync(cancellationToken).ConfigureAwait(false);
+                    else
+                        _logger?.LogInformation(
+                            "Recipe {ProposalId} merged into overlay {OverlayPath}; in-process catalog reload skipped (no IOntologyCatalogReloader registered).",
+                            result.ProposalId, _overlayPath);
+                }
             }
         }
         catch (Exception ex)

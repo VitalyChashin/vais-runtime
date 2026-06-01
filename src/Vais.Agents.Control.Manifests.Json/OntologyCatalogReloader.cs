@@ -20,6 +20,20 @@ public interface IOntologyCatalogReloader
 }
 
 /// <summary>
+/// Reloads <see cref="IFailureOntologyCatalog"/> after a failure overlay write.
+/// Symmetric with <see cref="IOntologyCatalogReloader"/> for the behaviour ontology but
+/// uses a dedicated interface to avoid DI ambiguity and carry the correct return type.
+/// </summary>
+public interface IFailureOntologyCatalogReloader
+{
+    /// <summary>
+    /// Re-read the overlay directory and atomically swap the catalog the runtime serves
+    /// through <see cref="IFailureOntologyCatalog"/>. Returns the new catalog.
+    /// </summary>
+    Task<IFailureOntologyCatalog> ReloadAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Default <see cref="IOntologyCatalogReloader"/> + a mutable
 /// <see cref="IOntologyCatalog"/> facade rolled into one. Composition root
 /// registers a single instance as both <see cref="IOntologyCatalog"/> and
